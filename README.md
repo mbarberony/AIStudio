@@ -1,6 +1,80 @@
 **AIStudio** is a modular AI engineering environment designed for exploring local LLM workflows, retrieval-augmented generation (RAG), agentic automation, observability, guardrails, and lightweight CI/CD practices.  
 It serves as a personal laboratory for experimenting with modern AI architectures and engineering techniques in both **local** and **cloud-ready** contexts.
 
+
+```mermaid
+flowchart LR
+    %% Top-level user entrypoints
+    U[User] --> OW[Open WebUI / HTTP Client]
+
+    %% Local RAG bot
+    subgraph RAG["local_llm_bot (RAG)"]
+        API[FastAPI /ask API]
+        RET[Retriever & Prompt Builder]
+        VS[(Vector Store)]
+        EMB[Embedding Model]
+    end
+
+    %% Corpus + ingestion
+    subgraph Corpus["Local Corpus"]
+        DOCS[(PDF / MD / TXT files)]
+    end
+
+    subgraph Ingest["Ingestion Pipeline"]
+        LOAD[Load & Parse Docs]
+        CHUNK[Chunk Text]
+        INDEX[Embed & Index in Vector Store]
+    end
+
+    %% LLM runtime
+    subgraph LLM["LLM Runtime"]
+        OLL[Ollama / Local LLM]
+    end
+
+    %% Agentic lab
+    subgraph Agents["agentic_lab"]
+        AG[Agents & Workflows]
+        TOOLS[Tools: RAG, File I/O, Summarization]
+    end
+
+    %% Observability & guardrails
+    subgraph Obs["Observability & Guardrails"]
+        LOGS[(Usage & Session Logs)]
+        GR[Guardrails<br/>(directory whitelist, redaction, limits)]
+    end
+
+    %% CI / Infra
+    subgraph Infra["infra / CI / Automation"]
+        CI[CI Pipeline<br/>(tests, lint, build)]
+    end
+
+    %% Flows
+    OW --> API
+    API --> RET
+    RET --> VS
+    RET --> OLL
+
+    DOCS --> LOAD --> CHUNK --> INDEX --> VS
+    EMB --> INDEX
+    RET --> EMB
+
+    %% Agents use RAG and tools
+    AG --> TOOLS
+    TOOLS --> API
+    TOOLS --> DOCS
+
+    %% Observability connections
+    API --> LOGS
+    AG --> LOGS
+
+    %% Guardrails in front of execution
+    GR --- API
+    GR --- AG
+
+    %% CI interacting with codebase
+    CI -. builds & tests .- RAG
+    CI -. builds & tests .- Agents
+
 ---
 
 ## Core Objectives
@@ -38,3 +112,40 @@ It serves as a personal laboratory for experimenting with modern AI architecture
 
 ### **CI/CD & Project Man**
 
+## Repository Structure
+
+```text
+AIStudio/
+├── local_llm_bot/         # Local RAG bot: ingestion, vector store, API, tests
+│   ├── app/
+│   ├── ingest/
+│   ├── data/
+│   ├── logs/
+│   └── tests/
+│
+├── agentic_lab/           # Agent tools, workflows, session logs
+│   ├── tools/
+│   ├── workflows/
+│   ├── logs/
+│   └── tests/
+│
+├── infra/                 # CI/CD configs, Docker, scripts, utilities
+│   ├── cicd/
+│   ├── docker/
+│   ├── scripts/
+│   └── configs/
+│
+├── cloud/                 # Cloud extension (Epic 2 — AWS, Azure)
+│   ├── aws/
+│   ├── azure/
+│   └── docs/
+│
+├── docs/                  # Architecture notes, diagrams, decisions, logs
+│   ├── architecture_overview.md
+│   ├── learning_log.md
+│   ├── rag_bot_v1.md
+│   └── agentic_lab_v1.md
+│
+├── .gitignore
+├── LICENSE
+└── README.md
