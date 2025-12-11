@@ -1,0 +1,13 @@
+# Core web & API
+fastapi
+uvicorn[standard]
+
+# RAG / LLM tools
+chromadb
+sentence-transformers
+langchain
+
+# Utilities
+python-dotenv
+
+# (Adjust and pin versions as the project evolves)
