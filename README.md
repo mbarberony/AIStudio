@@ -40,12 +40,12 @@ flowchart LR
     %% Observability and guardrails
     subgraph Obs["Observability and Guardrails"]
         LOGS[(Usage and Session Logs)]
-        GR[Guardrails (whitelist, redaction, limits)]
+        GR[Guardrails whitelist redaction limits]
     end
 
     %% CI / Infra
     subgraph Infra["infra / CI / Automation"]
-        CI[CI Pipeline (tests and build)]
+        CI[CI Pipeline tests and build]
     end
 
     %% Flows
@@ -74,6 +74,7 @@ flowchart LR
     %% CI interacting with codebase
     CI -. builds and tests .- RAG
     CI -. builds and tests .- Agents
+
 
 
 ---
