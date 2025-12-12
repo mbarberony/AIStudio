@@ -5,12 +5,12 @@ It serves as a personal laboratory for experimenting with modern AI architecture
 ```mermaid
 flowchart LR
     %% Top-level user entrypoints
-    U[User] --> OW[Open WebUI / HTTP Client]
+    U[User] --> OW[Open WebUI or HTTP Client]
 
     %% Local RAG bot
     subgraph RAG["local_llm_bot (RAG)"]
         API[FastAPI /ask API]
-        RET[Retriever & Prompt Builder]
+        RET[Retriever and Prompt Builder]
         VS[(Vector Store)]
         EMB[Embedding Model]
     end
@@ -21,31 +21,31 @@ flowchart LR
     end
 
     subgraph Ingest["Ingestion Pipeline"]
-        LOAD[Load & Parse Docs]
+        LOAD[Load and Parse Docs]
         CHUNK[Chunk Text]
-        INDEX[Embed & Index in Vector Store]
+        INDEX[Embed and Index in Vector Store]
     end
 
     %% LLM runtime
     subgraph LLM["LLM Runtime"]
-        OLL[Ollama / Local LLM]
+        OLL[Ollama or Local LLM]
     end
 
     %% Agentic lab
     subgraph Agents["agentic_lab"]
-        AG[Agents & Workflows]
-        TOOLS[Tools: RAG, File I/O, Summarization]
+        AG[Agents and Workflows]
+        TOOLS[Tools: RAG, File IO, Summarization]
     end
 
-    %% Observability & guardrails
-    subgraph Obs["Observability & Guardrails"]
-        LOGS[(Usage & Session Logs)]
-        GR[Guardrails<br/>(directory whitelist, redaction, limits)]
+    %% Observability and guardrails
+    subgraph Obs["Observability and Guardrails"]
+        LOGS[(Usage and Session Logs)]
+        GR[Guardrails (whitelist, redaction, limits)]
     end
 
     %% CI / Infra
     subgraph Infra["infra / CI / Automation"]
-        CI[CI Pipeline<br/>(tests, lint, build)]
+        CI[CI Pipeline (tests and build)]
     end
 
     %% Flows
@@ -72,8 +72,9 @@ flowchart LR
     GR --- AG
 
     %% CI interacting with codebase
-    CI -. builds & tests .- RAG
-    CI -. builds & tests .- Agents
+    CI -. builds and tests .- RAG
+    CI -. builds and tests .- Agents
+
 
 ---
 
