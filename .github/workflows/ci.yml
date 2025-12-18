@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Create venv
+        run: python -m venv .venv
+
+      - name: Install dependencies
+        run: |
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/python -m pip install ruff pytest
+
+      - name: Sanity checks
+        run: |
+          .venv/bin/python -m pip check
+          .venv/bin/python -m compileall local_llm_bot
+
+      - name: Lint (ruff)
+        run: |
+          .venv/bin/python -m ruff check .
+
+      - name: Run unit tests
+        run: |
+          .venv/bin/python -m pytest -m unit
+
+      - name: Run integration tests (main branch only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          .venv/bin/python -m pytest -m integration
