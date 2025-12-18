@@ -19,3 +19,8 @@ combine-as-imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+  "unit: fast tests that do not require external services",
+  "integration: tests that exercise API boundaries or external components",
+]
+
