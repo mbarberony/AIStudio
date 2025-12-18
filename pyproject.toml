@@ -1,0 +1,21 @@
+[project]
+name = "aistudio"
+version = "0.1.0"
+requires-python = ">=3.13"
+description = "AIStudio: local-first AI engineering environment (RAG, agentic workflows, observability)."
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["local_llm_bot"]
+combine-as-imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
