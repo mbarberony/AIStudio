@@ -12,15 +12,15 @@ Even when used as a solo project, this document defines a disciplined workflow a
 
 At a high level, the repository is organized as follows:
 
-AIStudio/  
-local_llm_bot/        Core application (FastAPI, RAG, agents)  
-agentic_lab/          Experimental agent workflows  
-tests/                Unit and integration tests  
-infra/                CI, scripts, automation  
-.github/workflows/    GitHub Actions CI  
-pyproject.toml        Tooling configuration  
-Makefile              Common developer commands  
-README.md             Project overview  
+- AIStudio/  
+- local_llm_bot/        Core application (FastAPI, RAG, agents)  
+- agentic_lab/          Experimental agent workflows  
+- tests/                Unit and integration tests  
+- infra/                CI, scripts, automation  
+- .github/workflows/    GitHub Actions CI  
+- pyproject.toml        Tooling configuration  
+- Makefile              Common developer commands  
+- README.md             Project overview  
 
 ---
 
@@ -53,9 +53,11 @@ This installs runtime dependencies as well as development tooling such as ruff, 
 
 Before committing or pushing any changes, the following commands must pass locally:
 
+```bash
 make format  
 make lint  
 make test  
+```
 
 If these fail locally, CI will fail as well.
 
