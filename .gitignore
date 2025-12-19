@@ -59,23 +59,24 @@ htmlcov/
 ###################################
 # Local Data, Embeddings, & Indexes
 ###################################
-# Personal corpus and derived embeddings should never be committed.
-data/raw/
-data/raw_samples/
-data/private/
-data/tmp/
+# Ignore all local data artifacts
+data/**
+
+# Allow small, fake, or sample data to be committed
+!data/raw_samples/
+!data/raw_samples/**
 
 # Local vector-store persistence (Chroma DB, LanceDB, etc.)
-local_llm_bot/data/chroma_db/
-local_llm_bot/data/lancedb/
-local_llm_bot/data/vector_store/
+../scr/AIStudio/local_llm_bot/data/chroma_db/
+../scr/AIStudio/local_llm_bot/data/lancedb/
+../scr/AIStudio/local_llm_bot/data/vector_store/
 
 #############################
 # Logs & Observability Output
 #############################
 # RAG usage logs, agent session logs, profiling output, etc.
-local_llm_bot/logs/
-agentic_lab/logs/
+../scr/AIStudio/local_llm_bot/logs/
+../scr/AIStudio/agentic_lab/logs/
 logs/
 *.log
 *.tmp

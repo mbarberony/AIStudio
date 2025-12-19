@@ -8,6 +8,26 @@ chromadb
 langchain
 
 # Utilities
+httpx
 python-dotenv
+pydantic
+tqdm
 
-# (Adjust and pin versions as the project evolves)
+
+# Doc Scanning
+
+pypdf
+openpyxl
+python-docx
+python-pptx
+
+
+# Development
+
+pre-commit
+pytest
+ruff
+setuptools
+wheel
+
+

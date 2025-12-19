@@ -4,6 +4,18 @@ version = "0.1.0"
 requires-python = ">=3.13"
 description = "AIStudio: local-first AI engineering environment (RAG, agentic workflows, observability)."
 
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["local_llm_bot*", "agentic_lab*"]
+
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"
@@ -23,4 +35,7 @@ markers = [
   "unit: fast tests that do not require external services",
   "integration: tests that exercise API boundaries or external components",
 ]
+[project.scripts]
+aistudio-corpus-stats = "local_llm_bot.app.cli.corpus_stats:main"
+
 

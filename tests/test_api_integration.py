@@ -7,6 +7,22 @@ from fastapi.testclient import TestClient
 from local_llm_bot.app.api import app
 
 
+def _ollama_can_generate(model: str) -> bool:
+    try:
+        payload = json.dumps({"model": model, "prompt": "ping", "stream": False}).encode("utf-8")
+        req = urllib.request.Request(
+            "http://127.0.0.1:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return bool(data.get("response", "").strip())
+    except Exception:
+        return False
+
+
 def _ollama_ready() -> bool:
     # Fast check: is the Ollama HTTP server reachable?
     try:
@@ -50,6 +66,10 @@ def test_ask_integration() -> None:
     # If you wire a default model (recommended), validate it's present.
     # Keep this string aligned with your rag_core DEFAULT_MODEL.
     model = "llama3.2:3b"
+
+    if not _ollama_can_generate(model):
+        pytest.skip(f"Ollama not ready to generate with model: {model}")
+
     if not _ollama_has_model(model):
         pytest.skip(f"Ollama model not available: {model}. Run: ollama pull {model}")
 
