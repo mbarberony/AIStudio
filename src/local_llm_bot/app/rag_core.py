@@ -9,7 +9,11 @@ from .ollama_client import ollama_generate
 
 DEFAULT_MODEL = "llama3.2:3b"
 REPO_ROOT = find_repo_root(Path(__file__))
-INDEX_PATH = REPO_ROOT / "data" / "index.jsonl"
+
+DATA_DIR = REPO_ROOT / "data"
+INDEX_PATH = DATA_DIR / "index.jsonl"
+MANIFEST_PATH = DATA_DIR / "manifest.jsonl"
+FAILURES_PATH = DATA_DIR / "ingest_failures.jsonl"
 
 
 @dataclass
