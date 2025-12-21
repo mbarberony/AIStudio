@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
-from pathlib import Path
 
-from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ollama_client import ollama_generate
-from local_llm_bot.app.utils.paths import find_repo_root
+from local_llm_bot.app.vectorstore.chroma_store import query as chroma_query
 
 DEFAULT_MODEL = "llama3.2:3b"
-
-REPO_ROOT = find_repo_root(Path(__file__))
-INDEX_PATH = REPO_ROOT / "data" / "index.jsonl"
+DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 
 @dataclass(frozen=True)
@@ -22,38 +17,17 @@ class RetrievedDoc:
     source: str
 
 
-def _tokens(s: str) -> set[str]:
-    # basic alnum tokens; ignore tiny ones
-    return {t for t in re.findall(r"[a-z0-9]+", s.lower()) if len(t) >= 3}
-
-
 def retrieve(query: str, top_k: int = 3) -> list[RetrievedDoc]:
-    rows = read_jsonl(INDEX_PATH)
-    if not rows:
-        return []
-
-    q_tokens = _tokens(query)
-    if not q_tokens:
-        return []
-
-    scored: list[tuple[int, dict]] = []
-    for r in rows:
-        text = str(r.get("text", "")).lower()
-        score = sum(1 for tok in q_tokens if tok in text)
-        if score > 0:
-            scored.append((score, r))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-    best = scored[:top_k]
-
+    hits = chroma_query(query_text=query, top_k=top_k, embed_model=DEFAULT_EMBED_MODEL)
     out: list[RetrievedDoc] = []
-    for score, r in best:
+    for h in hits:
         out.append(
             RetrievedDoc(
-                id=str(r.get("chunk_id", "")),
-                content=str(r.get("text", "")),
-                source=str(r.get("source_path", "")),
-                score=float(score),
+                id=h.chunk_id,
+                content=h.text,
+                source=h.source_path,
+                # Chroma returns distances; smaller is better. Keep as-is for debug.
+                score=h.distance,
             )
         )
     return out
