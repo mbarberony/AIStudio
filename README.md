@@ -115,6 +115,70 @@ flowchart LR
 - Documentation of engineering patterns, prompts, and workflow decisions.
 
 ### **CI/CD & Project Man**
+    
+## JSONL RAG Baseline (Debug Artifact)
+
+This project currently supports a local-first RAG baseline using JSONL artifacts:
+
+- `data/index.jsonl` — chunk store
+- `data/manifest.jsonl` — incremental ingestion tracking
+- `data/ingest_failures.jsonl` — parse failures
+- `data/doc_chunk_map.json` — used to remove stale chunks when a document changes
+
+### Ingest a corpus (incremental)
+```bash
+python -m local_llm_bot.app.ingest --root "/path/to/corpus" --reset-index
+python -m local_llm_bot.app.ingest --root "/path/to/corpus"
+```
+### Run API and debug stats
+```bash
+uvicorn local_llm_bot.app.api:app --reload --port 8000
+curl -s http://127.0.0.1:8000/debug/stats | python -m json.tool
+```
+
+---
+
+# Tests for JSONL environment
+
+## A) Test lexical retrieval works with a temp index file
+
+Create: `tests/test_rag_core_jsonl.py`
+
+```python
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from local_llm_bot.app import rag_core
+
+
+def test_retrieve_finds_hits(monkeypatch, tmp_path: Path) -> None:
+    index = tmp_path / "index.jsonl"
+
+    rows = [
+        {
+            "chunk_id": "doc1::chunk-0",
+            "doc_id": "doc1",
+            "source_path": "/tmp/doc1",
+            "text": "Manuel Barbero was Head of Architecture at Bridgewater Associates 2012-2017.",
+        },
+        {
+            "chunk_id": "doc2::chunk-0",
+            "doc_id": "doc2",
+            "source_path": "/tmp/doc2",
+            "text": "Unrelated content about gardening.",
+        },
+    ]
+    index.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+
+    monkeypatch.setattr(rag_core, "INDEX_PATH", index)
+
+    hits = rag_core.retrieve("Bridgewater", top_k=3)
+    assert len(hits) >= 1
+    assert any("Bridgewater" in h.content for h in hits)
+
+```
 
 ## Repository Structure
 

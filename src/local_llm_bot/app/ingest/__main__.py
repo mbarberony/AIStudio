@@ -6,6 +6,11 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from local_llm_bot.app.ingest.index_jsonl import (
+    load_doc_chunk_map,
+    rewrite_excluding_doc,
+    save_doc_chunk_map,
+)
 from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS, extract_text, should_skip_filename
 from local_llm_bot.app.ingest.manifest import (
     ManifestEntry,
@@ -23,8 +28,8 @@ except Exception:  # pragma: no cover
 
 def chunk_text(text: str, *, chunk_size: int, overlap: int) -> list[str]:
     """
-    Simple chunker: character-based with overlap.
-    Good enough for now; later we can do token-aware chunking.
+    Character-based chunking with overlap.
+    Good enough as a debug artifact; later we can do token-aware chunking.
     """
     t = text.strip()
     if not t:
@@ -56,29 +61,37 @@ def iter_supported_files(root: Path) -> list[Path]:
 
 @dataclass(frozen=True)
 class OutputPaths:
+    data_dir: Path
     index: Path
     manifest: Path
     failures: Path
+    docmap: Path
+    tmp_index: Path
 
 
 def output_paths() -> OutputPaths:
     repo_root = find_repo_root(Path(__file__))
     data_dir = repo_root / "data"
     return OutputPaths(
+        data_dir=data_dir,
         index=data_dir / "index.jsonl",
         manifest=data_dir / "manifest.jsonl",
         failures=data_dir / "ingest_failures.jsonl",
+        docmap=data_dir / "doc_chunk_map.json",
+        tmp_index=data_dir / "index.tmp.jsonl",
     )
 
 
 def reset_outputs(paths: OutputPaths) -> None:
-    for p in [paths.index, paths.manifest, paths.failures]:
+    for p in [paths.index, paths.manifest, paths.failures, paths.docmap, paths.tmp_index]:
         if p.exists():
             p.unlink()
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Ingest a folder into data/index.jsonl (incremental).")
+    p = argparse.ArgumentParser(
+        description="Incremental ingestion into data/index.jsonl (debug artifact; resumable)."
+    )
     p.add_argument("--root", required=True, help="Directory to ingest")
     p.add_argument("--chunk-size", type=int, default=1200)
     p.add_argument("--overlap", type=int, default=200)
@@ -92,14 +105,15 @@ def main() -> None:
         raise SystemExit(f"Path not found: {root}")
 
     paths = output_paths()
-    paths.index.parent.mkdir(parents=True, exist_ok=True)
+    paths.data_dir.mkdir(parents=True, exist_ok=True)
 
     if args.reset_index:
         reset_outputs(paths)
 
     manifest = load_manifest(paths.manifest)
-    files = iter_supported_files(root)
+    docmap = load_doc_chunk_map(paths.docmap)
 
+    files = iter_supported_files(root)
     iterator = files
     if tqdm is not None:
         iterator = tqdm(files, desc="Ingesting", unit="file")  # type: ignore
@@ -111,6 +125,7 @@ def main() -> None:
         paths.failures.open("a", encoding="utf-8") as fail_f,
     ):
         for path in iterator:  # type: ignore
+            # stat
             try:
                 st = path.stat()
                 mtime = float(st.st_mtime)
@@ -131,10 +146,13 @@ def main() -> None:
                 continue
 
             key = str(path.resolve())
+
+            # skip unchanged
             if unchanged(manifest.get(key), mtime=mtime, size=size):
                 counts["skipped_unchanged"] += 1
                 continue
 
+            # extract
             res = extract_text(path)
             if not res.ok or not res.text.strip():
                 counts["failed_extract"] += 1
@@ -151,20 +169,35 @@ def main() -> None:
                 )
                 continue
 
+            # if doc existed before, remove its old chunks from index.jsonl (avoid duplicates)
+            if key in docmap:
+                rewrite_excluding_doc(paths.index, paths.tmp_index, key)
+                counts["rewrote_index_for_changed_doc"] += 1
+
+            # chunk
             chunks = chunk_text(res.text, chunk_size=args.chunk_size, overlap=args.overlap)
             if not chunks:
                 counts["empty_after_chunking"] += 1
                 continue
 
+            # write new chunks
+            new_chunk_ids: list[str] = []
             for i, c in enumerate(chunks):
+                chunk_id = f"{key}::chunk-{i}"
+                new_chunk_ids.append(chunk_id)
                 row = {
-                    "chunk_id": f"{key}::chunk-{i}",
+                    "chunk_id": chunk_id,
                     "doc_id": key,
                     "source_path": key,
                     "text": c,
                 }
                 index_f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
+            # update doc map
+            docmap[key] = new_chunk_ids
+            save_doc_chunk_map(paths.docmap, docmap)
+
+            # update manifest
             entry = ManifestEntry(
                 path=key,
                 mtime=mtime,
@@ -174,14 +207,16 @@ def main() -> None:
             )
             append_manifest(paths.manifest, entry)
             manifest[key] = entry
+
             counts["ingested"] += 1
 
     print("\n=== Ingestion summary ===")
     for k, v in counts.most_common():
-        print(f"{k:20s} {v:,}")
+        print(f"{k:28s} {v:,}")
     print(f"index:     {paths.index}")
     print(f"manifest:  {paths.manifest}")
     print(f"failures:  {paths.failures}")
+    print(f"docmap:    {paths.docmap}")
 
 
 if __name__ == "__main__":

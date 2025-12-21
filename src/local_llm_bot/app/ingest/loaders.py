@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import fnmatch
+import logging
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..config import DEFAULT_XLSX_MAX_CELLS
 
 SUPPORTED_EXTS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx"}
+
+# Silence noisy PDF parsing logs/warnings (common with imperfect PDFs)
+logging.getLogger("pypdf").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", module="pypdf")
 
 
 @dataclass(frozen=True)

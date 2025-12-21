@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from local_llm_bot.app.debug_stats import compute_jsonl_stats
+
 from . import rag_core  # relative import within local_llm_bot.app
 
 app = FastAPI(
@@ -53,4 +55,32 @@ async def debug_retrieve(req: DebugRetrieveRequest):
             {"id": d.id, "source": d.source, "score": d.score, "preview": d.content[:200]}
             for d in docs
         ],
+    }
+
+
+@app.get("/debug/stats")
+def debug_stats() -> dict:
+    s = compute_jsonl_stats()
+    return {
+        "data_dir": s.data_dir,
+        "paths": {
+            "index": s.index_path,
+            "manifest": s.manifest_path,
+            "failures": s.failures_path,
+            "docmap": s.docmap_path,
+        },
+        "counts": {
+            "chunks_total": s.chunks_total,
+            "docs_unique": s.docs_unique,
+            "sources_unique": s.sources_unique,
+            "manifest_entries": s.manifest_entries,
+            "failures_total": s.failures_total,
+            "docmap_entries": s.docmap_entries,
+        },
+        "bytes": {
+            "index": s.bytes_index,
+            "manifest": s.bytes_manifest,
+            "failures": s.bytes_failures,
+        },
+        "top_sources": [{"source": src, "chunks": n} for src, n in s.top_sources],
     }

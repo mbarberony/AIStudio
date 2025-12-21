@@ -2,17 +2,20 @@
 fastapi
 uvicorn[standard]
 
-# RAG / LLM tools
+# (Debug) JSONL-based pipeline uses lexical retrieval.
+# (Next step) Chroma + embeddings:
+
 chromadb
 # sentence-transformers   # deferred until we decide embedding strategy
-langchain
+# langchain
 
 # Utilities
 httpx
 python-dotenv
 pydantic
-tqdm
 
+# Progress / UX
+tqdm
 
 # Doc Scanning
 
@@ -29,5 +32,3 @@ pytest
 ruff
 setuptools
 wheel
-
-
