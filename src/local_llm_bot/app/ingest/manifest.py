@@ -18,21 +18,21 @@ class ManifestEntry:
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
-    rows: list[dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
-            rows.append(json.loads(line))
-    return rows
+            out.append(json.loads(line))
+    return out
 
 
 def load_manifest(manifest_path: Path) -> dict[str, ManifestEntry]:
     rows = _read_jsonl(manifest_path)
     out: dict[str, ManifestEntry] = {}
     for r in rows:
-        p = str(r.get("path", ""))
+        p = str(r.get("path", "")).strip()
         if not p:
             continue
         out[p] = ManifestEntry(

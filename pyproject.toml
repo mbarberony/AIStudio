@@ -25,7 +25,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["local_llm_bot"]
+known-first-party = ["local_llm_bot", "agentic_lab"]
 combine-as-imports = true
 
 [tool.pytest.ini_options]
@@ -37,5 +37,3 @@ markers = [
 ]
 [project.scripts]
 aistudio-corpus-stats = "local_llm_bot.app.cli.corpus_stats:main"
-
-

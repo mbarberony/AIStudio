@@ -1,29 +1,30 @@
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from local_llm_bot.app.ingest.index_jsonl import read_jsonl
+from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.utils.paths import find_repo_root
 
-from .ingest.index import read_jsonl
-from .ollama_client import ollama_generate
-
 DEFAULT_MODEL = "llama3.2:3b"
+
 REPO_ROOT = find_repo_root(Path(__file__))
-
-DATA_DIR = REPO_ROOT / "data"
-INDEX_PATH = DATA_DIR / "index.jsonl"
-MANIFEST_PATH = DATA_DIR / "manifest.jsonl"
-FAILURES_PATH = DATA_DIR / "ingest_failures.jsonl"
+INDEX_PATH = REPO_ROOT / "data" / "index.jsonl"
 
 
-@dataclass
+@dataclass(frozen=True)
 class RetrievedDoc:
-    """Simple placeholder for a retrieved document chunk."""
-
     id: str
     content: str
     score: float
     source: str
+
+
+def _tokens(s: str) -> set[str]:
+    # basic alnum tokens; ignore tiny ones
+    return {t for t in re.findall(r"[a-z0-9]+", s.lower()) if len(t) >= 3}
 
 
 def retrieve(query: str, top_k: int = 3) -> list[RetrievedDoc]:
@@ -31,13 +32,14 @@ def retrieve(query: str, top_k: int = 3) -> list[RetrievedDoc]:
     if not rows:
         return []
 
-    q = query.lower()
-    tokens = {t for t in re.findall(r"[a-z0-9]+", q) if len(t) >= 3}
+    q_tokens = _tokens(query)
+    if not q_tokens:
+        return []
 
     scored: list[tuple[int, dict]] = []
     for r in rows:
         text = str(r.get("text", "")).lower()
-        score = sum(1 for token in tokens if token in text)
+        score = sum(1 for tok in q_tokens if tok in text)
         if score > 0:
             scored.append((score, r))
 
@@ -48,8 +50,8 @@ def retrieve(query: str, top_k: int = 3) -> list[RetrievedDoc]:
     for score, r in best:
         out.append(
             RetrievedDoc(
-                id=str(r.get("chunk_id")),
-                content=str(r.get("text")),
+                id=str(r.get("chunk_id", "")),
+                content=str(r.get("text", "")),
                 source=str(r.get("source_path", "")),
                 score=float(score),
             )
@@ -63,7 +65,5 @@ def generate_answer(query: str, docs: list[RetrievedDoc]) -> str:
         "You are a concise assistant. Use the provided context. "
         "If the context is insufficient, say you do not know."
     )
-
     prompt = f"Question:\n{query}\n\nContext:\n{context}\n\nAnswer:"
-
     return ollama_generate(model=DEFAULT_MODEL, prompt=prompt, system=system)
