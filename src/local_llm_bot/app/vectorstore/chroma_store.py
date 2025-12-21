@@ -65,13 +65,14 @@ def query(
     res = col.query(
         query_embeddings=[q_emb],
         n_results=top_k,
-        include=["documents", "metadatas", "distances", "ids"],
+        include=["documents", "metadatas", "distances"],
     )
 
+    # Chroma returns lists-of-lists
     ids = res["ids"][0]
-    docs = res["documents"][0]
-    metas = res["metadatas"][0]
-    dists = res["distances"][0]
+    docs = res.get("documents", [[]])[0]
+    metas = res.get("metadatas", [[]])[0]
+    dists = res.get("distances", [[]])[0]
 
     hits: list[SearchHit] = []
     for cid, doc, meta, dist in zip(ids, docs, metas, dists, strict=False):
