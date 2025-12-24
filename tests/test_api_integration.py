@@ -1,9 +1,11 @@
 import json
+import os
 import urllib.request
 
 import pytest
 from fastapi.testclient import TestClient
 
+os.environ["AISTUDIO_USE_CHROMA"] = "false"
 from local_llm_bot.app.api import app
 
 

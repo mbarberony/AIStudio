@@ -3,105 +3,146 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
-from local_llm_bot.app.utils.paths import find_repo_root
+from local_llm_bot.app.utils.corpus_paths import corpus_paths
+from local_llm_bot.app.utils.repo_root import find_repo_root
+
+
+def _count_jsonl(path: Path) -> int:
+    if not path.exists():
+        return 0
+    with path.open("r", encoding="utf-8") as f:
+        return sum(1 for line in f if line.strip())
+
+
+def _safe_size(path: Path) -> int:
+    return path.stat().st_size if path.exists() else 0
+
+
+def _load_docmap(path: Path) -> dict[str, list[str]]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            # best-effort validation
+            out: dict[str, list[str]] = {}
+            for k, v in data.items():
+                if isinstance(k, str) and isinstance(v, list):
+                    out[k] = [str(x) for x in v]
+            return out
+        return {}
+    except Exception:
+        return {}
 
 
 @dataclass(frozen=True)
 class JsonlStats:
-    data_dir: str
-    index_path: str
-    manifest_path: str
-    failures_path: str
-    docmap_path: str
+    data_dir: Path
 
+    # core counts
     chunks_total: int
     docs_unique: int
     sources_unique: int
-    failures_total: int
+
+    # artifact counts
     manifest_entries: int
+    failures_total: int
     docmap_entries: int
 
-    bytes_index: int
-    bytes_manifest: int
-    bytes_failures: int
-
-    top_sources: list[tuple[str, int]]
-
-
-def _size(p: Path) -> int:
-    try:
-        return p.stat().st_size
-    except Exception:
-        return 0
+    # sizes
+    index_bytes: int
+    manifest_bytes: int
+    failures_bytes: int
 
 
-def _read_docmap(path: Path) -> dict[str, list[str]]:
-    if not path.exists():
-        return {}
-    try:
-        obj = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(obj, dict):
-            out: dict[str, list[str]] = {}
-            for k, v in obj.items():
-                if (
-                    isinstance(k, str)
-                    and isinstance(v, list)
-                    and all(isinstance(x, str) for x in v)
-                ):
-                    out[k] = v
-            return out
-    except Exception:
-        return {}
-    return {}
+def compute_jsonl_stats(*, data_dir: Path | None = None, corpus: str = "default") -> JsonlStats:
+    """
+    Returns a typed stats object for JSONL artifacts.
+    - If `data_dir` is provided, reads artifacts from that directory (great for tests).
+    - Otherwise, resolves the named `corpus` under the repo's data directory.
+    """
+    if data_dir is not None:
+        base = Path(data_dir)
+        paths = {
+            "base": base,
+            "index": base / "index.jsonl",
+            "manifest": base / "manifest.jsonl",
+            "failures": base / "ingest_failures.jsonl",
+            "docmap": base / "doc_chunk_map.json",
+        }
+    else:
+        repo_root = find_repo_root(Path(__file__))
+        paths = corpus_paths(repo_root, corpus)
 
+    rows = read_jsonl(paths["index"])
 
-def compute_jsonl_stats(data_dir: Path | None = None, *, top_n: int = 10) -> JsonlStats:
-    repo_root = find_repo_root(Path(__file__))
-    data = data_dir or (repo_root / "data")
+    # unique doc_id/source_path
+    doc_ids = {str(r.get("doc_id")) for r in rows if r.get("doc_id")}
+    sources = {str(r.get("source_path")) for r in rows if r.get("source_path")}
 
-    index_path = data / "index.jsonl"
-    manifest_path = data / "manifest.jsonl"
-    failures_path = data / "ingest_failures.jsonl"
-    docmap_path = data / "doc_chunk_map.json"
-
-    rows = read_jsonl(index_path)
     chunks_total = len(rows)
+    docs_unique = len(doc_ids)
+    sources_unique = len(sources)
 
-    doc_ids: set[str] = set()
-    sources: set[str] = set()
-    source_counts: dict[str, int] = {}
-
-    for r in rows:
-        doc_id = str(r.get("doc_id", ""))
-        src = str(r.get("source_path", ""))
-        if doc_id:
-            doc_ids.add(doc_id)
-        if src:
-            sources.add(src)
-            source_counts[src] = source_counts.get(src, 0) + 1
-
-    failures_total = len(read_jsonl(failures_path))
-    manifest_entries = len(read_jsonl(manifest_path))
-    docmap = _read_docmap(docmap_path)
-
-    top_sources = sorted(source_counts.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+    manifest_entries = _count_jsonl(paths["manifest"])
+    failures_total = _count_jsonl(paths["failures"])
+    docmap_entries = len(_load_docmap(paths["docmap"]))
 
     return JsonlStats(
-        data_dir=str(data),
-        index_path=str(index_path),
-        manifest_path=str(manifest_path),
-        failures_path=str(failures_path),
-        docmap_path=str(docmap_path),
+        data_dir=Path(paths["base"]),
         chunks_total=chunks_total,
-        docs_unique=len(doc_ids),
-        sources_unique=len(sources),
-        failures_total=failures_total,
+        docs_unique=docs_unique,
+        sources_unique=sources_unique,
         manifest_entries=manifest_entries,
-        docmap_entries=len(docmap),
-        bytes_index=_size(index_path),
-        bytes_manifest=_size(manifest_path),
-        bytes_failures=_size(failures_path),
-        top_sources=top_sources,
+        failures_total=failures_total,
+        docmap_entries=docmap_entries,
+        index_bytes=_safe_size(paths["index"]),
+        manifest_bytes=_safe_size(paths["manifest"]),
+        failures_bytes=_safe_size(paths["failures"]),
     )
+
+
+def compute_stats(*, corpus: str = "default", top_n: int = 10) -> dict[str, Any]:
+    """
+    Dict-shaped stats for API responses (JSON-serializable).
+    """
+    repo_root = find_repo_root(Path(__file__))
+    paths = corpus_paths(repo_root, corpus)
+
+    rows = read_jsonl(paths["index"])
+    sources_list = [str(r.get("source_path", "")) for r in rows if r.get("source_path")]
+
+    counts: dict[str, int] = {}
+    for s in sources_list:
+        counts[s] = counts.get(s, 0) + 1
+
+    top_sources = sorted(
+        [{"source": k, "chunks": v} for k, v in counts.items()],
+        key=lambda x: x["chunks"],
+        reverse=True,
+    )[:top_n]
+
+    s = compute_jsonl_stats(corpus=corpus)
+
+    return {
+        "corpus": corpus,
+        "data_dir": str(s.data_dir),
+        "paths": {k: str(v) for k, v in paths.items()},
+        "counts": {
+            "chunks_total": s.chunks_total,
+            "docs_unique": s.docs_unique,
+            "sources_unique": s.sources_unique,
+            "manifest_entries": s.manifest_entries,
+            "failures_total": s.failures_total,
+            "docmap_entries": s.docmap_entries,
+        },
+        "bytes": {
+            "index": s.index_bytes,
+            "manifest": s.manifest_bytes,
+            "failures": s.failures_bytes,
+        },
+        "top_sources": top_sources,
+    }
