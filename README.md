@@ -1,202 +1,151 @@
-**AIStudio** is a modular AI engineering environment designed for exploring local LLM workflows, retrieval-augmented generation (RAG), agentic automation, observability, guardrails, and lightweight CI/CD practices.  
-It serves as a personal laboratory for experimenting with modern AI architectures and engineering techniques in both **local** and **cloud-ready** contexts.
+AIStudio
+========
+
+AIStudio is a modular AI engineering environment designed for exploring
+local-first LLM workflows, retrieval-augmented generation (RAG),
+agentic automation, observability, guardrails, and lightweight CI/CD practices.
+
+It serves as a personal laboratory for experimenting with modern AI
+architectures and engineering techniques in both local and cloud-ready contexts.
 
 
-```mermaid
-flowchart LR
-    %% Top-level user entrypoints
-    U[User] --> OW[Open WebUI or HTTP Client]
+HIGH-LEVEL OVERVIEW
+-------------------
 
-    %% Local RAG bot
-    subgraph RAG["local_llm_bot (RAG)"]
-        API[FastAPI /ask API]
-        RET[Retriever and Prompt Builder]
-        VS[(Vector Store)]
-        EMB[Embedding Model]
-    end
+User
+  |
+  v
+HTTP Client / Web UI
+  |
+  v
+FastAPI API  (/ask, /debug/*)
+  |
+  v
+Retriever + Prompt Builder
+  |
+  +--> Vector Store (Chroma OR JSONL baseline)
+  |
+  +--> Embedding Model (Ollama embeddings)
+  |
+  v
+LLM Runtime (Ollama)
 
-    %% Corpus + ingestion
-    subgraph Corpus["Local Corpus"]
-        DOCS[(PDF / MD / TXT files)]
-    end
-
-    subgraph Ingest["Ingestion Pipeline"]
-        LOAD[Load and Parse Docs]
-        CHUNK[Chunk Text]
-        INDEX[Embed and Index in Vector Store]
-    end
-
-    %% LLM runtime
-    subgraph LLM["LLM Runtime"]
-        OLL[Ollama or Local LLM]
-    end
-
-    %% Agentic lab
-    subgraph Agents["agentic_lab"]
-        AG[Agents and Workflows]
-        TOOLS[Tools: RAG, File IO, Summarization]
-    end
-
-    %% Observability and guardrails
-    subgraph Obs["Observability and Guardrails"]
-        LOGS[(Usage and Session Logs)]
-        GR[Guardrails whitelist redaction limits]
-    end
-
-    %% CI / Infra
-    subgraph Infra["infra / CI / Automation"]
-        CI[CI Pipeline tests and build]
-    end
-
-    %% Flows
-    OW --> API
-    API --> RET
-    RET --> VS
-    RET --> OLL
-
-    DOCS --> LOAD --> CHUNK --> INDEX --> VS
-    EMB --> INDEX
-    RET --> EMB
-
-    %% Agents use RAG and tools
-    AG --> TOOLS
-    TOOLS --> API
-    TOOLS --> DOCS
-
-    %% Observability connections
-    API --> LOGS
-    AG --> LOGS
-
-    %% Guardrails in front of execution
-    GR --- API
-    GR --- AG
-
-    %% CI interacting with codebase
-    CI -. builds and tests .- RAG
-    CI -. builds and tests .- Agents
-
-```
+In parallel:
+- Ingestion pipeline processes documents into chunks
+- Agentic workflows can call tools (RAG, file I/O, summarization)
+- Observability and guardrails capture usage and enforce limits
 
 
+CORE OBJECTIVES
+---------------
 
----
+- Build a local knowledge engine capable of answering questions over
+  a private corpus using open-source LLMs and embeddings.
+- Experiment with agentic AI: tool-using agents, multi-step workflows,
+  planning, and controlled autonomy.
+- Establish a “vibe-coding” workflow using PyCharm and conversational coding.
+- Apply structured engineering discipline: CI/CD, tests, observability,
+  reproducibility.
+- Extend the system to AWS and Azure (Epic 2) to compare cloud-native
+  and local architectures.
 
-## Core Objectives
 
-- Develop a **local knowledge engine** capable of answering questions across a private corpus using open-source LLMs and embeddings.
-- Experiment with **agentic AI**: tool-using agents, multi-step workflows, planning, and controlled autonomy.
-- Establish a **vibe-coding workflow** using PyCharm and conversational coding patterns.
-- Introduce **structured engineering discipline**: CI/CD, issue tracking, observability, and reproducibility.
-- Extend the system to **AWS and Azure** (Epic 2) to compare cloud-native and local architectures.
+ARCHITECTURE (EPIC 1 – LOCAL AI STUDIO)
+--------------------------------------
 
----
+Local Knowledge Engine (RAG)
+- Open-source LLMs via Ollama
+- Embedding-based retrieval using Chroma
+- Incremental ingestion pipeline for:
+  PDF, Word, PowerPoint, Excel, Markdown, text
+- FastAPI /ask endpoint
+- Source-aware answers
+- Refusal when context is insufficient
+- Debug-friendly JSONL artifacts
 
-## Architecture Overview (Epic 1 – Local AI Studio)
-
-### **Local Knowledge Engine (RAG System)**
-- Open-source LLMs via [Ollama](https://ollama.com/) or equivalent runtime.
-- Vector store (e.g., Chroma) for embedding-based retrieval.
-- Ingestion pipeline for PDFs, Markdown, and text documents.
-- FastAPI `/ask` endpoint returning answers with source attribution.
-- Usage logging for latency, query patterns, and model metadata.
-- Initial guardrails (directory whitelisting, redaction patterns, output limits).
-
-### **Agentic Lab**
-- Framework experimentation (LangChain, LangGraph, AutoGen, CrewAI, etc.).
-- Tools for RAG queries, file I/O, summarization, and structured content generation.
-- Example workflows such as:
+Agentic Lab
+- Isolated experimentation area for agent workflows
+- Tools:
+  - RAG queries
+  - File I/O
+  - Summarization and transformation
+- Example workflows:
   - Detect → ingest → summarize new files
-  - Multi-step assistants combining retrieval + transformation tasks
-- Session logs for traceability and behavior inspection.
+  - Multi-step assistants combining retrieval and transformation
+- Execution traces and logs for inspection
 
-### **Developer Experience / Vibe Coding**
-- PyCharm environment configured for conversational coding assistance.
-- Run/debug configurations for ingestion, API services, and agent workflows.
-- Documentation of engineering patterns, prompts, and workflow decisions.
-
-### **CI/CD & Project Man**
-    
-## JSONL RAG Baseline (Debug Artifact)
-
-This project currently supports a local-first RAG baseline using JSONL artifacts:
-
-- `data/index.jsonl` — chunk store
-- `data/manifest.jsonl` — incremental ingestion tracking
-- `data/ingest_failures.jsonl` — parse failures
-- `data/doc_chunk_map.json` — used to remove stale chunks when a document changes
-
-### Ingest a corpus (incremental)
-```bash
-python -m local_llm_bot.app.ingest --root "/path/to/corpus" --reset-index
-python -m local_llm_bot.app.ingest --root "/path/to/corpus"
-```
-### Run API and debug stats
-```bash
-uvicorn local_llm_bot.app.api:app --reload --port 8000
-curl -s http://127.0.0.1:8000/debug/stats | python -m json.tool
-```
-
----
-
-# Tests for JSONL environment
-
-## A) Test lexical retrieval works with a temp index file
-
-Create: `tests/test_rag_core_jsonl.py`
-
-```python
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-from local_llm_bot.app import rag_core
+Developer Experience (Vibe Coding)
+- PyCharm-first workflow
+- CLI-driven ingestion and diagnostics
+- Clear separation between:
+  - Debug artifacts
+  - Production-style components
+- Emphasis on clarity, inspectability, and reversibility
 
 
-def test_retrieve_finds_hits(monkeypatch, tmp_path: Path) -> None:
-    index = tmp_path / "index.jsonl"
+JSONL RAG BASELINE (DEBUG ARTIFACT)
+----------------------------------
 
-    rows = [
-        {
-            "chunk_id": "doc1::chunk-0",
-            "doc_id": "doc1",
-            "source_path": "/tmp/doc1",
-            "text": "Manuel Barbero was Head of Architecture at Bridgewater Associates 2012-2017.",
-        },
-        {
-            "chunk_id": "doc2::chunk-0",
-            "doc_id": "doc2",
-            "source_path": "/tmp/doc2",
-            "text": "Unrelated content about gardening.",
-        },
-    ]
-    index.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+In addition to Chroma, AIStudio maintains a JSONL-based RAG baseline
+used for debugging, testing, and deterministic behavior.
 
-    monkeypatch.setattr(rag_core, "INDEX_PATH", index)
+Artifacts:
+- data/index.jsonl            : chunk store
+- data/manifest.jsonl         : incremental ingestion tracking
+- data/ingest_failures.jsonl  : parse failures
+- data/doc_chunk_map.json     : mapping used to remove stale chunks
 
-    hits = rag_core.retrieve("Bridgewater", top_k=3)
-    assert len(hits) >= 1
-    assert any("Bridgewater" in h.content for h in hits)
+Ingest a corpus (incremental):
+  python -m local_llm_bot.app.ingest --root "/path/to/corpus" --reset-index
+  python -m local_llm_bot.app.ingest --root "/path/to/corpus"
 
-```
+Run API and inspect stats:
+  uvicorn local_llm_bot.app.api:app --reload --port 8000
+  curl http://127.0.0.1:8000/debug/stats
 
-## Repository Structure
 
-```text
-AIStudio/
-├── local_llm_bot/         # Local RAG bot: ingestion, vector store, API, tests
-│   ├── app/
-│   ├── ingest/
-│   ├── data/
-│   ├── logs/
-│   └── tests/
-│
-├── agentic_lab/           # Agent tools, workflows, session logs
-│   ├── tools/
-│   ├── workflows/
-│   ├── logs/
-│   └── tests/
-│
+TESTING (JSONL BASELINE)
+-----------------------
+
+The JSONL baseline allows deterministic testing without embeddings.
+
+Example test verifies that lexical retrieval finds expected hits
+without requiring Chroma or Ollama embeddings.
+
+
+REPOSITORY STRUCTURE
+--------------------
+
+Repo root
+  ├── src/
+  │   ├── local_llm_bot/
+  │   │   ├── app/
+  │   │   │   ├── api.py
+  │   │   │   ├── rag_core.py
+  │   │   │   ├── config.py
+  │   │   │   ├── ollama_client.py
+  │   │   │   ├── ingest/
+  │   │   │   ├── vectorstore/
+  │   │   │   └── utils/
+  │   │   └── __init__.py
+  │   └── agentic_lab/
+  │       └── workflows, tools, logs, tests
+  ├── data/
+  │   ├── index.jsonl
+  │   ├── manifest.jsonl
+  │   ├── ingest_failures.jsonl
+  │   ├── doc_chunk_map.json
+  │   └── chroma/
+  ├── tests/
+  ├── infra/
+  ├── cloud/
+  └── .github/
+  ├── .gitignore
+  ├── LICENSE
+  └── README.md
+
+TODO:
+
 ├── infra/                 # CI/CD configs, Docker, scripts, utilities
 │   ├── cicd/
 │   ├── docker/
@@ -213,7 +162,49 @@ AIStudio/
 │   ├── learning_log.md
 │   ├── rag_bot_v1.md
 │   └── agentic_lab_v1.md
-│
-├── .gitignore
-├── LICENSE
-└── README.md
+
+
+
+CONFIGURATION (ENV + .ENV)
+--------------------------
+
+AIStudio reads configuration from environment variables at startup.
+Variables can be set via shell exports or via a .env file (auto-loaded).
+
+Examples:
+
+  export AISTUDIO_USE_CHROMA=true
+  export AISTUDIO_DEFAULT_MODEL=llama3.2:3b
+  export AISTUDIO_DEFAULT_EMBED_MODEL=nomic-embed-text
+  export AISTUDIO_TOP_K=5
+  export AISTUDIO_MAX_DISTANCE=1.0
+  export AISTUDIO_INGEST_CHUNK_SIZE=1200
+  export AISTUDIO_INGEST_OVERLAP=200
+
+Notes:
+- AISTUDIO_MAX_DISTANCE controls retrieval strictness (lower is stricter).
+
+- If you change env vars, restart the server to pick them up.
+```bash
+uvicorn local_llm_bot.app.api:app --reload --port 8000
+````
+
+WHAT COMES NEXT
+---------------
+
+Epic 1 (continuing):
+- Corpus management (multiple named corpora)
+- Include/exclude rules and safe defaults
+- Guardrails (path allow-lists, redaction, refusal policies)
+- Observability and usage metering
+- Agent execution controls and dry-run modes
+
+Epic 2:
+- Cloud deployments (AWS and Azure)
+- Managed vector stores
+- Remote ingestion and indexing
+- Cost and performance comparisons
+
+
+
+
