@@ -1,209 +1,167 @@
-AIStudio
-========
+# AIStudio
+![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)
 
-AIStudio is a modular AI engineering environment designed for exploring
-local-first LLM workflows, retrieval-augmented generation (RAG),
-agentic automation, observability, guardrails, and lightweight CI/CD practices.
+> A hands-on AI engineering lab exploring production-relevant patterns 
+> for LLM-enabled systems — local RAG, agentic workflows, observability, 
+> and cloud-ready architecture.
 
-It serves as a personal laboratory for experimenting with modern AI
-architectures and engineering techniques in both local and cloud-ready contexts.
+---
 
+## About This Project
 
-HIGH-LEVEL OVERVIEW
--------------------
+This is a personal engineering lab, not production software. I built it 
+to stay hands-on with the stack I reason about professionally — and to 
+develop informed opinions about what actually holds up under real 
+operational constraints versus what looks good in a demo.
 
-User
-  |
-  v
-HTTP Client / Web UI
-  |
-  v
-FastAPI API  (/ask, /debug/*)
-  |
-  v
-Retriever + Prompt Builder
-  |
-  +--> Vector Store (Chroma OR JSONL baseline)
-  |
-  +--> Embedding Model (Ollama embeddings)
-  |
-  v
-LLM Runtime (Ollama)
+The work here directly informs how I think about AI architecture 
+decisions: where RAG breaks down, how agentic workflows fail, what 
+observability actually requires in an LLM system, and how local and 
+cloud deployments differ in practice.
 
-In parallel:
-- Ingestion pipeline processes documents into chunks
-- Agentic workflows can call tools (RAG, file I/O, summarization)
-- Observability and guardrails capture usage and enforce limits
+If you're reviewing this as part of evaluating my background: the goal 
+isn't to show production-grade software. It's to show that I engage with 
+these systems at the implementation level, not just the whiteboard level.
 
+---
 
-CORE OBJECTIVES
----------------
+## On Agent Architecture
 
-- Build a local knowledge engine capable of answering questions over
-  a private corpus using open-source LLMs and embeddings.
-- Experiment with agentic AI: tool-using agents, multi-step workflows,
-  planning, and controlled autonomy.
-- Establish a “vibe-coding” workflow using PyCharm and conversational coding.
-- Apply structured engineering discipline: CI/CD, tests, observability,
-  reproducibility.
-- Extend the system to AWS and Azure (Epic 2) to compare cloud-native
-  and local architectures.
+The current wave of managed agent platforms — Claude's computer use, 
+OpenAI Operator, Microsoft Copilot Studio — abstracts away the 
+implementation details. That's useful for adoption. It also means most 
+people building on top of them don't understand what's happening 
+underneath: how tool boundaries work, where context windows become a 
+constraint, why agents fail on ambiguous inputs, and what observability 
+you lose when orchestration is managed for you.
 
+This lab was built specifically to work at that lower level — to 
+understand the failure modes before relying on the abstractions. The 
+agentic workflows here are deliberately constructed without managed 
+platforms: explicit tool definitions, traced execution, documented 
+failure cases.
 
-ARCHITECTURE (EPIC 1 – LOCAL AI STUDIO)
---------------------------------------
+The goal is substrate knowledge, not API consumption.
 
-Local Knowledge Engine (RAG)
-- Open-source LLMs via Ollama
-- Embedding-based retrieval using Chroma
-- Incremental ingestion pipeline for:
-  PDF, Word, PowerPoint, Excel, Markdown, text
-- FastAPI /ask endpoint
-- Source-aware answers
-- Refusal when context is insufficient
-- Debug-friendly JSONL artifacts
+---
 
-Agentic Lab
-- Isolated experimentation area for agent workflows
-- Tools:
-  - RAG queries
-  - File I/O
-  - Summarization and transformation
-- Example workflows:
-  - Detect → ingest → summarize new files
-  - Multi-step assistants combining retrieval and transformation
-- Execution traces and logs for inspection
+## What's Here
 
-Developer Experience (Vibe Coding)
-- PyCharm-first workflow
-- CLI-driven ingestion and diagnostics
-- Clear separation between:
-  - Debug artifacts
-  - Production-style components
-- Emphasis on clarity, inspectability, and reversibility
+### Local Knowledge Engine (RAG)
+- Embedding-based retrieval using Chroma vector store
+- Open-source LLMs via Ollama — no external API dependency
+- Incremental document ingestion: PDF, Word, PowerPoint, Excel, Markdown
+- FastAPI `/ask` endpoint with source-aware answers
+- JSONL baseline for deterministic testing without embeddings
+- Explicit refusal behavior when context is insufficient
 
+### Agentic Lab
+- Tool-using agent workflows: RAG queries, file I/O, summarization
+- DAG-based orchestration for multi-step pipelines
+- Execution tracing and guardrail layers
+- Documented failure modes — built to understand where autonomy 
+  breaks down, not just where it works
 
-JSONL RAG BASELINE (DEBUG ARTIFACT)
-----------------------------------
+### Engineering Discipline
+- CI/CD via GitHub Actions
+- Pre-commit hooks and code quality checks
+- Reproducible setup via bootstrap script
+- Separation between debug artifacts and production-style components
 
-In addition to Chroma, AIStudio maintains a JSONL-based RAG baseline
-used for debugging, testing, and deterministic behavior.
+---
 
-Artifacts:
-- data/index.jsonl            : chunk store
-- data/manifest.jsonl         : incremental ingestion tracking
-- data/ingest_failures.jsonl  : parse failures
-- data/doc_chunk_map.json     : mapping used to remove stale chunks
+## Architecture
 
-Ingest a corpus (incremental):
-  python -m local_llm_bot.app.ingest --root "/path/to/corpus" --reset-index
-  python -m local_llm_bot.app.ingest --root "/path/to/corpus"
+```mermaid
+flowchart TD
+    U[User / HTTP Client]
+    U --> API
 
-Run API and inspect stats:
-  uvicorn local_llm_bot.app.api:app --reload --port 8000
-  curl http://127.0.0.1:8000/debug/stats
+    subgraph API["FastAPI — /ask  /debug/*  /health"]
+        AV[Request validation]
+        AS[Source attribution]
+    end
 
+    API --> RPB
 
-TESTING (JSONL BASELINE)
------------------------
+    subgraph RPB["Retriever + Prompt Builder"]
+        RH[Hybrid retrieval strategy]
+        RC[Context window management]
+        RR[Refusal when below threshold]
+    end
 
-The JSONL baseline allows deterministic testing without embeddings.
+    RPB --> C
+    RPB --> J
+    RPB --> O
 
-Example test verifies that lexical retrieval finds expected hits
-without requiring Chroma or Ollama embeddings.
+    C[(Chroma\nvector store)]
+    J[(JSONL\nbaseline / deterministic testing)]
+    O[Ollama\nembeddings + LLM inference\nlocal — no external API dependency\nmodel substitution via config]
 
+    subgraph AG["Agentic Layer"]
+        DAG[DAG orchestrator] --> TR[tool registry]
+        TR --> ET[execution tracer]
+        ET --> GC[guardrail checks]
+    end
 
-REPOSITORY STRUCTURE
---------------------
+    subgraph ING["Ingestion Pipeline"]
+        IN[PDF · Word · PPT · Excel · Markdown] --> CH[chunker]
+        CH --> EM[embedder]
+        EM --> C
+    end
+```
+---
 
-Repo root
-  ├── src/
-  │   ├── local_llm_bot/
-  │   │   ├── app/
-  │   │   │   ├── api.py
-  │   │   │   ├── rag_core.py
-  │   │   │   ├── config.py
-  │   │   │   ├── ollama_client.py
-  │   │   │   ├── ingest/
-  │   │   │   ├── vectorstore/
-  │   │   │   └── utils/
-  │   │   └── __init__.py
-  │   └── agentic_lab/
-  │       └── workflows, tools, logs, tests
-  ├── data/
-  │   ├── index.jsonl
-  │   ├── manifest.jsonl
-  │   ├── ingest_failures.jsonl
-  │   ├── doc_chunk_map.json
-  │   └── chroma/
-  ├── tests/
-  ├── infra/
-  ├── cloud/
-  └── .github/
-  ├── .gitignore
-  ├── LICENSE
-  └── README.md
+## Why These Choices
 
-TODO:
+See [Architecture Decisions](docs/architecture_decisions.md) for the 
+reasoning behind key technical choices — vector store selection, 
+local-first design, orchestration approach, and what I would change 
+for a production deployment at scale.
 
-├── infra/                 # CI/CD configs, Docker, scripts, utilities
-│   ├── cicd/
-│   ├── docker/
-│   ├── scripts/
-│   └── configs/
-│
-├── cloud/                 # Cloud extension (Epic 2 — AWS, Azure)
-│   ├── aws/
-│   ├── azure/
-│   └── docs/
-│
-├── docs/                  # Architecture notes, diagrams, decisions, logs
-│   ├── architecture_overview.md
-│   ├── learning_log.md
-│   ├── rag_bot_v1.md
-│   └── agentic_lab_v1.md
+---
 
+## Point of View
 
+For the broader strategic context behind this work — how agentic AI 
+is evolving, where its current limitations actually lie, and what 
+that means for financial services specifically — see:
 
-CONFIGURATION (ENV + .ENV)
---------------------------
+**[Agentic AI in Financial Services: Some Reflections](docs/agentic_ai_pov.pdf)**
 
-AIStudio reads configuration from environment variables at startup.
-Variables can be set via shell exports or via a .env file (auto-loaded).
+This document explores the transition from descriptive to generative 
+to agentic AI, the practical constraints on autonomous systems today, 
+and a framework for thinking about where AI adds durable value versus 
+where human judgment remains irreplaceable. Written December 2025.
 
-Examples:
+---
 
-  export AISTUDIO_USE_CHROMA=true
-  export AISTUDIO_DEFAULT_MODEL=llama3.2:3b
-  export AISTUDIO_DEFAULT_EMBED_MODEL=nomic-embed-text
-  export AISTUDIO_TOP_K=5
-  export AISTUDIO_MAX_DISTANCE=1.0
-  export AISTUDIO_INGEST_CHUNK_SIZE=1200
-  export AISTUDIO_INGEST_OVERLAP=200
+## Quickstart
 
-Notes:
-- AISTUDIO_MAX_DISTANCE controls retrieval strictness (lower is stricter).
+See [QUICKSTART.md](QUICKSTART.md) to get a running `/ask` endpoint 
+in under 10 minutes.
 
-- If you change env vars, restart the server to pick them up.
-```bash
-uvicorn local_llm_bot.app.api:app --reload --port 8000
-````
+---
 
-WHAT COMES NEXT
----------------
+## Roadmap
 
-Epic 1 (continuing):
-- Corpus management (multiple named corpora)
-- Include/exclude rules and safe defaults
-- Guardrails (path allow-lists, redaction, refusal policies)
-- Observability and usage metering
-- Agent execution controls and dry-run modes
+**In progress**
+- Corpus management with named corpora and include/exclude rules
+- Guardrails: path allow-lists, redaction, refusal policies
+- Usage metering and observability dashboard
 
-Epic 2:
-- Cloud deployments (AWS and Azure)
-- Managed vector stores
-- Remote ingestion and indexing
-- Cost and performance comparisons
+**Planned**
+- Cloud deployment on AWS (ECS + S3-backed vector store)
+- Comparison of local vs. cloud latency and cost tradeoffs
+- Multi-step agent demo with documented execution traces
+- LiteLLM integration for unified provider abstraction
+
+---
+
+## Stack
+
+Python · FastAPI · Ollama · Chroma · GitHub Actions · AWSAIStudio
+
 
 
 
