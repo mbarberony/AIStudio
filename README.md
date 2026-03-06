@@ -1,5 +1,4 @@
 # AIStudio
-![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)
 
 > A hands-on AI engineering lab exploring production-relevant patterns 
 > for LLM-enabled systems — local RAG, agentic workflows, observability, 
@@ -13,14 +12,29 @@ AIStudio gives you a **private, local search engine over your own documents** �
 running entirely on your Mac, with no data leaving your machine and no external 
 API dependency.
 
-Point it at a folder of PDFs, Word docs, PowerPoints, or Markdown files. Ask 
-questions in plain English. Get source-attributed answers drawn from your own 
-content, not from the internet.
+**What you actually see and do:**
 
-Under the hood: documents are chunked, embedded, and stored in a local vector 
-database. Queries are matched by semantic similarity, assembled into a prompt, 
-and answered by a locally-running LLM via Ollama — the full RAG pipeline, 
-running offline.
+A browser-based interface lets you manage your document collections and query 
+them conversationally. There are two main areas:
+
+- **Corpus Manager** — create named collections (corpora) of documents, point 
+  them at folders of PDFs, Word docs, PowerPoints, Excel files, or Markdown, 
+  and trigger indexing. Each corpus is independently searchable. You can 
+  maintain separate corpora for different projects, clients, or topics and 
+  query across one or all of them.
+
+- **Chat Interface** — a bot-style conversation window where you ask questions 
+  in plain English and get answers grounded in your documents, with source 
+  citations showing exactly which document and passage the answer came from. 
+  Query behavior is tunable: adjust temperature (how creative vs. literal the 
+  answer is), the number of retrieved passages considered (k), and the minimum 
+  relevance threshold below which the system refuses to answer rather than 
+  hallucinate.
+
+The practical result: ask "what did we agree on pricing in the Acme proposal?" 
+or "summarize the risk section of the Q3 board deck" — and get a sourced answer 
+from your own files, not from the internet, with no data ever leaving your 
+machine.
 
 **On performance:** the system runs on a current-generation MacBook Pro with 
 Apple Silicon. In practice, inference latency and throughput are comparable to 
@@ -96,12 +110,12 @@ The goal is substrate knowledge, not API consumption.
 ## Architecture
 
 The diagram below shows the full intended architecture. **Solid nodes are 
-deployed and running locally today.** Greyed nodes are planned extensions 
-on the roadmap — primarily cloud deployment and provider abstraction.
+deployed and running locally today.** Greyed nodes are on the roadmap — 
+not yet implemented.
 
 ```mermaid
 flowchart TD
-    U[User / HTTP Client]
+    U[/"Browser UI\nCorpus Manager · Chat Interface\n(functional — in active development)"/]
     U --> API
 
     subgraph API["FastAPI — /ask  /debug/*  /health"]
@@ -125,12 +139,13 @@ flowchart TD
     C[(Chroma\nvector store)]
     J[(JSONL\nbaseline / deterministic testing)]
     O[Ollama\nembeddings + LLM inference\nlocal — no external API dependency\nmodel substitution via config]
+
     L[/"LiteLLM\nunified provider abstraction\nlocal + cloud models\n(planned)"/]
 
-    subgraph AG["Agentic Layer"]
-        DAG[DAG orchestrator] --> TR[tool registry]
-        TR --> ET[execution tracer]
-        ET --> GC[guardrail checks]
+    subgraph AG["Agentic Layer (planned)"]
+        DAG[/"DAG orchestrator"/] --> TR[/"tool registry"/]
+        TR --> ET[/"execution tracer"/]
+        ET --> GC[/"guardrail checks"/]
     end
 
     subgraph ING["Ingestion Pipeline"]
@@ -145,9 +160,15 @@ flowchart TD
         OBS[/"Observability dashboard"/]
     end
 
+    API -.->|planned| AG
     API -.->|planned| CLOUD
 
     style L fill:#e0e0e0,stroke:#aaaaaa,color:#888888
+    style AG fill:#f5f5f5,stroke:#bbbbbb,color:#888888
+    style DAG fill:#eeeeee,stroke:#cccccc,color:#999999
+    style TR fill:#eeeeee,stroke:#cccccc,color:#999999
+    style ET fill:#eeeeee,stroke:#cccccc,color:#999999
+    style GC fill:#eeeeee,stroke:#cccccc,color:#999999
     style CLOUD fill:#f5f5f5,stroke:#bbbbbb,color:#888888
     style ECS fill:#eeeeee,stroke:#cccccc,color:#999999
     style S3 fill:#eeeeee,stroke:#cccccc,color:#999999
@@ -157,21 +178,28 @@ flowchart TD
 ### What the diagram shows
 
 **Currently deployed (local):**
-- A FastAPI layer handles all inbound requests, with request validation and 
-  source attribution built in
-- The Retriever + Prompt Builder selects a retrieval strategy (dense vector, 
+- **Browser UI** — a web interface with two areas: a Corpus Manager for 
+  creating named document collections and triggering indexing, and a Chat 
+  Interface for conversational querying with source citations and tunable 
+  parameters (temperature, retrieval depth, relevance threshold). Functional 
+  today; actively being refined.
+- **FastAPI backend** — handles all inbound requests with validation and 
+  source attribution
+- **Retriever + Prompt Builder** — selects retrieval strategy (dense vector, 
   JSONL baseline, or hybrid), manages context window budget, and enforces 
-  refusal when retrieved context falls below a quality threshold
-- Chroma provides persistent vector storage; the JSONL baseline enables 
+  refusal when retrieved context falls below a quality threshold rather than 
+  hallucinating an answer
+- **Chroma** — persistent local vector store; the JSONL baseline enables 
   deterministic regression testing independent of embedding drift
-- Ollama runs LLM inference and embedding generation entirely locally — 
+- **Ollama** — runs LLM inference and embedding generation entirely locally; 
   model substitution is config-driven, no code changes required
-- The Ingestion Pipeline handles multi-format document parsing, semantic 
-  chunking, and embedding into Chroma
-- The Agentic Layer provides DAG-based orchestration with explicit tool 
-  boundaries, execution tracing, and guardrail enforcement
+- **Ingestion Pipeline** — multi-format document parsing, semantic chunking, 
+  and embedding into Chroma
 
 **Planned extensions (greyed):**
+- **Agentic Layer** — DAG-based orchestration with explicit tool boundaries, 
+  execution tracing, and guardrail enforcement; architecture is defined, 
+  implementation in progress
 - **LiteLLM** — unified abstraction layer enabling seamless switching between 
   local Ollama models and cloud providers (OpenAI, Anthropic, Bedrock) without 
   changing application code
@@ -219,6 +247,8 @@ in under 10 minutes.
 - Corpus management with named corpora and include/exclude rules
 - Guardrails: path allow-lists, redaction, refusal policies
 - Usage metering and observability dashboard
+- One-click install (packaged installer — no manual dependency setup)
+- One-click launch (menu bar / dock icon to start the server and open the UI)
 
 **Planned**
 - Cloud deployment on AWS (ECS + S3-backed vector store)
