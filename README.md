@@ -7,6 +7,29 @@
 
 ---
 
+## What This Does
+
+AIStudio gives you a **private, local search engine over your own documents** — 
+running entirely on your Mac, with no data leaving your machine and no external 
+API dependency.
+
+Point it at a folder of PDFs, Word docs, PowerPoints, or Markdown files. Ask 
+questions in plain English. Get source-attributed answers drawn from your own 
+content, not from the internet.
+
+Under the hood: documents are chunked, embedded, and stored in a local vector 
+database. Queries are matched by semantic similarity, assembled into a prompt, 
+and answered by a locally-running LLM via Ollama — the full RAG pipeline, 
+running offline.
+
+**On performance:** the system runs on a current-generation MacBook Pro with 
+Apple Silicon. In practice, inference latency and throughput are comparable to 
+a mid-tier server from two years ago — sufficient for serious evaluation work, 
+and a meaningful demonstration that local AI infrastructure is no longer just 
+a toy. No GPU cluster required.
+
+---
+
 ## About This Project
 
 This is a personal engineering lab, not production software. I built it 
@@ -72,6 +95,10 @@ The goal is substrate knowledge, not API consumption.
 
 ## Architecture
 
+The diagram below shows the full intended architecture. **Solid nodes are 
+deployed and running locally today.** Greyed nodes are planned extensions 
+on the roadmap — primarily cloud deployment and provider abstraction.
+
 ```mermaid
 flowchart TD
     U[User / HTTP Client]
@@ -93,10 +120,12 @@ flowchart TD
     RPB --> C
     RPB --> J
     RPB --> O
+    RPB -.->|planned| L
 
     C[(Chroma\nvector store)]
     J[(JSONL\nbaseline / deterministic testing)]
     O[Ollama\nembeddings + LLM inference\nlocal — no external API dependency\nmodel substitution via config]
+    L[/"LiteLLM\nunified provider abstraction\nlocal + cloud models\n(planned)"/]
 
     subgraph AG["Agentic Layer"]
         DAG[DAG orchestrator] --> TR[tool registry]
@@ -109,7 +138,48 @@ flowchart TD
         CH --> EM[embedder]
         EM --> C
     end
+
+    subgraph CLOUD["Cloud Deployment — AWS (planned)"]
+        ECS[/"ECS container hosting"/]
+        S3[/"S3-backed vector store"/]
+        OBS[/"Observability dashboard"/]
+    end
+
+    API -.->|planned| CLOUD
+
+    style L fill:#e0e0e0,stroke:#aaaaaa,color:#888888
+    style CLOUD fill:#f5f5f5,stroke:#bbbbbb,color:#888888
+    style ECS fill:#eeeeee,stroke:#cccccc,color:#999999
+    style S3 fill:#eeeeee,stroke:#cccccc,color:#999999
+    style OBS fill:#eeeeee,stroke:#cccccc,color:#999999
 ```
+
+### What the diagram shows
+
+**Currently deployed (local):**
+- A FastAPI layer handles all inbound requests, with request validation and 
+  source attribution built in
+- The Retriever + Prompt Builder selects a retrieval strategy (dense vector, 
+  JSONL baseline, or hybrid), manages context window budget, and enforces 
+  refusal when retrieved context falls below a quality threshold
+- Chroma provides persistent vector storage; the JSONL baseline enables 
+  deterministic regression testing independent of embedding drift
+- Ollama runs LLM inference and embedding generation entirely locally — 
+  model substitution is config-driven, no code changes required
+- The Ingestion Pipeline handles multi-format document parsing, semantic 
+  chunking, and embedding into Chroma
+- The Agentic Layer provides DAG-based orchestration with explicit tool 
+  boundaries, execution tracing, and guardrail enforcement
+
+**Planned extensions (greyed):**
+- **LiteLLM** — unified abstraction layer enabling seamless switching between 
+  local Ollama models and cloud providers (OpenAI, Anthropic, Bedrock) without 
+  changing application code
+- **AWS cloud deployment** — ECS-hosted containers with S3-backed vector store, 
+  enabling cost and latency comparison against the local baseline
+- **Observability dashboard** — aggregated metrics for retrieval quality, 
+  latency distribution, and failure classification across sessions
+
 ---
 
 ## Why These Choices
@@ -160,9 +230,4 @@ in under 10 minutes.
 
 ## Stack
 
-Python · FastAPI · Ollama · Chroma · GitHub Actions · AWSAIStudio
-
-
-
-
-
+Python · FastAPI · Ollama · Chroma · GitHub Actions · AWS
