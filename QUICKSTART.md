@@ -8,6 +8,20 @@ accessible from your browser.
 
 ---
 
+## Before You Start — Open a Terminal
+
+All commands in this guide are run in the Terminal app.
+
+To open Terminal quickly: press **⌘ Space**, type **Terminal**, press Enter.
+
+Keep Terminal open throughout the setup. When a step asks you to open a 
+second terminal tab, press **⌘ T**.
+
+**Important:** paste and run commands one at a time. Do not paste entire 
+blocks at once.
+
+---
+
 ## Prerequisites
 
 - macOS with Apple Silicon (M1/M2/M3) or Intel — Apple Silicon recommended
@@ -22,15 +36,15 @@ accessible from your browser.
 Ollama runs the AI models locally on your machine.
 
 Go to [ollama.com](https://ollama.com) and follow the instructions — you can 
-either download the Mac app directly or run the install script in your terminal:
+either download the Mac app directly or run this in Terminal:
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-**Note:** the installer will ask for your computer password — this is normal, 
-it needs admin rights to complete the installation. Enter your Mac login 
-password when prompted.
+The installer will ask for your computer password — this is normal, it needs 
+admin rights to complete. Enter your Mac login password when prompted. You 
+won't see characters appear as you type — that's expected.
 
 Verify Ollama is running:
 
@@ -39,50 +53,88 @@ ollama list
 ```
 
 If you see a list (even empty), Ollama is up. If you get "connection refused", 
-start it manually with `ollama serve`.
+start it manually:
+
+```bash
+ollama serve
+```
 
 ---
 
 ## 2. Pull Required Models
 
-```bash
-# Embedding model (required for vector retrieval)
-ollama pull nomic-embed-text
+This downloads the AI models to your machine. Total download is roughly 
+5–6 GB — allow 5 to 10 minutes depending on your connection.
 
-# LLM — recommended for good answer quality
+Pull the embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Pull the language model:
+
+```bash
 ollama pull llama3.1:8b
 ```
 
 **Note on hardware:** `llama3.1:8b` runs well on current-generation MacBook 
 Pro with Apple Silicon — performance is comparable to a mid-tier server from 
 a couple of years ago. On older or CPU-only machines, use `llama3.2:3b` 
-instead (faster, but noticeably lower answer quality).
+instead (faster, but noticeably lower answer quality):
 
-Model download will take a few minutes depending on your connection.
+```bash
+ollama pull llama3.2:3b
+```
 
 ---
 
 ## 3. Install AIStudio
 
-AIStudio lives in your `~/Developer` folder — the standard Mac location for 
-developer tools and personal projects.
+Create the Developer folder if it doesn't exist:
 
 ```bash
-# Create the Developer folder if it doesn't exist
 mkdir -p ~/Developer
+```
 
-# Clone the repository
+Move into it:
+
+```bash
 cd ~/Developer
-git clone git@github.com:mbarberony/AIStudio.git
-cd AIStudio
+```
 
-# Install Python dependencies
+Clone the repository:
+
+```bash
+git clone git@github.com:mbarberony/AIStudio.git
+```
+
+Move into the AIStudio folder:
+
+```bash
+cd AIStudio
+```
+
+Install Python dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-**Note:** if `git clone` gives a permissions error, you may need to add your 
-SSH key to GitHub first. See 
-[GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+If `pip` gives an error, try `pip3` instead:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+If you have multiple Python versions and want to keep things isolated, use 
+a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ---
 
@@ -92,20 +144,27 @@ A **corpus** is a named collection of documents that AIStudio indexes and
 makes searchable. You can have multiple corpora — one per project, client, 
 or topic.
 
+Create a corpus directory:
+
 ```bash
-# Create a corpus directory
 mkdir -p data/corpora/my_corpus/uploads
+```
 
-# Copy your documents in (PDF, Word, PowerPoint, Excel, Markdown supported)
+Copy your documents into it. Replace the path below with the actual location 
+of your files (PDF, Word, PowerPoint, Excel, and Markdown are all supported):
+
+```bash
 cp /path/to/your/documents/* data/corpora/my_corpus/uploads/
+```
 
-# Run ingestion — this embeds and indexes your documents
+Run ingestion — this reads, chunks, embeds, and indexes your documents:
+
+```bash
 python -m local_llm_bot.app.ingest --corpus my_corpus --root data/corpora/my_corpus
 ```
 
-Ingestion is a one-time step per corpus. Incremental updates are supported — 
-re-run the command after adding new documents and only new files will be 
-processed.
+Ingestion is a one-time step per corpus. Re-run after adding new documents — 
+only new files will be processed.
 
 ---
 
@@ -115,7 +174,7 @@ processed.
 python -m uvicorn src.local_llm_bot.app.api:app --reload --port 8000
 ```
 
-Verify it's running:
+Leave this terminal running. Open a new terminal tab (⌘ T) and verify:
 
 ```bash
 curl http://localhost:8000/health
@@ -127,14 +186,19 @@ Expected response: `{"status": "ok"}`
 
 ## 6. Start the Frontend
 
-Open a second terminal tab, navigate back to your AIStudio folder, and run:
+In the new terminal tab, navigate to the frontend folder:
 
 ```bash
 cd ~/Developer/AIStudio/front_end
+```
+
+Start the frontend server:
+
+```bash
 python server.py 3000
 ```
 
-Then open your browser at:
+Leave this running. Open your browser at:
 
 ```
 http://localhost:3000/rag_studio.html
@@ -154,13 +218,16 @@ Answers include inline citations (`[1]`, `[2]`) with a References section
 showing exactly which document and passage the answer came from.
 
 **Tuning parameters** (available in the UI):
-- **Temperature** — controls how literal vs. creative the answer is. Lower = 
-  more precise, higher = more expansive
-- **k** — number of passages retrieved from your corpus before generating 
-  an answer. Higher k = more context, slower response
-- **Relevance threshold** — minimum match quality required. If nothing in 
-  your corpus meets the threshold, the system will say so rather than 
-  hallucinate an answer
+
+> *Note: check the UI for exact label names — the descriptions below reflect 
+> how these controls work conceptually.*
+
+- **Temperature** — how literal vs. creative the answer is; lower is more 
+  precise, higher is more expansive
+- **k** — number of passages retrieved before generating an answer; higher 
+  means more context, slightly slower response
+- **Relevance threshold** — minimum match quality required; if nothing in 
+  your corpus meets the bar, the system says so rather than guess
 
 The system maintains a 10-turn conversation memory — follow-up questions 
 work without re-stating context.
@@ -169,18 +236,29 @@ work without re-stating context.
 
 ## 8. Verify Embedding Quality (Optional)
 
+Navigate to the tests folder:
+
 ```bash
 cd ~/Developer/AIStudio/tests
+```
+
+Run the embedding tests:
+
+```bash
 python test_embeddings.py
 ```
 
-This runs three semantic arithmetic tests:
+This runs three semantic reasoning checks:
 - King − Man + Woman ≈ Queen
-- Paris − France + Italy ≈ Rome  
+- Paris − France + Italy ≈ Rome
 - Python − Django + JavaScript ≈ React
 
 All three should pass with score > 0.75. If they don't, re-pull the 
-embedding model: `ollama pull nomic-embed-text`.
+embedding model:
+
+```bash
+ollama pull nomic-embed-text
+```
 
 ---
 
@@ -194,34 +272,29 @@ embedding model: `ollama pull nomic-embed-text`.
 | Chroma | (embedded) | Vector store, runs in-process with the backend |
 
 All four need to be running for the full experience. Ollama starts 
-automatically on most setups; the backend and frontend need to be started 
-manually for now.
+automatically on most setups; the backend and frontend each require 
+a terminal tab for now.
 
 > **Coming soon:** one-click install and a menu bar launcher so you never 
-> have to touch the terminal after setup.
+> have to touch the terminal after initial setup.
 
 ---
 
 ## Troubleshooting
 
-**"Error loading models"** — Ollama isn't running. Start it with `ollama serve`.
+**Ollama isn't running** — start it with `ollama serve` in a terminal tab.
 
-**Input field disabled / "No corpora"** — No corpus found. Complete Step 4.
+**Input field disabled / "No corpora"** — no corpus found. Complete Step 4.
 
-**Citations show as plain text `[1]`** — You're serving the wrong HTML file. 
-Confirm you're at `http://localhost:3000/rag_studio.html` and that the file 
-is from `front_end/rag_studio.html` in this repo.
+**Citations show as plain text `[1]`** — confirm you're at 
+`http://localhost:3000/rag_studio.html` using the file from `front_end/` 
+in this repo.
 
-**Poor answer quality** — Check which LLM is active in the UI. `llama3.1:8b` 
-significantly outperforms `llama3.2:3b` for synthesis and reasoning tasks.
+**Poor answer quality** — confirm `llama3.1:8b` is selected in the UI; 
+it significantly outperforms `llama3.2:3b` for synthesis and reasoning.
 
-**pip install fails** — Try `pip3 install -r requirements.txt`. If you have 
-multiple Python versions, consider using a virtual environment:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+**git clone permission error** — you may need to add your SSH key to GitHub. 
+See [GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 
 ---
 
