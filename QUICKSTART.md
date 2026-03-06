@@ -17,17 +17,22 @@ To open Terminal quickly: press **⌘ Space**, type **Terminal**, press Enter.
 Keep Terminal open throughout the setup. When a step asks you to open a 
 second terminal tab, press **⌘ T**.
 
-**Important:** paste and run commands one at a time. Do not paste entire 
-blocks at once.
+Paste and run commands one at a time. Each command ends when you press Enter.
 
 ---
 
 ## Prerequisites
 
 - macOS with Apple Silicon (M1/M2/M3) or Intel — Apple Silicon recommended
-- Python 3.10+
+- Python 3.9 or later (3.11+ recommended for best compatibility)
 - Git
 - ~8GB free disk space (for models)
+
+**On Python versions:** AIStudio is tested on Python 3.9 and above. The 
+system Python that ships with macOS is typically 3.9 — this works fine for 
+getting started. If you manage your own Python installation (e.g. via 
+Homebrew or pyenv), Python 3.11 or 3.13 will also work and is recommended 
+for new setups.
 
 ---
 
@@ -81,7 +86,7 @@ ollama pull llama3.1:8b
 **Note on hardware:** `llama3.1:8b` runs well on current-generation MacBook 
 Pro with Apple Silicon — performance is comparable to a mid-tier server from 
 a couple of years ago. On older or CPU-only machines, use `llama3.2:3b` 
-instead (faster, but noticeably lower answer quality):
+instead (faster to download and run, but noticeably lower answer quality):
 
 ```bash
 ollama pull llama3.2:3b
@@ -91,58 +96,75 @@ ollama pull llama3.2:3b
 
 ## 3. Install AIStudio
 
-Create the Developer folder if it doesn't exist:
+Create the Developer folder and move into it:
 
 ```bash
-mkdir -p ~/Developer
+mkdir -p ~/Developer && cd ~/Developer
 ```
 
-Move into it:
+Clone the repository and move into it:
 
 ```bash
-cd ~/Developer
+git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 ```
 
-Clone the repository:
-
-```bash
-git clone git@github.com:mbarberony/AIStudio.git
-```
-
-Move into the AIStudio folder:
-
-```bash
-cd AIStudio
-```
-
-Install Python dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-If `pip` gives an error, try `pip3` instead:
-
-```bash
-pip3 install -r requirements.txt
-```
-
-If you have multiple Python versions and want to keep things isolated, use 
-a virtual environment:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+**Note:** if `git clone` gives a permissions error, you may need to add your 
+SSH key to GitHub first. See 
+[GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 
 ---
 
-## 4. Create a Corpus and Ingest Documents
+## 4. Set Up a Python Virtual Environment
+
+A virtual environment keeps AIStudio's dependencies isolated from the rest 
+of your system — this is the recommended approach and avoids a common class 
+of PATH and version conflicts.
+
+Create the virtual environment:
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+Your terminal prompt will change to show `(.venv)` — this confirms the 
+environment is active. **You'll need to run this activation command every 
+time you open a new terminal tab and want to work with AIStudio.**
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Using a virtual environment means `pip` (not `pip3`) works correctly inside 
+it, and all installed tools like `uvicorn` and `pytest` are immediately 
+available without any PATH changes.
+
+**About the warnings during install:** you may see messages like 
+"pip version X is available" or notes about script locations — these are 
+harmless and can be safely ignored. The install is successful if the last 
+line reads `Successfully installed ...`.
+
+---
+
+## 5. Create a Corpus and Ingest Documents
 
 A **corpus** is a named collection of documents that AIStudio indexes and 
 makes searchable. You can have multiple corpora — one per project, client, 
 or topic.
+
+Make sure your virtual environment is active (you should see `(.venv)` in 
+your prompt). If not:
+
+```bash
+source ~/Developer/AIStudio/.venv/bin/activate
+```
 
 Create a corpus directory:
 
@@ -168,15 +190,19 @@ only new files will be processed.
 
 ---
 
-## 5. Start the Backend
+## 6. Start the Backend
+
+Make sure your virtual environment is active, then:
 
 ```bash
 python -m uvicorn src.local_llm_bot.app.api:app --reload --port 8000
 ```
 
-Leave this terminal running. Open a new terminal tab (⌘ T) and verify:
+Leave this terminal running. Open a new terminal tab (⌘ T), activate the 
+virtual environment, and verify the backend is up:
 
 ```bash
+source ~/Developer/AIStudio/.venv/bin/activate
 curl http://localhost:8000/health
 ```
 
@@ -184,9 +210,9 @@ Expected response: `{"status": "ok"}`
 
 ---
 
-## 6. Start the Frontend
+## 7. Start the Frontend
 
-In the new terminal tab, navigate to the frontend folder:
+In the same new terminal tab, navigate to the frontend folder:
 
 ```bash
 cd ~/Developer/AIStudio/front_end
@@ -210,7 +236,7 @@ You should see the AIStudio interface with two main areas:
 
 ---
 
-## 7. Ask a Question
+## 8. Ask a Question
 
 Select your corpus from the dropdown and type a question in plain English.
 
@@ -234,7 +260,7 @@ work without re-stating context.
 
 ---
 
-## 8. Verify Embedding Quality (Optional)
+## 9. Verify Embedding Quality (Optional)
 
 Navigate to the tests folder:
 
@@ -282,9 +308,12 @@ a terminal tab for now.
 
 ## Troubleshooting
 
+**`(.venv)` not showing in prompt** — virtual environment isn't active. Run 
+`source ~/Developer/AIStudio/.venv/bin/activate` before any other command.
+
 **Ollama isn't running** — start it with `ollama serve` in a terminal tab.
 
-**Input field disabled / "No corpora"** — no corpus found. Complete Step 4.
+**Input field disabled / "No corpora"** — no corpus found. Complete Step 5.
 
 **Citations show as plain text `[1]`** — confirm you're at 
 `http://localhost:3000/rag_studio.html` using the file from `front_end/` 
