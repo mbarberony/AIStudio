@@ -13,8 +13,14 @@ from pydantic import BaseModel
 
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.debug_stats import JsonlStats, compute_jsonl_stats
-from local_llm_bot.app.rag_core import retrieve, RetrievedDoc, ollama_generate
+
+
+from local_llm_bot.app.rag_core import retrieve, RetrievedDoc
+from local_llm_bot.app.ollama_client import ollama_generate
+
 from local_llm_bot.app.utils.corpus_paths import corpus_exists, list_corpora, corpus_paths
+
+
 from local_llm_bot.app.utils.repo_root import find_repo_root
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 
@@ -180,12 +186,12 @@ async def health() -> dict[str, str]:
 
 
 def _require_corpus(corpus: str) -> None:
-    if not corpus_exists(corpus):
+    if not corpus_exists(find_repo_root(Path(__file__)), corpus):
         raise HTTPException(
             status_code=404,
             detail={
                 "error": f"Unknown corpus '{corpus}'",
-                "available": list_corpora(),
+                "available": list_corpora(find_repo_root(Path(__file__))),
             },
         )
 
@@ -307,7 +313,7 @@ async def get_corpora() -> List[CorpusInfo]:
     """
     Get list of available corpora with metadata.
     """
-    corpus_names = list_corpora()
+    corpus_names = list_corpora(find_repo_root(Path(__file__)))
     
     corpora_info = []
     for name in corpus_names:
@@ -428,11 +434,11 @@ async def create_corpus(name: str) -> dict[str, Any]:
             status_code=400,
             detail="Corpus name must contain only letters, numbers, hyphens, and underscores"
         )
-    
-    if corpus_exists(name):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Corpus '{name}' already exists"
+
+        if corpus_exists(find_repo_root(Path(__file__)), corpus):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Corpus '{name}' already exists"
         )
     
     repo_root = _get_repo_root()
@@ -623,16 +629,16 @@ async def get_config() -> dict[str, Any]:
     return {
         "current_model": CONFIG.rag.default_model,
         "current_embed_model": CONFIG.rag.default_embed_model,
-        "default_corpus": getattr(CONFIG.current_parameters, 'corpus', 'default'),
+        "default_corpus": "default",
         "parameters": {
-            "temperature": getattr(CONFIG.current_parameters, 'temperature', 0.7),
+            "temperature": 0.7,
             "top_k": CONFIG.rag.top_k,
-            "top_p": getattr(CONFIG.current_parameters, 'top_p', 0.9),
+            "top_p": 0.9,
         },
         "rag_config": {
             "use_chroma": CONFIG.rag.use_chroma,
-            "hybrid_enabled": CONFIG.rag.hybrid_enabled,
-            "decompose_multi_entity": CONFIG.rag.decompose_multi_entity,
+            # "hybrid_enabled": CONFIG.rag.hybrid_enabled,
+            # "decompose_multi_entity": CONFIG.rag.decompose_multi_entity,
             "max_distance": CONFIG.rag.max_distance,
         },
         "ingest_config": {
