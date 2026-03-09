@@ -423,11 +423,17 @@ async def upload_to_corpus(
         )
 
 
+class CreateCorpusRequest(BaseModel):
+    name: str
+
+
 @app.post("/corpus/create")
-async def create_corpus(name: str) -> dict[str, Any]:
+async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
     """
     Create a new corpus directory structure.
     """
+    name = request.name
+
     # Validate corpus name
     if not name or not name.replace("_", "").replace("-", "").isalnum():
         raise HTTPException(
@@ -435,10 +441,10 @@ async def create_corpus(name: str) -> dict[str, Any]:
             detail="Corpus name must contain only letters, numbers, hyphens, and underscores"
         )
 
-        if corpus_exists(find_repo_root(Path(__file__)), corpus):
-            raise HTTPException(
-                status_code=409,
-                detail=f"Corpus '{name}' already exists"
+    if corpus_exists(find_repo_root(Path(__file__)), name):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Corpus '{name}' already exists"
         )
     
     repo_root = _get_repo_root()
