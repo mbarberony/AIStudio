@@ -187,26 +187,56 @@ pip install ollama python-multipart
 ## 7. Ingest Documents
 
 A **corpus** is a named collection of documents that AIStudio indexes and 
-makes searchable.
+makes searchable. You have two options: start with the included demo corpus, 
+or jump straight to your own documents.
 
-Make sure your virtual environment is active (you should see `(.venv)` in 
-your prompt). Create a corpus directory:
+---
+
+### Option A — Use the Demo Corpus (recommended for first run)
+
+AIStudio ships with a curated demo corpus: 17 documents spanning 20+ years 
+of financial services technology architecture — strategy documents, 
+methodology papers, AI reference architecture, and more. It gives you 
+something substantive to query immediately, without needing your own 
+documents first.
+
+Make sure your virtual environment is active, then run:
+
+```bash
+PYTHONPATH=src python -m local_llm_bot.app.ingest \
+  --corpus demo \
+  --root data/demo
+```
+
+This indexes all documents in `data/demo/` into a corpus named `demo`. 
+Select `demo` from the corpus dropdown in the UI and start querying.
+
+Some questions to try:
+- *"What is the Air Traffic Controller model and how does it apply to IT strategy?"*
+- *"What does a reference architecture for enterprise AI look like?"*
+- *"What are the key risk and compliance considerations for financial services IT?"*
+
+See [data/demo/DEMO_CORPUS.md](data/demo/DEMO_CORPUS.md) for the full 
+document inventory and a complete set of suggested demo questions.
+
+---
+
+### Option B — Use Your Own Documents
+
+Copy your documents into a new corpus directory (PDF, Word, PowerPoint, 
+Excel, and Markdown are all supported):
 
 ```bash
 mkdir -p data/corpora/my_corpus/uploads
-```
-
-Copy your documents into it (PDF, Word, PowerPoint, Excel, and Markdown are 
-all supported):
-
-```bash
 cp /path/to/your/documents/* data/corpora/my_corpus/uploads/
 ```
 
 Run ingestion:
 
 ```bash
-PYTHONPATH=src python -m local_llm_bot.app.ingest --corpus my_corpus --root data/corpora/my_corpus
+PYTHONPATH=src python -m local_llm_bot.app.ingest \
+  --corpus my_corpus \
+  --root data/corpora/my_corpus
 ```
 
 Expected output: chunk count, document count, and zero failures. Re-run 

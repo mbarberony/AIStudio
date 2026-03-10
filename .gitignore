@@ -5,9 +5,11 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
-data/corpora/
-data/conversations/
-**/chroma/
 .vscode/
 .idea/
 *.log
+data/corpora/
+data/conversations/
+**/chroma/
+!data/demo/
+!data/demo/**
