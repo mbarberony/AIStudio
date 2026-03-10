@@ -13,3 +13,4 @@ data/conversations/
 **/chroma/
 !data/demo/
 !data/demo/**
+data/demo/reports/

@@ -34,6 +34,10 @@
 - End-to-end tested on M4 Max MacBook Pro 128GB
 - README and QUICKSTART reflecting real install experience
 - Both repos synced to GitHub
+- Demo corpus — 17 architecture documents spanning 2003–2021, ships with repo
+- Benchmark harness (`run_demo.py`) — structured question sets, markdown 
+  reports with per-question latency and summary stats, CLI overrides for 
+  model/temperature/k, optional ingest trigger, bring-your-own-corpus support
 
 ### Remaining for Alpha ✅
 - [ ] Fix `/corpus/create` endpoint (query param vs body mismatch)
@@ -111,6 +115,10 @@
 - [ ] Metrics panel — latency distribution, retrieval scores, token usage
 - [ ] Query history export (CSV)
 - [ ] Debug panel — raw prompt, retrieved chunks, token counts
+- [ ] Benchmark harness JSON output — machine-readable companion to markdown 
+      reports, enabling programmatic cross-run comparison
+- [ ] `compare_runs.py` — diff two or more benchmark reports on latency, 
+      answer length, source overlap, and topic-level performance
 
 ### Engineering
 - [ ] Automated test suite with CI (GitHub Actions)
