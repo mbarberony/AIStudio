@@ -95,48 +95,31 @@ def generate_answer_with_citations(
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
     
     # Extract citations from answer
-    # Handles: [1], [2,3], [1, 2], [1][2], [Source 1], [source 3], [1,2,3]
     citations = []
-    cited_indices: set[int] = set()
-
-    # Collect all numeric indices from any bracket pattern
-    raw_indices: list[int] = []
-
-    # Pattern 1: [Source N] or [source N]
-    for m in re.finditer(r'\[(?:Source\s+|source\s+)(\d+)\]', answer, re.IGNORECASE):
-        raw_indices.append(int(m.group(1)))
-
-    # Pattern 2: [1], [1,2], [1, 2], [1,2,3] — pure numeric brackets
-    for m in re.finditer(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
-        for idx_str in m.group(1).split(','):
-            raw_indices.append(int(idx_str.strip()))
-
-    for idx in raw_indices:
-        if idx > 0 and idx <= len(docs) and idx not in cited_indices:
-            doc = docs[idx - 1]
-            page = extract_page_number(doc.source, doc.id)
-            citations.append({
-                "index": idx,
-                "source": doc.source,
-                "page": page,
-                "chunk_id": doc.id,
-                "score": float(doc.score)
-            })
-            cited_indices.add(idx)
-
-    # If model cited nothing but we have docs, add all retrieved docs as implicit sources
-    if not citations and docs:
-        for i, doc in enumerate(docs, 1):
-            citations.append({
-                "index": i,
-                "source": doc.source,
-                "page": extract_page_number(doc.source, doc.id),
-                "chunk_id": doc.id,
-                "score": float(doc.score)
-            })
-
+    cited_indices = set()
+    
+    # Find all citation patterns: [1], [2,3], [1][2], etc.
+    citation_patterns = re.findall(r'\[(\d+(?:,\d+)*)\]', answer)
+    
+    for pattern in citation_patterns:
+        for idx_str in pattern.split(','):
+            idx = int(idx_str.strip())
+            if idx > 0 and idx <= len(docs) and idx not in cited_indices:
+                doc = docs[idx - 1]
+                page = extract_page_number(doc.source, doc.id)
+                
+                citations.append({
+                    "index": idx,
+                    "source": doc.source,
+                    "page": page,
+                    "chunk_id": doc.id,
+                    "score": float(doc.score)
+                })
+                cited_indices.add(idx)
+    
+    # Sort citations by index
     citations.sort(key=lambda c: c["index"])
-
+    
     return {
         "answer": answer,
         "citations": citations,
@@ -267,6 +250,8 @@ def _get_corpus_size(corpus_name: str) -> int:
 
 @app.post("/ask", response_model=AskResponse)
 async def ask(req: AskRequest) -> AskResponse:
+    if not req.query.strip():
+        raise HTTPException(status_code=400, detail="query must not be empty")
     _require_corpus(req.corpus)
     
     # Use provided top_k or default from config
@@ -311,8 +296,8 @@ async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
         ],
         "config": {
             "use_chroma": CONFIG.rag.use_chroma,
-            "hybrid_enabled": CONFIG.rag.hybrid_enabled,
-            "decompose_multi_entity": CONFIG.rag.decompose_multi_entity,
+            "hybrid_enabled": getattr(CONFIG.rag, "hybrid_enabled", False),
+            "decompose_multi_entity": getattr(CONFIG.rag, "decompose_multi_entity", False),
         },
     }
 
@@ -552,15 +537,32 @@ async def get_models() -> List[ModelInfo]:
         # Try to connect to Ollama and list models
         try:
             models_response = ollama.list()
-            ollama_models = models_response.get('models', [])
+            # Ollama SDK >= 0.3 returns a ListResponse object with a .models attribute
+            # (list of Model objects); older versions returned a dict with 'models' key.
+            if hasattr(models_response, 'models'):
+                ollama_models = models_response.models  # new SDK: list of Model objects
+            else:
+                ollama_models = models_response.get('models', [])  # old SDK: dict
             
             # Convert Ollama models to our format
             available_models = []
             for model in ollama_models:
-                model_name = model.get('name', '').split(':')[0]  # Remove tag
+                # New SDK: model is a Model object with a .model attribute (e.g. "llama3.1:8b")
+                # Old SDK: model is a dict with 'name' key
+                if hasattr(model, 'model'):
+                    full_name = model.model  # e.g. "llama3.1:8b"
+                elif hasattr(model, 'name'):
+                    full_name = model.name
+                else:
+                    full_name = model.get('name', '') if isinstance(model, dict) else ''
+                
+                if not full_name:
+                    continue
+                
+                display_name = full_name.split(':')[0].title()
                 available_models.append(ModelInfo(
-                    id=model.get('name', ''),
-                    name=model_name.title(),
+                    id=full_name,
+                    name=display_name,
                     provider="Ollama",
                     available=True
                 ))

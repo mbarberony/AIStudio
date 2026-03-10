@@ -190,7 +190,7 @@ def test_models(c: Client) -> Suite:
         assert "8b" in all_text or "llama" in all_text, \
             f"No llama/8b model found. Model entries: {[{k: m.get(k) for k in ('id','name')} for m in models]}"
 
-    run_test(suite, "llama3.1:8b (or similar) present in model list", check_has_8b)
+    run_test(suite, "llama3.1:8b (or similar) in model list with non-empty id+name", check_has_8b)
 
     return suite
 
@@ -327,11 +327,9 @@ def test_ask(c: Client) -> Suite:
 
     def check_empty_query_rejected():
         r = c.post("/ask", json={"query": "", "corpus": "demo"})
-        # Ideally 400 or 422; 500 means the API doesn't guard against empty strings
-        # (known issue — backend should add validation). We accept any non-2xx here
-        # OR a 200 with a graceful "no query" answer. We just confirm it doesn't hang.
-        assert r.status_code in (200, 400, 422, 500), f"Unexpected status {r.status_code}"
-        # TODO: tighten to (200, 400, 422) once API validates empty query strings
+        # api.py now raises HTTPException(400) for empty query strings
+        assert r.status_code in (400, 422), \
+            f"Expected 400 or 422 for empty query, got {r.status_code}"
 
     run_test(suite, "Empty query does not crash (200 or 4xx)", check_empty_query_rejected)
 
