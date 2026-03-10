@@ -120,16 +120,15 @@ def run_ingest(cfg: dict) -> None:
 def query(api_base: str, corpus: str, question: str, model: str,
           temperature: float, k: int) -> dict:
     """
-    POST /query and return a dict with:
+    POST /ask and return a dict with:
       answer, sources, latency_sec, error (if any)
     """
-    url = f"{api_base}/query"
+    url = f"{api_base}/ask"
     payload = {
-        "question":    question,
-        "corpus_name": corpus,
-        "model":       model,
+        "query":       question,
+        "corpus":      corpus,
         "temperature": temperature,
-        "k":           k,
+        "top_k":       k,
     }
 
     start = time.time()
@@ -140,7 +139,7 @@ def query(api_base: str, corpus: str, question: str, model: str,
         data = resp.json()
         return {
             "answer":      data.get("answer", ""),
-            "sources":     data.get("sources", []),
+            "sources":     data.get("citations", []),
             "latency_sec": round(latency, 2),
             "error":       None,
         }
@@ -168,11 +167,14 @@ def format_sources(sources: list) -> str:
     if not sources:
         return "_No sources returned._"
     lines = []
-    for i, s in enumerate(sources, 1):
-        doc = s.get("document", s.get("source", s.get("file", "unknown")))
-        chunk = s.get("chunk_index", "")
-        chunk_str = f" (chunk {chunk})" if chunk != "" else ""
-        lines.append(f"- [{i}] `{doc}`{chunk_str}")
+    for s in sources:
+        idx = s.get("index", "?")
+        doc = s.get("source", "unknown")
+        page = s.get("page")
+        score = s.get("score")
+        page_str = f" p.{page}" if page else ""
+        score_str = f" (score: {score:.3f})" if score else ""
+        lines.append(f"- [{idx}] `{doc}`{page_str}{score_str}")
     return "\n".join(lines)
 
 
