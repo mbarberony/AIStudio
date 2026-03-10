@@ -50,7 +50,7 @@ class RagConfig(BaseModel):
     max_distance: float | None = Field(default=None, ge=0.0)
 
     # default_model: str = Field(default="llama3.2:3b")
-    default_model: str = Field(default="llama3.1:70b")
+    default_model: str = Field(default="llama3.1:8b")
 
     default_embed_model: str = Field(default="nomic-embed-text")
     strict_unknown_reply: str = Field(default="I don't know based on the provided documents.")

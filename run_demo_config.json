@@ -1,7 +1,7 @@
 {
   "api_base": "http://localhost:8000",
   "corpus": "demo",
-  "model": "llama3.1:70b",
+  "model": "llama3.1:8b",
   "temperature": 0.3,
   "k": 5,
   "question_file": "data/demo/demo_questions.json",

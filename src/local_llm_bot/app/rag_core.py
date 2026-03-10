@@ -212,20 +212,39 @@ def generate_answer_with_citations(
 
     citations = []
     cited_indices: set[int] = set()
+    raw_indices: list[int] = []
 
-    for pattern in re.findall(r'\[(\d+(?:,\d+)*)\]', answer):
-        for idx_str in pattern.split(','):
-            idx = int(idx_str.strip())
-            if 0 < idx <= len(docs) and idx not in cited_indices:
-                doc = docs[idx - 1]
-                citations.append(Citation(
-                    index=idx,
-                    source=doc.source,
-                    page=extract_page_number(doc.source, doc.id),
-                    chunk_id=doc.id,
-                    score=doc.score
-                ))
-                cited_indices.add(idx)
+    # Pattern 1: [Source N] or [source N]
+    for m in re.finditer(r'\[(?:Source\s+|source\s+)(\d+)\]', answer, re.IGNORECASE):
+        raw_indices.append(int(m.group(1)))
+
+    # Pattern 2: [1], [1,2], [1, 2], [1,2,3]
+    for m in re.finditer(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for idx_str in m.group(1).split(','):
+            raw_indices.append(int(idx_str.strip()))
+
+    for idx in raw_indices:
+        if 0 < idx <= len(docs) and idx not in cited_indices:
+            doc = docs[idx - 1]
+            citations.append(Citation(
+                index=idx,
+                source=doc.source,
+                page=extract_page_number(doc.source, doc.id),
+                chunk_id=doc.id,
+                score=doc.score
+            ))
+            cited_indices.add(idx)
+
+    # If model cited nothing, surface all retrieved docs as implicit sources
+    if not citations and docs:
+        for i, doc in enumerate(docs, 1):
+            citations.append(Citation(
+                index=i,
+                source=doc.source,
+                page=extract_page_number(doc.source, doc.id),
+                chunk_id=doc.id,
+                score=doc.score
+            ))
 
     citations.sort(key=lambda c: c.index)
 

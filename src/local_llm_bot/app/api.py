@@ -95,31 +95,48 @@ def generate_answer_with_citations(
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
     
     # Extract citations from answer
+    # Handles: [1], [2,3], [1, 2], [1][2], [Source 1], [source 3], [1,2,3]
     citations = []
-    cited_indices = set()
-    
-    # Find all citation patterns: [1], [2,3], [1][2], etc.
-    citation_patterns = re.findall(r'\[(\d+(?:,\d+)*)\]', answer)
-    
-    for pattern in citation_patterns:
-        for idx_str in pattern.split(','):
-            idx = int(idx_str.strip())
-            if idx > 0 and idx <= len(docs) and idx not in cited_indices:
-                doc = docs[idx - 1]
-                page = extract_page_number(doc.source, doc.id)
-                
-                citations.append({
-                    "index": idx,
-                    "source": doc.source,
-                    "page": page,
-                    "chunk_id": doc.id,
-                    "score": float(doc.score)
-                })
-                cited_indices.add(idx)
-    
-    # Sort citations by index
+    cited_indices: set[int] = set()
+
+    # Collect all numeric indices from any bracket pattern
+    raw_indices: list[int] = []
+
+    # Pattern 1: [Source N] or [source N]
+    for m in re.finditer(r'\[(?:Source\s+|source\s+)(\d+)\]', answer, re.IGNORECASE):
+        raw_indices.append(int(m.group(1)))
+
+    # Pattern 2: [1], [1,2], [1, 2], [1,2,3] — pure numeric brackets
+    for m in re.finditer(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for idx_str in m.group(1).split(','):
+            raw_indices.append(int(idx_str.strip()))
+
+    for idx in raw_indices:
+        if idx > 0 and idx <= len(docs) and idx not in cited_indices:
+            doc = docs[idx - 1]
+            page = extract_page_number(doc.source, doc.id)
+            citations.append({
+                "index": idx,
+                "source": doc.source,
+                "page": page,
+                "chunk_id": doc.id,
+                "score": float(doc.score)
+            })
+            cited_indices.add(idx)
+
+    # If model cited nothing but we have docs, add all retrieved docs as implicit sources
+    if not citations and docs:
+        for i, doc in enumerate(docs, 1):
+            citations.append({
+                "index": i,
+                "source": doc.source,
+                "page": extract_page_number(doc.source, doc.id),
+                "chunk_id": doc.id,
+                "score": float(doc.score)
+            })
+
     citations.sort(key=lambda c: c["index"])
-    
+
     return {
         "answer": answer,
         "citations": citations,
