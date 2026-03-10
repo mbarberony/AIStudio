@@ -3,1557 +3,1096 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Studio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>AIStudio</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #151515;
-            --bg-tertiary: #1f1f1f;
-            --accent-primary: #00ff88;
-            --accent-secondary: #0088ff;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --border-color: #2a2a2a;
-            --danger: #ff3366;
-            --warning: #ffaa00;
+            --bg:           #f5f4f0;
+            --bg-panel:     #ffffff;
+            --bg-hover:     #f0efe9;
+            --border:       #e2e0d8;
+            --border-dark:  #ccc9be;
+            --text:         #1a1917;
+            --text-mid:     #6b6860;
+            --text-dim:     #9b9890;
+            --accent:       #2563eb;
+            --accent-light: #eff4ff;
+            --accent-dim:   #93b4f8;
+            --success:      #16a34a;
+            --warning:      #d97706;
+            --danger:       #dc2626;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow:       0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+            --radius:       8px;
+            --radius-lg:    12px;
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             height: 100vh;
             overflow: hidden;
         }
 
-        .app-container {
+        .app {
             display: grid;
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 272px 1fr;
             height: 100vh;
         }
 
-        /* Sidebar */
+        /* ── Sidebar ───────────────────────────────────────────── */
         .sidebar {
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
+        .sidebar-top {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .logo {
-            font-family: 'Space Mono', monospace;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .wordmark {
+            font-family: 'DM Mono', monospace;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: -0.3px;
+            color: var(--text);
         }
 
-        .sidebar-section {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
+        .wordmark span {
+            color: var(--accent);
         }
 
-        .sidebar-section-title {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-        }
-
-        .model-select, .corpus-select, select, input[type="number"] {
-            width: 100%;
-            padding: 10px 12px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .model-select:hover, .corpus-select:hover, select:hover {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.1);
-        }
-
-        .parameter-group {
-            margin-bottom: 16px;
-        }
-
-        .parameter-label {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .corpus-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .btn-icon {
-            flex: 1;
-            padding: 8px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 16px;
-        }
-
-        .btn-icon:hover {
-            background: var(--accent-primary);
-            color: var(--bg-primary);
-            border-color: var(--accent-primary);
-        }
-
-        .sidebar-scroll {
+        .sidebar-body {
             flex: 1;
             overflow-y: auto;
+            padding: 4px 0;
         }
 
-        /* Main Chat Area */
-        .chat-container {
+        .section {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6860' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        input[type="number"] {
+            background-image: none;
+            padding-right: 12px;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+        }
+
+        .param-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .param-row:last-child { margin-bottom: 0; }
+
+        .param-label {
+            font-size: 13px;
+            color: var(--text-mid);
+        }
+
+        .param-row input[type="number"] {
+            width: 80px;
+        }
+
+        /* Corpus action buttons */
+        .corpus-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-mid);
+            font-size: 12px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .action-btn svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* Conversation section */
+        .conv-meta {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .conv-meta span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .clear-btn {
+            width: 100%;
+            padding: 8px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-mid);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .clear-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: #fff5f5;
+        }
+
+        /* Sidebar footer */
+        .sidebar-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .copyright {
+            font-size: 10px;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .copyright a {
+            color: var(--text-dim);
+            text-decoration: none;
+        }
+
+        .copyright a:hover { color: var(--accent); }
+
+        /* ── Main area ─────────────────────────────────────────── */
+        .main {
             display: flex;
             flex-direction: column;
             height: 100vh;
+            background: var(--bg);
         }
 
-        .chat-header {
-            padding: 20px 30px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-secondary);
+        .topbar {
+            padding: 14px 28px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
         }
 
-        .chat-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
+        .topbar-left {
+            font-size: 13px;
+            color: var(--text-mid);
+            font-weight: 500;
         }
 
-        .status-indicator {
+        .topbar-left strong {
+            color: var(--text);
+        }
+
+        .status-pill {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             font-size: 12px;
-            color: var(--text-secondary);
+            color: var(--text-dim);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: var(--accent-primary);
-            animation: pulse 2s ease-in-out infinite;
+            background: var(--success);
+            animation: pulse 2.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.4; }
         }
 
-        .messages-container {
+        /* Messages */
+        .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 30px;
+            padding: 28px;
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 20px;
         }
 
-        .message {
-            display: flex;
-            gap: 16px;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-
-        .message-avatar.user {
-            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
-        }
-
-        .message-avatar.assistant {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-        }
-
-        .message-content {
-            flex: 1;
-            line-height: 1.6;
-        }
-
-        .message.user .message-content {
-            color: var(--text-primary);
-        }
-
-        .message.assistant .message-content {
-            color: var(--text-secondary);
-        }
-
-        .message-content pre {
-            background: var(--bg-tertiary);
-            padding: 12px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 12px 0;
-            border: 1px solid var(--border-color);
-        }
-
-        .message-content code {
-            font-family: 'Space Mono', monospace;
-            font-size: 13px;
-        }
-
-        .input-area {
-            padding: 20px 30px;
-            border-top: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-        }
-
-        .input-wrapper {
-            position: relative;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .chat-input {
-            width: 100%;
-            padding: 16px 60px 16px 20px;
-            background: var(--bg-tertiary);
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            color: var(--text-primary);
-            font-size: 15px;
-            font-family: inherit;
-            resize: none;
-            transition: all 0.2s;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
-        }
-
-        .send-button {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 40px;
-            height: 40px;
-            background: var(--accent-primary);
-            border: none;
-            border-radius: 8px;
-            color: var(--bg-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.2s;
-        }
-
-        .send-button:hover {
-            transform: translateY(-50%) scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
-        }
-
-        .send-button:disabled {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            cursor: not-allowed;
-            transform: translateY(-50%);
-        }
-
-        .loading {
-            display: flex;
-            gap: 6px;
-            padding: 12px 0;
-        }
-
-        .loading-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent-primary);
-            animation: loading 1.4s ease-in-out infinite;
-        }
-
-        .loading-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .loading-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes loading {
-            0%, 80%, 100% {
-                opacity: 0.3;
-                transform: scale(0.8);
-            }
-            40% {
-                opacity: 1;
-                transform: scale(1.2);
-            }
-        }
-
+        /* Empty state */
         .empty-state {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 20px;
-            color: var(--text-secondary);
+            gap: 12px;
+            color: var(--text-dim);
+            text-align: center;
         }
 
-        .empty-state-icon {
-            font-size: 64px;
-            opacity: 0.3;
+        .empty-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
         }
 
-        .empty-state-text {
-            font-size: 18px;
+        .empty-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--text-dim);
+        }
+
+        .empty-title {
+            font-size: 15px;
             font-weight: 500;
+            color: var(--text-mid);
         }
 
-        .empty-state-hint {
-            font-size: 14px;
-            opacity: 0.7;
+        .empty-hint {
+            font-size: 13px;
+            max-width: 340px;
+            line-height: 1.5;
         }
+
+        .latency-note {
+            font-size: 12px;
+            color: var(--warning);
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius);
+            padding: 8px 14px;
+            margin-top: 4px;
+            max-width: 360px;
+        }
+
+        /* Message bubbles */
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeUp 0.25s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .avatar.user {
+            background: var(--accent);
+            color: white;
+        }
+
+        .avatar.assistant {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text-mid);
+        }
+
+        .bubble {
+            flex: 1;
+            max-width: 760px;
+        }
+
+        .bubble.user .text {
+            background: var(--accent);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 4px 12px 12px 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .bubble.assistant .text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text);
+            padding: 4px 0;
+        }
+
+        /* Loading dots */
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+            padding: 8px 0;
+        }
+
+        .loading-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--border-dark);
+            animation: dot-pulse 1.4s ease-in-out infinite;
+        }
+
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dot-pulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+            40% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Citations */
+        .citation-ref {
+            color: var(--accent);
+            font-size: 0.72em;
+            vertical-align: super;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 1px;
+            transition: color 0.15s;
+        }
+
+        .citation-ref:hover { color: #1d4ed8; text-decoration: underline; }
+
+        .footnotes {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footnotes-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .footnote {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-mid);
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.4;
+        }
+
+        .footnote:last-child { border-bottom: none; }
+
+        .footnote-num {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 11px;
+            flex-shrink: 0;
+            min-width: 20px;
+        }
+
+        .footnote-name {
+            color: var(--text);
+            font-weight: 500;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            word-break: break-all;
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 28px 20px;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            max-width: 860px;
+        }
+
+        .input-wrap {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            line-height: 1.5;
+            min-height: 48px;
+            max-height: 200px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+        }
+
+        textarea::placeholder { color: var(--text-dim); }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .send-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: var(--shadow); }
+        .send-btn:active { transform: translateY(0); }
+        .send-btn:disabled { background: var(--border-dark); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .send-btn svg { width: 18px; height: 18px; }
 
         /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-primary);
-        }
-
-        /* File upload modal */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            inset: 0;
+            background: rgba(0,0,0,0.35);
             backdrop-filter: blur(4px);
-            z-index: 1000;
+            z-index: 100;
             align-items: center;
             justify-content: center;
         }
 
-        .modal.active {
-            display: flex;
-        }
+        .modal.open { display: flex; }
 
-        .modal-content {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
+        .modal-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            width: 440px;
+            box-shadow: var(--shadow);
         }
 
         .modal-title {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
-        .file-drop-zone {
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 40px;
+        .file-zone {
+            border: 2px dashed var(--border-dark);
+            border-radius: var(--radius);
+            padding: 36px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 20px;
+            transition: all 0.15s;
+            margin-bottom: 16px;
+            color: var(--text-mid);
+            font-size: 13px;
         }
 
-        .file-drop-zone:hover, .file-drop-zone.drag-over {
-            border-color: var(--accent-primary);
-            background: rgba(0, 255, 136, 0.05);
+        .file-zone:hover, .file-zone.over {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
         }
 
-        .modal-buttons {
+        .file-zone-icon { font-size: 36px; margin-bottom: 10px; }
+
+        .modal-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             justify-content: flex-end;
+            margin-top: 16px;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: none;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        .btn { padding: 9px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text-mid); }
+        .btn-ghost:hover { background: var(--bg-hover); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:disabled { background: var(--border-dark); cursor: not-allowed; }
 
-        .btn-primary {
-            background: var(--accent-primary);
-            color: var(--bg-primary);
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .btn-secondary:hover {
-            background: var(--border-color);
-        }
-
-        /* Debug panel */
-        .debug-panel {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 12px;
-            font-family: 'Space Mono', monospace;
-            font-size: 12px;
-        }
-
-        .debug-title {
-            font-weight: 700;
-            color: var(--accent-primary);
-            margin-bottom: 8px;
-        }
-
-        .debug-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .debug-item:last-child {
-            border-bottom: none;
-        }
-
-        .debug-label {
-            color: var(--text-secondary);
-        }
-
-        .debug-value {
-            color: var(--text-primary);
-            font-weight: 700;
-        }
-
-        /* ============================================================================
-           PART 1: CSS - Add to <style> section
-           ============================================================================ */
-
-        /* Citation superscripts */
-        .citation-ref {
-            color: var(--accent-secondary);
-            font-size: 0.75em;
-            vertical-align: super;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 0 1px;
-            transition: all 0.2s;
-        }
-
-        .citation-ref:hover {
-            color: var(--accent-primary);
-            text-decoration: underline;
-        }
-
-        /* Footnotes section */
-        .footnotes-section {
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .footnotes-title {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-        }
-
-        .footnote-item {
-            margin-bottom: 12px;
-            padding-left: 24px;
-            position: relative;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-        }
-
-        .footnote-number {
-            position: absolute;
-            left: 0;
-            color: var(--accent-secondary);
-            font-weight: 600;
-        }
-
-        .footnote-source {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .footnote-page {
-            color: var(--accent-primary);
-            margin-left: 8px;
-        }
-
-        .footnote-link {
-            color: var(--accent-secondary);
-            text-decoration: none;
-            margin-left: 8px;
-            font-size: 11px;
-        }
-
-        .footnote-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Conversation context indicator */
-        .context-indicator {
-            display: inline-block;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 11px;
-            color: var(--text-secondary);
-            margin-left: 8px;
-        }
-
-        .context-indicator.active {
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-        }
-
-        /* Clear conversation button */
-        .clear-conversation {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: var(--text-secondary);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 12px;
-        }
-
-        .clear-conversation:hover {
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        /* ========================================================================
-           CITATION STYLES
-           ======================================================================== */
-
-        /* Citation superscripts */
-        .citation-ref {
-            color: var(--accent-secondary);
-            font-size: 0.75em;
-            vertical-align: super;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 0 1px;
-            transition: all 0.2s;
-        }
-
-        .citation-ref:hover {
-            color: var(--accent-primary);
-            text-decoration: underline;
-        }
-
-        /* Footnotes section */
-        .footnotes-section {
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .footnotes-title {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-        }
-
-        .footnote-item {
-            margin-bottom: 12px;
-            padding-left: 24px;
-            position: relative;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-        }
-
-        .footnote-number {
-            position: absolute;
-            left: 0;
-            color: var(--accent-secondary);
-            font-weight: 600;
-        }
-
-        .footnote-source {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .footnote-page {
-            color: var(--accent-primary);
-            margin-left: 8px;
-        }
-
-        .footnote-link {
-            color: var(--accent-secondary);
-            text-decoration: none;
-            margin-left: 8px;
-            font-size: 11px;
-        }
-
-        .footnote-link:hover {
-            text-decoration: underline;
-        }
-
-
+        #uploadStatus { font-size: 12px; color: var(--text-mid); margin-top: 6px; }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">RAG_STUDIO</div>
+<div class="app">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="wordmark">AI<span>Studio</span></div>
+        </div>
+
+        <div class="sidebar-body">
+
+            <!-- Model -->
+            <div class="section">
+                <div class="section-label">Model</div>
+                <select id="modelSelect"><option value="">Loading…</option></select>
             </div>
-            
-            <div class="sidebar-scroll">
-                <!-- Model Selection -->
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Model</div>
-                    <select class="model-select" id="modelSelect">
-                        <option value="">Loading models...</option>
-                    </select>
-                </div>
 
-                <!-- Corpus Selection -->
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Current Corpus</div>
-                    <select class="corpus-select" id="corpusSelect">
-                        <option value="default">default</option>
-                    </select>
-                    <div class="corpus-actions">
-                        <button class="btn-icon" id="addFileBtn" title="Add file to corpus">+</button>
-                        <button class="btn-icon" id="inspectCorpusBtn" title="Inspect corpus">📊</button>
-                        <button class="btn-icon" id="createCorpusBtn" title="Create new corpus">📁</button>
-                    </div>
-                </div>
-
-                <!-- Search Parameters -->
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">Parameters</div>
-                    
-                    <div class="parameter-group">
-                        <label class="parameter-label">Temperature</label>
-                        <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.7" placeholder="0.7">
-                    </div>
-
-                    <div class="parameter-group">
-                        <label class="parameter-label">Top K</label>
-                        <input type="number" id="topK" min="1" max="20" step="1" value="5" placeholder="5">
-                    </div>
-
-                    <div class="parameter-group">
-                        <label class="parameter-label">Top P</label>
-                        <input type="number" id="topP" min="0" max="1" step="0.05" value="0.9" placeholder="0.9">
-                    </div>
-                </div>
-
-                <!-- Debug Info -->
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">System</div>
-                    <div id="debugInfo" class="debug-panel" style="display: none;">
-                        <div class="debug-title">Status</div>
-                        <div id="debugContent"></div>
-                    </div>
-                    <button class="btn-icon" id="toggleDebug" style="width: 100%;">🔧 Debug</button>
+            <!-- Corpus -->
+            <div class="section">
+                <div class="section-label">Corpus</div>
+                <select id="corpusSelect"><option value="">Loading…</option></select>
+                <div class="corpus-actions">
+                    <button class="action-btn" id="addFileBtn" title="Upload file to corpus">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Upload
+                    </button>
+                    <button class="action-btn" id="inspectBtn" title="Inspect corpus statistics">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Stats
+                    </button>
+                    <button class="action-btn" id="newCorpusBtn" title="Create new corpus">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                        New
+                    </button>
                 </div>
             </div>
 
-            <!-- PART 3: HTML Updates -->
-
-            <div class="sidebar-section">
-                <div class="sidebar-section-title">Conversation</div>
-                <div>
-                    <span id="contextIndicator" class="context-indicator">No context</span>
+            <!-- Parameters -->
+            <div class="section">
+                <div class="section-label">Parameters</div>
+                <div class="param-row">
+                    <span class="param-label">Top K</span>
+                    <input type="number" id="topK" min="1" max="20" value="5">
                 </div>
-                <button class="clear-conversation" onclick="clearConversation()">
-                    Clear Conversation
+                <div class="param-row">
+                    <span class="param-label">Temperature</span>
+                    <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3">
+                </div>
+            </div>
+
+            <!-- Conversation -->
+            <div class="section">
+                <div class="section-label">Conversation</div>
+                <div class="conv-meta" id="convMeta">No context in memory</div>
+                <button class="clear-btn" id="clearBtn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    Clear conversation
+                </button>
+            </div>
+
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="copyright">
+                © M. Barbero 2025–2026 &nbsp;·&nbsp;
+                <a href="mailto:mbarberony@gmail.com">mbarberony@gmail.com</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
+            <div class="status-pill">
+                <div class="status-dot"></div>
+                <span id="statusText">Connected</span>
+            </div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                </div>
+                <div class="empty-title">Ask anything about your corpus</div>
+                <div class="empty-hint">Select a corpus from the sidebar, then type your question below. Answers include inline citations linked to source documents.</div>
+                <div class="latency-note">
+                    ⏱ First query may take 20–50 s while the model loads into memory. Subsequent queries are faster.
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-row">
+                <div class="input-wrap">
+                    <textarea id="chatInput" rows="1" placeholder="Ask a question about your corpus…"></textarea>
+                </div>
+                <button class="send-btn" id="sendBtn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
                 </button>
             </div>
         </div>
+    </main>
+</div>
 
-        <!-- Main Chat Area -->
-        <div class="chat-container">
-            <div class="chat-header">
-                <div class="chat-title" id="chatTitle">Ready to query your corpus</div>
-                <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span>Connected</span>
-                </div>
-            </div>
-
-            <div class="messages-container" id="messagesContainer">
-                <div class="empty-state">
-                    <div class="empty-state-icon">💬</div>
-                    <div class="empty-state-text">Start a conversation</div>
-                    <div class="empty-state-hint">Ask questions about your corpus</div>
-                </div>
-            </div>
-
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <textarea 
-                        class="chat-input" 
-                        id="chatInput" 
-                        placeholder="Ask a question about your corpus..."
-                        rows="1"
-                    ></textarea>
-                    <button class="send-button" id="sendButton">➤</button>
-                </div>
-            </div>
+<!-- Upload Modal -->
+<div class="modal" id="uploadModal">
+    <div class="modal-box">
+        <div class="modal-title">Upload file to corpus</div>
+        <div class="file-zone" id="dropZone">
+            <div class="file-zone-icon">📄</div>
+            <div>Drop your file here or click to browse</div>
+            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT</div>
+            <input type="file" id="fileInput" style="display:none">
+        </div>
+        <div id="uploadStatus"></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="cancelUpload">Cancel</button>
+            <button class="btn btn-primary" id="confirmUpload" disabled>Upload</button>
         </div>
     </div>
+</div>
 
-    <!-- File Upload Modal -->
-    <div class="modal" id="uploadModal">
-        <div class="modal-content">
-            <div class="modal-title">Upload File to Corpus</div>
-            <div class="file-drop-zone" id="dropZone">
-                <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
-                <div style="margin-bottom: 8px;">Drop your file here or click to browse</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Supported: TXT, PDF, MD, JSON</div>
-                <input type="file" id="fileInput" style="display: none;">
-            </div>
-            <div id="uploadStatus"></div>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" id="cancelUpload">Cancel</button>
-                <button class="btn btn-primary" id="confirmUpload" disabled>Upload</button>
-            </div>
-        </div>
-    </div>
+<script>
+    const API = 'http://localhost:8000';
 
-    <script>
-        // API Configuration
-        const API_BASE = 'http://localhost:8000';
+    // ── State ──────────────────────────────────────────────────────
+    let currentCorpus = null;
+    let isLoading = false;
+    let conversationHistory = [];
+    const MAX_TURNS = 10;
+    let selectedFile = null;
 
-        // State
-        let currentCorpus = null; // Start with null instead of 'default'
-        let currentModel = null;
-        let selectedFile = null;
-        let isLoading = false;
+    // ── DOM refs ───────────────────────────────────────────────────
+    const messagesEl  = document.getElementById('messages');
+    const emptyState  = document.getElementById('emptyState');
+    const chatInput   = document.getElementById('chatInput');
+    const sendBtn     = document.getElementById('sendBtn');
+    const corpusSelect = document.getElementById('corpusSelect');
+    const modelSelect  = document.getElementById('modelSelect');
+    const topKInput    = document.getElementById('topK');
+    const tempInput    = document.getElementById('temperature');
+    const convMeta     = document.getElementById('convMeta');
+    const topbarTitle  = document.getElementById('topbarTitle');
+    const statusText   = document.getElementById('statusText');
+    const uploadModal  = document.getElementById('uploadModal');
+    const dropZone     = document.getElementById('dropZone');
+    const fileInput    = document.getElementById('fileInput');
 
-        // DOM Elements
-        const messagesContainer = document.getElementById('messagesContainer');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const modelSelect = document.getElementById('modelSelect');
-        const corpusSelect = document.getElementById('corpusSelect');
-        const temperatureInput = document.getElementById('temperature');
-        const topKInput = document.getElementById('topK');
-        const topPInput = document.getElementById('topP');
-        const uploadModal = document.getElementById('uploadModal');
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const debugInfo = document.getElementById('debugInfo');
-        const debugContent = document.getElementById('debugContent');
+    // ── Init ───────────────────────────────────────────────────────
+    async function init() {
+        await Promise.all([loadModels(), loadCorpora()]);
+    }
 
-        // Initialize
-        async function init() {
-            await loadModels();
-            await loadCorpora();
-            await loadConfig();
-        }
-
-
-
-        // Load available models
-        async function loadModels() {
-            try {
-                const response = await fetch(`${API_BASE}/models`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const models = await response.json();
-                
-                if (models.length === 0) {
-                    modelSelect.innerHTML = '<option value="">No models found - Check Ollama</option>';
-                    return;
-                }
-                
-                modelSelect.innerHTML = models.map(model => 
-                    `<option value="${model.id}" ${!model.available ? 'disabled' : ''}>
-                        ${model.name} ${!model.available ? '(unavailable)' : ''}
-                    </option>`
-                ).join('');
-                
-                if (models.length > 0) {
-                    currentModel = models.find(m => m.available)?.id || models[0].id;
-                    modelSelect.value = currentModel;
-                }
-            } catch (error) {
-                console.error('Failed to load models:', error);
-                // Provide helpful fallback
-                modelSelect.innerHTML = '<option value="">Ollama not running - Start with: ollama serve</option>';
-            }
-        }
-
-        // Load available corpora
-        async function loadCorpora() {
-            try {
-                const response = await fetch(`${API_BASE}/corpora`);
-                const corpora = await response.json();
-                
-                if (corpora.length === 0) {
-                    corpusSelect.innerHTML = '<option value="">No corpora - Create one below 📁</option>';
-                    currentCorpus = null;
-                    updatePlaceholder();
-                    return;
-                }
-                
-                corpusSelect.innerHTML = corpora.map(corpus => 
-                    `<option value="${corpus.name}">${corpus.name} (${corpus.document_count || 0} docs)</option>`
-                ).join('');
-                
-                // Set to first available corpus
-                currentCorpus = corpora[0].name;
-                corpusSelect.value = currentCorpus;
-                document.getElementById('chatTitle').textContent = `Querying: ${currentCorpus}`;
-                updatePlaceholder();
-            } catch (error) {
-                console.error('Failed to load corpora:', error);
-                corpusSelect.innerHTML = '<option value="">Error loading corpora</option>';
-                currentCorpus = null;
-                updatePlaceholder();
-            }
-        }
-        
-        // Update chat input placeholder based on corpus state
-        function updatePlaceholder() {
-            if (!currentCorpus) {
-                chatInput.placeholder = "⚠️ Select or create a corpus first";
-                chatInput.disabled = true;
-                sendButton.disabled = true;
-            } else {
-                chatInput.placeholder = `Ask a question about ${currentCorpus}...`;
-                chatInput.disabled = false;
-                sendButton.disabled = false;
-            }
-        }
-
-        // Load configuration
-        async function loadConfig() {
-            try {
-                const response = await fetch(`${API_BASE}/config`);
-                const config = await response.json();
-                
-                if (config.parameters.top_k) {
-                    topKInput.value = config.parameters.top_k;
-                }
-                
-                updateDebugInfo(config);
-            } catch (error) {
-                console.error('Failed to load config:', error);
-            }
-        }
-
-        // Send message
-        async function sendMessage() {
-            const query = chatInput.value.trim();
-            if (!query || isLoading) return;
-            
-            // Check if corpus is selected
-            if (!currentCorpus) {
-                addMessage('⚠️ Please select or create a corpus first', 'assistant');
+    async function loadModels() {
+        try {
+            const res = await fetch(`${API}/models`);
+            const models = await res.json();
+            if (!models.length) {
+                modelSelect.innerHTML = '<option>No models — check Ollama</option>';
                 return;
             }
-
-            // Clear input
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
-
-            // Add user message
-            addMessage(query, 'user');
-
-            // Show loading
-            isLoading = true;
-            sendButton.disabled = true;
-            const loadingId = addLoadingMessage();
-
-            try {
-                const response = await fetch(`${API_BASE}/ask`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        query: query,
-                        corpus: currentCorpus,
-                        top_k: parseInt(topKInput.value) || 5,
-                        temperature: parseFloat(temperatureInput.value) || 0.7,
-                        top_p: parseFloat(topPInput.value) || 0.9,
-                    })
-                });
-
-                const data = await response.json();
-
-                console.log('Response data:', data);
-                console.log('Has citations:', data.has_citations);
-                console.log('Citations:', data.citations);
-                
-                // Remove loading message
-                removeMessage(loadingId);
-                
-                // Process citations if present
-                let answerContent = data.answer;
-                if (data.has_citations && data.citations) {
-                    console.log('Processing citations...');
-                    answerContent = parseCitations(data.answer, data.citations);
-                    answerContent += renderFootnotes(data.citations);
-                    console.log('Processed answer:', answerContent);
-                }
-                
-                // Add assistant response with HTML rendering enabled for citations
-                addMessage(answerContent, 'assistant', true);
-                
-            } catch (error) {
-                removeMessage(loadingId);
-                addMessage(`Error: ${error.message}`, 'assistant');
-            } finally {
-                isLoading = false;
-                sendButton.disabled = false;
-            }
+            modelSelect.innerHTML = models
+                .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
+                .join('');
+            const first = models.find(m => m.available);
+            if (first) modelSelect.value = first.id;
+        } catch {
+            modelSelect.innerHTML = '<option>Ollama not running</option>';
         }
+    }
 
-        // Add message to chat
-        function addMessage(content, role, allowHtml = false) {
-            // Remove empty state if exists
-            const emptyState = messagesContainer.querySelector('.empty-state');
-            if (emptyState) {
-                emptyState.remove();
+    async function loadCorpora() {
+        try {
+            const res = await fetch(`${API}/corpora`);
+            const corpora = await res.json();
+            if (!corpora.length) {
+                corpusSelect.innerHTML = '<option value="">No corpora — create one</option>';
+                setCorpus(null);
+                return;
             }
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            
-            // For assistant messages with citations, allow HTML
-            // For user messages, always escape HTML for security
-            const messageContent = (role === 'assistant' && allowHtml) 
-                ? content 
-                : escapeHtml(content);
-            
-            messageDiv.innerHTML = `
-                <div class="message-avatar ${role}">
-                    ${role === 'user' ? '👤' : '🤖'}
-                </div>
-                <div class="message-content">${messageContent}</div>
-            `;
-            
-            messagesContainer.appendChild(messageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            return messageDiv;
+            corpusSelect.innerHTML = corpora
+                .map(c => `<option value="${c.name}">${c.name}</option>`)
+                .join('');
+            setCorpus(corpora[0].name);
+        } catch {
+            corpusSelect.innerHTML = '<option value="">Error loading corpora</option>';
+            setCorpus(null);
         }
+    }
 
-        // Add loading message
-        function addLoadingMessage() {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message assistant';
-            loadingDiv.id = 'loading-message';
-            loadingDiv.innerHTML = `
-                <div class="message-avatar assistant">🤖</div>
-                <div class="message-content">
-                    <div class="loading">
-                        <div class="loading-dot"></div>
-                        <div class="loading-dot"></div>
-                        <div class="loading-dot"></div>
-                    </div>
-                </div>
-            `;
-            
-            messagesContainer.appendChild(loadingDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            return 'loading-message';
+    function setCorpus(name) {
+        currentCorpus = name;
+        if (name) {
+            topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong>`;
+            chatInput.placeholder = `Ask a question about ${name}…`;
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+        } else {
+            topbarTitle.textContent = 'AIStudio — select a corpus';
+            chatInput.placeholder = '⚠ Select or create a corpus first';
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
         }
+    }
 
-        // Remove message
-        function removeMessage(id) {
-            const message = document.getElementById(id);
-            if (message) {
-                message.remove();
-            }
-        }
+    // ── Send message ───────────────────────────────────────────────
+    async function sendMessage() {
+        const query = chatInput.value.trim();
+        if (!query || isLoading || !currentCorpus) return;
 
-        // Escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        hideEmpty();
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
 
-        // Update debug info
-        function updateDebugInfo(config) {
-            debugContent.innerHTML = `
-                <div class="debug-item">
-                    <span class="debug-label">Corpus:</span>
-                    <span class="debug-value">${currentCorpus}</span>
-                </div>
-                <div class="debug-item">
-                    <span class="debug-label">Model:</span>
-                    <span class="debug-value">${currentModel || 'N/A'}</span>
-                </div>
-                <div class="debug-item">
-                    <span class="debug-label">Chroma:</span>
-                    <span class="debug-value">${config.rag_config.use_chroma ? 'ON' : 'OFF'}</span>
-                </div>
-                <div class="debug-item">
-                    <span class="debug-label">Hybrid:</span>
-                    <span class="debug-value">${config.rag_config.hybrid_enabled ? 'ON' : 'OFF'}</span>
-                </div>
-            `;
-        }
+        addMessage('user', query, false);
+        conversationHistory.push({ role: 'user', content: query });
+        trimHistory();
 
-        // Inspect corpus
-        async function inspectCorpus() {
-            try {
-                const response = await fetch(`${API_BASE}/corpus/${currentCorpus}/info`);
-                const data = await response.json();
-                
-                const statsResponse = await fetch(`${API_BASE}/debug/stats?corpus=${currentCorpus}`);
-                const stats = await statsResponse.json();
-                
-                addMessage(
-                    `Corpus: ${data.name}\n\nStatistics:\n${JSON.stringify(stats, null, 2)}`,
-                    'assistant'
-                );
-            } catch (error) {
-                addMessage(`Error inspecting corpus: ${error.message}`, 'assistant');
-            }
-        }
+        isLoading = true;
+        sendBtn.disabled = true;
+        const loadingEl = addLoading();
 
-        // ========================================================================
-        // CITATION FUNCTIONS
-        // ========================================================================
-        
-        /**
-         * Parse citations from answer text and create clickable superscripts
-         */
-        function parseCitations(answer, citations) {
-            if (!citations || citations.length === 0) {
-                return answer;
-            }
-            
-            let parsedAnswer = answer;
-            
-            // Pattern 1: Match [1], [2], [1,2,3], [1, 2, 3]
-            const numberPattern = /\[(\d+(?:,\s*\d+)*)\]/g;
-            parsedAnswer = parsedAnswer.replace(numberPattern, (match, numbers) => {
-                const nums = numbers.split(',').map(n => n.trim());
-                const links = nums.map(num => 
-                    `<a href="#footnote-${num}" class="citation-ref">[${num}]</a>`
-                ).join('');
-                return links;
-            });
-            
-            // Pattern 2: Match [Source 1], [Source 2]
-            const sourcePattern = /\[Source\s+(\d+)\]/gi;
-            parsedAnswer = parsedAnswer.replace(sourcePattern, (match, number) => {
-                return `<a href="#footnote-${number}" class="citation-ref">[${number}]</a>`;
-            });
-            
-            return parsedAnswer;
-        }
+        try {
+            const body = {
+                query,
+                corpus: currentCorpus,
+                top_k: parseInt(topKInput.value) || 5,
+                temperature: parseFloat(tempInput.value) || 0.3,
+                conversation_history: conversationHistory.length > 1 ? conversationHistory.slice(0, -1) : null
+            };
 
-        /**
-         * Render footnotes section
-         */
-        function renderFootnotes(citations) {
-            if (!citations || citations.length === 0) {
-                return '';
-            }
-            
-            let footnotesHTML = `
-                <div class="footnotes-section">
-                    <div class="footnotes-title">References</div>
-            `;
-            
-            citations.forEach(citation => {
-                const fileName = citation.source.split('/').pop();
-                const pageInfo = citation.page ? `<span class="footnote-page">Page ${citation.page}</span>` : '';
-                
-                footnotesHTML += `
-                    <div class="footnote-item" id="footnote-${citation.index}">
-                        <span class="footnote-number">[${citation.index}]</span>
-                        <span class="footnote-source">${fileName}</span>
-                        ${pageInfo}
-                    </div>
-                `;
-            });
-            
-            footnotesHTML += '</div>';
-            return footnotesHTML;
-        }
-
-        // ========================================================================
-        // END CITATION FUNCTIONS
-        // ========================================================================
-
-        // Event Listeners
-        sendButton.addEventListener('click', sendMessage);
-        
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = chatInput.scrollHeight + 'px';
-        });
-
-        modelSelect.addEventListener('change', (e) => {
-            currentModel = e.target.value;
-        });
-
-        corpusSelect.addEventListener('change', (e) => {
-            currentCorpus = e.target.value;
-            document.getElementById('chatTitle').textContent = `Querying: ${currentCorpus}`;
-            updatePlaceholder();
-        });
-
-        document.getElementById('toggleDebug').addEventListener('click', () => {
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-        });
-
-        document.getElementById('inspectCorpusBtn').addEventListener('click', inspectCorpus);
-
-        document.getElementById('addFileBtn').addEventListener('click', () => {
-            uploadModal.classList.add('active');
-        });
-
-        document.getElementById('cancelUpload').addEventListener('click', () => {
-            uploadModal.classList.remove('active');
-            selectedFile = null;
-            document.getElementById('confirmUpload').disabled = true;
-        });
-
-        dropZone.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            selectedFile = e.dataTransfer.files[0];
-            document.getElementById('confirmUpload').disabled = false;
-            document.getElementById('uploadStatus').textContent = `Selected: ${selectedFile.name}`;
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            selectedFile = e.target.files[0];
-            document.getElementById('confirmUpload').disabled = false;
-            document.getElementById('uploadStatus').textContent = `Selected: ${selectedFile.name}`;
-        });
-
-        /* ============================================================================
-   PART 4: Initialization - Add to your existing initialization code
-   ============================================================================ */
-
-    // Initialize context indicator on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            updateContextIndicator();
-
-            // Optional: Add Enter key support for sending messages
-            const queryInput = document.getElementById('queryInput');
-            if (queryInput) {
-                queryInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendQuery();
-                    }
-                });
-            }
-        });
-
-        document.getElementById('confirmUpload').addEventListener('click', async () => {
-            if (!selectedFile) return;
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
-            try {
-                const response = await fetch(`${API_BASE}/corpus/${currentCorpus}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                
-                uploadModal.classList.remove('active');
-                addMessage(`File upload: ${data.message || data.status}`, 'assistant');
-                
-                selectedFile = null;
-                document.getElementById('confirmUpload').disabled = true;
-                document.getElementById('uploadStatus').textContent = '';
-            } catch (error) {
-                addMessage(`Upload error: ${error.message}`, 'assistant');
-            }
-        });
-
-        document.getElementById('createCorpusBtn').addEventListener('click', async () => {
-            const name = prompt('Enter new corpus name:');
-            if (!name) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/corpus/create?name=${encodeURIComponent(name)}`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-                addMessage(`Corpus creation: ${data.message || data.status}`, 'assistant');
-                
-                await loadCorpora();
-            } catch (error) {
-                addMessage(`Error creating corpus: ${error.message}`, 'assistant');
-            }
-        });
-
-        // Initialize app
-        init();
-        /* ============================================================================
-   PART 2: JavaScript - Add to <script> section
-   ============================================================================ */
-
-        // Conversation memory storage
-        let conversationHistory = [];
-
-        // Maximum conversation turns to keep (configurable)
-        const MAX_CONVERSATION_TURNS = 10;
-
-        /**
-         * Add message to conversation history
-         */
-        function addToConversation(role, content) {
-            conversationHistory.push({
-                role: role,
-                content: content
+            const res = await fetch(`${API}/ask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
             });
 
-            // Keep only last N turns (N*2 messages since each turn has user + assistant)
-            if (conversationHistory.length > MAX_CONVERSATION_TURNS * 2) {
-                conversationHistory = conversationHistory.slice(-MAX_CONVERSATION_TURNS * 2);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            loadingEl.remove();
+
+            let html = escapeHtml(data.answer);
+            if (data.citations && data.citations.length) {
+                html = parseCitations(html, data.citations);
+                html += renderFootnotes(data.citations);
             }
 
-            updateContextIndicator();
+            addMessage('assistant', html, true);
+            conversationHistory.push({ role: 'assistant', content: data.answer });
+            trimHistory();
+            updateConvMeta();
+
+        } catch (err) {
+            loadingEl.remove();
+            addMessage('assistant', `<em style="color:var(--danger)">Error: ${err.message}</em>`, true);
+        } finally {
+            isLoading = false;
+            sendBtn.disabled = !currentCorpus;
         }
+    }
 
-        /**
-         * Clear conversation history
-         */
-        function clearConversation() {
-            conversationHistory = [];
-            updateContextIndicator();
-            showStatus('Conversation cleared', 'success');
+    // ── Messages ───────────────────────────────────────────────────
+    function hideEmpty() {
+        if (emptyState && emptyState.parentNode) emptyState.remove();
+    }
+
+    function addMessage(role, content, isHtml) {
+        const div = document.createElement('div');
+        div.className = `message`;
+
+        const avatarIcon = role === 'user'
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+
+        div.innerHTML = `
+            <div class="avatar ${role}">${avatarIcon}</div>
+            <div class="bubble ${role}">
+                <div class="text">${isHtml ? content : escapeHtml(content)}</div>
+            </div>`;
+
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+    }
+
+    function addLoading() {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `
+            <div class="avatar assistant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <div class="bubble assistant">
+                <div class="loading-dots"><span></span><span></span><span></span></div>
+            </div>`;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+    }
+
+    // ── Citations ──────────────────────────────────────────────────
+    function parseCitations(html, citations) {
+        // [Source N] and [source N]
+        html = html.replace(/\[(?:Source\s+|source\s+)(\d+)\]/gi,
+            (_, n) => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`);
+        // [1], [1,2], [1, 2]
+        html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_, nums) =>
+            nums.split(',').map(n => n.trim())
+                .map(n => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`)
+                .join(''));
+        return html;
+    }
+
+    function renderFootnotes(citations) {
+        if (!citations || !citations.length) return '';
+        const items = citations.map(c => {
+            const name = c.source.split('/').pop();
+            return `<div class="footnote" id="fn-${c.index}">
+                <span class="footnote-num">[${c.index}]</span>
+                <span class="footnote-name">${name}</span>
+            </div>`;
+        }).join('');
+        return `<div class="footnotes"><div class="footnotes-label">References</div>${items}</div>`;
+    }
+
+    // ── Conversation memory ────────────────────────────────────────
+    function trimHistory() {
+        if (conversationHistory.length > MAX_TURNS * 2)
+            conversationHistory = conversationHistory.slice(-MAX_TURNS * 2);
+    }
+
+    function updateConvMeta() {
+        const turns = Math.floor(conversationHistory.length / 2);
+        convMeta.innerHTML = turns > 0
+            ? `<span>${turns} turn${turns > 1 ? 's' : ''}</span> in memory`
+            : 'No context in memory';
+    }
+
+    function clearConversation() {
+        conversationHistory = [];
+        updateConvMeta();
+        // Clear messages and restore empty state
+        messagesEl.innerHTML = '';
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.id = 'emptyState';
+        empty.innerHTML = `
+            <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+            </div>
+            <div class="empty-title">Conversation cleared</div>
+            <div class="empty-hint">Ask a new question to start a fresh conversation.</div>
+            <div class="latency-note">⏱ First query may take 20–50 s while the model loads.</div>`;
+        messagesEl.appendChild(empty);
+    }
+
+    // ── Corpus inspect ─────────────────────────────────────────────
+    async function inspectCorpus() {
+        if (!currentCorpus) return;
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/info`);
+            const data = await res.json();
+            hideEmpty();
+            const html = `
+                <strong>Corpus: ${data.name}</strong><br><br>
+                Documents: ${data.document_count ?? '—'}<br>
+                Chunks: ${data.chunk_count ?? '—'}<br>
+                Size: ${data.size_bytes ? (data.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—'}`;
+            addMessage('assistant', html, true);
+        } catch (err) {
+            addMessage('assistant', `Error: ${err.message}`, false);
         }
+    }
 
-        /**
-         * Update the context indicator in UI
-         */
-        function updateContextIndicator() {
-            const indicator = document.getElementById('contextIndicator');
-            if (!indicator) return;
-
-            const turns = Math.floor(conversationHistory.length / 2);
-
-            if (turns > 0) {
-                indicator.textContent = `${turns} turn${turns > 1 ? 's' : ''} in memory`;
-                indicator.classList.add('active');
-            } else {
-                indicator.textContent = 'No context';
-                indicator.classList.remove('active');
-            }
-        }
-
-        /**
-         * Parse citations from answer text and create clickable superscripts
-         */
-        function parseCitations(answer, citations) {
-            if (!citations || citations.length === 0) {
-                return answer;
-            }
-
-            let parsedAnswer = answer;
-
-            // Pattern 1: Match [1], [2], [1,2,3]
-            const numberPattern = /\[(\d+(?:,\s*\d+)*)\]/g;
-            parsedAnswer = parsedAnswer.replace(numberPattern, (match, numbers) => {
-                const nums = numbers.split(',').map(n => n.trim());
-                const links = nums.map(num =>
-                    `<a href="#footnote-${num}" class="citation-ref">[${num}]</a>`
-                ).join('');
-                return links;
+    // ── Corpus create ──────────────────────────────────────────────
+    async function createCorpus() {
+        const name = prompt('New corpus name:');
+        if (!name) return;
+        try {
+            const res = await fetch(`${API}/corpus/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
             });
+            const data = await res.json();
+            await loadCorpora();
+            corpusSelect.value = name;
+            setCorpus(name);
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        }
+    }
 
-    // Pattern 2: Match [Source 1], [Source 2]
-    const sourcePattern = /\[Source\s+(\d+)\]/gi;
-    parsedAnswer = parsedAnswer.replace(sourcePattern, (match, number) => {
-        return `<a href="#footnote-${number}" class="citation-ref">[${number}]</a>`;
+    // ── File upload ────────────────────────────────────────────────
+    function openUpload() { uploadModal.classList.add('open'); }
+    function closeUpload() {
+        uploadModal.classList.remove('open');
+        selectedFile = null;
+        document.getElementById('uploadStatus').textContent = '';
+        document.getElementById('confirmUpload').disabled = true;
+        fileInput.value = '';
+    }
+
+    function selectFile(file) {
+        selectedFile = file;
+        document.getElementById('uploadStatus').textContent = `Selected: ${file.name}`;
+        document.getElementById('confirmUpload').disabled = false;
+    }
+
+    async function uploadFile() {
+        if (!selectedFile || !currentCorpus) return;
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
+            const data = await res.json();
+            closeUpload();
+            hideEmpty();
+            addMessage('assistant', `File uploaded: <strong>${selectedFile.name}</strong><br><small style="color:var(--text-dim)">Run ingest to process it.</small>`, true);
+        } catch (err) {
+            document.getElementById('uploadStatus').textContent = `Error: ${err.message}`;
+        }
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // ── Event listeners ────────────────────────────────────────────
+    sendBtn.addEventListener('click', sendMessage);
+
+    chatInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    return parsedAnswer;
-}
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    });
 
-        /**
-         * Render footnotes section
-         */
-        function renderFootnotes(citations) {
-            if (!citations || citations.length === 0) {
-                return '';
-            }
+    corpusSelect.addEventListener('change', e => setCorpus(e.target.value));
 
-            let footnotesHTML = `
-                <div class="footnotes-section">
-                    <div class="footnotes-title">References</div>
-            `;
+    document.getElementById('addFileBtn').addEventListener('click', openUpload);
+    document.getElementById('inspectBtn').addEventListener('click', inspectCorpus);
+    document.getElementById('newCorpusBtn').addEventListener('click', createCorpus);
+    document.getElementById('clearBtn').addEventListener('click', clearConversation);
 
-            citations.forEach(citation => {
-                const fileName = citation.source.split('/').pop();
-                const pageInfo = citation.page ? `<span class="footnote-page">Page ${citation.page}</span>` : '';
-                const link = `<a href="#" class="footnote-link" onclick="openSource('${citation.source}', ${citation.page}); return false;">↗ Open</a>`;
+    document.getElementById('cancelUpload').addEventListener('click', closeUpload);
+    document.getElementById('confirmUpload').addEventListener('click', uploadFile);
 
-                footnotesHTML += `
-                    <div class="footnote-item" id="footnote-${citation.index}">
-                        <span class="footnote-number">[${citation.index}]</span>
-                        <span class="footnote-source">${fileName}</span>
-                        ${pageInfo}
-                        ${link}
-                    </div>
-                `;
-            });
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) selectFile(e.target.files[0]); });
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('over');
+        if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+    });
 
-            footnotesHTML += '</div>';
-            return footnotesHTML;
-        }
-
-        /**
-         * Open source document (placeholder - implement based on your file storage)
-         */
-        function openSource(sourcePath, page) {
-            // TODO: Implement based on your file storage system
-            // Options:
-            // 1. If files are web-accessible: window.open(url, '_blank')
-            // 2. If using API: fetch file and display in modal
-            // 3. If local files: show path to user
-
-            console.log('Opening source:', sourcePath, 'page:', page);
-            alert(`Would open: ${sourcePath}${page ? ` (page ${page})` : ''}\n\nImplement file serving to enable this feature.`);
-        }
-
-        /**
-         * Enhanced sendQuery function with citations and conversation memory
-         * REPLACE your existing sendQuery() function with this
-         */
-        async function sendQuery() {
-
-            console.log('sendQuery called!');  // ADD THIS LINE
-            console.log('parseCitations exists?', typeof parseCitations);  // ADD THIS LINE
-
-            const queryInput = document.getElementById('queryInput');
-            const chatMessages = document.getElementById('chatMessages');
-            const query = queryInput.value.trim();
-
-            if (!query) return;
-
-            // Add user message to UI
-            appendMessage('user', query);
-            queryInput.value = '';
-
-            // Add to conversation history
-            addToConversation('user', query);
-
-            // Show loading state
-            const loadingId = Date.now();
-            appendMessage('assistant', '...', loadingId);
-
-            try {
-                const corpus = document.getElementById('corpusSelect').value;
-                const topK = parseInt(document.getElementById('topK').value) || 5;
-
-                // Build request with conversation history
-                const requestBody = {
-                    query: query,
-                    corpus: corpus,
-                    top_k: topK,
-                    conversation_history: conversationHistory.length > 0 ? conversationHistory : null
-                };
-
-                const response = await fetch('http://localhost:8000/ask', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                // Remove loading message
-                document.getElementById(`msg-${loadingId}`)?.remove();
-
-                // Parse citations if present
-                let answerHTML = data.answer;
-                let footnotesHTML = '';
-
-        if (data.has_citations && data.citations) {
-            // DEBUG LOGS - Add these FIRST
-            console.log('BEFORE parsing:', data.answer);
-
-            // Then do the parsing
-            answerHTML = parseCitations(data.answer, data.citations);
-            console.log('AFTER parsing:', answerHTML);
-
-            footnotesHTML = renderFootnotes(data.citations);
-            console.log('Footnotes HTML:', footnotesHTML);
-        }
-
-                // Add assistant message with citations
-                appendMessage('assistant', answerHTML + footnotesHTML);
-                console.log('Final HTML being appended:', answerHTML + footnotesHTML);
-
-                // Add to conversation history
-                addToConversation('assistant', data.answer);
-
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById(`msg-${loadingId}`)?.remove();
-                appendMessage('assistant', `Error: ${error.message}`, null, true);
-            }
-        }
-
-        /**
-         * Enhanced appendMessage to handle HTML content
-         * UPDATE your existing appendMessage() function
-         */
-        function appendMessage(role, content, id = null, isError = false) {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}-message${isError ? ' error-message' : ''}`;
-            if (id) messageDiv.id = `msg-${id}`;
-
-            // Use innerHTML for assistant messages to render citations
-            if (role === 'assistant') {
-                messageDiv.innerHTML = content;
-            } else {
-                messageDiv.textContent = content;
-            }
-
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-    </script>
+    // ── Boot ───────────────────────────────────────────────────────
+    init();
+</script>
 </body>
 </html>
