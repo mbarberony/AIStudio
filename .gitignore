@@ -14,3 +14,4 @@ data/conversations/
 !data/demo/
 !data/demo/**
 data/demo/reports/
+data/demo/.DS_Store
