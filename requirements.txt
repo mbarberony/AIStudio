@@ -1,6 +1,8 @@
 # Core web & API
 fastapi
 uvicorn[standard]
+ollama
+python-multipart
 
 # (Debug) JSONL-based pipeline uses lexical retrieval.
 # (Next step) Chroma + embeddings:
