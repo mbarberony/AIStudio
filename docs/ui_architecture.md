@@ -1,6 +1,6 @@
 # UI Architecture
 
-> AIStudio / MBCrew — target state interface design  
+> AIStudio / urCrew — target state interface design  
 > Left-bar navigation model. Incremental implementation against a stable target.
 
 ---
