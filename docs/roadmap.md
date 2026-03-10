@@ -1,6 +1,6 @@
 # Roadmap
 
-> AIStudio / MBCrew — phased delivery plan  
+> AIStudio — phased delivery plan  
 > Each release is a coherent, usable product. Nothing is a stepping stone 
 > to something else — every version ships real value.
 
@@ -15,7 +15,7 @@
 - **v1.0** — validated at scale, one-click install, automated tests. 
   Suitable for open-source release and resume reference.
 - **v2.0** — multi-user, teams, shared corpora, MCP integrations. 
-  MBCrew / Stratum layer begins here.
+  urCrew layer begins here — see urcrew.ai.
 
 ---
 
@@ -120,7 +120,7 @@
 
 ---
 
-## v2.0 — MBCrew / Stratum Layer
+## v2.0 — Multi-User & urCrew Foundation
 
 **Theme:** Multi-user orchestration. AIStudio becomes the substrate for 
 a personal AI operating system.
@@ -134,7 +134,7 @@ a personal AI operating system.
 - [ ] Shared conversations — multiple participants in one thread
 - [ ] Audit log — who queried what, when
 
-### MBCrew / Stratum Agent Layer
+### Agent Orchestration Layer (urCrew)
 - [ ] Agent entity — named thread with mandate, constraints, reporting cadence
 - [ ] Chief of Staff (CoS) agent — maintains context graph across all threads
 - [ ] StatePacket protocol — structured JSON state sync between agents and CoS
@@ -158,18 +158,18 @@ a personal AI operating system.
 
 ## Cross-Cutting Concerns (All Releases)
 
-### AIStudio ↔ MBCrew Synergy
+### AIStudio ↔ urCrew Synergy
 Every architectural decision in AIStudio is evaluated for reusability 
-in the MBCrew/Stratum layer:
+in the urCrew layer:
 
-| AIStudio Component | MBCrew Reuse |
+| AIStudio Component | urCrew Reuse |
 |---|---|
 | LLM abstraction (Ollama + LiteLLM) | Agent LLM routing |
 | Conversation JSON schema | Agent thread / StatePacket schema |
 | Multi-model support | Per-agent model assignment |
 | Corpus / RAG | Agent long-term memory |
 | FastAPI backend | Agent API endpoints |
-| Auth / users / teams | MBCrew team structure |
+| Auth / users / teams | urCrew team structure |
 | Observability | Agent state transition logging |
 
 ### Resume Narrative
@@ -177,7 +177,7 @@ The arc is deliberate:
 
 1. **AIStudio Alpha** — hands-on RAG, local LLM infrastructure, production patterns
 2. **AIStudio v1.0** — validated at scale, open-source, installer
-3. **MBCrew v2.0** — multi-agent orchestration, event-driven, role-based prompting
+3. **urCrew v2.0** — multi-agent orchestration, event-driven, role-based prompting
 4. **Self-referential** — used the tools being built to manage the job search 
    that required the tools in the first place
 
@@ -189,8 +189,8 @@ The arc is deliberate:
 Alpha (now)
   └── Beta
         └── v1.0
-              └── v2.0 (MBCrew layer)
-                    └── Stratum (open-source / commercial)
+              └── v2.0 (urCrew layer)
+                    └── urCrew (open-source / commercial)
 ```
 
 Each layer is independently useful. None is a dead end.
