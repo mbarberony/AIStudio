@@ -558,8 +558,10 @@ async def get_models() -> List[ModelInfo]:
                 
                 if not full_name:
                     continue
-                
-                display_name = full_name.split(':')[0].title()
+
+                # Show full name with tag for clarity (e.g. "llama3.1:8b" → "Llama3.1:8b")
+                # Capitalise only the first letter to avoid "Llama3.1" vs "llama3.1" confusion
+                display_name = full_name[0].upper() + full_name[1:]
                 available_models.append(ModelInfo(
                     id=full_name,
                     name=display_name,

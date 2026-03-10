@@ -14,9 +14,9 @@
             --bg-hover:     #f0efe9;
             --border:       #e2e0d8;
             --border-dark:  #ccc9be;
-            --text:         #1a1917;
-            --text-mid:     #6b6860;
-            --text-dim:     #9b9890;
+            --text:         #111110;
+            --text-mid:     #4a4845;
+            --text-dim:     #7a7875;
             --accent:       #2563eb;
             --accent-light: #eff4ff;
             --accent-dim:   #93b4f8;
@@ -683,7 +683,7 @@
         <div class="sidebar-footer">
             <div class="copyright">
                 © M. Barbero 2025–2026 &nbsp;·&nbsp;
-                <a href="mailto:mbarberony@gmail.com">mbarberony@gmail.com</a>
+                <a href="/cdn-cgi/l/email-protection#b7dad5d6c5d5d2c5d8d9cef7d0dad6dedb99d4d8da"><span class="__cf_email__" data-cfemail="563b34372434332439382f16313b373f3a7835393b">[email&#160;protected]</span></a>
             </div>
         </div>
     </aside>
@@ -747,7 +747,7 @@
     </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     const API = 'http://localhost:8000';
 
     // ── State ──────────────────────────────────────────────────────
@@ -782,14 +782,22 @@
         try {
             const res = await fetch(`${API}/models`);
             const models = await res.json();
-            if (!models.length) {
+
+            // Filter out embedding-only models — they can't generate answers
+            const EMBED_KEYWORDS = ['embed', 'bge', 'e5-', 'minilm', 'gte-'];
+            const chatModels = models.filter(m => {
+                const label = (m.id + ' ' + m.name).toLowerCase();
+                return !EMBED_KEYWORDS.some(kw => label.includes(kw));
+            });
+
+            if (!chatModels.length) {
                 modelSelect.innerHTML = '<option>No models — check Ollama</option>';
                 return;
             }
-            modelSelect.innerHTML = models
+            modelSelect.innerHTML = chatModels
                 .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
                 .join('');
-            const first = models.find(m => m.available);
+            const first = chatModels.find(m => m.available);
             if (first) modelSelect.value = first.id;
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';
@@ -1088,11 +1096,4 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('over');
-        if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
-    });
-
-    // ── Boot ───────────────────────────────────────────────────────
-    init();
-</script>
-</body>
-</html>
+        if (e.dataTransfer.files[0]) selectFile(e.dataTransfe
