@@ -1,101 +1,13 @@
-###############################################################################
-# AIStudio — Project-Specific .gitignore
-# Focused on Python, PyCharm, local LLM development, RAG pipelines,
-# agentic workflows, and privacy-preserving experimentation.
-###############################################################################
-
-###############
-# OS Artifacts
-###############
+README (1).md
 .DS_Store
-Thumbs.db
-
-###########################
-# PyCharm / JetBrains IDE
-###########################
-# Project-specific metadata should not be committed.
-.idea/
-
-###################
-# Python Artifacts
-###################
+**/.DS_Store
 __pycache__/
 *.py[cod]
-*.pyd
-*.so
-*.dylib
-*.egg-info/
-.eggs/
-build/
-dist/
-pip-wheel-metadata/
-*.egg
-*.whl
-
-######################
-# Virtual Environments
-######################
-# Exclude all local/desktop-style virtualenvs.
-venv/
 .venv/
-env/
-.python-version
-
-######################
-# Package / Tool Cache
-######################
-.mypy_cache/
-.pytest_cache/
-.tox/
-.coverage
-coverage.xml
-htmlcov/
-
-###################
-# Jupyter
-###################
-.ipynb_checkpoints/
-
-###################################
-# Local Data, Embeddings, & Indexes
-###################################
-# Ignore all local data artifacts
-data/**
-
-# Allow small, fake, or sample data to be committed
-!data/raw_samples/
-!data/raw_samples/**
-
-# Local vector-store persistence (Chroma DB, LanceDB, etc.)
-../scr/AIStudio/local_llm_bot/data/chroma_db/
-../scr/AIStudio/local_llm_bot/data/lancedb/
-../scr/AIStudio/local_llm_bot/data/vector_store/
-
-#############################
-# Logs & Observability Output
-#############################
-# RAG usage logs, agent session logs, profiling output, etc.
-../scr/AIStudio/local_llm_bot/logs/
-../scr/AIStudio/agentic_lab/logs/
-logs/
-*.log
-*.tmp
-
-############################
-# Secrets / Config Overrides
-############################
-# Environment variables, tokens, or local overrides.
 .env
-.env.*
-*.env
-*.secret
-secrets.json
-config.local.*
-credentials.*
-
-###################################
-# Docker, Containers & Build Output
-###################################
-# Docker build cache and local artifacts
-docker/*-cache/
-*.pid
+data/corpora/
+data/conversations/
+**/chroma/
+.vscode/
+.idea/
+*.log
