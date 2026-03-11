@@ -668,14 +668,13 @@ def main():
     total_failed = sum(s.failed for s in all_suites)
     total = total_passed + total_failed
 
-    print("\n" + "=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
+    print()
+    print("===> SUMMARY Phase 3")
     for s in all_suites:
         status = "✓" if s.failed == 0 else "✗"
         print(f"  {status} {s.name}: {s.passed}/{s.passed + s.failed}")
     print()
-    print(f"  Total: {total_passed}/{total} passed", end="")
+    print(f"===> Total: {total_passed}/{total} passed", end="")
     if total_failed:
         print(f"  ← {total_failed} FAILED")
     else:
