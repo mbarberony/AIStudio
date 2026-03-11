@@ -1113,4 +1113,10 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('over');
-        if (e.dataTransfer.files[0]) selectFile(e.dataTransfe
+        if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+    });
+
+    init();
+</script>
+</body>
+</html>
