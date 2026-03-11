@@ -898,7 +898,13 @@
 
             loadingEl.remove();
 
-            let html = escapeHtml(data.answer);
+            // Convert newlines to paragraph breaks for readable formatting
+            let html = escapeHtml(data.answer)
+                .split(/\n\n+/)
+                .map(p => p.trim())
+                .filter(p => p)
+                .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                .join('');
             if (data.citations && data.citations.length) {
                 html = parseCitations(html, data.citations);
                 html += renderFootnotes(data.citations);
@@ -959,14 +965,26 @@
 
     // ── Citations ──────────────────────────────────────────────────
     function parseCitations(html, citations) {
-        // [Source N] and [source N]
+        // Build a set of valid citation indices from what the API actually returned
+        const validIdx = new Set(citations.map(c => String(c.index)));
+
+        // [Source N] and [source N] — only linkify if index is valid
         html = html.replace(/\[(?:Source\s+|source\s+)(\d+)\]/gi,
-            (_, n) => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`);
-        // [1], [1,2], [1, 2]
-        html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_, nums) =>
-            nums.split(',').map(n => n.trim())
-                .map(n => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`)
-                .join(''));
+            (match, n) => validIdx.has(n)
+                ? `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`
+                : match);
+
+        // [1], [1,2], [1, 2] — only linkify valid indices
+        html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (match, nums) => {
+            const parts = nums.split(',').map(n => n.trim());
+            const linked = parts.map(n =>
+                validIdx.has(n)
+                    ? `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`
+                    : `[${n}]`
+            );
+            // If all parts were invalid, return original match unchanged
+            return linked.join('');
+        });
         return html;
     }
 

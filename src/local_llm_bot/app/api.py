@@ -65,11 +65,36 @@ def generate_answer_with_citations(
         }
     
     # Build context with numbered sources
-    context_parts = []
-    for i, doc in enumerate(docs, 1):
-        context_parts.append(f"[Source {i}] {doc.source}\n{doc.content}")
+    # Deduplicate by source file — merge chunks from same doc into one numbered source
+    seen_sources: dict[str, int] = {}
+    source_chunks: dict[int, list[str]] = {}
+    doc_to_index: dict[int, int] = {}  # original doc position -> source index
     
+    for i, doc in enumerate(docs):
+        src = doc.source
+        if src not in seen_sources:
+            idx = len(seen_sources) + 1
+            seen_sources[src] = idx
+            source_chunks[idx] = []
+        idx = seen_sources[src]
+        source_chunks[idx].append(doc.content)
+        doc_to_index[i] = idx
+
+    context_parts = []
+    for src, idx in seen_sources.items():
+        combined = "\n\n".join(source_chunks[idx])
+        context_parts.append(f"[{idx}] {src}\n{combined}")
+
     context = "\n\n".join(context_parts)
+    
+    # Remap docs list to deduplicated unique sources for citation building
+    unique_docs = []
+    seen = set()
+    for doc in docs:
+        if doc.source not in seen:
+            seen.add(doc.source)
+            unique_docs.append(doc)
+    docs = unique_docs
     
     # Enhanced system prompt with citation instructions
     system = (
@@ -78,7 +103,7 @@ def generate_answer_with_citations(
         "IMPORTANT: When you use information from a source, cite it using [1], [2], etc.\n"
         "The number should match the source number in the context.\n"
         "You can cite multiple sources like [1,2] or [1][2].\n"
-        "Always cite your sources - every factual claim should have a citation."
+        "Always cite your sources - every factual claim should have a citation. ""Cite sources using the exact numbers shown in brackets at the start of each source, e.g. [1], [2]. Never write [Source N]. ""Do NOT append a References or Sources section at the end of your answer — citations are rendered separately."
     )
     
     # Build prompt with conversation history
@@ -98,11 +123,13 @@ def generate_answer_with_citations(
     citations = []
     cited_indices = set()
     
+    # Normalize [Source N] -> [N] before extracting
+    answer = re.sub(r'\[Source\s+(\d+)\]', r'[\1]', answer, flags=re.IGNORECASE)
     # Find all citation patterns: [1], [2,3], [1][2], etc.
-    citation_patterns = re.findall(r'\[(\d+(?:,\d+)*)\]', answer)
+    citation_patterns = re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer)
     
     for pattern in citation_patterns:
-        for idx_str in pattern.split(','):
+        for idx_str in re.split(r',\s*', pattern):
             idx = int(idx_str.strip())
             if idx > 0 and idx <= len(docs) and idx not in cited_indices:
                 doc = docs[idx - 1]
