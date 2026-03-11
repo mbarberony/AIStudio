@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import shutil
@@ -426,6 +427,24 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     }
 
 
+
+async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
+    """Run ingest as a background task after upload."""
+    import sys, os
+    cmd = [sys.executable, "-m", "local_llm_bot.app.ingest",
+           "--corpus", corpus_name, "--root", str(uploads_dir)]
+    env = {**os.environ, "PYTHONPATH": "src"}
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0:
+        print(f"[ingest] Auto-ingest for '{corpus_name}' complete.")
+    else:
+        print(f"[ingest] Auto-ingest failed:\n{stderr.decode()}")
+
 @app.post("/corpus/{corpus_name}/upload")
 async def upload_to_corpus(
     corpus_name: str,
@@ -457,15 +476,17 @@ async def upload_to_corpus(
             f.write(content)
         
         file_size = len(content)
-        
+
+        # Auto-ingest in background
+        asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir))
+
         return {
             "status": "success",
-            "message": f"File uploaded successfully. Run ingest to process it.",
+            "message": f"File uploaded and ingestion started.",
             "filename": file.filename,
             "file_path": str(file_path),
             "size_bytes": file_size,
             "content_type": file.content_type,
-            "next_steps": f"Run: python -m local_llm_bot.app.ingest --corpus {corpus_name} --root {uploads_dir}"
         }
     except Exception as e:
         raise HTTPException(
