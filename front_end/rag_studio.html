@@ -792,6 +792,12 @@
                 return !EMBED_KEYWORDS.some(kw => label.includes(kw));
             });
 
+            // Sort by parameter count ascending (8b before 70b)
+            chatModels.sort((a, b) => {
+                const size = m => { const match = m.id.match(/(\d+)b/i); return match ? parseInt(match[1]) : 999; };
+                return size(a) - size(b);
+            });
+
             if (!chatModels.length) {
                 modelSelect.innerHTML = '<option>No models — check Ollama</option>';
                 return;
