@@ -132,7 +132,7 @@ ollama pull llama3.1:70b
 ```
 
 The 70b model delivers noticeably better answer quality and reasoning. On an 
-M4 Max MacBook Pro with 128GB, warm query latency is 9–17 seconds.
+M4 Max MacBook Pro with 128GB, warm query latency is ~7s once the model is loaded into unified memory — identical to 8b. See BENCHMARK_FINDINGS.md.
 
 ---
 
@@ -249,7 +249,7 @@ after adding new documents.
 With your virtual environment active:
 
 ```bash
-PYTHONPATH=src python -m uvicorn src.local_llm_bot.app.api:app --reload --port 8000
+OLLAMA_KEEP_ALIVE=30m PYTHONPATH=src uvicorn local_llm_bot.app.api:app --reload --port 8000
 ```
 
 Leave this terminal running. Open a new tab (⌘ T), activate the environment, 
@@ -321,7 +321,7 @@ The backend requires a terminal tab each session.
 `source ~/Developer/AIStudio/.venv/bin/activate`.
 
 **`ModuleNotFoundError` on backend start** — make sure you're using 
-`PYTHONPATH=src` in front of the uvicorn command.
+`PYTHONPATH=src` in front of the uvicorn command. Full command: `OLLAMA_KEEP_ALIVE=30m PYTHONPATH=src uvicorn local_llm_bot.app.api:app --reload --port 8000`
 
 **`ollama serve` — "address already in use"** — Ollama is already running 
 as a background service. This is correct; proceed normally.
