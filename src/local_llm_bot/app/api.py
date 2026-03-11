@@ -8,6 +8,7 @@ from typing import Any, List, Dict, Optional
 from dataclasses import dataclass
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -94,28 +95,35 @@ def generate_answer_with_citations(
     # Generate answer
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
     
-    # Extract citations from answer
+    # Extract citations from answer — handle all formats:
+    # [1], [1,2], [1][2], [Source 1], [Source 1, Source 2]
     citations = []
     cited_indices = set()
-    
-    # Find all citation patterns: [1], [2,3], [1][2], etc.
-    citation_patterns = re.findall(r'\[(\d+(?:,\d+)*)\]', answer)
-    
-    for pattern in citation_patterns:
-        for idx_str in pattern.split(','):
-            idx = int(idx_str.strip())
-            if idx > 0 and idx <= len(docs) and idx not in cited_indices:
-                doc = docs[idx - 1]
-                page = extract_page_number(doc.source, doc.id)
-                
-                citations.append({
-                    "index": idx,
-                    "source": doc.source,
-                    "page": page,
-                    "chunk_id": doc.id,
-                    "score": float(doc.score)
-                })
-                cited_indices.add(idx)
+    raw_indices = []
+
+    # Pattern 1: [Source N] or [source N] (single or multi: [Source 1, Source 2])
+    for m in re.finditer(r'\[(?:Source\s+\d+(?:,\s*Source\s+\d+)*)\]', answer, re.IGNORECASE):
+        for num in re.findall(r'\d+', m.group(0)):
+            raw_indices.append(int(num))
+
+    # Pattern 2: [1], [1,2], [1, 2] — plain numeric
+    for m in re.finditer(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
+        for num in m.group(1).split(','):
+            raw_indices.append(int(num.strip()))
+
+    for idx in raw_indices:
+        if idx > 0 and idx <= len(docs) and idx not in cited_indices:
+            doc = docs[idx - 1]
+            page = extract_page_number(doc.source, doc.id)
+            citations.append({
+                "index": idx,
+                "source": doc.source,
+                "page": page,
+                "chunk_id": doc.id,
+                "score": float(doc.score),
+                "content": doc.content
+            })
+            cited_indices.add(idx)
     
     # Sort citations by index
     citations.sort(key=lambda c: c["index"])
@@ -153,6 +161,7 @@ class CitationResponse(BaseModel):
     page: int | None = None
     chunk_id: str | None = None
     score: float = 0.0
+    content: str | None = None  # chunk text for reference viewer
 
 
 class AskResponse(BaseModel):
@@ -199,6 +208,37 @@ def _require_corpus(corpus: str) -> None:
 def _get_repo_root() -> Path:
     """Get repository root directory"""
     return find_repo_root(Path(__file__))
+
+
+@app.get("/file")
+async def serve_file(path: str):
+    """Serve a source document file (PDF, DOCX, etc.) for the reference viewer.
+    Security: only serves files inside the repo's data directory."""
+    repo_root = _get_repo_root()
+    data_dir = (repo_root / "data").resolve()
+    requested = Path(path).resolve()
+
+    # Security: refuse anything outside the data directory
+    try:
+        requested.relative_to(data_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied: path outside data directory")
+
+    if not requested.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+
+    # Determine media type
+    suffix = requested.suffix.lower()
+    media_types = {
+        ".pdf":  "application/pdf",
+        ".txt":  "text/plain",
+        ".md":   "text/plain",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+    media_type = media_types.get(suffix, "application/octet-stream")
+    return FileResponse(path=requested, media_type=media_type, filename=requested.name)
 
 
 def _get_corpus_document_count(corpus_name: str) -> int:
