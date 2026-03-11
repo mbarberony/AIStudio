@@ -403,48 +403,6 @@
             padding: 4px 0;
         }
 
-        .bubble.assistant .text p {
-            margin-bottom: 10px;
-        }
-
-        .bubble.assistant .text p:last-child {
-            margin-bottom: 0;
-        }
-
-        .bubble.assistant .text ul,
-        .bubble.assistant .text ol {
-            margin: 8px 0 10px 20px;
-        }
-
-        .bubble.assistant .text li {
-            margin-bottom: 4px;
-            line-height: 1.6;
-        }
-
-        .copy-btn {
-            position: absolute;
-            top: 4px;
-            right: 0;
-            width: 26px;
-            height: 26px;
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-dim);
-            opacity: 0;
-            transition: all 0.15s;
-        }
-
-        .bubble.assistant:hover .copy-btn { opacity: 1; }
-        .copy-btn:hover { background: var(--bg-hover); color: var(--text); border-color: var(--border-dark); }
-        .copy-btn.copied { color: var(--success); border-color: var(--success); background: #f0fdf4; }
-
-        .bubble.assistant { position: relative; }
-
         /* Loading dots */
         .loading-dots {
             display: flex;
@@ -660,262 +618,6 @@
         .btn-primary:disabled { background: var(--border-dark); cursor: not-allowed; }
 
         #uploadStatus { font-size: 12px; color: var(--text-mid); margin-top: 6px; }
-
-        /* ── Reference Drawer ──────────────────────────────────────── */
-        .ref-drawer {
-            position: fixed;
-            top: 0;
-            right: -480px;
-            width: 460px;
-            height: 100vh;
-            background: var(--bg-panel);
-            border-left: 1px solid var(--border);
-            box-shadow: -4px 0 24px rgba(0,0,0,0.08);
-            z-index: 200;
-            display: flex;
-            flex-direction: column;
-            transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .ref-drawer.open { right: 0; }
-
-        .ref-drawer-header {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .ref-drawer-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .ref-drawer-badge {
-            background: var(--accent-light);
-            color: var(--accent);
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 10px;
-            border: 1px solid var(--accent-dim);
-        }
-
-        .ref-drawer-close {
-            width: 28px;
-            height: 28px;
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-dim);
-            transition: all 0.15s;
-        }
-
-        .ref-drawer-close:hover {
-            background: var(--bg-hover);
-            color: var(--text);
-        }
-
-        .ref-drawer-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .ref-card {
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-            transition: border-color 0.15s;
-        }
-
-        .ref-card:hover { border-color: var(--accent-dim); }
-
-        .view-full-btn {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--accent);
-            background: var(--accent-light);
-            border: 1px solid var(--accent-dim);
-            border-radius: 6px;
-            padding: 4px 10px;
-            cursor: pointer;
-            font-family: inherit;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            white-space: nowrap;
-            transition: all 0.15s;
-            flex-shrink: 0;
-        }
-
-        .view-full-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-
-        .ref-card-header {
-            padding: 10px 14px;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .ref-card-num {
-            width: 22px;
-            height: 22px;
-            background: var(--accent);
-            color: white;
-            border-radius: 5px;
-            font-size: 11px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .ref-card-meta {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .ref-card-filename {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text);
-            font-family: 'DM Mono', monospace;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .ref-card-score {
-            font-size: 11px;
-            color: var(--text-dim);
-            margin-top: 2px;
-        }
-
-        .ref-card-content {
-            padding: 12px 14px;
-            font-size: 12.5px;
-            line-height: 1.65;
-            color: var(--text-mid);
-            white-space: pre-wrap;
-            word-break: break-word;
-            max-height: 260px;
-            overflow-y: auto;
-            background: var(--bg-panel);
-        }
-
-        .ref-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.15);
-            z-index: 199;
-        }
-
-        .ref-overlay.open { display: block; }
-
-        /* ── PDF Viewer Overlay ────────────────────────────────────── */
-        .pdf-viewer-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .pdf-viewer-overlay.open { display: flex; }
-
-        .pdf-viewer-box {
-            background: var(--bg-panel);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-            width: 88vw;
-            height: 90vh;
-            max-width: 1100px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .pdf-viewer-header {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .pdf-viewer-filename {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text);
-            font-family: 'DM Mono', monospace;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 70%;
-        }
-
-        .pdf-viewer-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .pdf-viewer-close {
-            width: 28px;
-            height: 28px;
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-dim);
-            transition: all 0.15s;
-        }
-
-        .pdf-viewer-close:hover { background: var(--bg-hover); color: var(--text); }
-
-        .pdf-viewer-iframe {
-            flex: 1;
-            width: 100%;
-            border: none;
-            background: #525659;
-        }
-
-        .pdf-unsupported {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            color: var(--text-dim);
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
@@ -1008,7 +710,7 @@
                 <div class="empty-title">Ask anything about your corpus</div>
                 <div class="empty-hint">Select a corpus from the sidebar, then type your question below. Answers include inline citations linked to source documents.</div>
                 <div class="latency-note">
-                    ⏱ First query may take up to 45s while the model loads into GPU memory. Subsequent queries are much faster.
+                    ⏱ First query may take 20–50 s while the model loads into memory. Subsequent queries are faster.
                 </div>
             </div>
         </div>
@@ -1027,41 +729,6 @@
             </div>
         </div>
     </main>
-</div>
-
-<!-- PDF Viewer Overlay -->
-<div class="pdf-viewer-overlay" id="pdfViewerOverlay">
-    <div class="pdf-viewer-box">
-        <div class="pdf-viewer-header">
-            <div class="pdf-viewer-filename" id="pdfViewerFilename"></div>
-            <div class="pdf-viewer-actions">
-                <a id="pdfViewerDownload" href="#" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:5px 12px;display:flex;align-items:center;gap:5px;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Download
-                </a>
-                <button class="pdf-viewer-close" id="pdfViewerClose">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-        </div>
-        <iframe class="pdf-viewer-iframe" id="pdfViewerIframe" src=""></iframe>
-    </div>
-</div>
-
-<!-- Reference Drawer -->
-<div class="ref-overlay" id="refOverlay"></div>
-<div class="ref-drawer" id="refDrawer">
-    <div class="ref-drawer-header">
-        <div class="ref-drawer-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Source References
-            <span class="ref-drawer-badge" id="refDrawerBadge">0</span>
-        </div>
-        <button class="ref-drawer-close" id="refDrawerClose">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-    </div>
-    <div class="ref-drawer-body" id="refDrawerBody"></div>
 </div>
 
 <!-- Upload Modal -->
@@ -1129,17 +796,6 @@
                 modelSelect.innerHTML = '<option>No models — check Ollama</option>';
                 return;
             }
-
-            // Sort by descending parameter size extracted from model id/name
-            function parseSize(m) {
-                const s = (m.id + ' ' + m.name).toLowerCase();
-                const match = s.match(/(\d+(?:\.\d+)?)\s*[x:]?\s*(\d+)?b/);
-                if (!match) return 0;
-                // Handle MoE notation like "8x7b" → 56b equivalent
-                return match[2] ? parseFloat(match[1]) * parseFloat(match[2]) : parseFloat(match[1]);
-            }
-            chatModels.sort((a, b) => parseSize(b) - parseSize(a));
-
             modelSelect.innerHTML = chatModels
                 .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
                 .join('');
@@ -1176,11 +832,26 @@
             chatInput.placeholder = `Ask a question about ${name}…`;
             chatInput.disabled = false;
             sendBtn.disabled = false;
+            prewarmModel();
         } else {
             topbarTitle.textContent = 'AIStudio — select a corpus';
             chatInput.placeholder = '⚠ Select or create a corpus first';
             chatInput.disabled = true;
             sendBtn.disabled = true;
+        }
+    }
+
+    // ── Prewarm ──────────────────────────────────────────────
+    async function prewarmModel() {
+        const model = modelSelect.value;
+        if (!model) return;
+        statusText.textContent = 'Loading model…';
+        try {
+            const res = await fetch(`${API}/prewarm?model_id=${encodeURIComponent(model)}`, { method: 'POST' });
+            const data = await res.json();
+            statusText.textContent = data.status === 'already_warm' ? 'Connected' : 'Model ready';
+        } catch {
+            statusText.textContent = 'Connected';
         }
     }
 
@@ -1221,19 +892,13 @@
 
             loadingEl.remove();
 
-            // Strip the model's self-generated reference list (e.g. "References:\n[1] /path/...")
-            // We render our own clean footnotes section below
-            let answerText = data.answer
-                .replace(/\n*References?:\s*\n[\s\S]*$/i, '')
-                .trim();
-
-            let html = renderMarkdown(answerText);
+            let html = escapeHtml(data.answer);
             if (data.citations && data.citations.length) {
                 html = parseCitations(html, data.citations);
                 html += renderFootnotes(data.citations);
             }
 
-            addMessage('assistant', html, true, answerText);
+            addMessage('assistant', html, true);
             conversationHistory.push({ role: 'assistant', content: data.answer });
             trimHistory();
             updateConvMeta();
@@ -1252,7 +917,7 @@
         if (emptyState && emptyState.parentNode) emptyState.remove();
     }
 
-    function addMessage(role, content, isHtml, rawText) {
+    function addMessage(role, content, isHtml) {
         const div = document.createElement('div');
         div.className = `message`;
 
@@ -1260,15 +925,9 @@
             ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
             : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
 
-        const copyBtn = role === 'assistant' && rawText ? `
-            <button class="copy-btn" title="Copy answer" onclick="copyText(this, ${JSON.stringify(rawText)})">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            </button>` : '';
-
         div.innerHTML = `
             <div class="avatar ${role}">${avatarIcon}</div>
             <div class="bubble ${role}">
-                ${copyBtn}
                 <div class="text">${isHtml ? content : escapeHtml(content)}</div>
             </div>`;
 
@@ -1294,13 +953,8 @@
 
     // ── Citations ──────────────────────────────────────────────────
     function parseCitations(html, citations) {
-        // [Source 1, Source 2] — multi-source with "Source" prefix
-        html = html.replace(/\[(?:Source\s+\d+(?:,\s*Source\s+\d+)+)\]/gi, (match) => {
-            const nums = [...match.matchAll(/\d+/g)].map(m => m[0]);
-            return nums.map(n => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`).join('');
-        });
-        // [Source N] single
-        html = html.replace(/\[(?:Source\s+)(\d+)\]/gi,
+        // [Source N] and [source N]
+        html = html.replace(/\[(?:Source\s+|source\s+)(\d+)\]/gi,
             (_, n) => `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`);
         // [1], [1,2], [1, 2]
         html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_, nums) =>
@@ -1319,20 +973,7 @@
                 <span class="footnote-name">${name}</span>
             </div>`;
         }).join('');
-        // Store citations on window for drawer access
-        const dataId = 'cit-' + Date.now();
-        window._citationStore = window._citationStore || {};
-        window._citationStore[dataId] = citations;
-        return `<div class="footnotes" data-cit-id="${dataId}">
-            <div class="footnotes-label-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div class="footnotes-label" style="margin-bottom:0">References</div>
-                <button class="view-sources-btn" onclick="openRefDrawer('${dataId}')" style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent-dim);border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    View sources
-                </button>
-            </div>
-            ${items}
-        </div>`;
+        return `<div class="footnotes"><div class="footnotes-label">References</div>${items}</div>`;
     }
 
     // ── Conversation memory ────────────────────────────────────────
@@ -1364,7 +1005,7 @@
             </div>
             <div class="empty-title">Conversation cleared</div>
             <div class="empty-hint">Ask a new question to start a fresh conversation.</div>
-            <div class="latency-note">⏱ First query may take up to 45s while the model loads.</div>`;
+            <div class="latency-note">⏱ First query may take 20–50 s while the model loads.</div>`;
         messagesEl.appendChild(empty);
     }
 
@@ -1436,152 +1077,11 @@
         }
     }
 
-    // ── Markdown renderer (lightweight, no external dep) ──────────
-    function renderMarkdown(text) {
-        // Escape HTML first to prevent injection
-        let html = escapeHtml(text);
-
-        // Bold **text** or __text__
-        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-
-        // Italic *text* or _text_ (single, not double)
-        html = html.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
-
-        // Bullet lists: lines starting with * or - or •
-        // Group consecutive bullet lines into a <ul>
-        html = html.replace(/((?:^[ \t]*(?:\*|-|•) .+\n?)+)/gm, (block) => {
-            const items = block.trim().split('\n').map(line =>
-                `<li>${line.replace(/^[ \t]*(?:\*|-|•) /, '').trim()}</li>`
-            ).join('');
-            return `<ul>${items}</ul>`;
-        });
-
-        // Numbered lists: lines starting with 1. 2. etc
-        html = html.replace(/((?:^[ \t]*\d+\. .+\n?)+)/gm, (block) => {
-            const items = block.trim().split('\n').map(line =>
-                `<li>${line.replace(/^[ \t]*\d+\. /, '').trim()}</li>`
-            ).join('');
-            return `<ol>${items}</ol>`;
-        });
-
-        // Paragraphs: split on double newlines
-        // But don't wrap list blocks in <p>
-        const parts = html.split(/\n{2,}/);
-        html = parts.map(p => {
-            p = p.trim();
-            if (!p) return '';
-            if (p.startsWith('<ul>') || p.startsWith('<ol>')) return p;
-            // Single newlines within a paragraph → <br>
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-        }).filter(Boolean).join('\n');
-
-        return html;
-    }
-
     // ── Helpers ────────────────────────────────────────────────────
     function escapeHtml(str) {
         const d = document.createElement('div');
         d.textContent = str;
         return d.innerHTML;
-    }
-
-    // ── PDF Viewer ─────────────────────────────────────────────────
-    const pdfOverlay   = document.getElementById('pdfViewerOverlay');
-    const pdfIframe    = document.getElementById('pdfViewerIframe');
-    const pdfFilename  = document.getElementById('pdfViewerFilename');
-    const pdfDownload  = document.getElementById('pdfViewerDownload');
-
-    function openPdfViewer(sourcePath, filename) {
-        const baseUrl = `${API}/file?path=${encodeURIComponent(sourcePath)}`;
-        pdfFilename.textContent = filename;
-        pdfDownload.href = baseUrl;
-        pdfDownload.download = filename;
-
-        const isPdf = filename.toLowerCase().endsWith('.pdf');
-        if (isPdf) {
-            pdfIframe.src = baseUrl;
-            pdfIframe.style.display = 'block';
-            const prev = pdfIframe.parentNode.querySelector('.pdf-unsupported');
-            if (prev) prev.remove();
-        } else {
-            pdfIframe.src = '';
-            pdfIframe.style.display = 'none';
-            const msg = document.createElement('div');
-            msg.className = 'pdf-unsupported';
-            msg.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <div>Preview not available for this file type.</div>
-                <a href="${baseUrl}" download="${filename}" class="btn btn-primary" style="margin-top:8px">Download to view</a>`;
-            pdfIframe.parentNode.appendChild(msg);
-        }
-        pdfOverlay.classList.add('open');
-    }
-
-    function closePdfViewer() {
-        pdfOverlay.classList.remove('open');
-        pdfIframe.src = '';
-    }
-
-    document.getElementById('pdfViewerClose').addEventListener('click', closePdfViewer);
-    pdfOverlay.addEventListener('click', e => {
-        if (e.target === pdfOverlay) closePdfViewer();
-    });
-
-    // ── Reference Drawer ───────────────────────────────────────────
-    const refDrawer  = document.getElementById('refDrawer');
-    const refOverlay = document.getElementById('refOverlay');
-    const refBody    = document.getElementById('refDrawerBody');
-    const refBadge   = document.getElementById('refDrawerBadge');
-
-    function openRefDrawer(citId) {
-        const citations = (window._citationStore || {})[citId];
-        if (!citations) return;
-
-        refBadge.textContent = citations.length;
-        refBody.innerHTML = citations.map(c => {
-            const name = c.source.split('/').pop();
-            const scoreLabel = c.score > 1 ? Math.round(c.score) : c.score.toFixed(3);
-            const content = c.content || '(chunk text not available)';
-            const isPdf = c.source.toLowerCase().endsWith('.pdf');
-            const viewBtn = `<button class="view-full-btn" onclick="openPdfViewer('${c.source.replace(/'/g, "\\'")}', '${name.replace(/'/g, "\\'")}')">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                View full doc
-            </button>`;
-            return `<div class="ref-card">
-                <div class="ref-card-header">
-                    <div class="ref-card-num">${c.index}</div>
-                    <div class="ref-card-meta">
-                        <div class="ref-card-filename" title="${c.source}">${name}</div>
-                        <div class="ref-card-score">Relevance score: ${scoreLabel}${c.page ? ' · Page ' + c.page : ''}</div>
-                    </div>
-                    ${viewBtn}
-                </div>
-                <div class="ref-card-content">${escapeHtml(content)}</div>
-            </div>`;
-        }).join('');
-
-        refDrawer.classList.add('open');
-        refOverlay.classList.add('open');
-    }
-
-    function closeRefDrawer() {
-        refDrawer.classList.remove('open');
-        refOverlay.classList.remove('open');
-    }
-
-    document.getElementById('refDrawerClose').addEventListener('click', closeRefDrawer);
-    refOverlay.addEventListener('click', closeRefDrawer);
-
-    // ── Copy answer ────────────────────────────────────────────────
-    function copyText(btn, text) {
-        navigator.clipboard.writeText(text).then(() => {
-            btn.classList.add('copied');
-            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
-            setTimeout(() => {
-                btn.classList.remove('copied');
-                btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
-            }, 2000);
-        });
     }
 
     // ── Event listeners ────────────────────────────────────────────
@@ -1613,11 +1113,4 @@
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('over');
-        if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
-    });
-
-    // ── Boot ───────────────────────────────────────────────────────
-    init();
-</script>
-</body>
-</html>
+        if (e.dataTransfer.files[0]) selectFile(e.dataTransfe
