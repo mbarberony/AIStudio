@@ -75,6 +75,18 @@ def _save_doc_chunk_map(path: Path, m: dict[str, list[str]]) -> None:
     path.write_text(json.dumps(m, indent=2), encoding="utf-8")
 
 
+def _parse_firm_year(file_path: str) -> dict:
+    """Parse firm name and year from 10K filename e.g. Goldman_Sachs_10K_2026-02-25.htm"""
+    import re as _re
+    from pathlib import Path as _Path
+    name = _Path(file_path).stem
+    m = _re.search(r'_10[Kk]_(\d{4})', name)
+    year = m.group(1) if m else "unknown"
+    m2 = _re.search(r'^(.+?)_10[Kk]_', name)
+    firm = m2.group(1).replace("_", " ").strip() if m2 else "unknown"
+    return {"firm": firm, "year": year}
+
+
 def ingest_corpus(
     *,
     root: Path,
@@ -292,7 +304,11 @@ def ingest_corpus(
         ids = [str(r.get("chunk_id", "")) for r in jsonl_rows]
         documents = [str(r.get("text", "")) for r in jsonl_rows]
         metadatas = [
-            {"source_path": str(r.get("source_path", "")), "doc_id": str(r.get("doc_id", ""))}
+            {
+                "source_path": str(r.get("source_path", "")),
+                "doc_id": str(r.get("doc_id", "")),
+                **_parse_firm_year(str(r.get("source_path", ""))),
+            }
             for r in jsonl_rows
         ]
 

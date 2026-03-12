@@ -160,6 +160,8 @@ def query(
     query_text: str,
     top_k: int,
     embed_model: str,
+    firm: str | None = None,
+    year: str | None = None,
 ) -> list[QdrantHit]:
     """
     Query Qdrant using a query embedding from Ollama.
@@ -172,11 +174,22 @@ def query(
     q_emb = ollama_embed(model=embed_model, texts=[query_text])[0]
 
     from qdrant_client.models import SearchRequest
+    # Build metadata filter if firm or year specified
+    qdrant_filter = None
+    conditions = []
+    if firm and firm.lower() != "all":
+        conditions.append(FieldCondition(key="firm", match=MatchValue(value=firm)))
+    if year and year.lower() != "all":
+        conditions.append(FieldCondition(key="year", match=MatchValue(value=year)))
+    if conditions:
+        qdrant_filter = Filter(must=conditions)
+
     results = client.query_points(
         collection_name=collection_name,
         query=q_emb,
         limit=int(top_k),
         with_payload=True,
+        query_filter=qdrant_filter,
     ).points
 
     out: list[QdrantHit] = []

@@ -113,7 +113,7 @@ def _lexical_jsonl_retrieve(*, query: str, top_k: int, corpus: str) -> list[Retr
 # ---------------------------------------------------------------------------
 
 def retrieve(
-    *, query: str, top_k: int | None = None, corpus: str = "default"
+    *, query: str, top_k: int | None = None, corpus: str = "default", firm: str | None = None, year: str | None = None
 ) -> list[RetrievedDoc]:
     k = int(top_k) if top_k is not None else int(CONFIG.rag.top_k)
 
@@ -126,6 +126,8 @@ def retrieve(
             embed_model=CONFIG.rag.default_embed_model,
             persist_dir=paths["chroma"],
             collection_name=f"aistudio_{corpus}",
+            firm=firm,
+            year=year,
         )
 
         max_d = CONFIG.rag.max_distance

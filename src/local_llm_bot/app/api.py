@@ -170,6 +170,8 @@ class AskRequest(BaseModel):
     query: str
     corpus: str = "default"
     top_k: int | None = None
+    firm: str | None = None
+    year: str | None = None
     temperature: float | None = None
     top_p: float | None = None
     conversation_history: List[Dict[str, str]] | None = None  # NEW: For follow-up questions
@@ -193,6 +195,8 @@ class RetrieveRequest(BaseModel):
     query: str
     corpus: str = "default"
     top_k: int = 5
+    firm: str | None = None
+    year: str | None = None
 
 
 class CorpusInfo(BaseModel):
@@ -308,7 +312,7 @@ async def ask(req: AskRequest) -> AskResponse:
     top_k = req.top_k if req.top_k is not None else CONFIG.rag.top_k
     
     # Retrieve relevant documents
-    docs = retrieve(query=req.query, top_k=top_k, corpus=req.corpus)
+    docs = retrieve(query=req.query, top_k=top_k, corpus=req.corpus, firm=req.firm, year=req.year)
     
     # Generate answer with citations
     result = generate_answer_with_citations(
@@ -332,7 +336,7 @@ async def ask(req: AskRequest) -> AskResponse:
 @app.post("/debug/retrieve")
 async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     _require_corpus(req.corpus)
-    docs = retrieve(query=req.query, top_k=req.top_k, corpus=req.corpus)
+    docs = retrieve(query=req.query, top_k=req.top_k, corpus=req.corpus, firm=req.firm, year=req.year)
     return {
         "count": len(docs),
         "docs": [
@@ -395,6 +399,16 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     stats = compute_jsonl_stats(corpus=corpus_name)
     doc_count = _get_corpus_document_count(corpus_name)
     size_bytes = _get_corpus_size(corpus_name)
+
+    # Get real chunk count from Qdrant
+    qdrant_chunk_count = 0
+    try:
+        from qdrant_client import QdrantClient
+        qc = QdrantClient(host="localhost", port=6333)
+        col_info = qc.get_collection(f"aistudio_{corpus_name}")
+        qdrant_chunk_count = col_info.points_count or 0
+    except Exception:
+        qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count
     
     # List files in corpus
     files = []
@@ -414,7 +428,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "name": corpus_name,
         "status": "available",
         "document_count": doc_count,
-        "chunk_count": stats.chunks_total,
+        "chunk_count": qdrant_chunk_count,
         "size_bytes": size_bytes,
         "files": files[:50],  # Limit to 50 files for performance
         "file_count": len(files),
@@ -422,7 +436,6 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "paths": {
             "base": str(paths["base"]),
             "index": str(paths["index"]),
-            "chroma": str(paths["chroma"])
         }
     }
 

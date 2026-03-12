@@ -1,204 +1,166 @@
 # Roadmap
 
-> AIStudio — phased delivery plan  
-> Each release is a coherent, usable product. Nothing is a stepping stone 
+> AIStudio — phased delivery plan
+> Each release is a coherent, usable product. Nothing is a stepping stone
 > to something else — every version ships real value.
 
 ---
 
 ## Release Philosophy
 
-- **Alpha** — core RAG loop working end-to-end. Credible demo, usable by 
+- **Alpha** — core RAG loop working end-to-end. Credible demo, usable by
   the builder. Suitable for sharing with technical reviewers.
-- **Beta** — conversation management, model switching, full corpus UI. 
-  Usable by a non-technical person who has been onboarded.
-- **v1.0** — validated at scale, one-click install, automated tests. 
-  Suitable for open-source release and resume reference.
-- **v2.0** — multi-user, teams, shared corpora, MCP integrations. 
-  urCrew layer begins here — see urcrew.ai.
+- **Beta** — production-scale corpus, metadata filtering, conversation
+  management, full corpus UI. Usable by a non-technical person who has
+  been onboarded.
+- **v1.0** — validated at scale, one-click install, automated tests.
+  Suitable for open-source release.
+- **v2.0** — multi-user, teams, shared corpora, cloud deployment.
 
 ---
 
-## Alpha — Current
+## Alpha — Completed ✅
 
 **Theme:** Core loop working. Demonstrate the concept.
 
-### Done ✅
-- Document ingestion (PDF, Word, PowerPoint, Excel, Markdown)
-- Embedding-based retrieval via Chroma vector store
-- RAG query with inline citations `[1][2]` and References section
-- Browser UI — corpus selector, query interface, corpus stats inspector
-- FastAPI backend — `/ask`, `/health`, `/corpus/*` endpoints
-- Model selection via config (any Ollama-hosted model)
-- `nomic-embed-text` embeddings, `llama3.1:70b` as default
-- End-to-end tested on M4 Max MacBook Pro 128GB
-- README and QUICKSTART reflecting real install experience
-- Both repos synced to GitHub
-- Demo corpus — 17 architecture documents spanning 2003–2021, ships with repo
-- Benchmark harness (`run_demo.py`) — structured question sets, markdown 
-  reports with per-question latency and summary stats, CLI overrides for 
-  model/temperature/k, optional ingest trigger, bring-your-own-corpus support
-
-### Remaining for Alpha ✅
-- [ ] Fix `/corpus/create` endpoint (query param vs body mismatch)
-- [ ] Fix auto re-index after file upload
-- [ ] Add `ollama` and `python-multipart` to `requirements.txt`
-- [ ] Remove or disable inoperative UI buttons (No Context, Debug, Clear)
-- [ ] Commit `data_model.md`, `ui_architecture.md`, `roadmap.md` to repo
+- [x] Document ingestion (PDF, Word, PowerPoint, Excel, Markdown, HTML)
+- [x] Embedding-based retrieval via Qdrant vector store (replaced ChromaDB)
+- [x] RAG query with inline citations `[1][2]` and References section
+- [x] Browser UI — corpus selector, model selector, query interface, corpus stats
+- [x] FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
+- [x] Model selection via UI (any Ollama-hosted model)
+- [x] `nomic-embed-text` embeddings (768 dimensions, cosine similarity)
+- [x] `llama3.1:8b` and `llama3.1:70b` tested and benchmarked
+- [x] End-to-end tested on M4 Max MacBook Pro 128GB
+- [x] README, QUICKSTART, BENCHMARK_FINDINGS reflecting real install experience
+- [x] Auto-launch script (`scripts/start.sh`) — starts all four processes
+- [x] Benchmark harness (`scripts/benchmark.py`) — CLI flags, auto-generates findings
+- [x] Metadata filtering — firm and year filters, backend + API + UI
+- [x] 143 SEC 10-K corpus — 105,964 chunks, 34 min ingest, 54 chunks/sec, 0 failures
+- [x] ChromaDB → Qdrant migration (Qdrant stable at 106K chunks; ChromaDB crashed at 32K)
 
 ---
 
-## Beta
+## Beta — In Progress
 
-**Theme:** Conversation management + full corpus UI. Usable by others.
+**Theme:** Production-quality retrieval. Usable by others on their own documents.
 
-### Conversation
-- [ ] Auto-save conversation to `data/conversations/current.json` after 
-      every exchange
-- [ ] Restore conversation on page load (no lost work on refresh)
-- [ ] `+ New Chat` button — archives current, starts fresh
-- [ ] Named conversation history in Chat panel (date-grouped)
-- [ ] Click past conversation to reopen
-- [ ] Rename and delete conversations
-- [ ] Export current conversation as Markdown
+### Retrieval Quality
+- [ ] **Reranker** — CrossEncoder (ms-marco-MiniLM, ~90MB local). Two-stage
+      retrieval: vector similarity → joint reranker scoring. Fixes vocabulary
+      mismatch (e.g. "AI governance" ≠ "Artificial Intelligence Risk and Controls").
+      Adds ~1–2s latency. High priority.
+- [ ] **Relevance threshold** — discard chunks below minimum similarity score.
+      Currently all top-K chunks passed to LLM context regardless of quality.
+- [ ] **XBRL stripping** — SEC 10-K HTML files embed XBRL structured data tags
+      that get chunked as noise. Strip `<ix:*>` tags in BeautifulSoup parser.
+- [ ] **Embedding model eval** — nomic-embed-text vs bge-large (768 vs 1024 dims).
+
+### Citation & Hallucination
+- [ ] **Citation compliance hardening** — model sometimes answers without inline
+      `[N]` markers despite system prompt. More pronounced on 8b than 70b.
+      Stricter prompt engineering or 70b default for production.
+- [ ] **Citation verification pass** — confirm cited source actually contains
+      the claimed fact.
 
 ### Corpus UI
-- [ ] Corpus detail view — file list, chunk count, last indexed timestamp
-- [ ] Add files via native OS file picker (no drag-and-drop)
-- [ ] Automatic re-index after file upload
-- [ ] Remove individual files from corpus
-- [ ] Delete corpus via UI
-- [ ] Multi-corpus file membership (file belongs to multiple corpora)
+- [ ] Per-file removal from corpus
+- [ ] Corpus delete via UI
+- [ ] Corpus rename via UI
+- [ ] Progress bar / ingestion completion notification
+- [ ] Corpus dropdown auto-refresh when new corpus created while UI open
+- [ ] Manifest deduplication — keep only latest entry per file
+- [ ] `ingested_at` timestamp in manifest
+- [ ] Re-ingest `demo` corpus into Qdrant (currently no Qdrant backing)
 
-### Models
-- [ ] Model switcher in UI (currently config-only)
-- [ ] Add model via UI (triggers `ollama pull` in backend)
-- [ ] Show RAM usage per model (loaded vs on-disk)
-- [ ] Pull progress indicator
-
-### Chat
-- [ ] Response time telemetry ("Research: 11.2s") in footer bar
-- [ ] `+File` attachment to query (file sent as context, not indexed)
-- [ ] Conversation title auto-generated from first query
+### Conversation
+- [ ] Auto-save conversation after every exchange
+- [ ] Restore conversation on page load
+- [ ] Named conversation history (date-grouped)
+- [ ] Export conversation as Markdown
 
 ### Engineering
-- [ ] 10–20 file corpus validation
-- [ ] Basic automated test suite (query regression, embedding quality)
-- [ ] Logging — structured logs per query with latency, chunk scores, 
-      token counts
+- [ ] Rename `chroma_upserts` → `vector_upserts` in result JSON (cosmetic)
+- [ ] Double message bug — verify resolved post-Qdrant migration
+- [ ] `DEMO_CORPUS.md` excluded from retrieval results
+- [ ] MacBook Air end-to-end validation
 
 ---
 
-## v1.0
+## v1.0 — Production Ready
 
-**Theme:** Production-quality, open-source ready, resume-grade artifact.
+**Theme:** Validated at scale, open-source ready.
+
+### Crown Jewel Features
+- [ ] **Page-aware chunking** — PDF ingest via pdfplumber, store `page=N`
+      in Qdrant payload. Prerequisite for PDF viewer.
+- [ ] **PDF viewer** — click citation `[N]` → open PDF, scroll to source page.
+      The feature that turns demo into product.
 
 ### Scale & Quality
-- [ ] 10–50 file corpus validated (latency, retrieval quality, edge cases)
-- [ ] Hybrid retrieval (dense vector + keyword BM25) configurable
-- [ ] Explicit refusal tuning — threshold calibration per corpus type
-- [ ] Re-ranking layer (cross-encoder) for improved citation relevance
+- [ ] Conversation memory validation — multi-turn testing at scale
+- [ ] Hybrid retrieval (dense vector + BM25 keyword) configurable
+- [ ] Quantization — consider for 300+ doc corpus
+- [ ] Observability — similarity scores visible in UI per citation
+
+### Benchmark & Tooling
+- [ ] Config file support — benchmark defaults from `config/benchmark.yaml`.
+      Pattern: file → env vars → CLI flags (CLI wins).
+- [ ] Benchmark visual output — rich terminal display with colored pass/fail,
+      latency bars, summary table (`rich` library).
+- [ ] `--json` flag for machine-readable benchmark output (default: human-readable)
+- [ ] `compare_runs.py` — diff two benchmark runs on latency and answer quality
+- [ ] `--help` verified on all scripts
 
 ### Install & Launch
 - [ ] One-click installer (.dmg for macOS)
 - [ ] Menu bar / dock icon to start server and open UI
 - [ ] No terminal required after initial setup
-- [ ] Windows support (basic)
+- [ ] Windows / Linux support
 
 ### Integrations
 - [ ] LiteLLM integration — unified abstraction for local + cloud models
       (OpenAI, Anthropic, Bedrock) via single config change
-- [ ] Web search toggle in UI (via LiteLLM or Brave Search API)
-- [ ] Conversation search (full-text across all saved conversations)
-
-### Observability
-- [ ] Metrics panel — latency distribution, retrieval scores, token usage
-- [ ] Query history export (CSV)
-- [ ] Debug panel — raw prompt, retrieved chunks, token counts
-- [ ] Benchmark harness JSON output — machine-readable companion to markdown 
-      reports, enabling programmatic cross-run comparison
-- [ ] `compare_runs.py` — diff two or more benchmark reports on latency, 
-      answer length, source overlap, and topic-level performance
+- [ ] Multi-tenancy / API key auth — for sharing with team members
 
 ### Engineering
 - [ ] Automated test suite with CI (GitHub Actions)
-- [ ] Architecture Decision Records (ADRs) for key choices
-- [ ] Contribution guide (CONTRIBUTING.md)
-- [ ] Open-source LICENSE file
+- [ ] Architecture Decision Records (ADRs)
+- [ ] INSTALL.md — step-by-step for non-technical users / AI teams
 
 ---
 
-## v2.0 — Multi-User & urCrew Foundation
+## v2.0 — Multi-User & Cloud
 
-**Theme:** Multi-user orchestration. AIStudio becomes the substrate for 
-a personal AI operating system.
+**Theme:** Teams, shared corpora, cloud deployment.
 
-### Multi-User Foundation
 - [ ] User accounts with roles (owner, admin, member, viewer)
-- [ ] Teams — named groups with member management
-- [ ] Permission system — resource-level access control for corpora, 
-      conversations, and models
-- [ ] Shared corpora — team members query the same indexed documents
-- [ ] Shared conversations — multiple participants in one thread
-- [ ] Audit log — who queried what, when
-
-### Agent Orchestration Layer (urCrew)
-- [ ] Agent entity — named thread with mandate, constraints, reporting cadence
-- [ ] Chief of Staff (CoS) agent — maintains context graph across all threads
-- [ ] StatePacket protocol — structured JSON state sync between agents and CoS
-- [ ] Event-driven architecture — agents publish events, CoS subscribes
-- [ ] Role-based prompting — system prompt per agent from structured template
-- [ ] Multi-LLM routing — different agents can use different models
-
-### Integrations
-- [ ] MCP connectors — Gmail, Google Calendar, Slack, Notion
-- [ ] GitHub integration — automated commit, issue creation from agent actions
-- [ ] Crawbot / web agent integration
-- [ ] REST API for external agent communication
-
-### Client Architecture
-- [ ] Client-server architecture (backend hosted, multiple frontends)
-- [ ] Mobile-friendly web UI
+- [ ] Shared corpora — team members query same indexed documents
+- [ ] Cloud deployment — AWS ECS + S3-backed vector store
 - [ ] REST API documented (OpenAPI spec)
-- [ ] SDK for building custom agents
+- [ ] Mobile-friendly web UI
+- [ ] MCP connectors — Gmail, Google Calendar, Slack, Notion
 
 ---
 
-## Cross-Cutting Concerns (All Releases)
+## Known Issues (Current)
 
-### AIStudio ↔ urCrew Synergy
-Every architectural decision in AIStudio is evaluated for reusability 
-in the urCrew layer:
-
-| AIStudio Component | urCrew Reuse |
-|---|---|
-| LLM abstraction (Ollama + LiteLLM) | Agent LLM routing |
-| Conversation JSON schema | Agent thread / StatePacket schema |
-| Multi-model support | Per-agent model assignment |
-| Corpus / RAG | Agent long-term memory |
-| FastAPI backend | Agent API endpoints |
-| Auth / users / teams | urCrew team structure |
-| Observability | Agent state transition logging |
-
-### Resume Narrative
-The arc is deliberate:
-
-1. **AIStudio Alpha** — hands-on RAG, local LLM infrastructure, production patterns
-2. **AIStudio v1.0** — validated at scale, open-source, installer
-3. **urCrew v2.0** — multi-agent orchestration, event-driven, role-based prompting
-4. **Self-referential** — used the tools being built to manage the job search 
-   that required the tools in the first place
+| Issue | Severity | Fix |
+|-------|----------|-----|
+| XBRL noise in JPMorgan HTML chunks | Medium | Strip `<ix:*>` in BeautifulSoup |
+| Northern Trust / Nuveen CIK collision | Medium | Deduplicate at download time |
+| BNY Mellon CIK incorrect — 2007 only | Medium | Correct CIK in download script |
+| Citation null on confident answers | Medium | Stricter prompt / 70b default |
+| Corpus dropdown doesn't refresh | Low | JS event on corpus creation |
+| Double message bug | Low | Verify post-migration |
 
 ---
 
 ## Dependency Map
 
 ```
-Alpha (now)
-  └── Beta
+Alpha ✅
+  └── Beta (current)
         └── v1.0
-              └── v2.0 (urCrew layer)
-                    └── urCrew (open-source / commercial)
+              └── v2.0
 ```
-
-Each layer is independently useful. None is a dead end.

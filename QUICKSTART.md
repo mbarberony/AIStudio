@@ -1,63 +1,57 @@
 # Quickstart
 
-Get a running AIStudio instance in under 20 minutes.
+Get a running AIStudio instance in under 30 minutes.
 
-AIStudio runs entirely on your Mac — no cloud account, no API keys, no data 
-leaving your machine. You'll have a local search engine over your own documents, 
+AIStudio runs entirely on your Mac — no cloud account, no API keys, no data
+leaving your machine. You'll have a local search engine over your own documents,
 accessible from your browser.
 
 ---
 
-## Before You Start — Open a Terminal
+## Before You Start
 
-All commands in this guide are run in the Terminal app.
+All commands run in Terminal. Press **⌘ Space**, type **Terminal**, press Enter.
 
-To open Terminal quickly: press **⌘ Space**, type **Terminal**, press Enter.
-
-Keep Terminal open throughout the setup. When a step asks you to open a 
-second terminal tab, press **⌘ T**.
-
-Paste and run commands one at a time. Each command ends when you press Enter.
+Use `python3` — not `python` — on macOS. The system `python` command may point
+to Python 2 or not exist. Always activate your virtual environment before
+running any AIStudio command.
 
 ---
 
 ## Prerequisites
 
-- macOS with Apple Silicon (M1/M2/M3/M4) — Intel also works but is slower
-- Python **3.10 or later** — 3.13 recommended for new setups
+- macOS with Apple Silicon (M1/M2/M3/M4) — Intel works but is slower
+- Python **3.10 or later** — 3.13 recommended
 - Git
 - ~8GB free disk space (for models)
 
-> **On Python versions:** Python 3.10+ is required. AIStudio uses type syntax 
-> (`float | None`) that will fail silently on Python 3.9. The system Python 
-> that ships with macOS is often 3.9 — check yours with `python3 --version` 
-> before proceeding.
+Check your Python version:
+```bash
+python3 --version
+```
+
+> Python 3.10+ required. AIStudio uses type syntax (`float | None`) that
+> fails on Python 3.9. The system Python on macOS is often 3.9 — install
+> a newer version if needed.
 
 ---
 
-## 1. Install Homebrew (if not already installed)
+## 1. Install Homebrew
 
-Homebrew is the standard package manager for macOS. Skip this step if you 
-already have it.
+Skip if already installed.
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-The installer will ask for your Mac login password — this is normal. You won't 
-see characters appear as you type; that's expected.
-
-**After install, add Homebrew to your PATH.** The installer prints these three 
-commands at the end — run them now (they start with `echo` and `eval`):
-
+Add to PATH (run the three lines the installer prints at the end):
 ```bash
 echo >> ~/.zprofile
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
-Verify Homebrew is working:
-
+Verify:
 ```bash
 brew --version
 ```
@@ -68,273 +62,277 @@ brew --version
 
 ```bash
 brew install python@3.13
-```
-
-Verify:
-
-```bash
 python3.13 --version
 ```
 
-Expected output: `Python 3.13.x`
+Expected: `Python 3.13.x`
 
 ---
 
 ## 3. Install Ollama
 
-Ollama runs the AI models locally on your machine.
-
 ```bash
 brew install ollama
-```
-
-Start Ollama as a background service:
-
-```bash
 brew services start ollama
-```
-
-Verify it's running:
-
-```bash
 ollama list
 ```
 
-If you see a list (even empty), Ollama is up. 
+If you see a list (even empty), Ollama is running.
 
-> **Note:** If you later run `ollama serve` manually and see "address already in 
-> use", that's expected — it means Ollama is already running as a background 
-> service. That's the correct state.
+> If you later run `ollama serve` and see "address already in use" — that's
+> correct. Ollama is already running as a background service.
 
 ---
 
 ## 4. Pull Required Models
 
-This downloads the AI models to your machine. Total download is roughly 
-5–6 GB — allow 5 to 10 minutes depending on your connection.
-
-Pull the embedding model (required):
+~5–6 GB download total. Allow 5–10 minutes.
 
 ```bash
+# Embedding model (required)
 ollama pull nomic-embed-text
+
+# Language model — choose based on your hardware:
+ollama pull llama3.1:8b      # ~8GB RAM required, recommended default
+ollama pull llama3.1:70b     # ~128GB RAM required, best quality
 ```
 
-Pull the language model. Choose based on your hardware:
-
-**Standard (recommended for most users)** — requires ~8GB RAM:
-```bash
-ollama pull llama3.1:8b
-```
-
-**High-performance** — requires 128GB RAM, ~42GB download:
-```bash
-ollama pull llama3.1:70b
-```
-
-The 70b model delivers noticeably better answer quality and reasoning. On an 
-M4 Max MacBook Pro with 128GB, warm query latency is ~7s once the model is loaded into unified memory — identical to 8b. See BENCHMARK_FINDINGS.md.
+> On Apple Silicon, warm `llama3.1:70b` and warm `llama3.1:8b` have identical
+> query latency (~6–7s). Once loaded into unified memory, model size stops
+> being a latency variable. See BENCHMARK_FINDINGS.md.
 
 ---
 
-## 5. Clone AIStudio
+## 5. Install Qdrant
 
-Create the Developer folder and move into it:
+Qdrant is the vector store. **It is not available via Homebrew** — install
+the binary directly:
+
+```bash
+curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
+mkdir -p ~/bin
+mv qdrant ~/bin/qdrant
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+qdrant --version
+```
+
+Expected: `qdrant 1.17.0` (or newer). You will also see:
+```
+<jemalloc>: option background_thread currently supports pthread only
+```
+This warning is harmless — ignore it.
+
+Create the storage directory:
+```bash
+mkdir -p ~/qdrant_storage
+```
+
+> **Why Qdrant?** ChromaDB (the previous vector store) crashed at 32,285
+> chunks. Qdrant — written in Rust — is stable at 105,964 chunks with
+> native metadata filtering, near-zero GC overhead, and a production
+> upgrade path (sharding, replication, quantization).
+
+---
+
+## 6. Clone AIStudio
 
 ```bash
 mkdir -p ~/Developer && cd ~/Developer
-```
-
-Clone the repository:
-
-```bash
 git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 ```
 
-> **SSH error?** You may need to add your SSH key to GitHub first. 
-> See [GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+> **SSH error?** See [GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 
 ---
 
-## 6. Set Up a Python Virtual Environment
-
-Create the virtual environment using Python 3.13:
+## 7. Set Up Python Virtual Environment
 
 ```bash
 python3.13 -m venv .venv
-```
-
-Activate it:
-
-```bash
 source .venv/bin/activate
-```
-
-Your prompt will change to show `(.venv)` — this confirms it's active. 
-**Run this activation command every time you open a new terminal tab.**
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
-pip install ollama python-multipart
 ```
 
-> The second line installs two packages not yet in requirements.txt. This will 
-> be consolidated in an upcoming release.
+Your prompt will show `(.venv)` when active.
+**Run `source .venv/bin/activate` every time you open a new terminal tab.**
 
 ---
 
-## 7. Ingest Documents
+## 8. Start All Services
 
-A **corpus** is a named collection of documents that AIStudio indexes and 
-makes searchable. You have two options: start with the included demo corpus, 
-or jump straight to your own documents.
-
----
-
-### Option A — Use the Demo Corpus (recommended for first run)
-
-AIStudio ships with a curated demo corpus: 17 documents spanning 20+ years 
-of financial services technology architecture — strategy documents, 
-methodology papers, AI reference architecture, and more. It gives you 
-something substantive to query immediately, without needing your own 
-documents first.
-
-Make sure your virtual environment is active, then run:
+AIStudio requires four processes: Ollama, Qdrant, FastAPI backend, and the
+frontend. The auto-launch script handles all of them:
 
 ```bash
-PYTHONPATH=src python -m local_llm_bot.app.ingest \
+~/Developer/AIStudio/scripts/start.sh
+```
+
+The script checks whether each service is already running before starting it —
+safe to run multiple times.
+
+**To start manually instead:**
+```bash
+# Terminal 1 — Qdrant
+cd ~/qdrant_storage && QDRANT__STORAGE__STORAGE_PATH=~/qdrant_storage qdrant &
+
+# Terminal 2 — Backend
+cd ~/Developer/AIStudio && source .venv/bin/activate
+OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+  uvicorn local_llm_bot.app.api:app --reload --port 8000
+```
+
+Verify the backend is up:
+```bash
+curl http://localhost:8000/health
+```
+Expected: `{"status": "ok"}`
+
+> **API explorer:** Visit `http://localhost:8000/docs` for the full
+> interactive Swagger UI — all endpoints with request/response schemas.
+
+---
+
+## 9. Ingest Documents
+
+A **corpus** is a named collection of documents AIStudio indexes and makes
+searchable.
+
+### Option A — Demo Corpus (recommended for first run)
+
+AIStudio ships with a curated demo corpus. To ingest it:
+
+```bash
+cd ~/Developer/AIStudio && source .venv/bin/activate
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
   --corpus demo \
   --root data/demo
 ```
 
-This indexes all documents in `data/demo/` into a corpus named `demo`. 
-Select `demo` from the corpus dropdown in the UI and start querying.
-
-Some questions to try:
+Try these questions to start:
 - *"What is the Air Traffic Controller model and how does it apply to IT strategy?"*
 - *"What does a reference architecture for enterprise AI look like?"*
-- *"What are the key risk and compliance considerations for financial services IT?"*
 
-See [data/demo/DEMO_CORPUS.md](data/demo/DEMO_CORPUS.md) for the full 
-document inventory and a complete set of suggested demo questions.
-
----
-
-### Option B — Use Your Own Documents
-
-Copy your documents into a new corpus directory (PDF, Word, PowerPoint, 
-Excel, and Markdown are all supported):
+### Option B — Your Own Documents
 
 ```bash
 mkdir -p data/corpora/my_corpus/uploads
 cp /path/to/your/documents/* data/corpora/my_corpus/uploads/
-```
 
-Run ingestion:
-
-```bash
-PYTHONPATH=src python -m local_llm_bot.app.ingest \
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
   --corpus my_corpus \
   --root data/corpora/my_corpus
 ```
 
-Expected output: chunk count, document count, and zero failures. Re-run 
-after adding new documents.
+You can also upload documents directly from the UI using the **Upload** button.
 
 ---
 
-## 8. Start the Backend
-
-With your virtual environment active:
-
-```bash
-OLLAMA_KEEP_ALIVE=30m PYTHONPATH=src uvicorn local_llm_bot.app.api:app --reload --port 8000
-```
-
-Leave this terminal running. Open a new tab (⌘ T), activate the environment, 
-and verify:
-
-```bash
-source ~/Developer/AIStudio/.venv/bin/activate
-curl http://localhost:8000/health
-```
-
-Expected: `{"status": "ok"}`
-
----
-
-## 9. Open the Frontend
-
-Open the UI directly in your browser:
+## 10. Open the Frontend
 
 ```bash
 open ~/Developer/AIStudio/front_end/rag_studio.html
 ```
 
-You should see the AIStudio interface. Select your corpus from the dropdown 
-and ask a question in plain English.
+Select your corpus from the dropdown, choose a model, and ask a question.
 
-Answers include inline citations (`[1]`, `[2]`) with a References section 
-showing the source document and passage for each citation.
+**Using Filters (optional):** The sidebar has Firm and Year filter fields.
+Leave them blank for cross-corpus queries. Type a firm name (e.g.
+`Goldman Sachs`) to restrict retrieval to that firm's documents only.
 
 ---
 
-## 10. Verify Embedding Quality (Optional)
+## 11. Tuning Parameters
 
-```bash
-cd ~/Developer/AIStudio
-PYTHONPATH=src python tests/test_embeddings.py
-```
-
-This runs three semantic reasoning checks (King − Man + Woman ≈ Queen, etc.). 
-All three should pass with score > 0.75. If they don't, re-pull the model:
-
-```bash
-ollama pull nomic-embed-text
-```
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| Top K | 5 | Number of chunks retrieved per query. Higher = more context, slower. Try 10 for large corpora. |
+| Temperature | 0.3 | LLM creativity. Lower = more factual and consistent. Higher = more varied. Keep at 0.3 for document Q&A. |
+| Firm | (empty) | Restricts retrieval to chunks from this firm. Must match ingested firm name exactly. |
+| Year | (empty) | Restricts retrieval to this filing year. Use the filing year (e.g. `2026` for fiscal year 2025 filings). |
 
 ---
 
 ## What's Running
 
-| Component | Address | Purpose |
-|---|---|---|
-| FastAPI backend | `localhost:8000` | RAG retrieval, LLM inference, corpus management |
-| Frontend | (file:// or localhost) | Browser UI |
-| Ollama | `localhost:11434` | Embeddings + LLM inference |
-| Chroma | (embedded) | Vector store, runs in-process with backend |
+| Process | Address | Purpose |
+|---------|---------|---------|
+| FastAPI/uvicorn | `localhost:8000` | RAG pipeline, embeddings, corpus management |
+| Qdrant | `localhost:6333` | Vector store (REST), `localhost:6334` (gRPC) |
+| Ollama | `localhost:11434` | LLM inference + embeddings |
+| Frontend | `file://` | Browser UI — no server required |
 
-Ollama runs as a background service and starts automatically on login. 
-The backend requires a terminal tab each session.
+---
 
-> **Coming soon:** one-click install and a menu bar launcher so you never 
-> have to touch the terminal after initial setup.
+## Qdrant Startup Warnings
+
+These three warnings appear on every Qdrant startup and are **harmless**:
+
+```
+<jemalloc>: option background_thread currently supports pthread only
+Config file not found — using defaults
+Static folder not found
+```
+
+Qdrant is running correctly. Ignore these messages.
 
 ---
 
 ## Troubleshooting
 
-**`python3.13` not found** — run `brew install python@3.13` and try again.
+**`python3.13` not found** — run `brew install python@3.13`
 
-**`(.venv)` not showing in prompt** — virtual environment isn't active. Run 
-`source ~/Developer/AIStudio/.venv/bin/activate`.
+**`(.venv)` not in prompt** — run `source ~/Developer/AIStudio/.venv/bin/activate`
 
-**`ModuleNotFoundError` on backend start** — make sure you're using 
-`PYTHONPATH=src` in front of the uvicorn command. Full command: `OLLAMA_KEEP_ALIVE=30m PYTHONPATH=src uvicorn local_llm_bot.app.api:app --reload --port 8000`
+**`ModuleNotFoundError`** — ensure `PYTHONPATH=src` and `AISTUDIO_VECTORSTORE=qdrant`
+are set before the uvicorn command
 
-**`ollama serve` — "address already in use"** — Ollama is already running 
-as a background service. This is correct; proceed normally.
+**`Failed to fetch` in UI** — the FastAPI backend is down. Run:
+```bash
+kill $(lsof -ti:8000)
+cd ~/Developer/AIStudio && source .venv/bin/activate
+OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+  uvicorn local_llm_bot.app.api:app --reload --port 8000
+```
 
-**Input field disabled / "No corpora"** — no corpus found. Complete Step 7.
+**`ollama serve` — "address already in use"** — Ollama already running. Correct state.
 
-**Poor answer quality** — confirm `llama3.1:8b` (or 70b) is set in config. 
-`llama3.2:3b` is faster but significantly weaker on synthesis tasks.
+**Stats show 0 chunks** — corpus not yet ingested into Qdrant. Run Step 9.
 
-**git clone permission error** — see 
-[GitHub SSH setup](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+**Backend code changes not reflected** — uvicorn `--reload` watches Python files.
+If changes don't appear, kill and restart the backend process.
+
+**Qdrant not found** — `~/bin` not in PATH. Run `source ~/.zshrc` or
+add `export PATH="$HOME/bin:$PATH"` to `~/.zshrc`.
 
 ---
 
-For architecture context and design decisions, see 
-[docs/architecture_decisions.md](docs/architecture_decisions.md).
+## Optional — Disable Qdrant Telemetry
+
+```bash
+export QDRANT__TELEMETRY_DISABLED=true
+```
+
+Add to `~/.zshrc` to make permanent.
+
+---
+
+## Optional — Run the Benchmark
+
+```bash
+cd ~/Developer/AIStudio && source .venv/bin/activate
+python3 scripts/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
+```
+
+Runs 8 test questions, prints pass/fail with latency, writes
+`scripts/benchmark_results.json` and updates `BENCHMARK_FINDINGS.md`.
+
+```bash
+# Run with 70b model
+python3 scripts/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3 --model llama3.1:70b
+```
+
+---
+
+For architecture context, see [docs/architecture_decisions.md](docs/architecture_decisions.md).
+For benchmark results, see [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md).

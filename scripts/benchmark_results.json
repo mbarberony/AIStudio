@@ -1,0 +1,415 @@
+{
+  "run_at": "2026-03-12T14:38:16.229462",
+  "config": {
+    "corpus": "sec_10k",
+    "top_k": 10,
+    "temperature": 0.3,
+    "model": null,
+    "api": "http://localhost:8000"
+  },
+  "summary": {
+    "total": 8,
+    "passed": 6,
+    "avg_latency_sec": 6.48
+  },
+  "results": [
+    {
+      "question": {
+        "id": "goldman_ai_risk",
+        "description": "Goldman Sachs AI risk \u2014 firm filter",
+        "query": "What does Goldman Sachs say about the risks of artificial intelligence?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "artificial intelligence",
+          "AI",
+          "risk",
+          "Goldman"
+        ],
+        "notes": "Should return Goldman-specific AI risk disclosure"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 7.17,
+        "data": {
+          "answer": "According to the provided sources, Goldman Sachs mentions the following risks associated with artificial intelligence (AI):\n\n1. \"New AI technologies may increase the frequency and severity of cybersecurity attacks.\" [1]\n2. \"Generative AI, if used to perpetrate fraud or launch cyber attacks, could result in losses, liquidity outflows or other adverse effects for us and our clients.\" [1]\n3. The use of AI technologies may heighten the risk of fraud and misappropriation of funds, as well as facilitate cyber attacks. [1]\n\nThese risks are mentioned in the context of the company's overall risk management framework, which includes cybersecurity risk management and operational risk management. The company acknowledges that AI technologies can increase the complexity of business activities and introduce new operational risks, which can have a material impact on the company's operations and reputation.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-801",
+              "score": 0.31922615
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Goldman_Sachs_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "jpmorgan_cybersecurity",
+        "description": "JPMorgan cybersecurity risk \u2014 firm filter",
+        "query": "How does JPMorgan Chase describe their cybersecurity risk management?",
+        "corpus": null,
+        "firm": "JPMorgan Chase",
+        "year": null,
+        "expected_keywords": [
+          "cybersecurity",
+          "JPMorgan",
+          "risk"
+        ],
+        "notes": "Should return JPMorgan cybersecurity section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 9.8,
+        "data": {
+          "answer": "According to JPMorgan Chase's 2025 Form 10-K, the company describes their cybersecurity risk management as follows:\n\nThe Firm's Information Security Program is designed to prevent, detect and respond to cyber attacks in order to help safeguard the confidentiality, integrity and availability of the Firm's infrastructure, resources and information. The program includes managing the Firm's global cybersecurity operations centers, providing training, conducting cybersecurity event simulation exercises, implementing the Firm's policies and standards relating to technology risk and cybersecurity management, and enhancing, as needed, the Firm's cybersecurity capabilities [1].\n\nThe program also includes the following functions:\n\n* Cyber Operations, which is responsible for implementing and maintaining controls designed to detect and defend the Firm against cyber attacks, and includes a dedicated function for incident response and ongoing monitoring for cybersecurity threats and vulnerabilities [1].\n* Technology Governance, Risk & Controls, which is responsible for operationalizing technology risk and control frameworks, analyzing regulatory developments that may impact the Firm, and developing control catalogs and assessments of controls, as well as overseeing governance and reporting of technology and cybersecurity risk [1].\n* Security Awareness, which provides awareness and training to employees on cybersecurity risks and best practices [1].\n\nThe Firm's cybersecurity risk management is integrated into the Firm's operational risk management framework, including through the escalation of key risk and control issues to management and the development of risk mitigation plans for heightened risk and control issues [1].\n\nThe Firm also engages in periodic discussions with its clients, customers, and other external parties concerning cybersecurity risks, and actively partners with government and law enforcement agencies and peer industry forums to assist in understanding the full spectrum of cybersecurity risks and in enhancing defenses and improving resiliency [1].\n\nIn terms of governance and oversight, the Cybersecurity and Technology Controls Operating Committee (\"CTOC\") is the principal management committee that oversees the Firm's assessment and management of cybersecurity risk, including oversight of the implementation and maintenance of appropriate controls in support of the Firm's Information Security Program [1].\n\nThe CTOC escalates key operational risk and control issues to the Global Technology Operating Committee (\"GTOC\") or its business control committee or to the appropriate LOB and Corporate Control Committees, and the CTOC receives periodic updates from the CIO, the CISO, and senior members of the CTOC concerning cybersecurity matters [1].\n\nThe Firm's Board of Directors also receives periodic updates from the CIO, the CISO, and senior members of the CTOC concerning cybersecurity matters, and the Audit Committee and the Risk Committee assist the Board in this oversight [1].\n\nOverall, JPMorgan Chase's cybersecurity risk management is a comprehensive and integrated approach that includes various functions, governance and oversight, and regular updates to the Board of Directors.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/JPMorgan_Chase_10K_2026-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/JPMorgan_Chase_10K_2026-02-13.htm::chunk-787",
+              "score": 0.20710459999999997
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2026-02-13.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "morgan_stanley_model_risk",
+        "description": "Morgan Stanley model risk \u2014 firm filter",
+        "query": "What is Morgan Stanley's approach to model risk?",
+        "corpus": null,
+        "firm": "Morgan Stanley",
+        "year": null,
+        "expected_keywords": [
+          "model risk",
+          "Morgan Stanley"
+        ],
+        "notes": "Should return model risk governance section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.85,
+        "data": {
+          "answer": "Morgan Stanley's approach to model risk is outlined in the Model Risk Management Department's (\"MRM\") responsibilities. According to the text, the MRM is a distinct department in Risk Management responsible for the oversight of model risk. The MRM establishes a model risk tolerance in line with the firm's risk appetite, based on an assessment of the materiality of the risk of financial loss or reputational damage due to errors in design, implementation, and/or inappropriate use of models.\n\nThe MRM also provides effective challenge of models, independently validates and approves models for use, annually recertifies models, periodically revalidates, identifies and tracks remediation plans for model limitations, and reports on model risk metrics [1].\n\nIn addition, the MRM oversees the development of controls to support a complete and accurate Firmwide model inventory [1].\n\nIt's worth noting that Morgan Stanley's approach to model risk is part of a broader Enterprise Risk Management (\"ERM\") framework that integrates the diverse roles of risk management into a holistic enterprise structure and facilitates the incorporation of risk assessment into decision-making processes across the Firm [5].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Morgan_Stanley_10K_2026-02-19.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Morgan_Stanley_10K_2026-02-19.htm::chunk-594",
+              "score": 0.19260096999999998
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Morgan_Stanley_10K_2026-02-19.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "goldman_ai_committee",
+        "description": "Goldman AI governance committee \u2014 firm filter",
+        "query": "Does Goldman Sachs have an AI governance committee and what does it do?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "Artificial Intelligence",
+          "committee",
+          "governance"
+        ],
+        "notes": "Should mention Firmwide Artificial Intelligence Risk and Controls Committee"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.25,
+        "data": {
+          "answer": "Goldman Sachs has a Firmwide Artificial Intelligence Risk and Controls Committee, which is responsible for overseeing risks associated with the use of AI. This committee reports to the Firmwide Technology Risk Committee, which oversees cybersecurity matters, as well as technology risk management frameworks and methodologies, and monitors their effectiveness.\n\nSo, to answer your question, yes, Goldman Sachs has an AI governance committee, and it is the Firmwide Artificial Intelligence Risk and Controls Committee.",
+          "citations": null,
+          "has_citations": false
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": false,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 0,
+        "cited_sources": []
+      }
+    },
+    {
+      "question": {
+        "id": "cross_corpus_ai_governance",
+        "description": "Cross-corpus AI governance \u2014 no filter",
+        "query": "Which financial firms have dedicated AI governance committees?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "expected_keywords": [
+          "AI",
+          "committee",
+          "governance"
+        ],
+        "notes": "No firm filter \u2014 tests cross-corpus retrieval quality"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.2,
+        "data": {
+          "answer": "Based on the provided sources, the following financial firms have dedicated AI governance committees:\n\n None, as none of the provided sources mention AI governance committees. However, the following firms have dedicated enterprise risk management or risk governance committees that oversee various types of risk, including financial and non-financial risks:\n\n1. AIG: The Group Risk Committee (GRC) and the Enterprise Risk Management Committee (ERMC) are mentioned in sources [1], [2], [4], and [6]. \n2. Goldman Sachs: The Firmwide Reputational Risk Committee, the Firmwide Data Governance Committee, and the Firmwide Asset Liability Committee are mentioned in source [2].\n3. Alliance Bernstein: The Governance Committee is mentioned in sources [3] and [5].\n4. Prudential Financial: The Enterprise Risk Committee (ERC) and the Enterprise Risk Management Committee (ERMC) are mentioned in sources [7] and [8].\n5. Bank of America: The Enterprise Risk Committee is mentioned in source [9].\n\nIt's worth noting that none of the provided sources mention AI governance committees, which suggests that these committees may not be widely established among the mentioned financial firms.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2022-02-17.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2022-02-17.htm::chunk-1018",
+              "score": 0.24864536999999998
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-694",
+              "score": 0.26903874000000005
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2017-02-14.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2017-02-14.htm::chunk-435",
+              "score": 0.2759922
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2021-02-19.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2021-02-19.htm::chunk-993",
+              "score": 0.28321339999999995
+            },
+            {
+              "index": 5,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2020-02-12.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2020-02-12.htm::chunk-469",
+              "score": 0.28423977
+            },
+            {
+              "index": 6,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2023-02-17.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2023-02-17.htm::chunk-884",
+              "score": 0.29171205
+            },
+            {
+              "index": 7,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2025-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2025-02-13.htm::chunk-1053",
+              "score": 0.29544380000000003
+            },
+            {
+              "index": 8,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2026-02-12.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2026-02-12.htm::chunk-949",
+              "score": 0.29698610000000003
+            },
+            {
+              "index": 9,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm::chunk-545",
+              "score": 0.29790634000000005
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 9,
+        "cited_sources": [
+          "AIG_10K_2022-02-17.htm",
+          "Goldman_Sachs_10K_2026-02-25.htm",
+          "AllianceBernstein_10K_2017-02-14.htm",
+          "AIG_10K_2021-02-19.htm",
+          "AllianceBernstein_10K_2020-02-12.htm",
+          "AIG_10K_2023-02-17.htm",
+          "Prudential_Financial_10K_2025-02-13.htm",
+          "Prudential_Financial_10K_2026-02-12.htm",
+          "Bank_of_America_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "bofa_climate_risk",
+        "description": "Bank of America climate risk \u2014 firm filter",
+        "query": "How does Bank of America describe climate risk in their annual report?",
+        "corpus": null,
+        "firm": "Bank of America",
+        "year": null,
+        "expected_keywords": [
+          "climate",
+          "risk",
+          "Bank of America"
+        ],
+        "notes": "Should return climate risk section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.47,
+        "data": {
+          "answer": "According to Bank of America's annual report, climate risk is described as a transverse risk that includes physical risk and transition risk. Physical risks related to severe weather events can increase credit risk, while transition risks related to transitioning to a low-carbon economy can amplify credit risks through the financial impacts of changes in policy, technology, or the market on counterparties [1].\n\nThe report also states that climate-related matters present short-, medium-, and long-term risks, including physical risks such as extreme weather events and natural disasters, and chronic risks such as rising average global temperatures and sea levels [1]. These events could adversely impact the company's facilities, employees, and clients' ability to repay outstanding loans, disrupt operations, or damage collateral [1].\n\nThe company acknowledges that it faces transition risk associated with the shift to a low-carbon economy, including changes in consumer preferences, market pressures, technology advancements, and additional legislation, regulatory, compliance, and legal requirements [1].\n\nTo manage climate risk, Bank of America has established a risk management framework that includes monitoring and assessing transverse risks such as climate risk, which includes physical risk and transition risk [1]. The company also has a Global Risk Management (GRM) function that is responsible for independently assessing and overseeing risks within business lines and other control functions [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm::chunk-626",
+              "score": 0.28282209999999997
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Bank_of_America_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "goldman_2026_revenue",
+        "description": "Goldman 2025 revenue \u2014 firm + year filter",
+        "query": "What were Goldman Sachs total revenues in 2025?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": "2026",
+        "expected_keywords": [
+          "revenue",
+          "billion",
+          "2025"
+        ],
+        "notes": "Tests year filter combined with firm filter"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.9,
+        "data": {
+          "answer": "According to the provided sources, the total revenues of Goldman Sachs in 2025 were $58.28 billion, which is 9% higher than 2024. \n\n[1] does not directly mention the total revenues, but mentions that \"Net revenues in the consolidated statements of earnings were $58.28 billion for 2025, 9% higher than 2024\" in the section \"Segment Assets and Operating Results \u2014 Consolidated Results of Operations \u2014 Net Revenues\".\n\nHowever, we can break down the total revenues into its components:\n\nNet revenues in Global Banking & Markets were $41.45 billion for 2025.\nInvestment banking fees were $9.34 billion for 2025.\nOther revenues included $4.43 billion for 2025.\nInterest income included $15.55 billion for 2025.\n\nTherefore, the total revenues of Goldman Sachs in 2025 were $70.77 billion.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-572",
+              "score": 0.23604225999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Goldman_Sachs_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "latency_test",
+        "description": "Simple factual \u2014 latency baseline",
+        "query": "What is Goldman Sachs?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "Goldman Sachs",
+          "bank",
+          "financial"
+        ],
+        "notes": "Simple query for latency baseline measurement"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.21,
+        "data": {
+          "answer": "Goldman Sachs is a leading global financial institution that delivers a broad range of financial services to a large and diversified client base that includes corporations, financial institutions, governments, and individuals.",
+          "citations": null,
+          "has_citations": false
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": false,
+        "citation_pass": false,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "bank"
+        ],
+        "citation_count": 0,
+        "cited_sources": []
+      }
+    }
+  ]
+}

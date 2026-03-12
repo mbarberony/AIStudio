@@ -670,6 +670,19 @@
                 </div>
             </div>
 
+            <!-- Filters -->
+            <div class="section">
+                <div class="section-label">Filters <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
+                <div class="param-row">
+                    <span class="param-label">Firm</span>
+                    <input type="text" id="filterFirm" placeholder="e.g. Goldman Sachs" style="width:140px;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Year</span>
+                    <input type="text" id="filterYear" placeholder="e.g. 2026" style="width:80px;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+                </div>
+            </div>
+
             <!-- Conversation -->
             <div class="section">
                 <div class="section-label">Conversation</div>
@@ -768,6 +781,8 @@
     const modelSelect  = document.getElementById('modelSelect');
     const topKInput    = document.getElementById('topK');
     const tempInput    = document.getElementById('temperature');
+    const filterFirm   = document.getElementById('filterFirm');
+    const filterYear   = document.getElementById('filterYear');
     const convMeta     = document.getElementById('convMeta');
     const topbarTitle  = document.getElementById('topbarTitle');
     const statusText   = document.getElementById('statusText');
@@ -838,7 +853,7 @@
             chatInput.placeholder = `Ask a question about ${name}…`;
             chatInput.disabled = false;
             sendBtn.disabled = false;
-            prewarmModel();
+            // NOTE: prewarm removed here — only fires on model change, not corpus change
         } else {
             topbarTitle.textContent = 'AIStudio — select a corpus';
             chatInput.placeholder = '⚠ Select or create a corpus first';
@@ -884,6 +899,8 @@
                 corpus: currentCorpus,
                 top_k: parseInt(topKInput.value) || 5,
                 temperature: parseFloat(tempInput.value) || 0.3,
+                ...(filterFirm.value.trim()  && { firm: filterFirm.value.trim() }),
+                ...(filterYear.value.trim()  && { year: filterYear.value.trim() }),
                 conversation_history: conversationHistory.length > 1 ? conversationHistory.slice(0, -1) : null
             };
 
@@ -1157,6 +1174,7 @@
     });
 
     corpusSelect.addEventListener('change', e => setCorpus(e.target.value));
+    modelSelect.addEventListener('change', () => prewarmModel());
 
     document.getElementById('addFileBtn').addEventListener('click', openUpload);
     document.getElementById('inspectBtn').addEventListener('click', inspectCorpus);
