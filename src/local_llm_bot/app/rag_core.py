@@ -15,7 +15,12 @@ from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
-from local_llm_bot.app.vectorstore import chroma_store
+import os as _os
+_VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
+if _VECTORSTORE == "chroma":
+    from local_llm_bot.app.vectorstore import chroma_store as _store
+else:
+    from local_llm_bot.app.vectorstore import qdrant_store as _store
 
 
 # ---------------------------------------------------------------------------
@@ -112,10 +117,10 @@ def retrieve(
 ) -> list[RetrievedDoc]:
     k = int(top_k) if top_k is not None else int(CONFIG.rag.top_k)
 
-    if CONFIG.rag.use_chroma:
+    if True:  # Always query — works for both Qdrant and Chroma via _store
         paths = corpus_paths(_repo_root(), corpus)
 
-        hits = chroma_store.query(
+        hits = _store.query(
             query_text=query,
             top_k=k,
             embed_model=CONFIG.rag.default_embed_model,

@@ -34,3 +34,4 @@ pytest
 ruff
 setuptools
 wheel
+beautifulsoup4

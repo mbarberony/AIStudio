@@ -19,7 +19,12 @@ from local_llm_bot.app.ingest.manifest import (
 )
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
-from local_llm_bot.app.vectorstore import chroma_store
+import os as _os
+_VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
+if _VECTORSTORE == "chroma":
+    from local_llm_bot.app.vectorstore import chroma_store as _store
+else:
+    from local_llm_bot.app.vectorstore import qdrant_store as _store
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,7 @@ class IngestResult:
     chroma_deletes: int
 
     duration_sec: float
+    vectorstore: str = "qdrant"
 
 
 def _repo_root() -> Path:
@@ -78,6 +84,7 @@ def ingest_corpus(
     force: bool = False,
     # CLI overrides (None => use CONFIG defaults)
     use_chroma: bool | None = None,
+    vectorstore: str | None = None,
     chunk_size: int | None = None,
     overlap: int | None = None,
     embed_model: str | None = None,
@@ -100,7 +107,8 @@ def ingest_corpus(
     paths["base"].mkdir(parents=True, exist_ok=True)
 
     # Resolve effective settings
-    use_chroma_eff = CONFIG.rag.use_chroma if use_chroma is None else bool(use_chroma)
+    _vs = (vectorstore or CONFIG.rag.vectorstore or "qdrant").lower()
+    use_chroma_eff = (_vs == "chroma") if use_chroma is None else bool(use_chroma)
     chunk_size_eff = CONFIG.ingest.chunk_size if chunk_size is None else int(chunk_size)
     overlap_eff = CONFIG.ingest.overlap if overlap is None else int(overlap)
     embed_model_eff = CONFIG.rag.default_embed_model if embed_model is None else str(embed_model)
@@ -193,7 +201,7 @@ def ingest_corpus(
                 # Delete stale chunks in Chroma if file changed
                 old_chunk_ids = prior_docmap.get(abs_path, [])
                 if use_chroma_eff and old_chunk_ids:
-                    chroma_store.delete_chunks(
+                    _store.delete_chunks(
                         persist_dir=paths["chroma"],
                         collection_name=f"aistudio_{corpus}",
                         ids=old_chunk_ids,
@@ -280,7 +288,7 @@ def ingest_corpus(
     # -----------------------
     # Phase 3: Embed / Upsert (Approach B)
     # -----------------------
-    if use_chroma_eff and jsonl_rows:
+    if jsonl_rows:  # Always embed — works for both Qdrant and Chroma
         ids = [str(r.get("chunk_id", "")) for r in jsonl_rows]
         documents = [str(r.get("text", "")) for r in jsonl_rows]
         metadatas = [
@@ -302,7 +310,7 @@ def ingest_corpus(
                     embed_pbar.update(n)
 
             try:
-                chroma_store.upsert_chunks(
+                _store.upsert_chunks(
                     persist_dir=paths["chroma"],
                     collection_name=f"aistudio_{corpus}",
                     embed_model=embed_model_eff,
@@ -322,6 +330,7 @@ def ingest_corpus(
         corpus=corpus,
         root=str(root),
         use_chroma=use_chroma_eff,
+        vectorstore=_vs,
         chunk_size=chunk_size_eff,
         overlap=overlap_eff,
         embed_model=embed_model_eff,

@@ -738,8 +738,8 @@
         <div class="file-zone" id="dropZone">
             <div class="file-zone-icon">📄</div>
             <div>Drop your file here or click to browse</div>
-            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT</div>
-            <input type="file" id="fileInput" style="display:none" onchange="if(this.files[0]) selectFile(this.files[0])">
+            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT · HTML</div>
+            <input type="file" id="fileInput" style="display:none" multiple onchange="selectFiles(this.files)">
         </div>
         <div id="uploadStatus"></div>
         <div class="modal-actions">
@@ -757,7 +757,7 @@
     let isLoading = false;
     let conversationHistory = [];
     const MAX_TURNS = 10;
-    window.window.selectedFile = null;
+    window.window.selectedFile = null; window.selectedFiles = [];
 
     // ── DOM refs ───────────────────────────────────────────────────
     const messagesEl  = document.getElementById('messages');
@@ -1053,7 +1053,7 @@
 
     // ── Corpus create ──────────────────────────────────────────────
     async function createCorpus() {
-        const name = prompt('New corpus name:');
+        const name = await showNameModal('New corpus name:');
         if (!name) return;
         try {
             const res = await fetch(`${API}/corpus/create`, {
@@ -1062,46 +1062,79 @@
                 body: JSON.stringify({ name })
             });
             const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
             await loadCorpora();
             corpusSelect.value = name;
             setCorpus(name);
+            addMessage('assistant', `✓ Corpus <strong>${name}</strong> created. Use Upload to add files.`, true);
         } catch (err) {
-            alert(`Error: ${err.message}`);
+            addMessage('assistant', `Error creating corpus: ${err.message}`, false);
         }
     }
 
+    function showNameModal(label) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="background:white;border-radius:16px;padding:28px 32px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="font-size:17px;font-weight:600;margin-bottom:16px;">${label}</div>
+                    <input id="corpusNameInput" type="text" placeholder="e.g. sec_10k" style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;font-size:15px;outline:none;box-sizing:border-box;">
+                    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+                        <button id="corpusNameCancel" style="padding:8px 18px;border-radius:8px;border:1.5px solid #d0d5dd;background:white;cursor:pointer;font-size:14px;">Cancel</button>
+                        <button id="corpusNameOk" style="padding:8px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:14px;font-weight:600;">Create</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            const input = overlay.querySelector('#corpusNameInput');
+            input.focus();
+            const finish = (val) => { document.body.removeChild(overlay); resolve(val); };
+            overlay.querySelector('#corpusNameOk').onclick = () => finish(input.value.trim() || null);
+            overlay.querySelector('#corpusNameCancel').onclick = () => finish(null);
+            input.onkeydown = (e) => { if (e.key === 'Enter') finish(input.value.trim() || null); if (e.key === 'Escape') finish(null); };
+        });
+    }
+
     // ── File upload ────────────────────────────────────────────────
-    function openUpload() { uploadModal.classList.add('open'); }
+    function openUpload() { uploadModal.classList.add('open'); const el = document.getElementById('uploadCorpusName'); if(el) el.textContent = currentCorpus; }
     function closeUpload() {
         uploadModal.classList.remove('open');
-        window.selectedFile = null;
+        window.selectedFile = null; window.selectedFiles = [];
         document.getElementById('uploadStatus').textContent = '';
         document.getElementById('confirmUpload').disabled = true;
         fileInput.value = '';
     }
 
-    function selectFile(file) {
-        window.selectedFile = file;
-        document.getElementById('uploadStatus').textContent = `Selected: ${file.name}`;
+    function selectFile(file) { selectFiles([file]); }
+    function selectFiles(files) {
+        window.selectedFiles = Array.from(files);
+        const names = window.selectedFiles.map(f => f.name).join(', ');
+        document.getElementById('uploadStatus').textContent = `Selected: ${names}`;
         document.getElementById('confirmUpload').disabled = false;
     }
 
     async function uploadFile() {
-        // Fall back to reading directly from input if selectedFile not set
-        const fileToUpload = window.selectedFile || (fileInput.files && fileInput.files[0]);
-        if (!fileToUpload || !currentCorpus) return;
-        const fd = new FormData();
-        fd.append('file', fileToUpload);
-        try {
-            const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-            closeUpload();
-            hideEmpty();
-            addMessage('assistant', `✓ <strong>${fileToUpload.name}</strong> uploaded to <em>${currentCorpus}</em>.<br><small style="color:var(--text-dim)">Ingestion started — chunks will be available shortly.</small>`, true);
-        } catch (err) {
-            document.getElementById('uploadStatus').textContent = `Error: ${err.message}`;
+        const files = (window.selectedFiles && window.selectedFiles.length)
+            ? window.selectedFiles
+            : (fileInput.files && fileInput.files.length ? Array.from(fileInput.files) : null);
+        if (!files || !files.length || !currentCorpus) return;
+        // Fix #3 — disable button immediately to prevent double submit
+        document.getElementById('confirmUpload').disabled = true;
+        closeUpload();
+        hideEmpty();
+        for (const file of files) {
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+                addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small style="color:var(--text-dim)">Ingestion started — chunks will be available shortly.</small>`, true);
+            } catch (err) {
+                addMessage('assistant', `Error uploading ${file.name}: ${err.message}`, false);
+            }
         }
+        window.selectedFiles = [];
     }
 
     // ── Helpers ────────────────────────────────────────────────────
@@ -1134,13 +1167,13 @@
     document.getElementById('confirmUpload').addEventListener('click', uploadFile);
 
     dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => { if (e.target.files[0]) { window.selectedFile = e.target.files[0]; selectFile(e.target.files[0]); }; });
+    fileInput.addEventListener('change', e => { if (e.target.files.length) selectFiles(e.target.files);; });
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('over');
-        if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length) selectFiles(e.dataTransfer.files);
     });
 
     init();

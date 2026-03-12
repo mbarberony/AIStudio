@@ -9,7 +9,7 @@ from pathlib import Path
 # from ..config import DEFAULT_XLSX_MAX_CELLS
 from local_llm_bot.app.config import CONFIG
 
-SUPPORTED_EXTS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx"}
+SUPPORTED_EXTS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx", ".htm", ".html"}
 
 # Silence noisy PDF parsing logs/warnings (common with imperfect PDFs)
 logging.getLogger("pypdf").setLevel(logging.ERROR)
@@ -44,6 +44,8 @@ def extract_text(path: Path) -> ExtractResult:
         return _extract_xlsx(path, max_cells=CONFIG.ingest.xlsx_max_cells)
     if ext == ".pdf":
         return _extract_pdf(path)
+    if ext in {".htm", ".html"}:
+        return _extract_html(path)
     return ExtractResult(ok=False, text="", reason="unsupported_ext")
 
 
@@ -195,6 +197,29 @@ def _extract_pdf(path: Path) -> ExtractResult:
     except Exception as e:
         return ExtractResult(ok=False, text="", reason=f"parse_error:{type(e).__name__}")
 
+
+
+def _extract_html(path: Path) -> ExtractResult:
+    try:
+        from bs4 import BeautifulSoup  # type: ignore
+    except Exception:
+        return ExtractResult(ok=False, text="", reason="missing_dep:beautifulsoup4")
+
+    try:
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+        soup = BeautifulSoup(raw, "html.parser")
+        # Remove scripts, styles, nav boilerplate
+        for tag in soup(["script", "style", "nav", "header", "footer", "meta", "link"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n").strip()
+        # Collapse excessive blank lines
+        import re
+        text = re.sub(r"\n{3,}", "\n\n", text).strip()
+        if not text:
+            return ExtractResult(ok=False, text="", reason="empty")
+        return ExtractResult(ok=True, text=text, reason="")
+    except Exception as e:
+        return ExtractResult(ok=False, text="", reason=f"parse_error:{type(e).__name__}")
 
 # Backward-compatible helper if you already import load_document elsewhere:
 @dataclass(frozen=True)

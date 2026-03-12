@@ -34,7 +34,8 @@ def _env_str(name: str, default: str) -> str:
 
 
 # class RagConfig(BaseModel):
-#     use_chroma: bool = Field(default=True)
+#     use_chroma: bool = Field(default=False)  # Legacy — use vectorstore instead
+    vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
 #     top_k: int = Field(default=5, ge=1, le=50)
 #     max_distance: float = Field(default=1.0, ge=0.0)
 #     default_model: str = Field(default="llama3.2:3b")
@@ -43,7 +44,8 @@ def _env_str(name: str, default: str) -> str:
 
 
 class RagConfig(BaseModel):
-    use_chroma: bool = Field(default=True)
+    use_chroma: bool = Field(default=False)  # Legacy — use vectorstore instead
+    vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
     top_k: int = Field(default=5, ge=1, le=50)
 
     # ✅ OFF by default (None = no distance filtering)
@@ -96,6 +98,10 @@ def load_config_from_env() -> AppConfig:
 
     # RAG
     cfg.rag.use_chroma = _env_bool("AISTUDIO_USE_CHROMA", cfg.rag.use_chroma)
+    _vs = os.getenv("AISTUDIO_VECTORSTORE", cfg.rag.vectorstore).lower()
+    cfg.rag.vectorstore = _vs
+    # Keep use_chroma in sync for legacy code
+    cfg.rag.use_chroma = (_vs == "chroma")
     cfg.rag.top_k = _env_int("AISTUDIO_TOP_K", cfg.rag.top_k)
     # cfg.rag.max_distance = _env_float("AISTUDIO_MAX_DISTANCE", cfg.rag.max_distance)
 
