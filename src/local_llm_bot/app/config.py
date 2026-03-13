@@ -35,7 +35,7 @@ def _env_str(name: str, default: str) -> str:
 
 # class RagConfig(BaseModel):
 #     use_chroma: bool = Field(default=False)  # Legacy — use vectorstore instead
-    vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
+#     vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
 #     top_k: int = Field(default=5, ge=1, le=50)
 #     max_distance: float = Field(default=1.0, ge=0.0)
 #     default_model: str = Field(default="llama3.2:3b")
@@ -45,7 +45,7 @@ def _env_str(name: str, default: str) -> str:
 
 class RagConfig(BaseModel):
     use_chroma: bool = Field(default=False)  # Legacy — use vectorstore instead
-    vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
+#     vectorstore: str = Field(default="qdrant")  # "qdrant" or "chroma"
     top_k: int = Field(default=5, ge=1, le=50)
 
     # ✅ OFF by default (None = no distance filtering)

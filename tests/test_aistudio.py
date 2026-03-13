@@ -29,13 +29,13 @@ For unit tests of rag_core internals, see the "Unit" section at bottom.
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import requests
 
@@ -367,8 +367,9 @@ def test_citations(c: Client) -> Suite:
     def check_citation_indices_match_answer():
         """Indices referenced in answer should match those returned in citations list."""
         data = c.ask("What is QFD?", top_k=5)
-        answer = data["answer"]
+        answer = data["answer"]  # noqa: F841
         citations = data.get("citations") or []
+        returned_indices = {cit["index"] for cit in citations}
         if not citations:
             return  # Can't validate without citations
 
@@ -377,7 +378,6 @@ def test_citations(c: Client) -> Suite:
         for m in re.finditer(r'\[(?:Source\s+)?(\d+)\]', answer, re.IGNORECASE):
             cited_in_text.add(int(m.group(1)))
 
-        returned_indices = {c["index"] for c in citations}
 
         # Every index cited in text should be in the returned citations list
         missing = cited_in_text - returned_indices
@@ -409,13 +409,12 @@ def test_citations(c: Client) -> Suite:
         index in the *returned* citations list corresponds to a valid [Source N] or [N]
         reference — not that every model-text reference was kept."""
         data = c.ask("What is QFD and how does it apply to technology architecture?", top_k=5)
-        answer = data["answer"]
         citations = data.get("citations") or []
-        returned_indices = {c["index"] for c in citations}
 
         # Every index in returned citations should appear somewhere in the answer
         # (either as [N] or [Source N]) OR via implicit fallback (all docs surfaced)
         # — we just verify no citation has index=0 and sources are non-empty
+        returned_indices = {cit["index"] for cit in citations}  # noqa: F841
         for cit in citations:
             assert cit["index"] > 0, f"Citation index must be > 0, got {cit['index']}"
             assert cit["source"].strip(), f"Citation {cit['index']} has empty source"
@@ -520,7 +519,11 @@ def test_rag_core_units() -> Suite:
     sys.path.insert(0, str(project_root / "src"))
 
     try:
-        from local_llm_bot.app.rag_core import extract_page_number, Citation, RetrievedDoc, AnswerWithCitations
+        from local_llm_bot.app.rag_core import (
+            Citation,
+            RetrievedDoc,
+            extract_page_number,
+        )
     except ImportError as e:
         suite.add(Result("import rag_core", False, str(e)))
         return suite

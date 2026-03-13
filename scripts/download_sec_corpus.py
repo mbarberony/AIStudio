@@ -6,10 +6,10 @@ Usage: python download_sec_corpus.py --out ~/Developer/AIStudio/data/corpora/sec
 """
 
 import argparse
-import json
 import time
-import requests
 from pathlib import Path
+
+import requests
 
 # SEC EDGAR requires a User-Agent header identifying yourself
 HEADERS = {
@@ -142,7 +142,7 @@ def main():
         filings = get_filings(cik, max_results=args.years)
         
         if not filings:
-            print(f"  [warn] No 10-K filings found")
+            print("  [warn] No 10-K filings found")
             total_fail += 1
             continue
 
@@ -158,7 +158,7 @@ def main():
     print(f"Downloaded: {total_ok} filings")
     print(f"Failed:     {total_fail}")
     print(f"Output:     {out_dir}")
-    print(f"\nNext step:")
+    print("\nNext step:")
     print(f"  python -m local_llm_bot.app.ingest --corpus sec_10k --root {out_dir}")
 
 

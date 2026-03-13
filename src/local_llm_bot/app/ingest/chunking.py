@@ -14,8 +14,8 @@ Key principles:
 """
 
 from __future__ import annotations
+
 import re
-from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
@@ -38,10 +38,10 @@ class TextBoundary:
     position: int           # Character position
     boundary_type: BoundaryType
     content: str           # Text before this boundary
-    context: Optional[str] = None  # Section/subsection title for context
+    context: str | None = None  # Section/subsection title for context
 
 
-def detect_header_level(line: str) -> Optional[int]:
+def detect_header_level(line: str) -> int | None:
     """
     Detect if a line is a header and return its level (1-6).
     
@@ -64,9 +64,7 @@ def detect_header_level(line: str) -> Optional[int]:
             return level
     
     # ALL CAPS headers (must be substantial, 3+ words or 10+ chars)
-    if line_stripped.isupper() and len(line_stripped) >= 10:
-        # Exclude lines that are all punctuation or numbers
-        if any(c.isalpha() for c in line_stripped):
+    if line_stripped.isupper() and len(line_stripped) >= 10 and any(c.isalpha() for c in line_stripped):
             # Count words
             words = line_stripped.split()
             if len(words) >= 2:  # At least 2 words
@@ -88,13 +86,13 @@ def detect_list_item(line: str) -> bool:
         return True
     
     # Letter lists: a. item, a) item
-    if re.match(r'^[a-z][\.\)]\s+\S', line_stripped):
+    if re.match(r'^[a-z][\.\)]\s+\S', line_stripped):  # noqa: SIM103
         return True
     
     return False
 
 
-def detect_boundaries(text: str) -> List[TextBoundary]:
+def detect_boundaries(text: str) -> list[TextBoundary]:
     """
     Detect natural boundaries in text.
     
@@ -108,7 +106,7 @@ def detect_boundaries(text: str) -> List[TextBoundary]:
     position = 0
     accumulated_content = []
     
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         line_length = len(line) + 1  # +1 for newline
         
         # Check if this is a header
@@ -175,7 +173,7 @@ def detect_boundaries(text: str) -> List[TextBoundary]:
     return boundaries
 
 
-def split_by_sentences(text: str) -> List[str]:
+def split_by_sentences(text: str) -> list[str]:
     """
     Split text into sentences using common patterns.
     
@@ -215,7 +213,7 @@ def chunk_with_boundaries(
     max_size: int = 1200,
     overlap: int = 200,
     prefer_boundary: BoundaryType = BoundaryType.PARAGRAPH
-) -> List[Dict[str, any]]:
+) -> list[dict[str, any]]:
     """
     Chunk text respecting natural boundaries.
     
@@ -307,7 +305,7 @@ def chunk_with_boundaries(
     return chunks
 
 
-def chunk_by_sentences_simple(sentences: List[str], max_size: int, overlap: int) -> List[Dict[str, any]]:
+def chunk_by_sentences_simple(sentences: list[str], max_size: int, overlap: int) -> list[dict[str, any]]:
     """Helper: chunk a list of sentences"""
     chunks = []
     current_chunk = []
@@ -353,7 +351,7 @@ def chunk_by_sentences_simple(sentences: List[str], max_size: int, overlap: int)
     return chunks
 
 
-def add_context_to_chunk(chunk_text: str, context: Optional[str]) -> str:
+def add_context_to_chunk(chunk_text: str, context: str | None) -> str:
     """
     Prepend context to chunk if available.
     
@@ -370,7 +368,7 @@ def chunk_document_smart(
     overlap: int = 200,
     include_context: bool = True,
     min_chunk_size: int = 100
-) -> List[Chunk]:
+) -> list[Chunk]:
     """
     Smart document chunking that works for any document type.
     
@@ -416,7 +414,7 @@ def chunk_document_smart(
 
 
 # Backward compatible wrapper
-def chunk_document(doc: Document, chunk_size: int = 1200, overlap: int = 200) -> List[Chunk]:
+def chunk_document(doc: Document, chunk_size: int = 1200, overlap: int = 200) -> list[Chunk]:
     """
     Main chunking function (backward compatible).
     
@@ -436,7 +434,7 @@ def chunk_document(doc: Document, chunk_size: int = 1200, overlap: int = 200) ->
         return chunk_document_simple(doc, chunk_size, overlap)
 
 
-def chunk_document_simple(doc: Document, chunk_size: int = 1200, overlap: int = 200) -> List[Chunk]:
+def chunk_document_simple(doc: Document, chunk_size: int = 1200, overlap: int = 200) -> list[Chunk]:
     """
     Fallback: Simple sentence-aware chunking.
     Better than character-based but not as smart as boundary detection.
@@ -458,7 +456,7 @@ def chunk_document_simple(doc: Document, chunk_size: int = 1200, overlap: int = 
 
 
 # Original character-based chunking (kept for reference/testing)
-def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 200) -> List[str]:
+def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 200) -> list[str]:
     """
     DEPRECATED: Character-based chunking.
     Use chunk_document() instead for better results.
@@ -474,7 +472,7 @@ def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 200) -> List[st
     if not text:
         return []
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     start = 0
     while start < len(text):
         end = min(len(text), start + chunk_size)
@@ -495,7 +493,7 @@ class ChunkingStrategy:
     """Predefined chunking strategies for different document types"""
     
     @staticmethod
-    def for_resumes(doc: Document) -> List[Chunk]:
+    def for_resumes(doc: Document) -> list[Chunk]:
         """Optimized for resumes: preserve sections, smaller chunks"""
         return chunk_document_smart(
             doc,
@@ -506,7 +504,7 @@ class ChunkingStrategy:
         )
     
     @staticmethod
-    def for_technical_docs(doc: Document) -> List[Chunk]:
+    def for_technical_docs(doc: Document) -> list[Chunk]:
         """Optimized for technical documentation: larger chunks, preserve code blocks"""
         return chunk_document_smart(
             doc,
@@ -517,7 +515,7 @@ class ChunkingStrategy:
         )
     
     @staticmethod
-    def for_legal_docs(doc: Document) -> List[Chunk]:
+    def for_legal_docs(doc: Document) -> list[Chunk]:
         """Optimized for legal documents: large chunks, high overlap for context"""
         return chunk_document_smart(
             doc,
@@ -528,7 +526,7 @@ class ChunkingStrategy:
         )
     
     @staticmethod
-    def for_articles(doc: Document) -> List[Chunk]:
+    def for_articles(doc: Document) -> list[Chunk]:
         """Optimized for articles/blog posts: medium chunks, paragraph-aware"""
         return chunk_document_smart(
             doc,
@@ -539,7 +537,7 @@ class ChunkingStrategy:
         )
     
     @staticmethod
-    def for_books(doc: Document) -> List[Chunk]:
+    def for_books(doc: Document) -> list[Chunk]:
         """Optimized for books: larger chunks for narrative flow"""
         return chunk_document_smart(
             doc,

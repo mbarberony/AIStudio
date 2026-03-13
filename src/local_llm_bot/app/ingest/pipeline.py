@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os as _os
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -19,7 +20,7 @@ from local_llm_bot.app.ingest.manifest import (
 )
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
-import os as _os
+
 _VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
 if _VECTORSTORE == "chroma":
     from local_llm_bot.app.vectorstore import chroma_store as _store

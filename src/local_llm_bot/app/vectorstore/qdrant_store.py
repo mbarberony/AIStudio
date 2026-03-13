@@ -10,14 +10,13 @@ from typing import Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
     FieldCondition,
+    Filter,
     MatchValue,
+    PointStruct,
+    VectorParams,
 )
 
-from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.ollama_client import ollama_embed
 
 # Qdrant runs locally on port 6333 by default
@@ -127,7 +126,7 @@ def upsert_chunks(
                     **meta,           # source_path, page, chunk_index, etc.
                 },
             )
-            for cid, doc, emb, meta in zip(b_ids, b_docs, b_embs, b_metas)
+            for cid, doc, emb, meta in zip(b_ids, b_docs, b_embs, b_metas, strict=False)
         ]
 
         client.upsert(collection_name=collection_name, points=points)
@@ -173,7 +172,6 @@ def query(
 
     q_emb = ollama_embed(model=embed_model, texts=[query_text])[0]
 
-    from qdrant_client.models import SearchRequest
     # Build metadata filter if firm or year specified
     qdrant_filter = None
     conditions = []

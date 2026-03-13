@@ -38,7 +38,6 @@ from pathlib import Path
 
 import requests
 
-
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -180,7 +179,6 @@ def format_sources(sources: list) -> str:
 
 def build_report(cfg: dict, results: list, total_sec: float) -> str:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    model_slug = cfg["model"].replace(":", "-").replace("/", "-")
 
     latencies = [r["latency_sec"] for r in results if r["error"] is None]
     errors = [r for r in results if r["error"]]
@@ -189,21 +187,21 @@ def build_report(cfg: dict, results: list, total_sec: float) -> str:
 
     # Header
     lines += [
-        f"# AIStudio Benchmark Report",
-        f"",
+        "# AIStudio Benchmark Report",
+        "",
         f"**Generated:** {ts}  ",
         f"**Corpus:** `{cfg['corpus']}`  ",
         f"**Model:** `{cfg['model']}`  ",
         f"**Temperature:** {cfg['temperature']}  ",
         f"**k (chunks retrieved):** {cfg['k']}  ",
         f"**Question file:** `{cfg['question_file']}`  ",
-        f"",
-        f"---",
-        f"",
-        f"## Summary",
-        f"",
-        f"| Metric | Value |",
-        f"|---|---|",
+        "",
+        "---",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
         f"| Total questions | {len(results)} |",
         f"| Successful | {len(latencies)} |",
         f"| Errors | {len(errors)} |",
@@ -228,23 +226,23 @@ def build_report(cfg: dict, results: list, total_sec: float) -> str:
 
         lines += [
             f"### Q: {r['question']}",
-            f"",
+            "",
             f"**Latency:** {r['latency_sec']}s  ",
-            f"",
+            "",
         ]
 
         if r["error"]:
             lines += [f"**Error:** {r['error']}", ""]
         else:
             lines += [
-                f"**Answer:**",
-                f"",
+                "**Answer:**",
+                "",
                 r["answer"].strip(),
-                f"",
-                f"**Sources:**",
-                f"",
+                "",
+                "**Sources:**",
+                "",
                 format_sources(r["sources"]),
-                f"",
+                "",
             ]
 
         lines.append("---")
@@ -258,7 +256,7 @@ def write_report(cfg: dict, report_text: str) -> Path:
     report_dir.mkdir(parents=True, exist_ok=True)
 
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    model_slug = cfg["model"].replace(":", "-").replace("/", "-")
+    model_slug = cfg["model"].replace(":", "-").replace("/", "-")  # noqa: F841
     filename = f"report_{ts}_{model_slug}.md"
     path = report_dir / filename
 

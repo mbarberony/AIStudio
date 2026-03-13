@@ -16,10 +16,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import numpy as np
-from typing import List, Tuple
 import sys
 from pathlib import Path
+
+import numpy as np
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -43,11 +43,11 @@ def get_embedding(text: str, model: str = None) -> np.ndarray:
 
 def find_closest_words(
     target_embedding: np.ndarray,
-    word_list: List[str],
+    word_list: list[str],
     model: str,
     top_k: int = 5,
-    exclude: List[str] = None
-) -> List[Tuple[str, float]]:
+    exclude: list[str] = None
+) -> list[tuple[str, float]]:
     """
     Find words in word_list closest to target_embedding.
     
@@ -71,8 +71,8 @@ def find_closest_words(
 
 
 def embedding_arithmetic(
-    positive: List[str],
-    negative: List[str],
+    positive: list[str],
+    negative: list[str],
     model: str = None,
     verbose: bool = True
 ) -> np.ndarray:
@@ -117,10 +117,10 @@ def embedding_arithmetic(
 
 def test_analogy(
     a: str, b: str, c: str,
-    candidates: List[str],
+    candidates: list[str],
     model: str = None,
     top_k: int = 5
-) -> List[Tuple[str, float]]:
+) -> list[tuple[str, float]]:
     """
     Test analogy: a is to b as c is to ?
     
@@ -144,7 +144,7 @@ def test_analogy(
     )
     
     # Find closest candidates
-    print(f"\nSearching for closest matches...")
+    print("\nSearching for closest matches...")
     matches = find_closest_words(
         result,
         candidates,
@@ -259,7 +259,7 @@ def run_test_suite(model: str = None, category: str = "all"):
     model = model or CONFIG.rag.default_embed_model
     
     print(f"\n{'='*60}")
-    print(f"EMBEDDING ARITHMETIC TEST SUITE")
+    print("EMBEDDING ARITHMETIC TEST SUITE")
     print(f"Model: {model}")
     print(f"{'='*60}")
     
@@ -320,7 +320,7 @@ def run_test_suite(model: str = None, category: str = "all"):
     accuracy = passed / total * 100
     
     print(f"\n{'='*60}")
-    print(f"SUMMARY")
+    print("SUMMARY")
     print(f"{'='*60}")
     print(f"Total tests: {total}")
     print(f"Passed: {passed}")
@@ -342,7 +342,7 @@ def interactive_mode(model: str = None):
     model = model or CONFIG.rag.default_embed_model
     
     print(f"\n{'='*60}")
-    print(f"INTERACTIVE EMBEDDING ARITHMETIC")
+    print("INTERACTIVE EMBEDDING ARITHMETIC")
     print(f"Model: {model}")
     print(f"{'='*60}")
     print("\nEnter arithmetic operations on words.")

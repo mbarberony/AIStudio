@@ -5,17 +5,18 @@ RAG core: retrieval, answer generation, citation support, and conversation memor
 
 from __future__ import annotations
 
+import os as _os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Dict, Optional
+from typing import Any
 
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
-import os as _os
+
 _VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
 if _VECTORSTORE == "chroma":
     from local_llm_bot.app.vectorstore import chroma_store as _store
@@ -40,8 +41,8 @@ class Citation:
     """A citation reference to a source document."""
     index: int
     source: str
-    page: Optional[int] = None
-    chunk_id: Optional[str] = None
+    page: int | None = None
+    chunk_id: str | None = None
     score: float = 0.0
 
 
@@ -49,8 +50,8 @@ class Citation:
 class AnswerWithCitations:
     """Answer with citation metadata."""
     answer: str
-    citations: List[Citation]
-    source_docs: List[RetrievedDoc]
+    citations: list[Citation]
+    source_docs: list[RetrievedDoc]
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +156,7 @@ def retrieve(
 # Citation helpers
 # ---------------------------------------------------------------------------
 
-def extract_page_number(source_path: str, chunk_id: str = "") -> Optional[int]:
+def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
     """Attempt to extract page number from source path or chunk_id."""
     page_match = re.search(r'#page=(\d+)', source_path)
     if page_match:
@@ -180,8 +181,8 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> Optional[int]:
 def generate_answer_with_citations(
     *,
     query: str,
-    docs: List[RetrievedDoc],
-    conversation_history: Optional[List[Dict[str, str]]] = None
+    docs: list[RetrievedDoc],
+    conversation_history: list[dict[str, str]] | None = None
 ) -> AnswerWithCitations:
     """Generate answer with inline citation markers and return citation metadata."""
     if not docs:

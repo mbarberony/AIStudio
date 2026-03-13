@@ -5,32 +5,25 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, List, Dict, Optional
-from dataclasses import dataclass
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.debug_stats import JsonlStats, compute_jsonl_stats
-
-
-from local_llm_bot.app.rag_core import retrieve, RetrievedDoc
-from local_llm_bot.app.ollama_client import ollama_generate
-
-from local_llm_bot.app.utils.corpus_paths import corpus_exists, list_corpora, corpus_paths
-
-
-from local_llm_bot.app.utils.repo_root import find_repo_root
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
-
+from local_llm_bot.app.ollama_client import ollama_generate
+from local_llm_bot.app.rag_core import RetrievedDoc, retrieve
+from local_llm_bot.app.utils.corpus_paths import corpus_exists, corpus_paths, list_corpora
+from local_llm_bot.app.utils.repo_root import find_repo_root
 
 # ============================================================================
 # INLINE CITATION SUPPORT (embedded in API for simplicity)
 # ============================================================================
 
-def extract_page_number(source_path: str, chunk_id: str = "") -> Optional[int]:
+def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
     """Extract page number from source path or chunk_id"""
     # Try from source path: "document.pdf#page=5"
     page_match = re.search(r'#page=(\d+)', source_path)
@@ -53,9 +46,9 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> Optional[int]:
 
 def generate_answer_with_citations(
     query: str,
-    docs: List[RetrievedDoc],
-    conversation_history: Optional[List[Dict[str, str]]] = None
-) -> Dict[str, Any]:
+    docs: list[RetrievedDoc],
+    conversation_history: list[dict[str, str]] | None = None
+) -> dict[str, Any]:
     """Generate answer with citation support"""
     
     if not docs:
@@ -174,7 +167,7 @@ class AskRequest(BaseModel):
     year: str | None = None
     temperature: float | None = None
     top_p: float | None = None
-    conversation_history: List[Dict[str, str]] | None = None  # NEW: For follow-up questions
+    conversation_history: list[dict[str, str]] | None = None  # NEW: For follow-up questions
 
 
 class CitationResponse(BaseModel):
@@ -187,7 +180,7 @@ class CitationResponse(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
-    citations: List[CitationResponse] | None = None  # NEW: Citation metadata
+    citations: list[CitationResponse] | None = None  # NEW: Citation metadata
     has_citations: bool = False  # NEW: Flag indicating if citations are present
 
 
@@ -236,7 +229,7 @@ async def prewarm(model_id: str | None = None) -> dict[str, str]:
         _warm_models.add(model)
         return {"status": "warm", "model": model}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prewarm failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prewarm failed: {str(e)}") from e
 
 
 def _require_corpus(corpus: str) -> None:
@@ -290,7 +283,7 @@ def _get_corpus_size(corpus_name: str) -> int:
             return 0
         
         total_size = 0
-        for dirpath, dirnames, filenames in os.walk(corpus_dir):
+        for dirpath, _dirnames, filenames in os.walk(corpus_dir):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 if os.path.exists(fp):
@@ -365,7 +358,7 @@ async def debug_stats(corpus: str = "default") -> JsonlStats:
 # CORPUS MANAGEMENT ENDPOINTS
 
 @app.get("/corpora")
-async def get_corpora() -> List[CorpusInfo]:
+async def get_corpora() -> list[CorpusInfo]:
     """
     Get list of available corpora with metadata.
     """
@@ -443,7 +436,8 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
 
 async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     """Run ingest as a background task after upload."""
-    import sys, os
+    import os
+    import sys
     cmd = [sys.executable, "-m", "local_llm_bot.app.ingest",
            "--corpus", corpus_name, "--root", str(uploads_dir)]
     env = {**os.environ, "PYTHONPATH": "src"}
@@ -461,7 +455,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
 @app.post("/corpus/{corpus_name}/upload")
 async def upload_to_corpus(
     corpus_name: str,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...)  # noqa: B008
 ) -> dict[str, Any]:
     """
     Upload a file to the specified corpus.
@@ -495,7 +489,7 @@ async def upload_to_corpus(
 
         return {
             "status": "success",
-            "message": f"File uploaded and ingestion started.",
+            "message": "File uploaded and ingestion started.",
             "filename": file.filename,
             "file_path": str(file_path),
             "size_bytes": file_size,
@@ -505,7 +499,7 @@ async def upload_to_corpus(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to upload file: {str(e)}"
-        )
+        ) from e
 
 
 class CreateCorpusRequest(BaseModel):
@@ -568,7 +562,7 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create corpus: {str(e)}"
-        )
+        ) from e
 
 
 @app.delete("/corpus/{corpus_name}")
@@ -604,13 +598,13 @@ async def delete_corpus(corpus_name: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete corpus: {str(e)}"
-        )
+        ) from e
 
 
 # MODEL MANAGEMENT ENDPOINTS
 
 @app.get("/models")
-async def get_models() -> List[ModelInfo]:
+async def get_models() -> list[ModelInfo]:
     """
     Get list of available LLM models from Ollama.
     """
@@ -731,7 +725,7 @@ async def select_model(model_id: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Error selecting model: {str(e)}"
-        )
+        ) from e
 
 
 @app.get("/config")

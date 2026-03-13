@@ -21,11 +21,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
-
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -335,7 +333,7 @@ def main() -> None:
 
     questions = load_questions(questions_path)
 
-    print(f"\n🔍 AIStudio Benchmark")
+    print("\n🔍 AIStudio Benchmark")
     print(f"   Corpus:      {args.corpus}")
     print(f"   Top K:       {args.top_k}")
     print(f"   Temperature: {args.temperature}")
