@@ -34,5 +34,3 @@ pytest
 ruff
 setuptools
 wheel
-beautifulsoup4
-qdrant-client>=1.7.0
