@@ -1,8 +1,11 @@
 # Roadmap
 
-> AIStudio — phased delivery plan
-> Each release is a coherent, usable product. Nothing is a stepping stone
-> to something else — every version ships real value.
+> AIStudio — phased delivery plan.
+> This is a living document. Priorities shift based on deployment learnings,
+> interview feedback, and what breaks in production. Manuel Barbero serves as
+> both product owner and tech lead — decisions get made fast and the backlog
+> reflects real-world constraints, not wishful thinking. Agile in practice,
+> not in ceremony.
 
 ---
 
@@ -21,146 +24,101 @@
 
 ## Alpha — Completed ✅
 
-**Theme:** Core loop working. Demonstrate the concept.
-
 - [x] Document ingestion (PDF, Word, PowerPoint, Excel, Markdown, HTML)
 - [x] Embedding-based retrieval via Qdrant vector store (replaced ChromaDB)
-- [x] RAG query with inline citations `[1][2]` and References section
-- [x] Browser UI — corpus selector, model selector, query interface, corpus stats
-- [x] FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
-- [x] Model selection via UI (any Ollama-hosted model)
-- [x] `nomic-embed-text` embeddings (768 dimensions, cosine similarity)
-- [x] `llama3.1:8b` and `llama3.1:70b` tested and benchmarked
-- [x] End-to-end tested on M4 Max MacBook Pro 128GB
-- [x] README, QUICKSTART, BENCHMARK_FINDINGS reflecting real install experience
-- [x] Auto-launch script (`scripts/start.sh`) — starts all four processes
-- [x] Benchmark harness (`scripts/benchmark.py`) — CLI flags, auto-generates findings
-- [x] Metadata filtering — firm and year filters, backend + API + UI
+- [x] RAG query with inline citations and References section
+- [x] Browser UI — corpus selector, model selector, query interface
+- [x] FastAPI backend — /ask, /health, /corpus/*, /debug/* endpoints
+- [x] nomic-embed-text embeddings (768 dimensions, cosine similarity)
+- [x] llama3.1:8b and llama3.1:70b tested and benchmarked
+- [x] Auto-launch script, benchmark harness, metadata filtering
 - [x] 143 SEC 10-K corpus — 105,964 chunks, 34 min ingest, 54 chunks/sec, 0 failures
-- [x] ChromaDB → Qdrant migration (Qdrant stable at 106K chunks; ChromaDB crashed at 32K)
+- [x] ChromaDB → Qdrant migration
 
 ---
 
 ## Beta — In Progress
 
-**Theme:** Production-quality retrieval. Usable by others on their own documents.
+### Recently Completed ✅
+- [x] mistral:7b installed
+- [x] sentence-transformers installed (reranker dependency ready)
+- [x] CI/CD pipeline green (GitHub Actions)
+- [x] Makefile — make check, make test-unit, make coverage
+- [x] pre-commit hooks — ruff + ruff-format on every commit
+- [x] CI badge in README
+- [x] Conventional commits in practice
+- [x] Coverage reporting (~26%)
 
 ### Retrieval Quality
-- [ ] **Reranker** — CrossEncoder (ms-marco-MiniLM, ~90MB local). Two-stage
-      retrieval: vector similarity → joint reranker scoring. Fixes vocabulary
-      mismatch (e.g. "AI governance" ≠ "Artificial Intelligence Risk and Controls").
-      Adds ~1–2s latency. High priority.
-- [ ] **Relevance threshold** — discard chunks below minimum similarity score.
-      Currently all top-K chunks passed to LLM context regardless of quality.
-- [ ] **XBRL stripping** — SEC 10-K HTML files embed XBRL structured data tags
-      that get chunked as noise. Strip `<ix:*>` tags in BeautifulSoup parser.
-- [ ] **Embedding model eval** — nomic-embed-text vs bge-large (768 vs 1024 dims).
+- [ ] Reranker — CrossEncoder ms-marco-MiniLM — START HERE next session
+- [ ] Relevance threshold
+- [ ] XBRL stripping in HTML ingestion
+- [ ] Embedding model eval: nomic-embed-text vs bge-large
 
 ### Citation & Hallucination
-- [ ] **Citation compliance hardening** — model sometimes answers without inline
-      `[N]` markers despite system prompt. More pronounced on 8b than 70b.
-      Stricter prompt engineering or 70b default for production.
-- [ ] **Citation verification pass** — confirm cited source actually contains
-      the claimed fact.
+- [ ] Citation numbering carry-over fix
+- [ ] Citation compliance — stricter prompt or 70b default
+- [ ] Phantom citation numbers fix
 
 ### Corpus UI
-- [ ] Per-file removal from corpus
-- [ ] Corpus delete via UI
-- [ ] Corpus rename via UI
-- [ ] Progress bar / ingestion completion notification
-- [ ] Corpus dropdown auto-refresh when new corpus created while UI open
-- [ ] Manifest deduplication — keep only latest entry per file
-- [ ] `ingested_at` timestamp in manifest
-- [ ] Re-ingest `demo` corpus into Qdrant (currently no Qdrant backing)
-
-### Conversation
-- [ ] Auto-save conversation after every exchange
-- [ ] Restore conversation on page load
-- [ ] Named conversation history (date-grouped)
-- [ ] Export conversation as Markdown
+- [ ] Per-file removal, corpus delete/rename
+- [ ] Progress bar during ingest
+- [ ] Corpus dropdown auto-refresh
+- [ ] ingested_at timestamp in manifest
 
 ### Engineering
-- [ ] Rename `chroma_upserts` → `vector_upserts` in result JSON (cosmetic)
-- [ ] Double message bug — verify resolved post-Qdrant migration
-- [ ] `DEMO_CORPUS.md` excluded from retrieval results
-- [ ] MacBook Air end-to-end validation
+- [ ] OBE test — clean install in fresh directory (AFTER reranker)
+- [ ] MacBook Air validation
+- [ ] Swagger/OpenAPI — enable FastAPI auto-docs
+- [ ] About modal in UI
+- [ ] SDLC.md, HOW_TO.md
+- [ ] CI dependency caching
+- [ ] Mock/container for integration tests in CI
+
+### Conversation
+- [ ] Auto-save, restore on page load
+- [ ] Named conversation history
+- [ ] Export as Markdown
 
 ---
 
 ## v1.0 — Production Ready
 
-**Theme:** Validated at scale, open-source ready.
-
-### Crown Jewel Features
-- [ ] **Page-aware chunking** — PDF ingest via pdfplumber, store `page=N`
-      in Qdrant payload. Prerequisite for PDF viewer.
-- [ ] **PDF viewer** — click citation `[N]` → open PDF, scroll to source page.
-      The feature that turns demo into product.
-
-### Scale & Quality
-- [ ] Conversation memory validation — multi-turn testing at scale
-- [ ] Hybrid retrieval (dense vector + BM25 keyword) configurable
-- [ ] Quantization — consider for 300+ doc corpus
-- [ ] Observability — similarity scores visible in UI per citation
-
-### Benchmark & Tooling
-- [ ] Config file support — benchmark defaults from `config/benchmark.yaml`.
-      Pattern: file → env vars → CLI flags (CLI wins).
-- [ ] Benchmark visual output — rich terminal display with colored pass/fail,
-      latency bars, summary table (`rich` library).
-- [ ] `--json` flag for machine-readable benchmark output (default: human-readable)
-- [ ] `compare_runs.py` — diff two benchmark runs on latency and answer quality
-- [ ] `--help` verified on all scripts
-
-### Install & Launch
-- [ ] One-click installer (.dmg for macOS)
-- [ ] Menu bar / dock icon to start server and open UI
-- [ ] No terminal required after initial setup
+- [ ] Page-aware chunking (pdfplumber, page=N in Qdrant payload)
+- [ ] PDF viewer — click citation → scroll to source page
+- [ ] PDF image identification and citation
+- [ ] Respond with images (LLaVA via Ollama)
+- [ ] Hybrid retrieval (dense + BM25)
+- [ ] One-click installer (.dmg)
 - [ ] Windows / Linux support
-
-### Integrations
-- [ ] LiteLLM integration — unified abstraction for local + cloud models
-      (OpenAI, Anthropic, Bedrock) via single config change
-- [ ] Multi-tenancy / API key auth — for sharing with team members
-
-### Engineering
-- [ ] Automated test suite with CI (GitHub Actions)
-- [ ] Architecture Decision Records (ADRs)
-- [ ] INSTALL.md — step-by-step for non-technical users / AI teams
+- [ ] uv migration
+- [ ] LiteLLM integration
+- [ ] Config file for benchmark, compare_runs.py, rich output
+- [ ] Parallel CI jobs, semantic-release
 
 ---
 
 ## v2.0 — Multi-User & Cloud
 
-**Theme:** Teams, shared corpora, cloud deployment.
-
-- [ ] User accounts with roles (owner, admin, member, viewer)
-- [ ] Shared corpora — team members query same indexed documents
-- [ ] Cloud deployment — AWS ECS + S3-backed vector store
-- [ ] REST API documented (OpenAPI spec)
-- [ ] Mobile-friendly web UI
-- [ ] MCP connectors — Gmail, Google Calendar, Slack, Notion
+- [ ] User accounts with roles
+- [ ] Shared corpora
+- [ ] AWS ECS Fargate + S3-backed Qdrant + ALB + CloudFront
+- [ ] GPU inference (Inferentia2 or g4dn.xlarge)
+- [ ] MCP connectors
+- [ ] Compiled distribution (PyInstaller/Nuitka)
 
 ---
 
-## Known Issues (Current)
+## Known Issues
 
 | Issue | Severity | Fix |
 |-------|----------|-----|
-| XBRL noise in JPMorgan HTML chunks | Medium | Strip `<ix:*>` in BeautifulSoup |
-| Northern Trust / Nuveen CIK collision | Medium | Deduplicate at download time |
-| BNY Mellon CIK incorrect — 2007 only | Medium | Correct CIK in download script |
-| Citation null on confident answers | Medium | Stricter prompt / 70b default |
-| Corpus dropdown doesn't refresh | Low | JS event on corpus creation |
-| Double message bug | Low | Verify post-migration |
-
----
-
-## Dependency Map
-
-```
-Alpha ✅
-  └── Beta (current)
-        └── v1.0
-              └── v2.0
-```
+| Vocabulary mismatch (no reranker yet) | Critical | CrossEncoder — next commit |
+| XBRL noise in HTML 10-K chunks | Medium | Strip ix:* tags |
+| Northern Trust / Nuveen CIK collision | Medium | Deduplicate at download |
+| BNY Mellon CIK incorrect | Medium | Correct CIK in script |
+| Citation null on confident answers | Medium | Stricter prompt / 70b |
+| Citation numbering carry-over | Medium | Reset counter per response |
+| Corpus dropdown doesn't refresh | Low | JS event fix |
+| Stats button wired to Upload listener | Low | Fix event binding |
+| chroma/ created on new corpus init | Low | Remove stale mkdir |

@@ -1,130 +1,217 @@
 # Architecture Decisions
 
-Key technical choices made in this project, with rationale. This document is intended for anyone reviewing the codebase who wants to understand not just what was built, but why.
+Key technical choices made in this project, with rationale. This document is
+intended for anyone reviewing the codebase who wants to understand not just
+what was built, but why.
 
 ---
 
 ## 1. Local-First Design (Ollama, No External API)
 
-**Decision:** All LLM inference and embedding runs locally via Ollama. No OpenAI, Anthropic, or other cloud API dependency in the core stack.
+**Decision:** All LLM inference and embedding runs locally via Ollama. No OpenAI,
+Anthropic, or other cloud API dependency in the core stack.
 
 **Why:**
-- Forces genuine understanding of model behavior at the infrastructure level — latency, memory pressure, model selection tradeoffs
+- Forces genuine understanding of model behavior at the infrastructure level —
+  latency, memory pressure, model selection tradeoffs
 - Eliminates API cost as a variable during experimentation
-- Relevant to financial services contexts where data residency and network egress are real constraints, not afterthoughts
+- Relevant to financial services contexts where data residency and network egress
+  are real constraints, not afterthoughts
 - Makes the system runnable in air-gapped or restricted environments
 
-**Tradeoff:** Inference quality is lower than frontier models. This is a deliberate constraint, not a limitation. The goal is substrate knowledge, not benchmark performance.
+**Tradeoff:** Inference quality is lower than frontier models. This is a deliberate
+constraint, not a limitation. The goal is substrate knowledge, not benchmark
+performance.
 
-**Would change for production:** Add LiteLLM as a provider abstraction layer. Local inference for development and sensitive data; cloud inference (with appropriate data handling) for production quality. The architecture is designed to make this substitution straightforward — Ollama client is isolated in `ollama_client.py`.
+**Would change for production:** Add LiteLLM as a provider abstraction layer.
+Local inference for development and sensitive data; cloud inference (with
+appropriate data handling) for production quality. The architecture is designed
+to make this substitution straightforward — Ollama client is isolated in
+`ollama_client.py`.
 
 ---
 
-## 2. Chroma as Vector Store
+## 2. Qdrant as Vector Store (replaced ChromaDB)
 
-**Decision:** Chroma, running embedded (in-process), not as a separate service.
+**Decision:** Qdrant 1.17.0, running as a separate process on port 6333.
+ChromaDB was the original choice and was replaced in production.
 
-**Why:**
-- Zero operational overhead for a personal lab — no separate process to manage, no network hop
-- Persistent storage between runs without configuration
-- Python-native, fits naturally into the FastAPI stack
-- Sufficient for the document volumes in scope
+**Why the switch:**
+ChromaDB crashed at 32,285 chunks during the SEC 10-K corpus ingest. Not a
+configuration issue — a hard failure at scale. Qdrant was stable at 105,964
+chunks with zero failures across multiple full re-ingests.
 
-**Tradeoff:** Doesn't scale horizontally. Single-process means no concurrent write safety at scale.
+**Why Qdrant specifically:**
+- Written in Rust — near-zero GC overhead vs ChromaDB's Python-based memory model
+- Native metadata filtering via `Filter`/`FieldCondition` — firm and year filters
+  run at the vector search layer, not post-hoc on results
+- Production upgrade path: sharding, replication, quantization, gRPC (port 6334)
+- Separate process model — independently restartable, independently scalable,
+  maps directly to a Docker container in cloud deployment
 
-**Would change for production:** Pinecone or Weaviate for cloud-native deployment with horizontal scaling. Alternatively, pgvector if the deployment already has PostgreSQL — reduces operational surface area significantly. The vector store interface is abstracted in `vectorstore/chroma_store.py`, making substitution a contained change.
+**The four-process pattern is deliberate:** Browser → FastAPI → Qdrant → Ollama.
+Each process independently restartable. The separation that looks like operational
+overhead in a personal lab is the same separation that enables horizontal scaling
+in production — add Qdrant nodes, add uvicorn workers, point at shared Qdrant
+cluster. No architecture change required.
+
+**Tradeoff:** Qdrant requires a separate process and persistent storage directory
+(`~/qdrant_storage/`). ChromaDB ran in-process with zero operational overhead.
+The stability gain at scale makes this tradeoff non-negotiable.
+
+**Would change for production:** Same Qdrant, configured for replication and
+S3-backed snapshots. Alternatively Qdrant Cloud for managed hosting.
+The `qdrant_store.py` adapter makes the substitution a configuration change.
 
 ---
 
 ## 3. Embedding Model: `nomic-embed-text`
 
-**Decision:** `nomic-embed-text` as the default embedding model.
+**Decision:** `nomic-embed-text` as the default embedding model (768 dimensions,
+cosine similarity).
 
 **Why:**
-- Best CPU performance among locally available models at time of selection — low latency without GPU
-- Produces meaningful semantic representations for the document types in scope (resumes, technical docs, markdown)
-- Passes the embedding arithmetic tests (King − Man + Woman = Queen), which is a practical signal of semantic quality
+- Best CPU/unified memory performance among locally available models at time
+  of selection — low latency without GPU
+- Produces meaningful semantic representations for the document types in scope
+- Passes embedding arithmetic tests (King − Man + Woman ≈ Queen), a practical
+  signal of semantic quality
 
-**Considered:** `bge-large-en` — approximately 5% quality improvement on retrieval benchmarks, but roughly 2x slower on CPU. The tradeoff didn't justify it for this use case.
+**Considered:** `bge-large-en` — approximately 5% quality improvement on
+retrieval benchmarks, but roughly 2x slower. The tradeoff didn't justify it.
 
-**Would change for production:** Benchmark against the specific corpus and query patterns in scope. Embedding model selection is highly workload-dependent; the right choice for financial documents may differ from the right choice for code or legal text.
+**Would change for production:** Benchmark against the specific corpus and
+query patterns in scope. Embedding model selection is highly workload-dependent.
 
 ---
 
 ## 4. Citation Logic Embedded in API, Not Modularized
 
-**Decision:** Citation extraction and formatting lives in `api.py` rather than as a separate module.
+**Decision:** Citation extraction and formatting lives in `api.py` rather than
+as a separate module.
 
 **Why:**
-- Citation logic is tightly coupled to the response pipeline — it operates on the LLM output immediately before it's returned
-- Separating it into a module adds indirection without architectural benefit at this scale
+- Citation logic is tightly coupled to the response pipeline — it operates on
+  LLM output immediately before it's returned
+- Separating it adds indirection without architectural benefit at this scale
 - Simpler deployment: one file to update, no import chain to maintain
 
-**Tradeoff:** `api.py` is longer as a result. The citation functions (`generate_answer_with_citations`, `extract_page_number`) are clearly named and easy to locate.
+**Tradeoff:** `api.py` is longer as a result.
 
-**Would change for production:** With multiple citation formats (inline, footnote, structured JSON) or multiple output channels, a dedicated citation module with a clean interface would be worth the overhead.
+**Would change for production:** With multiple citation formats or output channels,
+a dedicated citation module with a clean interface would be worth the overhead.
 
 ---
 
 ## 5. Semantic Chunking Over Fixed-Size Chunking
 
-**Decision:** `chunking_generic.py` uses boundary-aware semantic chunking. The previous implementation used fixed character counts.
+**Decision:** Boundary-aware semantic chunking. The previous implementation used
+fixed character counts.
 
 **Why:**
-- Fixed chunking fragments natural language units — a sentence split across two chunks degrades retrieval significantly
-- Document structure carries semantic information: section headers, paragraph breaks, and sentence boundaries are meaningful signals
-- Measured improvement: approximately 25–40% accuracy improvement on resume-style queries after switching
+- Fixed chunking fragments natural language units — a sentence split across two
+  chunks degrades retrieval significantly
+- Document structure carries semantic information: section headers, paragraph
+  breaks, sentence boundaries are meaningful signals
+- Measured improvement: ~25–40% accuracy improvement on document queries
 
-**Implementation:** Three-tier fallback — semantic boundary detection → sentence splitting → character fallback. Pre-built strategies for common document types (`for_resumes()`, `for_technical_docs()`).
+**Implementation:** Three-tier fallback — semantic boundary detection → sentence
+splitting → character fallback.
 
-**Tradeoff:** Chunks are variable-length, which creates some unpredictability in context window usage. Handled via explicit context window management in the retriever.
+**Tradeoff:** Variable-length chunks create some unpredictability in context
+window usage. Handled via explicit context window management in the retriever.
 
 ---
 
-## 6. Page Number Tracking: Deferred
+## 6. Metadata Filtering at the Vector Layer
 
-**Decision:** Page numbers are not tracked in citations at this time.
+**Decision:** Firm and year filters are applied as Qdrant `FieldCondition`
+filters at query time, not as post-hoc filtering on results.
 
 **Why:**
-- The primary corpus in scope is resumes — 1–2 pages. Page attribution adds no meaningful value.
-- Implementation requires reliable page boundary detection during ingestion, which varies significantly by document type (PDF pagination is reliable; Word documents are layout-dependent).
-- The accuracy cost of getting page numbers wrong outweighs the benefit of showing them.
+- Post-hoc filtering wastes retrieval budget — you retrieve top-K then discard
+  most of them. Vector-layer filtering retrieves top-K from the filtered subset.
+- Qdrant's native Filter API has zero measurable latency overhead.
+- Metadata (firm, year) is parsed from filenames at ingest time
+  (`_parse_firm_year()` in `pipeline.py`) and stored as Qdrant payload fields.
+  No manual tagging required.
 
-**Would add when:** Indexing long documents (contracts, research reports, regulatory filings) where page attribution genuinely aids verification.
+**Pattern:** `Goldman_Sachs_10K_2026-02-25.htm` → `firm=Goldman Sachs, year=2026`
+parsed automatically. Filter adds zero latency. Filter is optional — omitting
+it runs cross-corpus retrieval.
 
 ---
 
-## 7. Conversation Memory: Sliding Window of 10 Turns
+## 7. Page Number Tracking: Deferred to v1.0
 
-**Decision:** The system maintains the last 10 conversation turns as context for follow-up questions.
+**Decision:** Page numbers not tracked in citations at this time.
 
 **Why:**
-- 10 turns covers most realistic conversational patterns without excessive context window consumption
-- Stateless between sessions by design — no persistence layer required, no privacy surface area
-- Simple to reason about and debug
+- Implementation requires reliable page boundary detection during ingestion,
+  which varies significantly by document type
+- The accuracy cost of getting page numbers wrong outweighs the benefit
 
-**Tradeoff:** Long research sessions lose early context. For use cases requiring persistent memory across sessions, a vector-based memory store (storing conversation summaries as embeddings) would be more appropriate.
+**Will add in v1.0:** pdfplumber for PDF ingestion with `page=N` stored as
+Qdrant payload. Enables the PDF viewer — click citation → scroll to source page.
+This is the crown jewel feature of v1.0.
 
 ---
 
-## 8. JSONL Baseline for Deterministic Testing
+## 8. Conversation Memory: Sliding Window of 10 Turns
 
-**Decision:** A JSONL retrieval path exists alongside the Chroma path, returning deterministic results without embedding inference.
+**Decision:** Last 10 conversation turns maintained as context for follow-up
+questions.
 
 **Why:**
-- Embedding models are nondeterministic under some conditions and slow to run in CI
-- Deterministic tests that don't depend on model inference are more reliable and much faster
-- Allows testing the full API response pipeline without Ollama running
+- Covers most realistic conversational patterns without excessive context
+  window consumption
+- Stateless between sessions by design — no persistence layer required
 
-**Usage:** Set via config; the test suite uses the JSONL path by default. Production queries use Chroma.
+**Tradeoff:** Long research sessions lose early context. Vector-based memory
+store (storing conversation summaries as embeddings) would be more appropriate
+for persistent multi-session memory.
+
+---
+
+## 9. JSONL Baseline for Deterministic Testing
+
+**Decision:** A JSONL retrieval path exists alongside the Qdrant path, returning
+deterministic results without embedding inference.
+
+**Why:**
+- Embedding models are nondeterministic under some conditions and slow in CI
+- Allows testing the full API response pipeline without Ollama or Qdrant running
+- Unit tests use the JSONL path; integration tests use Qdrant
+
+---
+
+## 10. Single HTML File Frontend
+
+**Decision:** The entire UI is `front_end/rag_studio.html` — one file, ~3,700
+lines, no build step.
+
+**Why:**
+- Zero build toolchain. Clone and open. Works immediately.
+- No npm, no webpack, no node_modules. Nothing to break on a new machine.
+- Consistent with the "runnable in under 30 minutes" QUICKSTART promise.
+
+**Tradeoff:** A single 3,700-line file is harder to navigate than a componentized
+React app. The tradeoff is deliberate — operational simplicity over developer
+ergonomics at this scale.
+
+**Would change for production:** React with component library for multi-user
+Beta. The `ui_architecture.md` doc describes the target left-bar layout.
 
 ---
 
 ## What I Would Do Differently at Scale
 
-A few things that are acceptable for a personal lab but would need to change for a real deployment:
-
-- **Authentication:** The API has no auth. Fine for localhost; needs at minimum API key validation before any network exposure.
-- **Observability:** Structured logging exists but there's no metrics layer. LLM latency, retrieval score distributions, and refusal rates are the three most important things to instrument first.
-- **Async ingestion:** Document ingestion is currently synchronous and blocking. At any meaningful document volume, this needs to move to a queue-backed async pipeline.
-- **Vector store backup:** Chroma's embedded mode has no backup strategy. In production, the vector store is effectively a derived artifact (documents → embeddings), but regenerating it is expensive. Treat it like a database and back it up.
+- **Authentication:** The API has no auth. Fine for localhost; needs API key
+  validation before any network exposure.
+- **Observability:** LLM latency, retrieval score distributions, and refusal
+  rates are the three most important things to instrument first.
+- **Async ingestion:** Currently synchronous and blocking. Needs a queue-backed
+  async pipeline at meaningful document volumes.
+- **Vector store backup:** Qdrant storage (`~/qdrant_storage/`) is a derived
+  artifact but expensive to regenerate. Treat it like a database — back it up.
+  In production: S3-backed Qdrant snapshots on a schedule.
