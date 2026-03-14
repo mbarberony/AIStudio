@@ -4,13 +4,6 @@ uvicorn[standard]
 ollama
 python-multipart
 
-# (Debug) JSONL-based pipeline uses lexical retrieval.
-# (Next step) Chroma + embeddings:
-
-chromadb
-# sentence-transformers   # deferred until we decide embedding strategy
-# langchain
-
 # Utilities
 httpx
 python-dotenv
@@ -19,18 +12,27 @@ pydantic
 # Progress / UX
 tqdm
 
-# Doc Scanning
+# Vector store
+qdrant-client>=1.7.0
 
+# Embeddings & reranker
+sentence-transformers  # CrossEncoder reranker (ms-marco-MiniLM) + embedding benchmarking
+
+# Document parsing
 pypdf
 openpyxl
 python-docx
 python-pptx
-
+beautifulsoup4
 
 # Development
-
 pre-commit
 pytest
+pytest-cov
 ruff
 setuptools
 wheel
+
+# Legacy (kept for fallback path — not active)
+# chromadb          # replaced by Qdrant (crashed at 32K chunks; Qdrant stable at 106K)
+# langchain         # deliberately excluded — see docs/dependencies.md

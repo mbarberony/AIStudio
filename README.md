@@ -1,10 +1,18 @@
-# AIStudio
-
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-> A hands-on AI engineering lab exploring production-relevant patterns
-> for LLM-enabled systems — local RAG, metadata filtering, observability,
-> and scalable vector architecture on Apple Silicon.
+# AIStudio
+
+> AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled
+> systems behave under real operational constraints — retrieval quality,
+> vocabulary mismatch, metadata filtering, observability, and deployment
+> trade-offs — before those issues get hidden behind abstractions.
+
+**Current stack:** local Ollama inference · Qdrant vector storage · FastAPI ·
+143 SEC 10-K filings at 105,964 chunks · benchmark harness · CI/CD pipeline.
+
+If you're reviewing this as part of evaluating my background: the goal is to
+show implementation-level AI engagement, not whiteboard-level. The architecture
+choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
 
 ---
 
@@ -48,23 +56,39 @@ See [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md).
 Core RAG loop working end-to-end on a 106K-chunk production corpus.
 Qdrant vector store (Rust-based) replaced ChromaDB after ChromaDB crashed
 at 32K chunks. Metadata filtering (firm, year) implemented end-to-end —
-backend, API, and UI.
+backend, API, and UI. CI/CD pipeline green on every push.
 
 **Working today:**
 - Document ingestion: PDF, Word, PowerPoint, Excel, Markdown, HTML
 - Vector search via Qdrant 1.17.0 with cosine similarity
-- Metadata filtering — firm and year filters on retrieval
+- Metadata filtering — firm and year filters at the vector layer
 - RAG query with inline citations and source references
 - Browser UI — corpus selector, model selector, parameters, filters, chat
 - FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
 - Auto-launch script — `scripts/start.sh` starts all four processes
 - Benchmark harness — `scripts/benchmark.py` with CLI flags, auto-generates findings
+- CI/CD — GitHub Actions: lint + unit + integration tests on every push
+- Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 
 **In progress:**
-- Reranker (CrossEncoder) for vocabulary mismatch in retrieval
+- Reranker (CrossEncoder ms-marco-MiniLM) — fixes vocabulary mismatch
 - Relevance threshold — discard low-scoring chunks
 - XBRL noise stripping in HTML ingestion
 - PDF viewer with click-to-source citation
+
+---
+
+## Roadmap in a Nutshell
+
+| Now | Next | Later |
+|-----|------|-------|
+| Reranker (CrossEncoder) | Page-aware PDF chunking | Docker + AWS ECS |
+| Citation numbering fix | PDF viewer — click → source page | Multi-user + shared corpora |
+| Clean install validation | PDF image identification + citation | GPU inference (Inferentia2) |
+| MacBook Air OBE test | Benchmark comparison tooling | Compiled installer (.dmg) |
+
+See [docs/roadmap.md](docs/roadmap.md) for the full phased plan with Beta Gate,
+v1.0, and v2.0 detail.
 
 ---
 
@@ -94,7 +118,7 @@ flowchart TD
 
     subgraph OL["Ollama · :11434"]
         OE["nomic-embed-text\n768-dim embeddings"]
-        OM["llama3.1:8b / 70b\nlocal inference\nno external API"]
+        OM["llama3.1:8b / 70b / mistral:7b\nlocal inference\nno external API"]
     end
 
     subgraph ING["Ingestion Pipeline"]
@@ -182,20 +206,20 @@ Docker and deployed to ECS Fargate. No code changes required.
 
 ---
 
-## About This Project
+## Benchmark
 
-This is a personal engineering lab, not production software. Built to stay
-hands-on with the stack I reason about professionally — and to develop
-informed opinions about what actually holds up under real operational
-constraints versus what looks good in a demo.
+```
+Corpus:     143 SEC 10-K filings, 25 financial services firms
+Chunks:     105,964
+Ingest:     34 min, 54 chunks/sec, 0 failures
+Latency:    ~6–7s warm (8b and 70b identical on Apple Silicon)
+Filtering:  firm + year metadata filters, zero latency overhead
+ChromaDB:   crashed at 32,285 chunks
+Qdrant:     stable at 105,964 chunks
+```
 
-If you're reviewing this as part of evaluating my background: the goal
-isn't to show production-grade software. It's to show that I engage with
-these systems at the implementation level, not just the whiteboard level.
-
-The architecture choices — Qdrant over ChromaDB, four-process separation,
-metadata filtering at the vector layer — are deliberate and documented in
-[docs/architecture_decisions.md](docs/architecture_decisions.md).
+See [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md) for full analysis including
+cold vs warm latency breakdown and cross-model comparison.
 
 ---
 
@@ -223,23 +247,6 @@ open front_end/rag_studio.html
 
 ---
 
-## Benchmark
-
-```
-Corpus:     143 SEC 10-K filings, 25 financial services firms
-Chunks:     105,964
-Ingest:     34 min, 54 chunks/sec, 0 failures
-Latency:    ~6–7s warm (8b and 70b identical on Apple Silicon)
-Filtering:  firm + year metadata filters, zero latency overhead
-ChromaDB:   crashed at 32,285 chunks
-Qdrant:     stable at 105,964 chunks
-```
-
-See [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md) for full analysis including
-cold vs warm latency breakdown and cross-model comparison.
-
----
-
 ## Point of View
 
 **[Agentic AI in Financial Services: Some Reflections](docs/agentic_ai_pov.pdf)**
@@ -251,19 +258,6 @@ irreplaceable. Written December 2025.
 
 ---
 
-## Roadmap
-
-See [docs/roadmap.md](docs/roadmap.md) for the full phased plan.
-
-**Next milestones:**
-- Reranker (CrossEncoder ms-marco-MiniLM) — fixes vocabulary mismatch in retrieval
-- Relevance threshold — discard chunks below similarity cutoff
-- Page-aware chunking + PDF viewer — click citation → scroll to source page
-- MacBook Air end-to-end validation
-- Containerization + AWS ECS deployment (v2.0)
-
----
-
 ## Stack
 
-Python · FastAPI · Qdrant · Ollama · llama3.1 · nomic-embed-text · Docker (v2.0) · AWS ECS (v2.0)
+Python · FastAPI · Qdrant · Ollama · llama3.1 · mistral · nomic-embed-text · sentence-transformers · Docker (v2.0) · AWS ECS (v2.0)
