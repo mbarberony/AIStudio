@@ -1,5 +1,7 @@
 # AIStudio
 
+[![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
+
 > A hands-on AI engineering lab exploring production-relevant patterns
 > for LLM-enabled systems — local RAG, metadata filtering, observability,
 > and scalable vector architecture on Apple Silicon.
