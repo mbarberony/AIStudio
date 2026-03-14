@@ -18,3 +18,5 @@ data/demo/.DS_Store
 src/*.egg-info/
 .DS_Store
 **/.DS_Store
+.coverage
+.coverage

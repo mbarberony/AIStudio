@@ -60,15 +60,15 @@ def build_config(args: argparse.Namespace) -> dict:
 
     # CLI overrides
     overrides = {
-        "api_base":     args.api_base,
-        "corpus":       args.corpus,
-        "model":        args.model,
-        "temperature":  args.temperature,
-        "k":            args.k,
+        "api_base": args.api_base,
+        "corpus": args.corpus,
+        "model": args.model,
+        "temperature": args.temperature,
+        "k": args.k,
         "question_file": args.questions,
-        "report_dir":   args.report_dir,
-        "corpus_root":  args.corpus_root,
-        "ingest":       args.ingest,
+        "report_dir": args.report_dir,
+        "corpus_root": args.corpus_root,
+        "ingest": args.ingest,
     }
 
     for key, val in overrides.items():
@@ -77,15 +77,15 @@ def build_config(args: argparse.Namespace) -> dict:
 
     # Final defaults for anything still missing
     defaults = {
-        "api_base":     "http://localhost:8000",
-        "corpus":       "demo",
-        "model":        "llama3.1:70b",
-        "temperature":  0.3,
-        "k":            5,
+        "api_base": "http://localhost:8000",
+        "corpus": "demo",
+        "model": "llama3.1:70b",
+        "temperature": 0.3,
+        "k": 5,
         "question_file": "data/demo/demo_questions.json",
-        "report_dir":   "data/demo/reports",
-        "corpus_root":  "data/demo/demo_data",
-        "ingest":       False,
+        "report_dir": "data/demo/reports",
+        "corpus_root": "data/demo/demo_data",
+        "ingest": False,
     }
     for key, val in defaults.items():
         cfg.setdefault(key, val)
@@ -97,12 +97,17 @@ def build_config(args: argparse.Namespace) -> dict:
 # Ingest
 # ---------------------------------------------------------------------------
 
+
 def run_ingest(cfg: dict) -> None:
     print(f"\n[ingest] Ingesting corpus '{cfg['corpus']}' from '{cfg['corpus_root']}' ...")
     cmd = [
-        sys.executable, "-m", "local_llm_bot.app.ingest",
-        "--corpus", cfg["corpus"],
-        "--root",   cfg["corpus_root"],
+        sys.executable,
+        "-m",
+        "local_llm_bot.app.ingest",
+        "--corpus",
+        cfg["corpus"],
+        "--root",
+        cfg["corpus_root"],
     ]
     env = {**os.environ, "PYTHONPATH": "src"}
     result = subprocess.run(cmd, env=env, capture_output=False, text=True)
@@ -116,18 +121,20 @@ def run_ingest(cfg: dict) -> None:
 # Query
 # ---------------------------------------------------------------------------
 
-def query(api_base: str, corpus: str, question: str, model: str,
-          temperature: float, k: int) -> dict:
+
+def query(
+    api_base: str, corpus: str, question: str, model: str, temperature: float, k: int
+) -> dict:
     """
     POST /ask and return a dict with:
       answer, sources, latency_sec, error (if any)
     """
     url = f"{api_base}/ask"
     payload = {
-        "query":       question,
-        "corpus":      corpus,
+        "query": question,
+        "corpus": corpus,
         "temperature": temperature,
-        "top_k":       k,
+        "top_k": k,
     }
 
     start = time.time()
@@ -137,30 +144,31 @@ def query(api_base: str, corpus: str, question: str, model: str,
         resp.raise_for_status()
         data = resp.json()
         return {
-            "answer":      data.get("answer", ""),
-            "sources":     data.get("citations", []),
+            "answer": data.get("answer", ""),
+            "sources": data.get("citations", []),
             "latency_sec": round(latency, 2),
-            "error":       None,
+            "error": None,
         }
     except requests.exceptions.ConnectionError:
         return {
-            "answer":      "",
-            "sources":     [],
+            "answer": "",
+            "sources": [],
             "latency_sec": round(time.time() - start, 2),
-            "error":       f"Connection refused — is the backend running at {api_base}?",
+            "error": f"Connection refused — is the backend running at {api_base}?",
         }
     except Exception as e:
         return {
-            "answer":      "",
-            "sources":     [],
+            "answer": "",
+            "sources": [],
             "latency_sec": round(time.time() - start, 2),
-            "error":       str(e),
+            "error": str(e),
         }
 
 
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
+
 
 def format_sources(sources: list) -> str:
     if not sources:
@@ -210,7 +218,7 @@ def build_report(cfg: dict, results: list, total_sec: float) -> str:
 
     if latencies:
         lines += [
-            f"| Avg latency | {round(sum(latencies)/len(latencies), 1)}s |",
+            f"| Avg latency | {round(sum(latencies) / len(latencies), 1)}s |",
             f"| Min latency | {min(latencies)}s |",
             f"| Max latency | {max(latencies)}s |",
         ]
@@ -269,6 +277,7 @@ def write_report(cfg: dict, report_text: str) -> Path:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -410,7 +419,9 @@ def main() -> None:
             result["question"] = question
             results.append(result)
 
-            status = f"✓ {result['latency_sec']}s" if not result["error"] else f"✗ {result['error']}"
+            status = (
+                f"✓ {result['latency_sec']}s" if not result["error"] else f"✗ {result['error']}"
+            )
             print(f"    {status}")
 
     total_sec = time.time() - overall_start
@@ -424,3 +435,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+x = 1
