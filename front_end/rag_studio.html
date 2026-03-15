@@ -481,7 +481,26 @@
             font-family: 'DM Mono', monospace;
             font-size: 11px;
             word-break: break-all;
+            flex: 1;
         }
+
+        .footnote-page {
+            color: var(--text-mid);
+            font-size: 11px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .footnote-open {
+            color: var(--accent);
+            font-size: 11px;
+            text-decoration: none;
+            flex-shrink: 0;
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        .footnote-open:hover { opacity: 1; text-decoration: underline; }
 
         /* Input area */
         .input-area {
@@ -1009,9 +1028,16 @@
         if (!citations || !citations.length) return '';
         const items = citations.map(c => {
             const name = c.source.split('/').pop();
+            const pageLabel = c.page ? `<span class="footnote-page">p. ${c.page}</span>` : '';
+            const openUrl = c.page
+                ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}&page=${c.page}`
+                : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
+            const openLink = `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
             return `<div class="footnote" id="fn-${c.index}">
                 <span class="footnote-num">[${c.index}]</span>
                 <span class="footnote-name">${name}</span>
+                ${pageLabel}
+                ${openLink}
             </div>`;
         }).join('');
         return `<div class="footnotes"><div class="footnotes-label">References</div>${items}</div>`;

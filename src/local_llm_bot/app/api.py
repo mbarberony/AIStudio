@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from local_llm_bot.app.config import CONFIG
@@ -23,47 +24,46 @@ from local_llm_bot.app.utils.repo_root import find_repo_root
 # INLINE CITATION SUPPORT (embedded in API for simplicity)
 # ============================================================================
 
+
 def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
     """Extract page number from source path or chunk_id"""
     # Try from source path: "document.pdf#page=5"
-    page_match = re.search(r'#page=(\d+)', source_path)
+    page_match = re.search(r"#page=(\d+)", source_path)
     if page_match:
         return int(page_match.group(1))
-    
+
     # Try from filename: "document_p12.pdf"
-    page_match = re.search(r'[_\-]p(\d+)', source_path, re.IGNORECASE)
+    page_match = re.search(r"[_\-]p(\d+)", source_path, re.IGNORECASE)
     if page_match:
         return int(page_match.group(1))
-    
+
     # Try from chunk_id: "chunk-page-3"
     if chunk_id:
-        page_match = re.search(r'page[_\-]?(\d+)', chunk_id, re.IGNORECASE)
+        page_match = re.search(r"page[_\-]?(\d+)", chunk_id, re.IGNORECASE)
         if page_match:
             return int(page_match.group(1))
-    
+
     return None
 
 
 def generate_answer_with_citations(
-    query: str,
-    docs: list[RetrievedDoc],
-    conversation_history: list[dict[str, str]] | None = None
+    query: str, docs: list[RetrievedDoc], conversation_history: list[dict[str, str]] | None = None
 ) -> dict[str, Any]:
     """Generate answer with citation support"""
-    
+
     if not docs:
         return {
             "answer": "I don't have any relevant documents to answer this question.",
             "citations": [],
-            "has_citations": False
+            "has_citations": False,
         }
-    
+
     # Build context with numbered sources
     # Deduplicate by source file — merge chunks from same doc into one numbered source
     seen_sources: dict[str, int] = {}
     source_chunks: dict[int, list[str]] = {}
     doc_to_index: dict[int, int] = {}  # original doc position -> source index
-    
+
     for i, doc in enumerate(docs):
         src = doc.source
         if src not in seen_sources:
@@ -80,7 +80,7 @@ def generate_answer_with_citations(
         context_parts.append(f"[{idx}] {src}\n{combined}")
 
     context = "\n\n".join(context_parts)
-    
+
     # Remap docs list to deduplicated unique sources for citation building
     unique_docs = []
     seen = set()
@@ -89,7 +89,7 @@ def generate_answer_with_citations(
             seen.add(doc.source)
             unique_docs.append(doc)
     docs = unique_docs
-    
+
     # Enhanced system prompt with citation instructions
     system = (
         "You are a helpful research assistant.\n"
@@ -97,55 +97,58 @@ def generate_answer_with_citations(
         "IMPORTANT: When you use information from a source, cite it using [1], [2], etc.\n"
         "The number should match the source number in the context.\n"
         "You can cite multiple sources like [1,2] or [1][2].\n"
-        "Always cite your sources - every factual claim should have a citation. ""Cite sources using the exact numbers shown in brackets at the start of each source, e.g. [1], [2]. Never write [Source N]. ""Do NOT append a References or Sources section at the end of your answer — citations are rendered separately."
+        "Always cite your sources - every factual claim should have a citation. "
+        "Cite sources using the exact numbers shown in brackets at the start of each source, e.g. [1], [2]. Never write [Source N]. "
+        "Do NOT append a References or Sources section at the end of your answer — citations are rendered separately."
     )
-    
+
     # Build prompt with conversation history
     if conversation_history:
-        history_text = "\n".join([
-            f"{msg['role'].upper()}: {msg['content']}"
-            for msg in conversation_history[-6:]  # Last 3 exchanges
-        ])
+        history_text = "\n".join(
+            [
+                f"{msg['role'].upper()}: {msg['content']}"
+                for msg in conversation_history[-6:]  # Last 3 exchanges
+            ]
+        )
         prompt = f"Conversation History:\n{history_text}\n\nCurrent Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
     else:
         prompt = f"Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
-    
+
     # Generate answer
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
-    
+
     # Extract citations from answer
     citations = []
     cited_indices = set()
-    
+
     # Normalize [Source N] -> [N] before extracting
-    answer = re.sub(r'\[Source\s+(\d+)\]', r'[\1]', answer, flags=re.IGNORECASE)
+    answer = re.sub(r"\[Source\s+(\d+)\]", r"[\1]", answer, flags=re.IGNORECASE)
     # Find all citation patterns: [1], [2,3], [1][2], etc.
-    citation_patterns = re.findall(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer)
-    
+    citation_patterns = re.findall(r"\[(\d+(?:\s*,\s*\d+)*)\]", answer)
+
     for pattern in citation_patterns:
-        for idx_str in re.split(r',\s*', pattern):
+        for idx_str in re.split(r",\s*", pattern):
             idx = int(idx_str.strip())
             if idx > 0 and idx <= len(docs) and idx not in cited_indices:
                 doc = docs[idx - 1]
                 page = extract_page_number(doc.source, doc.id)
-                
-                citations.append({
-                    "index": idx,
-                    "source": doc.source,
-                    "page": page,
-                    "chunk_id": doc.id,
-                    "score": float(doc.score)
-                })
+
+                citations.append(
+                    {
+                        "index": idx,
+                        "source": doc.source,
+                        "page": page,
+                        "chunk_id": doc.id,
+                        "score": float(doc.score),
+                    }
+                )
                 cited_indices.add(idx)
-    
+
     # Sort citations by index
     citations.sort(key=lambda c: c["index"])
-    
-    return {
-        "answer": answer,
-        "citations": citations,
-        "has_citations": len(citations) > 0
-    }
+
+    return {"answer": answer, "citations": citations, "has_citations": len(citations) > 0}
+
 
 app = FastAPI(title="AIStudio Local LLM Bot")
 
@@ -254,10 +257,10 @@ def _get_corpus_document_count(corpus_name: str) -> int:
         repo_root = _get_repo_root()
         paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
         index_file = paths["index"]
-        
+
         if not index_file.exists():
             return 0
-        
+
         rows = read_jsonl(index_file)
         # Count unique document IDs
         doc_ids = set()
@@ -265,7 +268,7 @@ def _get_corpus_document_count(corpus_name: str) -> int:
             doc_id = row.get("doc_id", "")
             if doc_id:
                 doc_ids.add(doc_id)
-        
+
         return len(doc_ids)
     except Exception as e:
         print(f"Error counting documents: {e}")
@@ -278,17 +281,17 @@ def _get_corpus_size(corpus_name: str) -> int:
         repo_root = _get_repo_root()
         paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
         corpus_dir = paths["base"]
-        
+
         if not corpus_dir.exists():
             return 0
-        
+
         total_size = 0
         for dirpath, _dirnames, filenames in os.walk(corpus_dir):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 if os.path.exists(fp):
                     total_size += os.path.getsize(fp)
-        
+
         return total_size
     except Exception as e:
         print(f"Error calculating corpus size: {e}")
@@ -300,36 +303,34 @@ async def ask(req: AskRequest) -> AskResponse:
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="query must not be empty")
     _require_corpus(req.corpus)
-    
+
     # Use provided top_k or default from config
     top_k = req.top_k if req.top_k is not None else CONFIG.rag.top_k
-    
+
     # Retrieve relevant documents
     docs = retrieve(query=req.query, top_k=top_k, corpus=req.corpus, firm=req.firm, year=req.year)
-    
+
     # Generate answer with citations
     result = generate_answer_with_citations(
-        query=req.query,
-        docs=docs,
-        conversation_history=req.conversation_history
+        query=req.query, docs=docs, conversation_history=req.conversation_history
     )
-    
+
     # Convert to response format
-    citation_responses = [
-        CitationResponse(**c) for c in result["citations"]
-    ] if result["citations"] else None
-    
+    citation_responses = (
+        [CitationResponse(**c) for c in result["citations"]] if result["citations"] else None
+    )
+
     return AskResponse(
-        answer=result["answer"],
-        citations=citation_responses,
-        has_citations=result["has_citations"]
+        answer=result["answer"], citations=citation_responses, has_citations=result["has_citations"]
     )
 
 
 @app.post("/debug/retrieve")
 async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     _require_corpus(req.corpus)
-    docs = retrieve(query=req.query, top_k=req.top_k, corpus=req.corpus, firm=req.firm, year=req.year)
+    docs = retrieve(
+        query=req.query, top_k=req.top_k, corpus=req.corpus, firm=req.firm, year=req.year
+    )
     return {
         "count": len(docs),
         "docs": [
@@ -357,24 +358,21 @@ async def debug_stats(corpus: str = "default") -> JsonlStats:
 
 # CORPUS MANAGEMENT ENDPOINTS
 
+
 @app.get("/corpora")
 async def get_corpora() -> list[CorpusInfo]:
     """
     Get list of available corpora with metadata.
     """
     corpus_names = list_corpora(find_repo_root(Path(__file__)))
-    
+
     corpora_info = []
     for name in corpus_names:
         doc_count = _get_corpus_document_count(name)
         size_bytes = _get_corpus_size(name)
-        
-        corpora_info.append(CorpusInfo(
-            name=name,
-            document_count=doc_count,
-            size_bytes=size_bytes
-        ))
-    
+
+        corpora_info.append(CorpusInfo(name=name, document_count=doc_count, size_bytes=size_bytes))
+
     return corpora_info
 
 
@@ -384,10 +382,10 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     Get detailed information about a specific corpus.
     """
     _require_corpus(corpus_name)
-    
+
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    
+
     # Get basic stats
     stats = compute_jsonl_stats(corpus=corpus_name)
     doc_count = _get_corpus_document_count(corpus_name)
@@ -397,26 +395,29 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     qdrant_chunk_count = 0
     try:
         from qdrant_client import QdrantClient
+
         qc = QdrantClient(host="localhost", port=6333)
         col_info = qc.get_collection(f"aistudio_{corpus_name}")
         qdrant_chunk_count = col_info.points_count or 0
     except Exception:
         qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count
-    
+
     # List files in corpus
     files = []
     corpus_dir = paths["base"]
     if corpus_dir.exists():
         for file_path in corpus_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith('.'):
+            if file_path.is_file() and not file_path.name.startswith("."):
                 relative_path = file_path.relative_to(corpus_dir)
-                files.append({
-                    "name": file_path.name,
-                    "path": str(relative_path),
-                    "size": file_path.stat().st_size,
-                    "type": file_path.suffix
-                })
-    
+                files.append(
+                    {
+                        "name": file_path.name,
+                        "path": str(relative_path),
+                        "size": file_path.stat().st_size,
+                        "type": file_path.suffix,
+                    }
+                )
+
     return {
         "name": corpus_name,
         "status": "available",
@@ -429,22 +430,27 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "paths": {
             "base": str(paths["base"]),
             "index": str(paths["index"]),
-        }
+        },
     }
-
 
 
 async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     """Run ingest as a background task after upload."""
     import os
     import sys
-    cmd = [sys.executable, "-m", "local_llm_bot.app.ingest",
-           "--corpus", corpus_name, "--root", str(uploads_dir)]
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "local_llm_bot.app.ingest",
+        "--corpus",
+        corpus_name,
+        "--root",
+        str(uploads_dir),
+    ]
     env = {**os.environ, "PYTHONPATH": "src"}
     proc = await asyncio.create_subprocess_exec(
-        *cmd, env=env,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode == 0:
@@ -452,10 +458,11 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     else:
         print(f"[ingest] Auto-ingest failed:\n{stderr.decode()}")
 
+
 @app.post("/corpus/{corpus_name}/upload")
 async def upload_to_corpus(
     corpus_name: str,
-    file: UploadFile = File(...)  # noqa: B008
+    file: UploadFile = File(...),  # noqa: B008
 ) -> dict[str, Any]:
     """
     Upload a file to the specified corpus.
@@ -463,25 +470,25 @@ async def upload_to_corpus(
     You must run the ingest command separately to process and embed the file.
     """
     _require_corpus(corpus_name)
-    
+
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    
+
     # Create uploads directory in corpus
     uploads_dir = paths["base"] / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Save uploaded file
     file_path = uploads_dir / file.filename
-    
+
     try:
         # Read file content
         content = await file.read()
-        
+
         # Write to disk
         with open(file_path, "wb") as f:
             f.write(content)
-        
+
         file_size = len(content)
 
         # Auto-ingest in background
@@ -496,10 +503,7 @@ async def upload_to_corpus(
             "content_type": file.content_type,
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to upload file: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}") from e
 
 
 class CreateCorpusRequest(BaseModel):
@@ -517,35 +521,32 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
     if not name or not name.replace("_", "").replace("-", "").isalnum():
         raise HTTPException(
             status_code=400,
-            detail="Corpus name must contain only letters, numbers, hyphens, and underscores"
+            detail="Corpus name must contain only letters, numbers, hyphens, and underscores",
         )
 
     if corpus_exists(find_repo_root(Path(__file__)), name):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Corpus '{name}' already exists"
-        )
-    
+        raise HTTPException(status_code=409, detail=f"Corpus '{name}' already exists")
+
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=name)
-    
+
     try:
         # Create corpus directory structure
         corpus_dir = paths["base"]
         corpus_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create subdirectories
         (corpus_dir / "uploads").mkdir(exist_ok=True)
-        
+
         # Create empty index file
         index_file = paths["index"]
         index_file.parent.mkdir(parents=True, exist_ok=True)
         index_file.touch()
-        
+
         # Create chroma directory
         chroma_dir = paths["chroma"]
         chroma_dir.mkdir(parents=True, exist_ok=True)
-        
+
         return {
             "status": "success",
             "message": f"Corpus '{name}' created successfully",
@@ -554,15 +555,12 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
                 "base": str(corpus_dir),
                 "uploads": str(corpus_dir / "uploads"),
                 "index": str(index_file),
-                "chroma": str(chroma_dir)
+                "chroma": str(chroma_dir),
             },
-            "next_steps": f"Upload files to corpus or add documents to {corpus_dir / 'uploads'}"
+            "next_steps": f"Upload files to corpus or add documents to {corpus_dir / 'uploads'}",
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create corpus: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to create corpus: {str(e)}") from e
 
 
 @app.delete("/corpus/{corpus_name}")
@@ -572,36 +570,31 @@ async def delete_corpus(corpus_name: str) -> dict[str, Any]:
     WARNING: This is irreversible!
     """
     _require_corpus(corpus_name)
-    
+
     # Prevent deletion of default corpus
     if corpus_name == "default":
-        raise HTTPException(
-            status_code=403,
-            detail="Cannot delete the default corpus"
-        )
-    
+        raise HTTPException(status_code=403, detail="Cannot delete the default corpus")
+
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
     corpus_dir = paths["base"]
-    
+
     try:
         # Delete corpus directory
         if corpus_dir.exists():
             shutil.rmtree(corpus_dir)
-        
+
         return {
             "status": "success",
             "message": f"Corpus '{corpus_name}' deleted successfully",
-            "name": corpus_name
+            "name": corpus_name,
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete corpus: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to delete corpus: {str(e)}") from e
 
 
 # MODEL MANAGEMENT ENDPOINTS
+
 
 @app.get("/models")
 async def get_models() -> list[ModelInfo]:
@@ -610,74 +603,59 @@ async def get_models() -> list[ModelInfo]:
     """
     try:
         import ollama
-        
+
         # Try to connect to Ollama and list models
         try:
             models_response = ollama.list()
             # Ollama SDK >= 0.3 returns a ListResponse object with a .models attribute
             # (list of Model objects); older versions returned a dict with 'models' key.
-            if hasattr(models_response, 'models'):
+            if hasattr(models_response, "models"):
                 ollama_models = models_response.models  # new SDK: list of Model objects
             else:
-                ollama_models = models_response.get('models', [])  # old SDK: dict
-            
+                ollama_models = models_response.get("models", [])  # old SDK: dict
+
             # Convert Ollama models to our format
             available_models = []
             for model in ollama_models:
                 # New SDK: model is a Model object with a .model attribute (e.g. "llama3.1:8b")
                 # Old SDK: model is a dict with 'name' key
-                if hasattr(model, 'model'):
+                if hasattr(model, "model"):
                     full_name = model.model  # e.g. "llama3.1:8b"
-                elif hasattr(model, 'name'):
+                elif hasattr(model, "name"):
                     full_name = model.name
                 else:
-                    full_name = model.get('name', '') if isinstance(model, dict) else ''
-                
+                    full_name = model.get("name", "") if isinstance(model, dict) else ""
+
                 if not full_name:
                     continue
 
                 # Show full name with tag for clarity (e.g. "llama3.1:8b" → "Llama3.1:8b")
                 # Capitalise only the first letter to avoid "Llama3.1" vs "llama3.1" confusion
                 display_name = full_name[0].upper() + full_name[1:]
-                available_models.append(ModelInfo(
-                    id=full_name,
-                    name=display_name,
-                    provider="Ollama",
-                    available=True
-                ))
-            
+                available_models.append(
+                    ModelInfo(id=full_name, name=display_name, provider="Ollama", available=True)
+                )
+
             # If we got models, return them
             if available_models:
                 return available_models
-                
+
         except Exception as e:
             print(f"Could not connect to Ollama: {e}")
-        
+
         # Fallback: return common models with availability unknown
         return [
             ModelInfo(
-                id="llama3.2:3b",
-                name="Llama 3.2 3B",
-                provider="Meta/Ollama",
-                available=False
+                id="llama3.2:3b", name="Llama 3.2 3B", provider="Meta/Ollama", available=False
             ),
             ModelInfo(
-                id="llama3.1:8b",
-                name="Llama 3.1 8B",
-                provider="Meta/Ollama",
-                available=False
+                id="llama3.1:8b", name="Llama 3.1 8B", provider="Meta/Ollama", available=False
             ),
             ModelInfo(
-                id="mistral:7b",
-                name="Mistral 7B",
-                provider="Mistral/Ollama",
-                available=False
+                id="mistral:7b", name="Mistral 7B", provider="Mistral/Ollama", available=False
             ),
             ModelInfo(
-                id="qwen2.5:7b",
-                name="Qwen 2.5 7B",
-                provider="Alibaba/Ollama",
-                available=False
+                id="qwen2.5:7b", name="Qwen 2.5 7B", provider="Alibaba/Ollama", available=False
             ),
         ]
     except Exception as e:
@@ -694,23 +672,23 @@ async def select_model(model_id: str) -> dict[str, Any]:
     """
     try:
         import ollama
-        
+
         # Try to validate model exists
         try:
             models_response = ollama.list()
-            ollama_models = models_response.get('models', [])
-            model_names = [m.get('name', '') for m in ollama_models]
-            
+            ollama_models = models_response.get("models", [])
+            model_names = [m.get("name", "") for m in ollama_models]
+
             if model_id not in model_names:
                 return {
                     "status": "warning",
                     "message": f"Model '{model_id}' not found in Ollama. It may need to be pulled first.",
                     "model_id": model_id,
-                    "suggestion": f"Run: ollama pull {model_id}"
+                    "suggestion": f"Run: ollama pull {model_id}",
                 }
         except Exception as e:
             print(f"Could not verify model: {e}")
-        
+
         # Mark new model as cold so next /ask triggers a fresh prewarm
         _warm_models.discard(model_id)
 
@@ -719,13 +697,10 @@ async def select_model(model_id: str) -> dict[str, Any]:
             "message": f"To use model '{model_id}', set environment variable: AISTUDIO_DEFAULT_MODEL={model_id}",
             "model_id": model_id,
             "current_model": CONFIG.rag.default_model,
-            "note": "Restart the API server after updating environment variables"
+            "note": "Restart the API server after updating environment variables",
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error selecting model: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error selecting model: {str(e)}") from e
 
 
 @app.get("/config")
@@ -751,5 +726,44 @@ async def get_config() -> dict[str, Any]:
         "ingest_config": {
             "chunk_size": CONFIG.ingest.chunk_size,
             "overlap": CONFIG.ingest.overlap,
-        }
+        },
     }
+
+
+@app.get("/source")
+async def serve_source(path: str, page: int | None = None) -> FileResponse:
+    """
+    Serve a local source document (PDF, PPTX, etc.) by absolute path.
+    Replaces file:// links — works in all browsers including Safari.
+    The optional page parameter is passed as a URL fragment hint in the
+    response header so the browser can scroll to the cited page.
+    """
+    file_path = Path(path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Source file not found: {path}")
+
+    # Security: only serve files within known corpus/data directories
+    repo = _get_repo_root()
+    allowed_roots = [
+        repo / "data",
+        Path.home() / "Downloads",
+    ]
+    resolved = file_path.resolve()
+    if not any(str(resolved).startswith(str(r.resolve())) for r in allowed_roots):
+        raise HTTPException(status_code=403, detail="Access to this path is not permitted")
+
+    media_type = (
+        "application/pdf" if file_path.suffix.lower() == ".pdf" else "application/octet-stream"
+    )
+
+    headers = {}
+    if page is not None:
+        # Hint the browser to scroll to the page via Content-Disposition filename fragment
+        headers["X-PDF-Page"] = str(page)
+
+    return FileResponse(
+        path=str(resolved),
+        media_type=media_type,
+        headers=headers,
+        filename=file_path.name,
+    )
