@@ -22,21 +22,29 @@ from __future__ import annotations
 import argparse
 import json
 import time
+
+try:
+    import yaml as _yaml
+
+    _YAML_AVAILABLE = True
+except ImportError:
+    _YAML_AVAILABLE = False
 from datetime import datetime
 from pathlib import Path
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="AIStudio RAG Benchmark")
-    p.add_argument("--corpus",      default="sec_10k",          help="Corpus name")
-    p.add_argument("--top-k",       type=int, default=10,        help="Top K chunks to retrieve")
-    p.add_argument("--temperature", type=float, default=0.3,     help="LLM temperature")
-    p.add_argument("--model",       default=None,                help="Model ID (default: API default)")
-    p.add_argument("--questions",   default=None,                help="Path to questions JSONL file")
-    p.add_argument("--output",      default=None,                help="Path to write results JSON")
-    p.add_argument("--api",         default="http://localhost:8000", help="API base URL")
-    p.add_argument("--no-markdown", action="store_true",         help="Skip writing BENCHMARK_FINDINGS.md")
+    p.add_argument("--corpus", default="sec_10k", help="Corpus name")
+    p.add_argument("--top-k", type=int, default=10, help="Top K chunks to retrieve")
+    p.add_argument("--temperature", type=float, default=0.3, help="LLM temperature")
+    p.add_argument("--model", default=None, help="Model ID (default: API default)")
+    p.add_argument("--questions", default=None, help="Path to questions JSONL file")
+    p.add_argument("--output", default=None, help="Path to write results JSON")
+    p.add_argument("--api", default="http://localhost:8000", help="API base URL")
+    p.add_argument("--no-markdown", action="store_true", help="Skip writing BENCHMARK_FINDINGS.md")
     return p.parse_args()
 
 
@@ -51,7 +59,7 @@ DEFAULT_QUESTIONS = [
         "firm": "Goldman Sachs",
         "year": None,
         "expected_keywords": ["artificial intelligence", "AI", "risk", "Goldman"],
-        "notes": "Should return Goldman-specific AI risk disclosure"
+        "notes": "Should return Goldman-specific AI risk disclosure",
     },
     {
         "id": "jpmorgan_cybersecurity",
@@ -61,7 +69,7 @@ DEFAULT_QUESTIONS = [
         "firm": "JPMorgan Chase",
         "year": None,
         "expected_keywords": ["cybersecurity", "JPMorgan", "risk"],
-        "notes": "Should return JPMorgan cybersecurity section"
+        "notes": "Should return JPMorgan cybersecurity section",
     },
     {
         "id": "morgan_stanley_model_risk",
@@ -71,7 +79,7 @@ DEFAULT_QUESTIONS = [
         "firm": "Morgan Stanley",
         "year": None,
         "expected_keywords": ["model risk", "Morgan Stanley"],
-        "notes": "Should return model risk governance section"
+        "notes": "Should return model risk governance section",
     },
     {
         "id": "goldman_ai_committee",
@@ -81,7 +89,7 @@ DEFAULT_QUESTIONS = [
         "firm": "Goldman Sachs",
         "year": None,
         "expected_keywords": ["Artificial Intelligence", "committee", "governance"],
-        "notes": "Should mention Firmwide Artificial Intelligence Risk and Controls Committee"
+        "notes": "Should mention Firmwide Artificial Intelligence Risk and Controls Committee",
     },
     {
         "id": "cross_corpus_ai_governance",
@@ -91,7 +99,7 @@ DEFAULT_QUESTIONS = [
         "firm": None,
         "year": None,
         "expected_keywords": ["AI", "committee", "governance"],
-        "notes": "No firm filter — tests cross-corpus retrieval quality"
+        "notes": "No firm filter — tests cross-corpus retrieval quality",
     },
     {
         "id": "bofa_climate_risk",
@@ -101,7 +109,7 @@ DEFAULT_QUESTIONS = [
         "firm": "Bank of America",
         "year": None,
         "expected_keywords": ["climate", "risk", "Bank of America"],
-        "notes": "Should return climate risk section"
+        "notes": "Should return climate risk section",
     },
     {
         "id": "goldman_2026_revenue",
@@ -111,7 +119,7 @@ DEFAULT_QUESTIONS = [
         "firm": "Goldman Sachs",
         "year": "2026",  # filing year
         "expected_keywords": ["revenue", "billion", "2025"],
-        "notes": "Tests year filter combined with firm filter"
+        "notes": "Tests year filter combined with firm filter",
     },
     {
         "id": "latency_test",
@@ -121,29 +129,112 @@ DEFAULT_QUESTIONS = [
         "firm": "Goldman Sachs",
         "year": None,
         "expected_keywords": ["Goldman Sachs", "bank", "financial"],
-        "notes": "Simple query for latency baseline measurement"
+        "notes": "Simple query for latency baseline measurement",
     },
 ]
 
 
-def load_questions(path: str | None) -> list[dict]:
+def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
+    """
+    Load benchmark questions from a file or auto-detect based on corpus name.
+
+    Priority:
+    1. Explicit --questions path (JSONL or JSON)
+    2. Auto-detect: data/demo/demo_questions.json for demo corpus
+    3. Fallback: DEFAULT_QUESTIONS (sec_10k hardcoded set)
+    """
+    # Auto-detect corpus question file if no explicit path given
+    # Priority: {corpus}_questions.yaml > {corpus}_questions.json > DEFAULT_QUESTIONS
+    if path is None:
+        script_dir = Path(__file__).parent
+        repo_root = script_dir.parent
+        # Check data/corpora/{corpus}/ first, then data/{corpus}/
+        search_roots = [
+            repo_root / "data" / "corpora" / corpus,
+            repo_root / "data" / corpus,
+        ]
+        found = None
+        for search_root in search_roots:
+            for ext in (".yaml", ".yml", ".json"):
+                candidate = search_root / f"{corpus}_questions{ext}"
+                if candidate.exists():
+                    found = candidate
+                    break
+            if found:
+                break
+        if found:
+            path = str(found)
+            print(f"   Auto-detected questions: {found.name}")
+        else:
+            print(f"   No questions file found for corpus '{corpus}' — using defaults")
+            return DEFAULT_QUESTIONS
+
     if path is None:
         return DEFAULT_QUESTIONS
+
     p = Path(path)
     if not p.exists():
         print(f"Questions file not found: {path} — using defaults")
         return DEFAULT_QUESTIONS
+
     questions = []
-    with open(p) as f:
-        for line in f:
+    with p.open() as f:
+        content_str = f.read().strip()
+
+    # Support YAML, JSON array, and JSONL formats
+    if p.suffix.lower() in (".yaml", ".yml"):
+        # YAML format: list of topic blocks with questions
+        if not _YAML_AVAILABLE:
+            print("   pyyaml not installed — pip install pyyaml")
+            return DEFAULT_QUESTIONS
+        raw = _yaml.safe_load(content_str)
+        for topic_block in raw:
+            topic = topic_block.get("topic", "General")
+            for q in topic_block.get("questions", []):
+                qid = q.get("id", q.get("question", "")[:40].lower().replace(" ", "_"))
+                questions.append(
+                    {
+                        "id": qid,
+                        "description": q.get("question", ""),
+                        "query": q.get("question", ""),
+                        "corpus": q.get("corpus", None),
+                        "firm": q.get("firm", None),
+                        "year": q.get("year", None),
+                        "keywords": q.get("keywords", []),
+                        "notes": q.get("notes", topic),
+                    }
+                )
+    elif content_str.startswith("["):
+        # JSON array format: [{topic, questions: [...]}, ...]
+        raw = json.loads(content_str)
+        for topic_block in raw:
+            topic = topic_block.get("topic", "General")
+            for q in topic_block.get("questions", []):
+                questions.append(
+                    {
+                        "id": q.lower().replace(" ", "_")[:40],
+                        "description": q,
+                        "query": q,
+                        "corpus": None,
+                        "firm": None,
+                        "year": None,
+                        "keywords": [],
+                        "notes": topic,
+                    }
+                )
+    else:
+        # JSONL format: one question object per line
+        for line in content_str.splitlines():
             line = line.strip()
             if line:
                 questions.append(json.loads(line))
-    print(f"Loaded {len(questions)} questions from {path}")
+
+    print(f"   Loaded {len(questions)} questions from {p.name}")
     return questions
 
 
 # ── Run single benchmark query ────────────────────────────────────────────────
+
 
 def run_query(
     *,
@@ -192,6 +283,7 @@ def run_query(
 
 # ── Evaluate result ───────────────────────────────────────────────────────────
 
+
 def evaluate(result: dict, expected_keywords: list[str]) -> dict:
     if not result["ok"]:
         return {"pass": False, "reason": f"Request failed: {result['error']}"}
@@ -209,10 +301,18 @@ def evaluate(result: dict, expected_keywords: list[str]) -> dict:
     citation_pass = has_citations and len(citations) > 0
 
     # Check for hallucination signal — model saying "no information" despite having sources
-    no_info_signal = any(phrase in answer for phrase in [
-        "no information", "not mention", "does not mention",
-        "no mention", "cannot find", "not found", "no specific"
-    ])
+    no_info_signal = any(
+        phrase in answer
+        for phrase in [
+            "no information",
+            "not mention",
+            "does not mention",
+            "no mention",
+            "cannot find",
+            "not found",
+            "no specific",
+        ]
+    )
 
     return {
         "pass": keyword_pass and citation_pass and not no_info_signal,
@@ -227,11 +327,14 @@ def evaluate(result: dict, expected_keywords: list[str]) -> dict:
 
 # ── Write BENCHMARK_FINDINGS.md ───────────────────────────────────────────────
 
+
 def write_markdown(results: list[dict], args: argparse.Namespace, output_path: Path) -> None:
     md_path = output_path.parent / "BENCHMARK_FINDINGS.md"
     passed = sum(1 for r in results if r["eval"]["pass"])
     total = len(results)
-    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(1, total)
+    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(
+        1, total
+    )
 
     lines = [
         "# AIStudio — Benchmark Findings",
@@ -246,7 +349,7 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         "",
         "## Summary",
         f"- **Questions:** {total}",
-        f"- **Passed:** {passed}/{total} ({round(100*passed/total)}%)",
+        f"- **Passed:** {passed}/{total} ({round(100 * passed / total)}%)",
         f"- **Avg latency:** {round(avg_latency, 1)}s",
         "",
         "## Infrastructure",
@@ -270,7 +373,9 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         status = "✅" if ev["pass"] else "❌"
         latency = f"{res['elapsed_sec']}s"
         cites = ", ".join(ev.get("cited_sources", []))[:40] or "—"
-        lines.append(f"| {i} | {q['description']} | {latency} | {status} | {cites} | {q.get('notes','')} |")
+        lines.append(
+            f"| {i} | {q['description']} | {latency} | {status} | {cites} | {q.get('notes', '')} |"
+        )
 
     lines += ["", "## Detailed Results", ""]
 
@@ -322,6 +427,7 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     args = parse_args()
 
@@ -331,7 +437,7 @@ def main() -> None:
     output_path = Path(args.output) if args.output else script_dir / "benchmark_results.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    questions = load_questions(questions_path)
+    questions = load_questions(questions_path, corpus=args.corpus)
 
     print("\n🔍 AIStudio Benchmark")
     print(f"   Corpus:      {args.corpus}")
@@ -349,7 +455,7 @@ def main() -> None:
 
         result = run_query(
             api=args.api,
-            query=q["query"],
+            query=q.get("query") or q.get("question", ""),
             corpus=corpus,
             top_k=args.top_k,
             temperature=args.temperature,
@@ -360,41 +466,51 @@ def main() -> None:
 
         ev = evaluate(result, q.get("expected_keywords", []))
         status = "✅" if ev["pass"] else "❌"
-        print(f"   {status} {result['elapsed_sec']}s | citations: {ev['citation_count']} | {ev.get('missing_keywords') or 'all keywords found'}")
+        print(
+            f"   {status} {result['elapsed_sec']}s | citations: {ev['citation_count']} | {ev.get('missing_keywords') or 'all keywords found'}"
+        )
 
-        results.append({
-            "question": q,
-            "result": result,
-            "eval": ev,
-        })
+        results.append(
+            {
+                "question": q,
+                "result": result,
+                "eval": ev,
+            }
+        )
 
     # Summary
     passed = sum(1 for r in results if r["eval"]["pass"])
     total = len(results)
-    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(1, total)
+    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(
+        1, total
+    )
 
-    print(f"\n{'='*50}")
-    print(f"Results: {passed}/{total} passed | avg latency: {round(avg_latency,1)}s")
-    print(f"{'='*50}\n")
+    print(f"\n{'=' * 50}")
+    print(f"Results: {passed}/{total} passed | avg latency: {round(avg_latency, 1)}s")
+    print(f"{'=' * 50}\n")
 
     # Write JSON results
     with open(output_path, "w") as f:
-        json.dump({
-            "run_at": datetime.now().isoformat(),
-            "config": {
-                "corpus": args.corpus,
-                "top_k": args.top_k,
-                "temperature": args.temperature,
-                "model": args.model,
-                "api": args.api,
+        json.dump(
+            {
+                "run_at": datetime.now().isoformat(),
+                "config": {
+                    "corpus": args.corpus,
+                    "top_k": args.top_k,
+                    "temperature": args.temperature,
+                    "model": args.model,
+                    "api": args.api,
+                },
+                "summary": {
+                    "total": total,
+                    "passed": passed,
+                    "avg_latency_sec": round(avg_latency, 2),
+                },
+                "results": results,
             },
-            "summary": {
-                "total": total,
-                "passed": passed,
-                "avg_latency_sec": round(avg_latency, 2),
-            },
-            "results": results,
-        }, f, indent=2)
+            f,
+            indent=2,
+        )
     print(f"📊 Results written to {output_path}")
 
     # Write markdown

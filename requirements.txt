@@ -37,3 +37,4 @@ wheel
 # Legacy (kept for fallback path — not active)
 # chromadb          # replaced by Qdrant (crashed at 32K chunks; Qdrant stable at 106K)
 # langchain         # deliberately excluded — see docs/dependencies.md
+pyyaml
