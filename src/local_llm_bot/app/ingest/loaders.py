@@ -165,6 +165,37 @@ def _extract_xlsx(path: Path, max_cells: int) -> ExtractResult:
 
 
 def _extract_pdf(path: Path) -> ExtractResult:
+    """
+    Extract PDF text with page boundary markers using pdfplumber.
+    Each page is prefixed with [PAGE_N] so downstream chunking can
+    store page numbers in Qdrant payload for click-to-source citation.
+    Falls back to pypdf if pdfplumber is unavailable.
+    """
+    try:
+        import pdfplumber  # type: ignore
+
+        parts: list[str] = []
+        with pdfplumber.open(str(path)) as pdf:
+            if not pdf.pages:
+                return ExtractResult(ok=False, text="", reason="empty")
+            for page_num, page in enumerate(pdf.pages, 1):
+                t = (page.extract_text() or "").strip()
+                if t:
+                    parts.append(f"[PAGE_{page_num}]\n{t}")
+
+        text = "\n\n".join(parts).strip()
+        if not text:
+            return ExtractResult(ok=False, text="", reason="empty")
+        if text.lstrip().startswith("%PDF-"):
+            return ExtractResult(ok=False, text="", reason="pdf_bytes_detected")
+        return ExtractResult(ok=True, text=text, reason="")
+
+    except ImportError:
+        pass  # fall through to pypdf
+    except Exception as e:
+        return ExtractResult(ok=False, text="", reason=f"parse_error:{type(e).__name__}")
+
+    # Fallback: pypdf (no page markers)
     try:
         from pypdf import PdfReader  # type: ignore
         from pypdf.errors import PdfReadError  # type: ignore
@@ -174,10 +205,9 @@ def _extract_pdf(path: Path) -> ExtractResult:
     try:
         reader = PdfReader(str(path))
         if getattr(reader, "is_encrypted", False):
-            # Skip encrypted PDFs by design
             return ExtractResult(ok=False, text="", reason="encrypted_pdf")
 
-        parts: list[str] = []
+        parts = []
         for page in reader.pages:
             t = (page.extract_text() or "").strip()
             if t:
@@ -186,17 +216,13 @@ def _extract_pdf(path: Path) -> ExtractResult:
         text = "\n".join(parts).strip()
         if not text:
             return ExtractResult(ok=False, text="", reason="empty")
-
-        # guardrail: avoid raw PDF bytes ever making it through
         if text.lstrip().startswith("%PDF-"):
             return ExtractResult(ok=False, text="", reason="pdf_bytes_detected")
-
         return ExtractResult(ok=True, text=text, reason="")
     except PdfReadError:
         return ExtractResult(ok=False, text="", reason="pdf_read_error")
     except Exception as e:
         return ExtractResult(ok=False, text="", reason=f"parse_error:{type(e).__name__}")
-
 
 
 def _extract_html(path: Path) -> ExtractResult:
@@ -214,12 +240,14 @@ def _extract_html(path: Path) -> ExtractResult:
         text = soup.get_text(separator="\n").strip()
         # Collapse excessive blank lines
         import re
+
         text = re.sub(r"\n{3,}", "\n\n", text).strip()
         if not text:
             return ExtractResult(ok=False, text="", reason="empty")
         return ExtractResult(ok=True, text=text, reason="")
     except Exception as e:
         return ExtractResult(ok=False, text="", reason=f"parse_error:{type(e).__name__}")
+
 
 # Backward-compatible helper if you already import load_document elsewhere:
 @dataclass(frozen=True)
