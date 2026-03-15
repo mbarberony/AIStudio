@@ -23,10 +23,21 @@ if _VECTORSTORE == "chroma":
 else:
     from local_llm_bot.app.vectorstore import qdrant_store as _store
 
+# Reranker — lazy load, graceful fallback if sentence-transformers missing
+try:
+    from sentence_transformers import CrossEncoder as _CrossEncoder
+
+    _reranker: _CrossEncoder | None = _CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    _RERANKER_AVAILABLE = True
+except Exception:  # noqa: BLE001
+    _reranker = None
+    _RERANKER_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Core data types
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class RetrievedDoc:
@@ -39,6 +50,7 @@ class RetrievedDoc:
 @dataclass
 class Citation:
     """A citation reference to a source document."""
+
     index: int
     source: str
     page: int | None = None
@@ -49,6 +61,7 @@ class Citation:
 @dataclass
 class AnswerWithCitations:
     """Answer with citation metadata."""
+
     answer: str
     citations: list[Citation]
     source_docs: list[RetrievedDoc]
@@ -57,6 +70,7 @@ class AnswerWithCitations:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _repo_root() -> Path:
     return find_repo_root(Path(__file__))
@@ -113,8 +127,14 @@ def _lexical_jsonl_retrieve(*, query: str, top_k: int, corpus: str) -> list[Retr
 # Retrieval
 # ---------------------------------------------------------------------------
 
+
 def retrieve(
-    *, query: str, top_k: int | None = None, corpus: str = "default", firm: str | None = None, year: str | None = None
+    *,
+    query: str,
+    top_k: int | None = None,
+    corpus: str = "default",
+    firm: str | None = None,
+    year: str | None = None,
 ) -> list[RetrievedDoc]:
     k = int(top_k) if top_k is not None else int(CONFIG.rag.top_k)
 
@@ -137,6 +157,15 @@ def retrieve(
             hits = [h for h in hits if float(h.distance) <= md]
 
         if hits:
+            if _RERANKER_AVAILABLE and _reranker is not None:
+                pairs = [[query, h.text] for h in hits]
+                scores = _reranker.predict(pairs)
+                hits = [
+                    h
+                    for _, h in sorted(
+                        zip(scores, hits, strict=False), key=lambda x: x[0], reverse=True
+                    )
+                ]
             return [
                 RetrievedDoc(
                     id=h.chunk_id,
@@ -156,18 +185,19 @@ def retrieve(
 # Citation helpers
 # ---------------------------------------------------------------------------
 
+
 def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
     """Attempt to extract page number from source path or chunk_id."""
-    page_match = re.search(r'#page=(\d+)', source_path)
+    page_match = re.search(r"#page=(\d+)", source_path)
     if page_match:
         return int(page_match.group(1))
 
-    page_match = re.search(r'[_\-]p(\d+)', source_path, re.IGNORECASE)
+    page_match = re.search(r"[_\-]p(\d+)", source_path, re.IGNORECASE)
     if page_match:
         return int(page_match.group(1))
 
     if chunk_id:
-        page_match = re.search(r'page[_\-]?(\d+)', chunk_id, re.IGNORECASE)
+        page_match = re.search(r"page[_\-]?(\d+)", chunk_id, re.IGNORECASE)
         if page_match:
             return int(page_match.group(1))
 
@@ -178,18 +208,19 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
 # Answer generation
 # ---------------------------------------------------------------------------
 
+
 def generate_answer_with_citations(
     *,
     query: str,
     docs: list[RetrievedDoc],
-    conversation_history: list[dict[str, str]] | None = None
+    conversation_history: list[dict[str, str]] | None = None,
 ) -> AnswerWithCitations:
     """Generate answer with inline citation markers and return citation metadata."""
     if not docs:
         return AnswerWithCitations(
             answer="I don't have any relevant documents to answer this question.",
             citations=[],
-            source_docs=[]
+            source_docs=[],
         )
 
     context_parts = []
@@ -208,10 +239,9 @@ def generate_answer_with_citations(
     )
 
     if conversation_history:
-        history_text = "\n".join([
-            f"{msg['role'].upper()}: {msg['content']}"
-            for msg in conversation_history[-6:]
-        ])
+        history_text = "\n".join(
+            [f"{msg['role'].upper()}: {msg['content']}" for msg in conversation_history[-6:]]
+        )
         prompt = f"Conversation History:\n{history_text}\n\nCurrent Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
     else:
         prompt = f"Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
@@ -223,44 +253,44 @@ def generate_answer_with_citations(
     raw_indices: list[int] = []
 
     # Pattern 1: [Source N] or [source N]
-    for m in re.finditer(r'\[(?:Source\s+|source\s+)(\d+)\]', answer, re.IGNORECASE):
+    for m in re.finditer(r"\[(?:Source\s+|source\s+)(\d+)\]", answer, re.IGNORECASE):
         raw_indices.append(int(m.group(1)))
 
     # Pattern 2: [1], [1,2], [1, 2], [1,2,3]
-    for m in re.finditer(r'\[(\d+(?:\s*,\s*\d+)*)\]', answer):
-        for idx_str in m.group(1).split(','):
+    for m in re.finditer(r"\[(\d+(?:\s*,\s*\d+)*)\]", answer):
+        for idx_str in m.group(1).split(","):
             raw_indices.append(int(idx_str.strip()))
 
     for idx in raw_indices:
         if 0 < idx <= len(docs) and idx not in cited_indices:
             doc = docs[idx - 1]
-            citations.append(Citation(
-                index=idx,
-                source=doc.source,
-                page=extract_page_number(doc.source, doc.id),
-                chunk_id=doc.id,
-                score=doc.score
-            ))
+            citations.append(
+                Citation(
+                    index=idx,
+                    source=doc.source,
+                    page=extract_page_number(doc.source, doc.id),
+                    chunk_id=doc.id,
+                    score=doc.score,
+                )
+            )
             cited_indices.add(idx)
 
     # If model cited nothing, surface all retrieved docs as implicit sources
     if not citations and docs:
         for i, doc in enumerate(docs, 1):
-            citations.append(Citation(
-                index=i,
-                source=doc.source,
-                page=extract_page_number(doc.source, doc.id),
-                chunk_id=doc.id,
-                score=doc.score
-            ))
+            citations.append(
+                Citation(
+                    index=i,
+                    source=doc.source,
+                    page=extract_page_number(doc.source, doc.id),
+                    chunk_id=doc.id,
+                    score=doc.score,
+                )
+            )
 
     citations.sort(key=lambda c: c.index)
 
-    return AnswerWithCitations(
-        answer=answer,
-        citations=citations,
-        source_docs=docs
-    )
+    return AnswerWithCitations(answer=answer, citations=citations, source_docs=docs)
 
 
 def generate_answer(*, query: str, docs: list[RetrievedDoc]) -> str:
