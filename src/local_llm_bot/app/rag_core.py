@@ -45,6 +45,7 @@ class RetrievedDoc:
     content: str
     source: str
     score: float  # distance for Chroma (lower=better); token score for JSONL (higher=better)
+    page: int | None = None  # page number from pdfplumber extraction, None for non-PDF or unknown
 
 
 @dataclass
@@ -172,6 +173,7 @@ def retrieve(
                     content=h.text,
                     source=str(h.metadata.get("source_path", "")),
                     score=float(h.distance),
+                    page=h.metadata.get("page"),
                 )
                 for h in hits
             ]
@@ -268,7 +270,9 @@ def generate_answer_with_citations(
                 Citation(
                     index=idx,
                     source=doc.source,
-                    page=extract_page_number(doc.source, doc.id),
+                    page=doc.page
+                    if doc.page is not None
+                    else extract_page_number(doc.source, doc.id),
                     chunk_id=doc.id,
                     score=doc.score,
                 )
@@ -282,7 +286,9 @@ def generate_answer_with_citations(
                 Citation(
                     index=i,
                     source=doc.source,
-                    page=extract_page_number(doc.source, doc.id),
+                    page=doc.page
+                    if doc.page is not None
+                    else extract_page_number(doc.source, doc.id),
                     chunk_id=doc.id,
                     score=doc.score,
                 )

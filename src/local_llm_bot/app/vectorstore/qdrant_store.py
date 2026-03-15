@@ -33,6 +33,7 @@ DEFAULT_EMBED_BATCH_SIZE = 32
 @dataclass(frozen=True)
 class QdrantHit:
     """Mirrors ChromaHit exactly so rag_core.py needs no changes."""
+
     chunk_id: str
     text: str
     metadata: dict[str, Any]
@@ -60,7 +61,7 @@ def _ensure_collection(client: QdrantClient, collection_name: str) -> None:
 def _batched(items: list, batch_size: int) -> list[list]:
     if batch_size <= 0:
         return [items]
-    return [items[i: i + batch_size] for i in range(0, len(items), batch_size)]
+    return [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
 
 
 def _chunk_id_to_uint64(chunk_id: str) -> int:
@@ -70,13 +71,14 @@ def _chunk_id_to_uint64(chunk_id: str) -> int:
     Collision probability is negligible for corpus sizes we target.
     """
     import hashlib
+
     h = hashlib.sha256(chunk_id.encode()).digest()
     return int.from_bytes(h[:8], "big")
 
 
 def upsert_chunks(
     *,
-    persist_dir: Path,           # Kept for API compatibility with chroma_store — not used by Qdrant
+    persist_dir: Path,  # Kept for API compatibility with chroma_store — not used by Qdrant
     collection_name: str,
     embed_model: str,
     ids: list[str],
@@ -108,9 +110,9 @@ def upsert_chunks(
         bs = DEFAULT_EMBED_BATCH_SIZE
 
     for idx_batch in _batched(list(range(len(ids))), bs):
-        b_ids    = [ids[i]       for i in idx_batch]
-        b_docs   = [documents[i] for i in idx_batch]
-        b_metas  = [metadatas[i] for i in idx_batch]
+        b_ids = [ids[i] for i in idx_batch]
+        b_docs = [documents[i] for i in idx_batch]
+        b_metas = [metadatas[i] for i in idx_batch]
 
         b_embs = ollama_embed(model=embed_model, texts=b_docs)
         if not isinstance(b_embs, list) or len(b_embs) != len(b_docs):
@@ -121,9 +123,9 @@ def upsert_chunks(
                 id=_chunk_id_to_uint64(cid),
                 vector=emb,
                 payload={
-                    "chunk_id":   cid,
-                    "text":       doc,
-                    **meta,           # source_path, page, chunk_index, etc.
+                    "chunk_id": cid,
+                    "text": doc,
+                    **meta,  # source_path, page, chunk_index, etc.
                 },
             )
             for cid, doc, emb, meta in zip(b_ids, b_docs, b_embs, b_metas, strict=False)
@@ -137,7 +139,7 @@ def upsert_chunks(
 
 def delete_chunks(
     *,
-    persist_dir: Path,           # API compatibility — not used
+    persist_dir: Path,  # API compatibility — not used
     collection_name: str,
     ids: list[str],
 ) -> None:
@@ -154,7 +156,7 @@ def delete_chunks(
 
 def query(
     *,
-    persist_dir: Path,           # API compatibility — not used
+    persist_dir: Path,  # API compatibility — not used
     collection_name: str,
     query_text: str,
     top_k: int,
@@ -204,3 +206,11 @@ def query(
             )
         )
     return out
+
+
+def delete_collection(*, collection_name: str) -> None:
+    """Delete an entire Qdrant collection. Used by --force ingest to ensure clean state."""
+    client = get_client()
+    existing = [c.name for c in client.get_collections().collections]
+    if collection_name in existing:
+        client.delete_collection(collection_name=collection_name)

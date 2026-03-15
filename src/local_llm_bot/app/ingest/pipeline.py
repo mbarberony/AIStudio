@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os as _os
 import time
@@ -80,10 +81,11 @@ def _parse_firm_year(file_path: str) -> dict:
     """Parse firm name and year from 10K filename e.g. Goldman_Sachs_10K_2026-02-25.htm"""
     import re as _re
     from pathlib import Path as _Path
+
     name = _Path(file_path).stem
-    m = _re.search(r'_10[Kk]_(\d{4})', name)
+    m = _re.search(r"_10[Kk]_(\d{4})", name)
     year = m.group(1) if m else "unknown"
-    m2 = _re.search(r'^(.+?)_10[Kk]_', name)
+    m2 = _re.search(r"^(.+?)_10[Kk]_", name)
     firm = m2.group(1).replace("_", " ").strip() if m2 else "unknown"
     return {"firm": firm, "year": year}
 
@@ -138,6 +140,15 @@ def ingest_corpus(
             import shutil
 
             shutil.rmtree(chroma_dir, ignore_errors=True)
+
+    # --force: atomic wipe of Qdrant collection + manifest + index
+    # Ensures no stale chunk IDs survive across format changes or re-ingests
+    if force:
+        for k in ("index", "manifest", "failures", "docmap"):
+            if paths[k].exists():
+                paths[k].write_text("", encoding="utf-8")  # truncate, don't delete
+        with contextlib.suppress(Exception):
+            _store.delete_collection(collection_name=f"aistudio_{corpus}")
 
     manifest_map = load_manifest_map(paths["manifest"])
     prior_docmap = _load_doc_chunk_map(paths["docmap"])
@@ -239,15 +250,26 @@ def ingest_corpus(
                 chunks = chunk_text(doc.text, chunk_size=chunk_size_eff, overlap=overlap_eff)
                 chunk_ids: list[str] = []
 
+                import re as _re
+
+                _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
+
                 for i, c in enumerate(chunks):
-                    chunk_id = f"{abs_path}::chunk-{i}"
+                    page_match = _PAGE_RE.search(c)
+                    page_num = int(page_match.group(1)) if page_match else None
+                    clean_text = _PAGE_RE.sub("", c).strip()
+                    if page_num is not None:
+                        chunk_id = f"{abs_path}::page-{page_num}::chunk-{i}"
+                    else:
+                        chunk_id = f"{abs_path}::chunk-{i}"
                     chunk_ids.append(chunk_id)
                     jsonl_rows.append(
                         {
                             "chunk_id": chunk_id,
                             "doc_id": abs_path,
                             "source_path": abs_path,
-                            "text": c,
+                            "text": clean_text,
+                            "page": page_num,
                         }
                     )
 
@@ -308,6 +330,7 @@ def ingest_corpus(
             {
                 "source_path": str(r.get("source_path", "")),
                 "doc_id": str(r.get("doc_id", "")),
+                "page": r.get("page"),
                 **_parse_firm_year(str(r.get("source_path", ""))),
             }
             for r in jsonl_rows

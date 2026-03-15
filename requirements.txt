@@ -20,6 +20,7 @@ sentence-transformers  # CrossEncoder reranker (ms-marco-MiniLM) + embedding ben
 
 # Document parsing
 pypdf
+pdfplumber
 openpyxl
 python-docx
 python-pptx
