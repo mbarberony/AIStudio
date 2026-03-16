@@ -44,7 +44,24 @@ OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
 sleep 2
 echo "✓ Backend started on http://localhost:8000"
 
-# 4. Open frontend
+# 4. Auto-ingest demo corpus if not already in Qdrant
+DEMO_COLLECTION="aistudio_demo"
+DEMO_CHECK=$(curl -s "http://localhost:6333/collections/$DEMO_COLLECTION" 2>/dev/null)
+
+if echo "$DEMO_CHECK" | grep -q '"status":"ok"'; then
+    echo "✓ Demo corpus already indexed"
+else
+    echo "▶ Demo corpus not found — ingesting for first time (~45 seconds)..."
+    echo "  This happens once. Subsequent starts are instant."
+    echo ""
+    cd "$REPO_ROOT"
+    source "$VENV/bin/activate"
+    AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src         python3 -m local_llm_bot.app.ingest         --corpus demo         --root data/demo/demo_data
+    echo ""
+    echo "✓ Demo corpus indexed and ready"
+fi
+
+# 5. Open frontend
 echo "▶ Opening frontend..."
 open "$FRONTEND"
 
