@@ -766,4 +766,5 @@ async def serve_source(path: str, page: int | None = None) -> FileResponse:
         media_type=media_type,
         headers=headers,
         filename=file_path.name,
+        content_disposition_type="inline",
     )
