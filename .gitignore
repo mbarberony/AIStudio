@@ -20,3 +20,14 @@ src/*.egg-info/
 **/.DS_Store
 .coverage
 .coverage
+meta/
+!data/corpora/demo/index.jsonl
+!data/corpora/demo/manifest.jsonl
+!data/corpora/demo/demo_questions.yaml
+!data/corpora/demo/
+!data/corpora/demo/index.jsonl
+!data/corpora/demo/manifest.jsonl
+!data/corpora/demo/demo_questions.yaml
+# Keep everything else in data/corpora/ ignored
+data/corpora/sec_10k/
+data/corpora/fr_10k/
