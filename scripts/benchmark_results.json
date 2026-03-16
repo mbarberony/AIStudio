@@ -1,267 +1,243 @@
 {
-  "run_at": "2026-03-12T14:38:16.229462",
+  "run_at": "2026-03-15T21:46:38.738884",
   "config": {
-    "corpus": "sec_10k",
-    "top_k": 10,
+    "corpus": "demo",
+    "top_k": 5,
     "temperature": 0.3,
     "model": null,
     "api": "http://localhost:8000"
   },
   "summary": {
-    "total": 8,
-    "passed": 6,
-    "avg_latency_sec": 6.48
+    "total": 12,
+    "passed": 12,
+    "avg_latency_sec": 5.87
   },
   "results": [
     {
       "question": {
-        "id": "goldman_ai_risk",
-        "description": "Goldman Sachs AI risk \u2014 firm filter",
-        "query": "What does Goldman Sachs say about the risks of artificial intelligence?",
-        "corpus": null,
-        "firm": "Goldman Sachs",
-        "year": null,
-        "expected_keywords": [
-          "artificial intelligence",
-          "AI",
-          "risk",
-          "Goldman"
-        ],
-        "notes": "Should return Goldman-specific AI risk disclosure"
-      },
-      "result": {
-        "ok": true,
-        "elapsed_sec": 7.17,
-        "data": {
-          "answer": "According to the provided sources, Goldman Sachs mentions the following risks associated with artificial intelligence (AI):\n\n1. \"New AI technologies may increase the frequency and severity of cybersecurity attacks.\" [1]\n2. \"Generative AI, if used to perpetrate fraud or launch cyber attacks, could result in losses, liquidity outflows or other adverse effects for us and our clients.\" [1]\n3. The use of AI technologies may heighten the risk of fraud and misappropriation of funds, as well as facilitate cyber attacks. [1]\n\nThese risks are mentioned in the context of the company's overall risk management framework, which includes cybersecurity risk management and operational risk management. The company acknowledges that AI technologies can increase the complexity of business activities and introduce new operational risks, which can have a material impact on the company's operations and reputation.",
-          "citations": [
-            {
-              "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-801",
-              "score": 0.31922615
-            }
-          ],
-          "has_citations": true
-        }
-      },
-      "eval": {
-        "pass": true,
-        "keyword_pass": true,
-        "citation_pass": true,
-        "no_info_signal": false,
-        "missing_keywords": [],
-        "citation_count": 1,
-        "cited_sources": [
-          "Goldman_Sachs_10K_2026-02-25.htm"
-        ]
-      }
-    },
-    {
-      "question": {
-        "id": "jpmorgan_cybersecurity",
-        "description": "JPMorgan cybersecurity risk \u2014 firm filter",
-        "query": "How does JPMorgan Chase describe their cybersecurity risk management?",
-        "corpus": null,
-        "firm": "JPMorgan Chase",
-        "year": null,
-        "expected_keywords": [
-          "cybersecurity",
-          "JPMorgan",
-          "risk"
-        ],
-        "notes": "Should return JPMorgan cybersecurity section"
-      },
-      "result": {
-        "ok": true,
-        "elapsed_sec": 9.8,
-        "data": {
-          "answer": "According to JPMorgan Chase's 2025 Form 10-K, the company describes their cybersecurity risk management as follows:\n\nThe Firm's Information Security Program is designed to prevent, detect and respond to cyber attacks in order to help safeguard the confidentiality, integrity and availability of the Firm's infrastructure, resources and information. The program includes managing the Firm's global cybersecurity operations centers, providing training, conducting cybersecurity event simulation exercises, implementing the Firm's policies and standards relating to technology risk and cybersecurity management, and enhancing, as needed, the Firm's cybersecurity capabilities [1].\n\nThe program also includes the following functions:\n\n* Cyber Operations, which is responsible for implementing and maintaining controls designed to detect and defend the Firm against cyber attacks, and includes a dedicated function for incident response and ongoing monitoring for cybersecurity threats and vulnerabilities [1].\n* Technology Governance, Risk & Controls, which is responsible for operationalizing technology risk and control frameworks, analyzing regulatory developments that may impact the Firm, and developing control catalogs and assessments of controls, as well as overseeing governance and reporting of technology and cybersecurity risk [1].\n* Security Awareness, which provides awareness and training to employees on cybersecurity risks and best practices [1].\n\nThe Firm's cybersecurity risk management is integrated into the Firm's operational risk management framework, including through the escalation of key risk and control issues to management and the development of risk mitigation plans for heightened risk and control issues [1].\n\nThe Firm also engages in periodic discussions with its clients, customers, and other external parties concerning cybersecurity risks, and actively partners with government and law enforcement agencies and peer industry forums to assist in understanding the full spectrum of cybersecurity risks and in enhancing defenses and improving resiliency [1].\n\nIn terms of governance and oversight, the Cybersecurity and Technology Controls Operating Committee (\"CTOC\") is the principal management committee that oversees the Firm's assessment and management of cybersecurity risk, including oversight of the implementation and maintenance of appropriate controls in support of the Firm's Information Security Program [1].\n\nThe CTOC escalates key operational risk and control issues to the Global Technology Operating Committee (\"GTOC\") or its business control committee or to the appropriate LOB and Corporate Control Committees, and the CTOC receives periodic updates from the CIO, the CISO, and senior members of the CTOC concerning cybersecurity matters [1].\n\nThe Firm's Board of Directors also receives periodic updates from the CIO, the CISO, and senior members of the CTOC concerning cybersecurity matters, and the Audit Committee and the Risk Committee assist the Board in this oversight [1].\n\nOverall, JPMorgan Chase's cybersecurity risk management is a comprehensive and integrated approach that includes various functions, governance and oversight, and regular updates to the Board of Directors.",
-          "citations": [
-            {
-              "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/JPMorgan_Chase_10K_2026-02-13.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/JPMorgan_Chase_10K_2026-02-13.htm::chunk-787",
-              "score": 0.20710459999999997
-            }
-          ],
-          "has_citations": true
-        }
-      },
-      "eval": {
-        "pass": true,
-        "keyword_pass": true,
-        "citation_pass": true,
-        "no_info_signal": false,
-        "missing_keywords": [],
-        "citation_count": 1,
-        "cited_sources": [
-          "JPMorgan_Chase_10K_2026-02-13.htm"
-        ]
-      }
-    },
-    {
-      "question": {
-        "id": "morgan_stanley_model_risk",
-        "description": "Morgan Stanley model risk \u2014 firm filter",
-        "query": "What is Morgan Stanley's approach to model risk?",
-        "corpus": null,
-        "firm": "Morgan Stanley",
-        "year": null,
-        "expected_keywords": [
-          "model risk",
-          "Morgan Stanley"
-        ],
-        "notes": "Should return model risk governance section"
-      },
-      "result": {
-        "ok": true,
-        "elapsed_sec": 5.85,
-        "data": {
-          "answer": "Morgan Stanley's approach to model risk is outlined in the Model Risk Management Department's (\"MRM\") responsibilities. According to the text, the MRM is a distinct department in Risk Management responsible for the oversight of model risk. The MRM establishes a model risk tolerance in line with the firm's risk appetite, based on an assessment of the materiality of the risk of financial loss or reputational damage due to errors in design, implementation, and/or inappropriate use of models.\n\nThe MRM also provides effective challenge of models, independently validates and approves models for use, annually recertifies models, periodically revalidates, identifies and tracks remediation plans for model limitations, and reports on model risk metrics [1].\n\nIn addition, the MRM oversees the development of controls to support a complete and accurate Firmwide model inventory [1].\n\nIt's worth noting that Morgan Stanley's approach to model risk is part of a broader Enterprise Risk Management (\"ERM\") framework that integrates the diverse roles of risk management into a holistic enterprise structure and facilitates the incorporation of risk assessment into decision-making processes across the Firm [5].",
-          "citations": [
-            {
-              "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Morgan_Stanley_10K_2026-02-19.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Morgan_Stanley_10K_2026-02-19.htm::chunk-594",
-              "score": 0.19260096999999998
-            }
-          ],
-          "has_citations": true
-        }
-      },
-      "eval": {
-        "pass": true,
-        "keyword_pass": true,
-        "citation_pass": true,
-        "no_info_signal": false,
-        "missing_keywords": [],
-        "citation_count": 1,
-        "cited_sources": [
-          "Morgan_Stanley_10K_2026-02-19.htm"
-        ]
-      }
-    },
-    {
-      "question": {
-        "id": "goldman_ai_committee",
-        "description": "Goldman AI governance committee \u2014 firm filter",
-        "query": "Does Goldman Sachs have an AI governance committee and what does it do?",
-        "corpus": null,
-        "firm": "Goldman Sachs",
-        "year": null,
-        "expected_keywords": [
-          "Artificial Intelligence",
-          "committee",
-          "governance"
-        ],
-        "notes": "Should mention Firmwide Artificial Intelligence Risk and Controls Committee"
-      },
-      "result": {
-        "ok": true,
-        "elapsed_sec": 4.25,
-        "data": {
-          "answer": "Goldman Sachs has a Firmwide Artificial Intelligence Risk and Controls Committee, which is responsible for overseeing risks associated with the use of AI. This committee reports to the Firmwide Technology Risk Committee, which oversees cybersecurity matters, as well as technology risk management frameworks and methodologies, and monitors their effectiveness.\n\nSo, to answer your question, yes, Goldman Sachs has an AI governance committee, and it is the Firmwide Artificial Intelligence Risk and Controls Committee.",
-          "citations": null,
-          "has_citations": false
-        }
-      },
-      "eval": {
-        "pass": false,
-        "keyword_pass": true,
-        "citation_pass": false,
-        "no_info_signal": false,
-        "missing_keywords": [],
-        "citation_count": 0,
-        "cited_sources": []
-      }
-    },
-    {
-      "question": {
-        "id": "cross_corpus_ai_governance",
-        "description": "Cross-corpus AI governance \u2014 no filter",
-        "query": "Which financial firms have dedicated AI governance committees?",
+        "id": "qfd_technology_architecture",
+        "description": "What is QFD and how does it apply to technology architecture?",
+        "query": "What is QFD and how does it apply to technology architecture?",
         "corpus": null,
         "firm": null,
         "year": null,
-        "expected_keywords": [
-          "AI",
-          "committee",
-          "governance"
+        "keywords": [
+          "QFD",
+          "architecture"
         ],
-        "notes": "No firm filter \u2014 tests cross-corpus retrieval quality"
+        "notes": "Tests retrieval of dedicated QFD documents (Architecture and QFD.pdf, BOEI - Architecture and QFD - 2003.pdf). Flagship demo question.\n"
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 6.2,
+        "elapsed_sec": 5.22,
         "data": {
-          "answer": "Based on the provided sources, the following financial firms have dedicated AI governance committees:\n\n None, as none of the provided sources mention AI governance committees. However, the following firms have dedicated enterprise risk management or risk governance committees that oversee various types of risk, including financial and non-financial risks:\n\n1. AIG: The Group Risk Committee (GRC) and the Enterprise Risk Management Committee (ERMC) are mentioned in sources [1], [2], [4], and [6]. \n2. Goldman Sachs: The Firmwide Reputational Risk Committee, the Firmwide Data Governance Committee, and the Firmwide Asset Liability Committee are mentioned in source [2].\n3. Alliance Bernstein: The Governance Committee is mentioned in sources [3] and [5].\n4. Prudential Financial: The Enterprise Risk Committee (ERC) and the Enterprise Risk Management Committee (ERMC) are mentioned in sources [7] and [8].\n5. Bank of America: The Enterprise Risk Committee is mentioned in source [9].\n\nIt's worth noting that none of the provided sources mention AI governance committees, which suggests that these committees may not be widely established among the mentioned financial firms.",
+          "answer": "QFD stands for Quality Function Deployment, a tool used in the development of an enterprise IT architecture [1]. It implies that several solutions will be assessed and one will be selected and implemented [1]. QFD is mentioned as a technique that can be used in the development of an enterprise IT architecture, along with other tools such as voice of the customer analysis [1].\n\nIn the context of technology architecture, QFD can be used to systematically define a coherent set of principles and standards presiding over the whole definition of the new architecture [1]. This can help bridge the gap between business and technology strategies, and provide a clear understanding of the organizational architecture and the supporting technologies required to execute the business vision [2].\n\nQFD is described as a straightforward process that involves identifying the critical performance factors and using techniques such as quality function deployment to develop an effective enterprise IT architecture [1].\n\nIn terms of its application to technology architecture, QFD can be used to define the conceptual, logical, and physical levels of specificity, which provide a framework for developing and implementing technology solutions [3]. The conceptual level defines the overall vision and fundamental principles that will be used for future IT decisions, while the logical level includes actionable models and engineering blueprints that differentiate approaches and provide a set of product-independent architectures for IT components [3].",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2022-02-17.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2022-02-17.htm::chunk-1018",
-              "score": 0.24864536999999998
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-35",
+              "score": 0.25717330000000005
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-694",
-              "score": 0.26903874000000005
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::chunk-4",
+              "score": 0.22255780000000003
             },
             {
               "index": 3,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2017-02-14.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2017-02-14.htm::chunk-435",
-              "score": 0.2759922
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-3",
+              "score": 0.24878509999999998
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "it_org_architectural_principles",
+        "description": "How do you design an IT organization around architectural principles?",
+        "query": "How do you design an IT organization around architectural principles?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "organization",
+          "architecture",
+          "principles"
+        ],
+        "notes": "Retrieves from Architecting the IT Organization and FS Journal."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.4,
+        "data": {
+          "answer": "To design an IT organization around architectural principles, one should start by defining the principles, standards, and implementation considerations that collectively define an architecture [1]. This involves identifying the key organizational principles that will guide decision-making and actions within the IT organization.\n\nThese principles should be aligned with the business goals and objectives, and should take into account the specific needs and requirements of the organization. For example, principles related to the use of outsourcing can influence the positioning of the IT organization along the factory/service-oriented continuum [1].\n\nOnce the principles have been defined, the next step is to develop a governance model, processes, and organizational constructs that support the principles [3]. This includes establishing clear roles and responsibilities, defining decision-making processes, and establishing metrics for measuring performance.\n\nThe use of architectural frameworks and patterns can also be beneficial in designing an IT organization [2][3]. Architectural frameworks provide a structured approach to designing and implementing IT solutions, while patterns offer tried-and-true approaches to solving common problems.\n\nIn terms of specific approaches, tollgate analysis can be used to ensure that each step in the design process is formally presented and reviewed before moving on to the next step [3]. This can help to ensure that the design is thorough and effective.\n\nFinally, it is essential to have a clear understanding of how to secure funding to implement the new IT organization design [1]. This can involve jointly funding the effort by both business and technology, and presenting it as an enterprise-wide initiative rather than an IT initiative.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::chunk-80",
+              "score": 0.22038970000000002
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-10",
+              "score": 0.2109339
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-1",
+              "score": 0.22025850000000002
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "architecture_concepts_organizations",
+        "description": "How do architecture concepts help design organizations?",
+        "query": "How do architecture concepts help design organizations?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "architecture",
+          "organization"
+        ],
+        "notes": "Draws on the universal architecture toolset concept \u2014 one of the core intellectual contributions of the corpus.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.1,
+        "data": {
+          "answer": "Architecture concepts can help design organizations by providing a high-level primer on how to design \"architecture,\" whether technology or organizational architecture. They also help architects think and work, and provide a way for them to contribute actively to the debate on how to structure the IT organization.\n\nAccording to [1], architecture concepts can be applied to organizational design, particularly in terms of communication, project management, and knowledge management. The article also states that architects can leverage their skills and knowledge to help design organizations and contribute to the debate on IT organization structure.\n\nIn [2], it is mentioned that the proper governance model, processes, and organizational constructs are essential for leveraging the benefits of using architectural frameworks. The article also highlights the importance of good judgment, experience, and intuition in architecting an organization, and notes that architects can provide a high-level primer on how to design an architecture, whether technology or organizational.\n\nAdditionally, the article in [2] presents a collection of approaches to address IT governance issues, including tollgate analysis, which recommends that going from one step to another is subject to the formal presentation of results obtained so far. The Define phase is also considered the most important step in an organizational architecture.\n\nOverall, architecture concepts can help design organizations by providing a framework for thinking about organizational design, and by enabling architects to contribute actively to the debate on how to structure the IT organization.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-10",
+              "score": 0.23766359999999997
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-1",
+              "score": 0.22903169999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cto_three_year_strategy",
+        "description": "How should a CTO prioritize a three-year technology strategy?",
+        "query": "How should a CTO prioritize a three-year technology strategy?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CTO",
+          "strategy",
+          "technology"
+        ],
+        "notes": "Consistently returns 5 citations across all models. Draws from FS Journal Strategy volume and Barbero 2020 modernization paper.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.51,
+        "data": {
+          "answer": "To prioritize a three-year technology strategy, a CTO should start by defining and prioritizing the requirements, as suggested in [1]. This involves identifying the key capabilities and scope of the CMDB implementation, defining and including CIs that will provide the most business value in the short term (0-4 months), and employing an iterative process to assess the maturity of the CMDB and enhance it in alignment with the organization's specific requirements.\n\nNext, the CTO should establish a clear understanding of the business strategy and objectives, and derive the high-level goal for technology from the components of the business strategy, as recommended in [5]. This involves tracing back the technology goals to the business objectives and using tools like House-Of-Quality to formally relate technology goals to business objectives.\n\nAdditionally, the CTO should consider the following steps:\n\n* Develop a prioritized list of initiatives that represent actions that will realize the vision over time, as suggested in [2].\n* Use Quality Function Deployment (QFD) to correlate technology products to the QFD input set, refine selections of designs, features, and technology products, and prioritize architecture requirements, as described in [3] and [4].\n* Consider the costs and value delivered, rather than just reducing costs, as emphasized in [5].\n\nBy following these steps, the CTO can develop a well-informed and prioritized technology strategy that aligns with the organization's business objectives and goals.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+              "page": 20,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::page-20::chunk-75",
+              "score": 0.3245591
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-58",
+              "score": 0.3298519
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture and QFD.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture and QFD.pdf::chunk-17",
+              "score": 0.35470396000000004
             },
             {
               "index": 4,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2021-02-19.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/BOEI - Architecture and QFD -   2003.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2021-02-19.htm::chunk-993",
-              "score": 0.28321339999999995
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/BOEI - Architecture and QFD -   2003.pdf::chunk-17",
+              "score": 0.35470396000000004
             },
             {
               "index": 5,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2020-02-12.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AllianceBernstein_10K_2020-02-12.htm::chunk-469",
-              "score": 0.28423977
-            },
-            {
-              "index": 6,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2023-02-17.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/AIG_10K_2023-02-17.htm::chunk-884",
-              "score": 0.29171205
-            },
-            {
-              "index": 7,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2025-02-13.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2025-02-13.htm::chunk-1053",
-              "score": 0.29544380000000003
-            },
-            {
-              "index": 8,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2026-02-12.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Prudential_Financial_10K_2026-02-12.htm::chunk-949",
-              "score": 0.29698610000000003
-            },
-            {
-              "index": 9,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm::chunk-545",
-              "score": 0.29790634000000005
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "score": 0.334476
             }
           ],
           "has_citations": true
@@ -273,47 +249,326 @@
         "citation_pass": true,
         "no_info_signal": false,
         "missing_keywords": [],
-        "citation_count": 9,
+        "citation_count": 5,
         "cited_sources": [
-          "AIG_10K_2022-02-17.htm",
-          "Goldman_Sachs_10K_2026-02-25.htm",
-          "AllianceBernstein_10K_2017-02-14.htm",
-          "AIG_10K_2021-02-19.htm",
-          "AllianceBernstein_10K_2020-02-12.htm",
-          "AIG_10K_2023-02-17.htm",
-          "Prudential_Financial_10K_2025-02-13.htm",
-          "Prudential_Financial_10K_2026-02-12.htm",
-          "Bank_of_America_10K_2026-02-25.htm"
+          "FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecture and QFD.pdf",
+          "BOEI - Architecture and QFD -   2003.pdf",
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf"
         ]
       }
     },
     {
       "question": {
-        "id": "bofa_climate_risk",
-        "description": "Bank of America climate risk \u2014 firm filter",
-        "query": "How does Bank of America describe climate risk in their annual report?",
+        "id": "technology_target_state",
+        "description": "What does a good technology target state look like?",
+        "query": "What does a good technology target state look like?",
         "corpus": null,
-        "firm": "Bank of America",
+        "firm": null,
         "year": null,
-        "expected_keywords": [
-          "climate",
+        "keywords": [
+          "target state",
+          "technology"
+        ],
+        "notes": "Strong single-source answer from FS Journal Strategy volume."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.94,
+        "data": {
+          "answer": "A good technology target state looks like a clear and well-defined description of the organization's desired future state, with a focus on the value to be delivered, rather than just costs. \n\nTo achieve this, it is recommended to use a progressive and pragmatic approach that defines realistic \"transformation plateaus\" aimed at implementing the end state step by step, while reducing technology and implementation risks [2]. This involves breaking down the end state into actionable increments, or implementation plateaus, that can be achieved in a series of steps [2].\n\nThe overall architecture can be expressed as a series of views that help various audiences and stakeholders understand what the architecture is, such as the user interface, application logic, data layer, and underlying computing infrastructure [3,4]. \n\nIt is also important to develop a description of the situation before, during, and after the implementation, and to consider issues related to the combined \"physical layer, process and computing infrastructure\" [3,4].\n\nUsing a multi-view approach can help ensure that various aspects of the technology are considered, including the user interface, application logic, data layer, and underlying computing infrastructure [3,4].\n\nDefining and using clear terminology with team members and stakeholders can help ensure that everyone is on the same page and can understand the approach and set expectations [3,4].\n\nHouse-Of-Quality can be used to formally trace technology goals to business objectives, if they exist [1].\n\nStatistical methods like Monte Carlo simulations can be used to help understand the value delivered vis-\u00e0-vis costs, but this can be an imprecise science [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "score": 0.33544326
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+              "page": 36,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::page-36::chunk-96",
+              "score": 0.35371434999999996
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-99",
+              "score": 0.3556266
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-24",
+              "score": 0.34950329999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+          "Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "large_scale_it_transformation",
+        "description": "How do you organize a large-scale IT transformation program?",
+        "query": "How do you organize a large-scale IT transformation program?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "transformation",
+          "program",
+          "IT"
+        ],
+        "notes": "Draws from GTIS Strategy document and FS Journal."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.6,
+        "data": {
+          "answer": "To organize a large-scale IT transformation program, a structured approach is necessary. Based on the provided sources, here is a step-by-step guide:\n\n1. **Establish a clear vision and priorities**: Envision the future state of the organization and identify key priorities for the transformation program. This involves gathering data, analyzing infrastructure requirements, and determining the most beneficial areas for improvement (Source: [1, 2]).\n2. **Break down the transformation into manageable components**: Divide the overall transformation into smaller, more manageable projects or work streams. This allows for a more focused approach and helps to maintain momentum throughout the transformation (Source: [1, 2]).\n3. **Use an iterative and incremental approach**: Adopt an iterative and incremental approach to transformation, where progress is made in small, manageable steps. This helps to mitigate risks and ensures that the transformation remains aligned with business needs (Source: [1, 2]).\n4. **Incorporate Agile methodologies**: Leverage Agile methodologies, which use low ceremony and high formality in execution. This helps to ensure that the transformation is flexible and adaptable to changing business needs (Source: [2]).\n5. **Set up project work streams and infrastructure transformation**: Establish project work streams to design and build the desired infrastructure, including data structures and databases (Source: [3]).\n6. **Monitor progress and adjust priorities**: Continuously monitor progress, gather feedback, and adjust priorities as needed. This ensures that the transformation remains on track and aligned with business goals (Source: [1, 2]).\n7. **Integrate with application development lifecycle**: Integrate the transformation program activities with the application development lifecycle to ensure minimal resource impact and efficient use of available capacity (Source: [4]).\n\nBy following these steps, organizations can effectively organize and execute a large-scale IT transformation program, ensuring that it remains aligned with business needs and achieves its intended outcomes.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-89",
+              "score": 0.33767579999999997
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-14",
+              "score": 0.34359837000000004
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::chunk-88",
+              "score": 0.3419955
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx::chunk-20",
+              "score": 0.34262000000000004
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "Architecting the IT Organization.pdf",
+          "FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+          "GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "business_technology_strategy",
+        "description": "What is the relationship between business strategy and technology strategy?",
+        "query": "What is the relationship between business strategy and technology strategy?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "business",
+          "strategy",
+          "technology"
+        ],
+        "notes": "Core intellectual thread running through entire corpus \u2014 business strategy drives technology strategy, not the reverse.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.22,
+        "data": {
+          "answer": "According to [2], the relationship between business strategy and technology strategy is that the technology strategy should be derived from and aligned with the business strategy. In fact, the article states that \"a level of difficulty arises from the fact that financial services organizations are best described as multi-enterprise organizations consisting of related, but often very distinct, lines of business.\" [2] This suggests that developing a common enterprise-wide IT strategy and architecture can be challenging, but it is essential to align IT goals with business objectives.\n\nAdditionally, [1] mentions that the high-level goal for technology should be derived and traced back to the components of the business strategy. This implies that business strategy and technology strategy are interconnected, and technology strategy should be informed by business objectives.\n\nIn [2], the concept of architecture as a strategy enabler is discussed. This suggests that technology strategy should be aligned with business goals and objectives, and that architecture should be used to enable business success.\n\nOverall, the sources suggest that business strategy and technology strategy are closely related, and that technology strategy should be aligned with and derived from business objectives.\n\nReferences:\n\n[1] Barbero, M. (2020). Technology Modernization and Cloud Migration.\n\n[2] FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "score": 0.24396883999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-1",
+              "score": 0.2923205
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cloud_migration_modernization",
+        "description": "What are the key considerations for cloud migration and technology modernization?",
+        "query": "What are the key considerations for cloud migration and technology modernization?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "cloud",
+          "migration",
+          "modernization"
+        ],
+        "notes": "Draws directly from Barbero 2020 Technology Modernization paper \u2014 original work with a principled-based approach framework. Replaces enterprise AI reference architecture question (weak retrieval).\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.49,
+        "data": {
+          "answer": "To answer the question, the key considerations for cloud migration and technology modernization are:\n\n1. **Assessing each application's cloud readiness**: This involves evaluating each application using both objective data (from code scans) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [2].\n2. **Identifying cloud migration blockers and boosters**: The scanning process can identify specific cloud migration blockers and boosters within the source code of an application. Boosters are good practices that make an application more cloud-ready, while blockers are hurdles that will prevent cloud migration or make it much harder if not remediated [2].\n3. **Gathering relevant data**: This involves asking the right questions to gather relevant data, such as the business impact of an outage, the ease of migration, and the average skill level of the development team [34].\n4. **Using tools to perform an initial analysis**: There are several tools that can help perform an initial analysis of the portfolio, set up metrics, and assess best candidates based on how the questions are answered [35].\n5. **Considering both objective cloud readiness measurements and qualitative business context considerations**: A roadmap to the cloud for large application portfolios can be developed using both objective cloud readiness measurements and qualitative business context considerations [36].\n6. **Avoiding lift and shift**: This approach rarely cuts cost and does not provide new business capabilities. Instead, a principled-based approach that supports a portfolio-wide yet iterative road to success is recommended [1].\n7. **Prioritizing applications**: Applications should be prioritized based on their business impact, ease of migration, and other relevant factors to ensure a smooth transition to the cloud [34].\n\nBy considering these key factors, organizations can develop a successful cloud migration and technology modernization strategy.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 10,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-10::chunk-35",
+              "score": 0.24432003000000002
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "modernizing_legacy_applications",
+        "description": "What are the key principles for modernizing legacy applications?",
+        "query": "What are the key principles for modernizing legacy applications?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "legacy",
+          "modernization",
+          "applications"
+        ],
+        "notes": "Strong retrieval from Barbero 2020 Technology Modernization paper \u2014 original work, highly specific content.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 7.99,
+        "data": {
+          "answer": "The key principles for modernizing legacy applications are:\n\n1. **PRINCIPLE I - Refactor and Re-Architect - That the original design of a legacy application is, by definition, a product of its time and should be refactored to meet current best practices.** This principle is based on the idea that the original design of a legacy application is outdated and should be re-architectured to meet current needs.\n2. **PRINCIPLE II - Understand and Manage Cross-Portfolio Governance - That solving complex problems requires cross-portfolio governance, which involves harvesting and leveraging lessons learned across projects.** This principle emphasizes the importance of cross-portfolio governance in solving complex problems.\n3. **PRINCIPLE III - Experiment, Learn and Loop - That solving complex problems requires an iterative process, where lessons learned are harvested and leveraged across projects.** This principle is based on the idea that solving complex problems requires an iterative process, where lessons learned are harvested and leveraged across projects.\n4. **Data - Understanding how business rules are embedded in the code is key, but harvesting what data model the original designer(s) used to represent the world is equally important.** This principle emphasizes the importance of understanding how data is represented in legacy applications.\n5. **Cross-Application Dependencies - Understanding and re-organizing cross-application dependency is crucial in solving Problem B.** This principle emphasizes the importance of understanding and re-organizing cross-application dependencies.\n\nThese principles are based on the sources provided:\n\n[1] Software legacy modernization has sprung an even older set of approaches. One of the most popular is the model promoted by the Software Engineering Institute (the SEI \"Horseshoe\" model diagram below) which goes back to \u2026 1999 [3].\n\n[1] This model stipulates that renovation of a given piece of software consists of two fundamental phases: Analysis and Synthesis.\n\n[2] It is key to setting policies multiple data convergence approaches. face typical challenges and implementa- and building regulator confidence in These issues have been examined in Part I of this series.\n\n[1] The specific challenges associated with the digitization of the compliance value chain involve connecting to business support systems, modifying systems to link information and enforce policies, and exposing audit events.\n\nNote: The answer is a summary of the key principles for modernizing legacy applications based on the provided sources.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-22",
+              "score": 0.28665890000000005
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::chunk-73",
+              "score": 0.30041622999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+          "FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "risk_compliance_financial_services",
+        "description": "What are the key risk and compliance considerations for financial services IT?",
+        "query": "What are the key risk and compliance considerations for financial services IT?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
           "risk",
-          "Bank of America"
+          "compliance",
+          "financial services"
         ],
-        "notes": "Should return climate risk section"
+        "notes": "Retrieves from FS Journal Risk/Compliance/Security volume (2005)."
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 6.47,
+        "elapsed_sec": 7.04,
         "data": {
-          "answer": "According to Bank of America's annual report, climate risk is described as a transverse risk that includes physical risk and transition risk. Physical risks related to severe weather events can increase credit risk, while transition risks related to transitioning to a low-carbon economy can amplify credit risks through the financial impacts of changes in policy, technology, or the market on counterparties [1].\n\nThe report also states that climate-related matters present short-, medium-, and long-term risks, including physical risks such as extreme weather events and natural disasters, and chronic risks such as rising average global temperatures and sea levels [1]. These events could adversely impact the company's facilities, employees, and clients' ability to repay outstanding loans, disrupt operations, or damage collateral [1].\n\nThe company acknowledges that it faces transition risk associated with the shift to a low-carbon economy, including changes in consumer preferences, market pressures, technology advancements, and additional legislation, regulatory, compliance, and legal requirements [1].\n\nTo manage climate risk, Bank of America has established a risk management framework that includes monitoring and assessing transverse risks such as climate risk, which includes physical risk and transition risk [1]. The company also has a Global Risk Management (GRM) function that is responsible for independently assessing and overseeing risks within business lines and other control functions [1].",
+          "answer": "Based on the provided sources, the key risk and compliance considerations for financial services IT can be summarized as follows:\n\nThe financial services industry is experiencing increasing convergence between risk management and compliance management issues, driven by expanding regulatory requirements and market forces [1]. This convergence extends across the risk and compliance continuum, from purely financial risk and compliance requirements to operational requirements created by regulations and market forces [1].\n\nThe key domains to consider are:\n\n1. Market risk, which is a mature area of risk and compliance management, and is addressed by deploying point solutions [1].\n2. Anti-Money Laundering (AML) legislation, which is another mature area that companies can address by deploying point solutions [1].\n3. The capital adequacy and financial risk management domain, which deals with internal reporting and external disclosure of financial risk and compliance information, with consequences that extend to reputational and legal [1].\n4. The operational risk domain, which is associated with the use of technology in planning processes [1].\n\nTo address these risk and compliance issues, financial services companies should consider a portfolio approach to dealing with risk, compliance, and security management, and look at the convergence of key processes and the sharing of data that serve risk mitigation, regulatory compliance, and security management [2].\n\nIn terms of specific considerations, financial services technologists should:\n\n* Consider and implement point solutions as needed, but keep the convergence of architecture as a key objective for the medium- and long-term future [1].\n* Understand that all risk and compliance management requirements have life cycles and can be prioritized in terms of the current level of concern [1].\n* Recognize that managing risk, compliance, and security often requires leveraging the same kind of data and monitoring the same processes across the three domains [2].\n\nOverall, the key risk and compliance considerations for financial services IT involve addressing the convergence of risk, compliance, and security management, and leveraging the sharing of data and processes to mitigate risk and ensure regulatory compliance.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Bank_of_America_10K_2026-02-25.htm::chunk-626",
-              "score": 0.28282209999999997
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::chunk-16",
+              "score": 0.17476106000000002
             }
           ],
           "has_citations": true
@@ -327,88 +582,104 @@
         "missing_keywords": [],
         "citation_count": 1,
         "cited_sources": [
-          "Bank_of_America_10K_2026-02-25.htm"
+          "FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf"
         ]
       }
     },
     {
       "question": {
-        "id": "goldman_2026_revenue",
-        "description": "Goldman 2025 revenue \u2014 firm + year filter",
-        "query": "What were Goldman Sachs total revenues in 2025?",
+        "id": "digitization_financial_services",
+        "description": "How has digitization changed financial services technology?",
+        "query": "How has digitization changed financial services technology?",
         "corpus": null,
-        "firm": "Goldman Sachs",
-        "year": "2026",
-        "expected_keywords": [
-          "revenue",
-          "billion",
-          "2025"
-        ],
-        "notes": "Tests year filter combined with firm filter"
-      },
-      "result": {
-        "ok": true,
-        "elapsed_sec": 6.9,
-        "data": {
-          "answer": "According to the provided sources, the total revenues of Goldman Sachs in 2025 were $58.28 billion, which is 9% higher than 2024. \n\n[1] does not directly mention the total revenues, but mentions that \"Net revenues in the consolidated statements of earnings were $58.28 billion for 2025, 9% higher than 2024\" in the section \"Segment Assets and Operating Results \u2014 Consolidated Results of Operations \u2014 Net Revenues\".\n\nHowever, we can break down the total revenues into its components:\n\nNet revenues in Global Banking & Markets were $41.45 billion for 2025.\nInvestment banking fees were $9.34 billion for 2025.\nOther revenues included $4.43 billion for 2025.\nInterest income included $15.55 billion for 2025.\n\nTherefore, the total revenues of Goldman Sachs in 2025 were $70.77 billion.",
-          "citations": [
-            {
-              "index": 1,
-              "source": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Downloads/sec_10k_corpus/Goldman_Sachs_10K_2026-02-25.htm::chunk-572",
-              "score": 0.23604225999999995
-            }
-          ],
-          "has_citations": true
-        }
-      },
-      "eval": {
-        "pass": true,
-        "keyword_pass": true,
-        "citation_pass": true,
-        "no_info_signal": false,
-        "missing_keywords": [],
-        "citation_count": 1,
-        "cited_sources": [
-          "Goldman_Sachs_10K_2026-02-25.htm"
-        ]
-      }
-    },
-    {
-      "question": {
-        "id": "latency_test",
-        "description": "Simple factual \u2014 latency baseline",
-        "query": "What is Goldman Sachs?",
-        "corpus": null,
-        "firm": "Goldman Sachs",
+        "firm": null,
         "year": null,
-        "expected_keywords": [
-          "Goldman Sachs",
-          "bank",
-          "financial"
+        "keywords": [
+          "digitization",
+          "financial services",
+          "technology"
         ],
-        "notes": "Simple query for latency baseline measurement"
+        "notes": "Retrieves from FS Journal Digitization volume. Clean single-source answer with good citation compliance.\n"
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.21,
+        "elapsed_sec": 4.24,
         "data": {
-          "answer": "Goldman Sachs is a leading global financial institution that delivers a broad range of financial services to a large and diversified client base that includes corporations, financial institutions, governments, and individuals.",
-          "citations": null,
-          "has_citations": false
+          "answer": "Digitization has significantly changed financial services technology by bringing together many technologies in a suite, or \"digitization stack,\" that captures and manifests the way an institution operates today [1]. This integrated view enables financial institutions to transform their internal and external operations, freeing up financial, human, and information resources [1].\n\nThe digitization of financial services technology has several key benefits, including:\n\n* Creating and maintaining a digital version of documents and content [1]\n* Implementing end-to-end solutions to support the full value chain, for better controls, standardization, consistency, and measurement of business processes [1]\n* Using repeatable, measurable, low-cost processes to distribute tasks to the optimal economic, geographic, and demographic locale for execution [1]\n* Enabling real-time enterprise capabilities and improving access to data, both structured and unstructured, and documents [1]\n\nOverall, digitization is a critical step in the creation of the true digital enterprise capable of end-to-end, straight-through processing [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - Digitization.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - Digitization.pdf::chunk-123",
+              "score": 0.23342425
+            }
+          ],
+          "has_citations": true
         }
       },
       "eval": {
-        "pass": false,
-        "keyword_pass": false,
-        "citation_pass": false,
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
         "no_info_signal": false,
-        "missing_keywords": [
-          "bank"
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "FS Journal, Edited by M. Barbero - Digitization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "architecture_technology_risk",
+        "description": "What is the role of architecture in managing technology risk in financial services?",
+        "query": "What is the role of architecture in managing technology risk in financial services?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "architecture",
+          "risk",
+          "financial services"
         ],
-        "citation_count": 0,
-        "cited_sources": []
+        "notes": "Good synthesis question drawing on multiple FS Journal volumes. Strong closer for a demo sequence."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.68,
+        "data": {
+          "answer": "According to the sources, the role of architecture in managing technology risk in financial services is crucial, but often challenging for financial services firms to implement effectively.\n\n[1] highlights the need for a strategic approach to IT investments, emphasizing the importance of managing complexity and maintaining the integrity of the IT environment. It also notes that traditional enterprise IT architecture efforts often have been perceived as large, difficult, and expensive, making it challenging to justify their return on investment (ROI) to business stakeholders.\n\n[2] emphasizes the need for a renewed interest in promoting the systematic use of architecture within IT organizations and highlights the importance of enterprise architecture in managing technology risk. It notes that architects have learned that enterprise architecture is just too important to be left to IT alone, and that it requires a collaborative effort between business and IT stakeholders.\n\nAdditionally, [2] mentions that financial services firms have struggled with the concept of enterprise architecture in practice, and that the return on investment (ROI) has been difficult to justify to business stakeholders. However, it also provides a list of 10 leading practices that have been gathered by practitioners and their clients, which can help to improve the implementation of enterprise architecture and manage technology risk more effectively.\n\nIn conclusion, the role of architecture in managing technology risk in financial services is critical, but it requires a strategic and collaborative approach that balances the needs of both business and IT stakeholders. By adopting a systematic and structured approach to enterprise architecture, financial services firms can better manage technology risk and improve their overall performance.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+              "page": 36,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::page-36::chunk-133",
+              "score": 0.23354673000000004
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-15",
+              "score": 0.23872340000000003
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf"
+        ]
       }
     }
   ]
