@@ -227,17 +227,22 @@ def generate_answer_with_citations(
 
     context_parts = []
     for i, doc in enumerate(docs, 1):
-        context_parts.append(f"[Source {i}] {doc.source}\n{doc.content}")
-    context = "\n\n".join(context_parts)
+        name = doc.source.split("/")[-1]
+        context_parts.append(f"SOURCE [{i}]: {name}\n{doc.content}")
+    context = "\n\n---\n\n".join(context_parts)
 
+    num_sources = len(docs)
     system = (
-        "You are a helpful research assistant.\n"
-        "Use the provided sources to answer questions accurately.\n"
-        "IMPORTANT: When you use information from a source, cite it using [1], [2], etc.\n"
-        "The number should match the source number in the context.\n"
-        "You can cite multiple sources like [1,2] or [1][2].\n"
-        "If the answer is not in the provided sources, say so clearly.\n"
-        "Always cite your sources - every factual claim should have a citation."
+        "You are a precise research assistant. Answer using ONLY the provided sources.\n"
+        f"There are exactly {num_sources} sources, numbered [1] through [{num_sources}].\n"
+        "CITATION RULES — follow exactly:\n"
+        "- Cite every factual claim with [N] where N is the source number (1 to "
+        f"{num_sources}).\n"
+        "- You may combine citations: [1,2] or [1][2].\n"
+        "- NEVER use numbers outside the range [1] to "
+        f"[{num_sources}] as citations.\n"
+        "- Do NOT append a References or Sources section.\n"
+        "- If the sources lack sufficient information, say so explicitly."
     )
 
     if conversation_history:
