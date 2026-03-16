@@ -8,7 +8,7 @@
 > trade-offs — before those issues get hidden behind abstractions.
 
 **Current stack:** local Ollama inference · Qdrant vector storage · FastAPI ·
-143 SEC 10-K filings at 105,964 chunks · benchmark harness · CI/CD pipeline.
+pdfplumber page-aware PDF extraction · CrossEncoder reranker · 143 SEC 10-K filings at 105,964 chunks · benchmark harness · CI/CD pipeline.
 
 If you're reviewing this as part of evaluating my background: the goal is to
 show implementation-level AI engagement, not whiteboard-level. The architecture
@@ -40,9 +40,28 @@ them conversationally. Three main areas:
   source before the query runs. Filtering happens at the vector layer — not
   post-hoc on results.
 
-**Flagship corpus:** 143 SEC 10-K filings from 25 financial services firms
-(Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others),
-105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4 MacBook Pro.
+**Two corpora ship with AIStudio, each proving something different:**
+
+**SEC 10-K corpus — technical scale:** 143 annual filings from 25 financial
+services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and
+others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4
+MacBook Pro. This corpus demonstrates production-grade retrieval — metadata
+filtering, vocabulary mismatch handling via CrossEncoder reranker, and
+page-aware citations at scale.
+
+**Demo corpus — 20 years of original thought leadership:** AIStudio ships with
+a curated set of 15 documents spanning 2003–2021 — IT strategy frameworks,
+enterprise architecture methodology, financial services technology journals,
+cloud migration analysis, and AI reference architecture. These are original
+works: articles edited for practitioner journals, engagement frameworks, and
+strategy documents produced across senior technology roles at major financial
+institutions. Querying this corpus is querying the intellectual capital of a
+20-year career. The corpus and the tool are the same proof point.
+
+A reviewer who asks *"What is the relationship between business strategy and
+technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal
+article — original work, not sample data. That is what makes the demo corpus
+distinctive.
 
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are
 statistically identical in query latency on Apple Silicon (~6–7s average).
@@ -70,25 +89,34 @@ backend, API, and UI. CI/CD pipeline green on every push.
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
 - Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 
+**Recently completed (Beta):**
+- CrossEncoder reranker (ms-marco-MiniLM) — fixes vocabulary mismatch ✅
+- Page-aware PDF chunking via pdfplumber — page numbers in citations ✅
+- PDF viewer — Open ↗ links in References section, works in all browsers ✅
+- `--force` ingest flag — atomic wipe + clean re-index ✅
+- YAML benchmark question files with corpus auto-detection ✅
+- Demo corpus benchmark: 11/12 questions pass, 6.3s avg latency ✅
+
 **In progress:**
-- Reranker (CrossEncoder ms-marco-MiniLM) — fixes vocabulary mismatch
+- Citation compliance — stricter prompt for edge cases
 - Relevance threshold — discard low-scoring chunks
 - XBRL noise stripping in HTML ingestion
-- PDF viewer with click-to-source citation
+- Remove file from corpus UI
 
 ---
 
 ## Roadmap in a Nutshell
 
-| Now | Next | Later |
-|-----|------|-------|
-| Reranker (CrossEncoder) | Page-aware PDF chunking | Docker + AWS ECS |
-| Citation numbering fix | PDF viewer — click → source page | Multi-user + shared corpora |
-| Clean install validation | PDF image identification + citation | GPU inference (Inferentia2) |
-| MacBook Air OBE test | Benchmark comparison tooling | Compiled installer (.dmg) |
+| Beta (now) | v2.0 | v3.0 |
+|------------|------|------|
+| ✅ CrossEncoder reranker | PDF viewer click → source page | Docker + AWS ECS Fargate |
+| ✅ Page-aware PDF chunking | PDF image identification + citation | Multi-user + shared corpora |
+| ✅ PDF viewer Open ↗ links | OBE clean install validation | GPU inference (Inferentia2) |
+| ✅ `--force` atomic ingest | MacBook Air validation | Compiled installer (.dmg) |
+| Citation compliance fix | Benchmark comparison tooling | urCrew integration |
 
-See [docs/roadmap.md](docs/roadmap.md) for the full phased plan with Beta Gate,
-v1.0, and v2.0 detail.
+See [docs/roadmap.md](docs/roadmap.md) for the full phased plan.
+Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
 
 ---
 
@@ -148,7 +176,7 @@ flowchart TD
 
 ---
 
-## Architecture — Cloud (v2.0 Roadmap)
+## Architecture — Cloud (v3.0 Roadmap)
 
 The local four-process pattern maps directly to a containerized cloud deployment.
 Each process becomes a container; Qdrant and Ollama have official Docker images.
@@ -203,6 +231,7 @@ flowchart TD
 **Local → cloud is a container boundary, not an architecture change.**
 Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in
 Docker and deployed to ECS Fargate. No code changes required.
+Target release: v3.0.
 
 ---
 
@@ -260,4 +289,4 @@ irreplaceable. Written December 2025.
 
 ## Stack
 
-Python · FastAPI · Qdrant · Ollama · llama3.1 · mistral · nomic-embed-text · sentence-transformers · Docker (v2.0) · AWS ECS (v2.0)
+Python · FastAPI · Qdrant · Ollama · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber · Docker (v3.0) · AWS ECS (v3.0)

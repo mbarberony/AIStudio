@@ -204,14 +204,26 @@ AIStudio ships with a curated demo corpus. To ingest it:
 
 ```bash
 cd ~/Developer/AIStudio && source .venv/bin/activate
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus demo \
-  --root data/demo
+  --root data/demo/demo_data
 ```
 
 Try these questions to start:
-- *"What is the Air Traffic Controller model and how does it apply to IT strategy?"*
-- *"What does a reference architecture for enterprise AI look like?"*
+- *"What is QFD and how does it apply to technology architecture?"*
+- *"How should a CTO prioritize a three-year technology strategy?"*
+- *"What are the key principles for modernizing legacy applications?"*
+
+> **About the demo corpus:** This is not sample data. It is a curated set of
+> 15 original documents spanning 2003–2021 — IT strategy frameworks, enterprise
+> architecture methodology, financial services technology journals, cloud
+> migration analysis, and AI reference architecture — produced across senior
+> technology roles at major financial institutions. Querying it is querying
+> 20 years of original thought leadership. The corpus and the tool are the
+> same proof point.
+>
+> Run `python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3`
+> to validate all 12 benchmark questions automatically.
 
 ### Option B — Your Own Documents
 
@@ -305,6 +317,13 @@ If changes don't appear, kill and restart the backend process.
 **Qdrant not found** — `~/bin` not in PATH. Run `source ~/.zshrc` or
 add `export PATH="$HOME/bin:$PATH"` to `~/.zshrc`.
 
+**Citations show wrong page numbers or stale content** — corpus has mixed
+old/new chunk formats. Re-ingest with `--force` to wipe and rebuild cleanly:
+```bash
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
+  --corpus demo --root data/demo/demo_data --force
+```
+
 ---
 
 ## Optional — Disable Qdrant Telemetry
@@ -321,16 +340,20 @@ Add to `~/.zshrc` to make permanent.
 
 ```bash
 cd ~/Developer/AIStudio && source .venv/bin/activate
+
+# Demo corpus — 12 curated questions, auto-detected question file
+python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+
+# SEC 10-K corpus — requires ~/Downloads/sec_10k_corpus/ (not included in repo)
 python3 scripts/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
-```
 
-Runs 8 test questions, prints pass/fail with latency, writes
-`scripts/benchmark_results.json` and updates `BENCHMARK_FINDINGS.md`.
-
-```bash
 # Run with 70b model
-python3 scripts/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3 --model llama3.1:70b
+python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
 ```
+
+Prints pass/fail with latency per question, writes `scripts/benchmark_results.json`
+and updates `scripts/BENCHMARK_FINDINGS.md`. Question files auto-detected from
+`data/corpora/{corpus}/{corpus}_questions.yaml`.
 
 ---
 
