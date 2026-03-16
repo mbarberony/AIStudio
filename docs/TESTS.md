@@ -10,6 +10,10 @@ AIStudio has two test layers: **unit tests** (no server required) and **integrat
 |---|---|---|
 | `test_aistudio.py` | Integration + Unit | API endpoints, RAG pipeline, citations, conversation memory, corpus management |
 | `test_embeddings.py` | Integration | Embedding model quality (King − Man + Woman = Queen, etc.) |
+| `test_page_number_pipeline.py` | Unit | Page number extraction pipeline — [PAGE_N] markers → chunk_id → RetrievedDoc.page |
+| `test_rag_core_jsonl.py` | Unit | JSONL retrieval path, deterministic results without Qdrant |
+| `test_corpus_paths.py` | Unit | Corpus path structure and directory creation |
+| `test_health.py` | Unit | /health endpoint via FastAPI TestClient |
 | `embedding_arithmetic.py` | Interactive tool | Explore embedding arithmetic interactively or as a test suite |
 
 ---
@@ -24,13 +28,22 @@ ollama serve
 
 # Terminal 2 — start the backend
 source .venv/bin/activate
-python -m uvicorn src.local_llm_bot.app.api:app --reload --port 8000
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src uvicorn local_llm_bot.app.api:app --reload --port 8000
 ```
 
-The **demo corpus must be ingested** for citation and retrieval tests to pass:
+The **demo corpus must be ingested** for citation and retrieval tests to pass.
+On first run, `scripts/start.sh` handles this automatically. To ingest manually:
 
 ```bash
-python -m local_llm_bot.app.ingest --corpus demo --root data/demo/demo_data
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
+  --corpus demo --root data/demo/demo_data
+```
+
+Use `--force` to wipe and rebuild cleanly if chunk format has changed:
+
+```bash
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
+  --corpus demo --root data/demo/demo_data --force
 ```
 
 The `rag` group (unit tests) has no server dependency and can run any time.
@@ -156,6 +169,28 @@ def test_my_feature(c: Client) -> Suite:
 ```
 
 Register it in `GROUP_MAP` at the bottom of the file and it becomes available as `--group my_feature`.
+
+---
+
+## Page Number Pipeline Tests
+
+`test_page_number_pipeline.py` validates the full page number chain without
+requiring any external services:
+
+```bash
+pytest tests/test_page_number_pipeline.py -v
+```
+
+10 tests covering:
+- `[PAGE_N]` marker regex extraction
+- Marker stripping from chunk text
+- Continuation chunk handling (null page expected)
+- Cross-page boundary chunks (uses first page)
+- `chunk_id` encoding format
+- `RetrievedDoc.page` field
+- `extract_page_number()` fallback parsing
+
+All 10 pass without Ollama or Qdrant running.
 
 ---
 

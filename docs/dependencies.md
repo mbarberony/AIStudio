@@ -105,8 +105,17 @@ produces no output. With it, you see chunk-by-chunk progress and ETA.
 ## Document Parsing
 
 ### `pypdf`
-Extracts text from PDF files. Does not handle scanned PDFs (image-only) —
-those require OCR. Future: `pdfplumber` for page-aware chunking (v1.0).
+Fallback PDF text extractor. Used when `pdfplumber` is unavailable. Does not
+handle scanned PDFs (image-only) — those require OCR. Retained as a fallback
+in `loaders.py` — if pdfplumber import fails, pypdf runs instead with no page markers.
+
+### `pdfplumber`
+Primary PDF extractor. Added Beta (March 2026). Extracts text with page boundary
+awareness — inserts `[PAGE_N]` markers at each page boundary during extraction.
+These markers flow through the chunking pipeline into Qdrant payload (`page` field)
+and `chunk_id` format (`filename::page-N::chunk-M`), enabling page numbers in
+citations and the PDF viewer Open ↗ feature. Falls back to pypdf gracefully if
+pdfplumber is unavailable.
 
 ### `openpyxl`
 Reads Excel files (`.xlsx`, `.xlsm`). Extracts cell values sheet by sheet.
@@ -176,9 +185,10 @@ LiteLLM (not LangChain) would be the right abstraction layer.
 
 | Package | Purpose | Release |
 |---|---|---|
-| `litellm` | Unified abstraction for local + cloud LLMs — swap providers via config | v1.0 |
-| `pdfplumber` | Page-aware PDF chunking — prerequisite for PDF viewer | v1.0 |
+| `litellm` | Unified abstraction for local + cloud LLMs — swap providers via config | v2.0 |
+| ~~`pdfplumber`~~ | ~~Page-aware PDF chunking~~ | ✅ Active — installed Beta |
 | `pytest-asyncio` | Async test support for FastAPI endpoints | Beta |
 | `structlog` | Structured JSON logging for query traces and latency | Beta |
-| `rich` | Visual benchmark output — colored tables, pass/fail markers | v1.0 |
-| `uv` | Replace pip+venv — faster installs, better lockfiles, modern toolchain | v1.0 |
+| `rich` | Visual benchmark output — colored tables, pass/fail markers | v2.0 |
+| `pyyaml` | YAML benchmark question files — human-readable alternative to JSONL | ✅ Active — installed Beta |
+| `uv` | Replace pip+venv — faster installs, better lockfiles, modern toolchain | v2.0 |

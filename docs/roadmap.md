@@ -13,12 +13,15 @@
 
 - **Alpha** — core RAG loop working end-to-end. Credible demo, usable by
   the builder. Suitable for sharing with technical reviewers.
-- **Beta** — production-scale corpus, metadata filtering, conversation
-  management, full corpus UI. Usable by a non-technical person who has
-  been onboarded.
-- **v1.0** — validated at scale, one-click install, automated tests.
-  Suitable for open-source release.
-- **v2.0** — multi-user, teams, shared corpora, cloud deployment.
+- **Beta** — production-scale corpus, reranker, page-aware citations, PDF viewer,
+  metadata filtering, zero-ingest onboarding, 12/12 benchmark. Suitable for
+  sharing with technical reviewers and potential employers.
+- **v2.0** — validated at scale, one-click installer, full doc suite, OBE tested.
+  Suitable for open-source release. No v1.0 by design — ships when it's ready.
+- **v3.0** — multi-user, teams, shared corpora, cloud deployment (AWS ECS Fargate).
+
+> Release numbering starts at v2.0. The product goes directly from Beta to v2.0.
+> This is a deliberate positioning signal.
 
 ---
 
@@ -49,15 +52,20 @@
 - [x] Conventional commits in practice
 - [x] Coverage reporting (~26%)
 
-### Retrieval Quality
-- [ ] Reranker — CrossEncoder ms-marco-MiniLM — START HERE next session
-- [ ] Relevance threshold
+### Retrieval Quality ✅
+- [x] Reranker — CrossEncoder ms-marco-MiniLM-L-6-v2 wired into retrieve()
+- [x] Page-aware PDF chunking via pdfplumber — page numbers in Qdrant payload
+- [x] PDF viewer — Open ↗ links in References, browser-independent via /source endpoint
+- [x] `--force` ingest flag — atomic wipe of Qdrant + manifest + index
+- [x] Citation compliance — unambiguous SOURCE [N] format, 12/12 demo benchmark
+- [x] YAML benchmark question files with corpus auto-detection
+- [x] Zero-ingest onboarding — demo corpus ships with index, auto-ingests on first run
+- [ ] Relevance threshold — discard chunks below similarity cutoff
 - [ ] XBRL stripping in HTML ingestion
 - [ ] Embedding model eval: nomic-embed-text vs bge-large
 
 ### Citation & Hallucination
 - [ ] Citation numbering carry-over fix
-- [ ] Citation compliance — stricter prompt or 70b default
 - [ ] Phantom citation numbers fix
 
 ### Corpus UI
@@ -82,10 +90,10 @@
 
 ---
 
-## v1.0 — Production Ready
+## v2.0 — Production Ready
 
-- [ ] Page-aware chunking (pdfplumber, page=N in Qdrant payload)
-- [ ] PDF viewer — click citation → scroll to source page
+- [x] Page-aware chunking (pdfplumber, page=N in Qdrant payload) ✅
+- [ ] PDF viewer — click citation → scroll to source page (page numbers ready, viewer pending)
 - [ ] PDF image identification and citation
 - [ ] Respond with images (LLaVA via Ollama)
 - [ ] Hybrid retrieval (dense + BM25)
@@ -98,7 +106,7 @@
 
 ---
 
-## v2.0 — Multi-User & Cloud
+## v3.0 — Multi-User & Cloud
 
 - [ ] User accounts with roles
 - [ ] Shared corpora
@@ -113,11 +121,11 @@
 
 | Issue | Severity | Fix |
 |-------|----------|-----|
-| Vocabulary mismatch (no reranker yet) | Critical | CrossEncoder — next commit |
+| ~~Vocabulary mismatch~~ | ~~Critical~~ | ✅ Fixed — CrossEncoder reranker wired |
 | XBRL noise in HTML 10-K chunks | Medium | Strip ix:* tags |
 | Northern Trust / Nuveen CIK collision | Medium | Deduplicate at download |
 | BNY Mellon CIK incorrect | Medium | Correct CIK in script |
-| Citation null on confident answers | Medium | Stricter prompt / 70b |
+| ~~Citation null on confident answers~~ | ~~Medium~~ | ✅ Fixed — unambiguous SOURCE [N] format |
 | Citation numbering carry-over | Medium | Reset counter per response |
 | Corpus dropdown doesn't refresh | Low | JS event fix |
 | Stats button wired to Upload listener | Low | Fix event binding |

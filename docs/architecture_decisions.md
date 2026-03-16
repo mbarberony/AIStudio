@@ -142,18 +142,27 @@ it runs cross-corpus retrieval.
 
 ---
 
-## 7. Page Number Tracking: Deferred to v1.0
+## 7. Page-Aware PDF Chunking via pdfplumber *(implemented Beta)*
 
-**Decision:** Page numbers not tracked in citations at this time.
+**Decision:** pdfplumber as primary PDF extractor, inserting `[PAGE_N]` markers
+at each page boundary. pypdf retained as fallback.
 
-**Why:**
-- Implementation requires reliable page boundary detection during ingestion,
-  which varies significantly by document type
-- The accuracy cost of getting page numbers wrong outweighs the benefit
+**Why pdfplumber over pypdf:**
+- pypdf extracts flat text with no page boundary information
+- pdfplumber provides page-by-page extraction with reliable boundary detection
+- `[PAGE_N]` markers flow through the chunking pipeline into Qdrant payload
+  (`page` field) and `chunk_id` (`filename::page-N::chunk-M`)
 
-**Will add in v1.0:** pdfplumber for PDF ingestion with `page=N` stored as
-Qdrant payload. Enables the PDF viewer — click citation → scroll to source page.
-This is the crown jewel feature of v1.0.
+**Pipeline:** `loaders._extract_pdf()` → `[PAGE_N]` markers in text →
+`pipeline.py` extracts page numbers → stored in Qdrant payload → surfaced
+in `RetrievedDoc.page` → rendered in UI citation footnotes with `Open ↗` link.
+
+**Null pages are expected** for: non-PDF files (PPTX, DOCX), scanned PDFs
+with no text layer, and continuation chunks that start mid-page.
+
+**PDF viewer — click citation → scroll to page** remains a v2.0 item requiring
+frontend PDF rendering (pdfjs). Page numbers are ready in the backend; the
+viewer frontend is the remaining work.
 
 ---
 
@@ -215,3 +224,61 @@ Beta. The `ui_architecture.md` doc describes the target left-bar layout.
 - **Vector store backup:** Qdrant storage (`~/qdrant_storage/`) is a derived
   artifact but expensive to regenerate. Treat it like a database — back it up.
   In production: S3-backed Qdrant snapshots on a schedule.
+
+---
+
+## 11. CrossEncoder Reranker: Two-Stage Retrieval
+
+**Decision:** CrossEncoder `ms-marco-MiniLM-L-6-v2` as a reranking pass after
+vector search, before prompt assembly.
+
+**Why:**
+The bi-encoder (nomic-embed-text) compresses query and chunk independently into
+fixed vectors. Compression loses nuance — "AI governance committee" and "Firmwide
+Artificial Intelligence Risk and Controls Committee" are semantically equivalent
+but vector-distant. This is vocabulary mismatch.
+
+The CrossEncoder reads query + chunk concatenated as a single input, with full
+attention across both. It scores relevance directly rather than approximating
+via cosine distance. Vocabulary mismatch largely disappears.
+
+**Two-stage architecture:**
+- Stage 1: Qdrant HNSW vector search — fast, retrieves top-K candidates
+- Stage 2: CrossEncoder reranker — slower, reorders by true relevance
+
+**Model selection: `ms-marco-MiniLM-L-6-v2`**
+- 22M parameters, 90MB — loads in <1s on Apple Silicon
+- Fine-tuned on MS MARCO (500K passage relevance pairs) — directly applicable
+  to "rank these passages for this query"
+- Best latency/quality tradeoff in the MiniLM family
+- Knowledge-distilled from BERT-large — 6 transformer layers, preserves most
+  quality at fraction of the depth
+
+**Implementation:** `rag_core.py` — lazy load with graceful fallback if
+`sentence-transformers` unavailable. Zero impact on existing behavior if
+reranker fails to load.
+
+**Tradeoff:** ~1-2s additional latency per query for CrossEncoder inference on
+top-K candidates. Acceptable at current corpus sizes.
+
+---
+
+## 12. Atomic `--force` Ingest
+
+**Decision:** `--force` flag in the ingest pipeline performs an atomic wipe of
+Qdrant collection + JSONL index + manifest before re-ingesting.
+
+**Why:**
+Without atomic wipe, incremental upserts leave stale chunk IDs in Qdrant when
+chunk format changes (e.g. switching from `::chunk-N` to `::page-N::chunk-M`
+format). Old and new format chunks coexist, degrading retrieval quality.
+
+**Implementation:** `pipeline.py` `ingest_corpus()` — when `force=True`:
+1. Truncate `index.jsonl`, `manifest.jsonl`, `failures.jsonl`, `doc_chunk_map.json`
+2. Call `qdrant_store.delete_collection()` — wipes Qdrant collection entirely
+3. Re-ingest all files from scratch
+
+`delete_collection()` added to `qdrant_store.py` for this purpose.
+
+**Also used by:** `scripts/start.sh` auto-ingest on first run (without --force,
+via collection existence check).
