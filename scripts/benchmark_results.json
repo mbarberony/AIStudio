@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-03-15T21:46:38.738884",
+  "run_at": "2026-03-16T17:58:16.753482",
   "config": {
     "corpus": "demo",
     "top_k": 5,
@@ -10,7 +10,7 @@
   "summary": {
     "total": 12,
     "passed": 12,
-    "avg_latency_sec": 5.87
+    "avg_latency_sec": 5.99
   },
   "results": [
     {
@@ -29,29 +29,22 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.22,
+        "elapsed_sec": 7.78,
         "data": {
-          "answer": "QFD stands for Quality Function Deployment, a tool used in the development of an enterprise IT architecture [1]. It implies that several solutions will be assessed and one will be selected and implemented [1]. QFD is mentioned as a technique that can be used in the development of an enterprise IT architecture, along with other tools such as voice of the customer analysis [1].\n\nIn the context of technology architecture, QFD can be used to systematically define a coherent set of principles and standards presiding over the whole definition of the new architecture [1]. This can help bridge the gap between business and technology strategies, and provide a clear understanding of the organizational architecture and the supporting technologies required to execute the business vision [2].\n\nQFD is described as a straightforward process that involves identifying the critical performance factors and using techniques such as quality function deployment to develop an effective enterprise IT architecture [1].\n\nIn terms of its application to technology architecture, QFD can be used to define the conceptual, logical, and physical levels of specificity, which provide a framework for developing and implementing technology solutions [3]. The conceptual level defines the overall vision and fundamental principles that will be used for future IT decisions, while the logical level includes actionable models and engineering blueprints that differentiate approaches and provide a set of product-independent architectures for IT components [3].",
+          "answer": "Quality Function Deployment (QFD) is a methodology that can be applied to technology architecture to ensure that the design and implementation of technology solutions meet the needs and requirements of the business.\n\nAccording to the provided sources, QFD is a tool that can be used in the development of an enterprise IT architecture [1]. It is based on the principles of quality development and is used to assess and select the best solutions to architectural or organizational problems. The QFD methodology involves the use of several tools, including Voice of the Customer analysis, which helps to identify and prioritize the needs and requirements of the business [1].\n\nIn the context of technology architecture, QFD can be used to ensure that the design and implementation of technology solutions align with the business vision and objectives. This involves defining the conceptual, logical, and physical levels of specificity in architecture [3], which provides a framework for understanding the different levels of abstraction and detail in technology architecture.\n\nThe conceptual level provides the highest level of abstraction and defines the overall vision and fundamental principles for future IT decisions [3]. The logical level includes actionable models and engineering blueprints that differentiate approaches and provide a set of product-independent architectures for IT components [3]. The physical level includes the specific details and implementation of the technology solutions [3].\n\nBy applying QFD to technology architecture, organizations can ensure that their technology solutions meet the needs and requirements of the business, and that they are aligned with the overall business vision and objectives.\n\nReferences:\n\n[1] Barbero, M. (2006). Strategy and Architecture Concepts and Techniques.\n\n[3] Barbero, M. (2020). Technology Modernization and Cloud Migration.\n\n[4] (Section Understanding the Difference Between the Conceptual, Logical and Physical Views... in pp. 26-27)",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-35",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 10,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-10::chunk-35",
               "score": 0.25717330000000005
             },
             {
-              "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::chunk-4",
-              "score": 0.22255780000000003
-            },
-            {
               "index": 3,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-3",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-1::chunk-3",
               "score": 0.24878509999999998
             }
           ],
@@ -64,10 +57,9 @@
         "citation_pass": true,
         "no_info_signal": false,
         "missing_keywords": [],
-        "citation_count": 3,
+        "citation_count": 2,
         "cited_sources": [
           "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-          "Architecture Concepts and How To Use Them To Design an Organizations.pdf",
           "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf"
         ]
       }
@@ -89,29 +81,29 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.4,
+        "elapsed_sec": 6.27,
         "data": {
-          "answer": "To design an IT organization around architectural principles, one should start by defining the principles, standards, and implementation considerations that collectively define an architecture [1]. This involves identifying the key organizational principles that will guide decision-making and actions within the IT organization.\n\nThese principles should be aligned with the business goals and objectives, and should take into account the specific needs and requirements of the organization. For example, principles related to the use of outsourcing can influence the positioning of the IT organization along the factory/service-oriented continuum [1].\n\nOnce the principles have been defined, the next step is to develop a governance model, processes, and organizational constructs that support the principles [3]. This includes establishing clear roles and responsibilities, defining decision-making processes, and establishing metrics for measuring performance.\n\nThe use of architectural frameworks and patterns can also be beneficial in designing an IT organization [2][3]. Architectural frameworks provide a structured approach to designing and implementing IT solutions, while patterns offer tried-and-true approaches to solving common problems.\n\nIn terms of specific approaches, tollgate analysis can be used to ensure that each step in the design process is formally presented and reviewed before moving on to the next step [3]. This can help to ensure that the design is thorough and effective.\n\nFinally, it is essential to have a clear understanding of how to secure funding to implement the new IT organization design [1]. This can involve jointly funding the effort by both business and technology, and presenting it as an enterprise-wide initiative rather than an IT initiative.",
+          "answer": "Designing an IT organization around architectural principles involves several key steps and considerations. According to [1], defining an organizational architecture/model requires discipline and the definition of principles, standards, and implementation considerations. The first step in this process is to define the principles that will govern decisions and actions within the organization. These principles should be related to the use of outsourcing, for example, and influence the positioning of the IT organization along the factory/service-oriented continuum.\n\nNext, it is essential to develop a governance model, processes, and organizational constructs that support the principles and standards defined in the previous step. This involves creating a framework for decision-making and ensuring that the proper governance model, processes, and organizational constructs are in place.\n\nThe use of architectural frameworks and patterns can also play a significant role in designing an IT organization around architectural principles. According to [2], patterns are tried-and-true approaches to solving problems, and using them can help ensure that the proper governance model, processes, and organizational constructs are in place.\n\nIn addition, the use of tollgate analysis, as described in [3], can be a helpful approach in designing an IT organization around architectural principles. This approach involves going from one step to another subject to the formal presentation of results obtained so far. In practice, the Define phase is probably the most important step in an organizational architecture.\n\nOverall, designing an IT organization around architectural principles requires a combination of discipline, good judgment, experience, and intuition. It involves defining principles, developing a governance model, processes, and organizational constructs, and using architectural frameworks and patterns to support the design.\n\nReferences:\n\n[1] Architecture Concepts and How To Use Them To Design an Organizations.pdf\n[2] FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf\n[3] Architecting the IT Organization.pdf",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::chunk-80",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+              "page": 30,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture Concepts and How To Use Them To Design an Organizations.pdf::page-30::chunk-80",
               "score": 0.22038970000000002
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-10",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-4::chunk-10",
               "score": 0.2109339
             },
             {
               "index": 3,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-1",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf::page-1::chunk-1",
               "score": 0.22025850000000002
             }
           ],
@@ -148,22 +140,22 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.1,
+        "elapsed_sec": 4.76,
         "data": {
-          "answer": "Architecture concepts can help design organizations by providing a high-level primer on how to design \"architecture,\" whether technology or organizational architecture. They also help architects think and work, and provide a way for them to contribute actively to the debate on how to structure the IT organization.\n\nAccording to [1], architecture concepts can be applied to organizational design, particularly in terms of communication, project management, and knowledge management. The article also states that architects can leverage their skills and knowledge to help design organizations and contribute to the debate on IT organization structure.\n\nIn [2], it is mentioned that the proper governance model, processes, and organizational constructs are essential for leveraging the benefits of using architectural frameworks. The article also highlights the importance of good judgment, experience, and intuition in architecting an organization, and notes that architects can provide a high-level primer on how to design an architecture, whether technology or organizational.\n\nAdditionally, the article in [2] presents a collection of approaches to address IT governance issues, including tollgate analysis, which recommends that going from one step to another is subject to the formal presentation of results obtained so far. The Define phase is also considered the most important step in an organizational architecture.\n\nOverall, architecture concepts can help design organizations by providing a framework for thinking about organizational design, and by enabling architects to contribute actively to the debate on how to structure the IT organization.",
+          "answer": "Architecture concepts help design organizations in several ways. Firstly, they provide a framework for thinking about and organizing complex systems, which can be applied to both technology and organizational architecture. This framework includes concepts such as governance models, processes, and organizational constructs, which are essential for effective organizational design [1].\n\nSecondly, architecture concepts can help identify and address critical success factors, such as leveraging the benefits of using architectural frameworks, which is a critical factor in designing and operating an IT organization [2]. By applying these concepts, organizations can ensure that the proper governance model, processes, and organizational constructs are in place.\n\nMoreover, architecture concepts can facilitate communication and project management by providing a common language and set of tools that can be understood by both architects and non-architects. This can lead to more effective collaboration and decision-making in organizational design.\n\nIn addition, architecture concepts can be applied to various areas of organizational design, including communication, project management, and knowledge management. By using these concepts, organizations can arrive at the right decisions in a way that is more likely to be received favorably by impacted employees.\n\nOverall, architecture concepts play a crucial role in designing and operating organizations, and their application can benefit both architects and non-architects alike.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-10",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-4::chunk-10",
               "score": 0.23766359999999997
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-1",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf::page-1::chunk-1",
               "score": 0.22903169999999995
             }
           ],
@@ -200,43 +192,43 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.51,
+        "elapsed_sec": 5.75,
         "data": {
-          "answer": "To prioritize a three-year technology strategy, a CTO should start by defining and prioritizing the requirements, as suggested in [1]. This involves identifying the key capabilities and scope of the CMDB implementation, defining and including CIs that will provide the most business value in the short term (0-4 months), and employing an iterative process to assess the maturity of the CMDB and enhance it in alignment with the organization's specific requirements.\n\nNext, the CTO should establish a clear understanding of the business strategy and objectives, and derive the high-level goal for technology from the components of the business strategy, as recommended in [5]. This involves tracing back the technology goals to the business objectives and using tools like House-Of-Quality to formally relate technology goals to business objectives.\n\nAdditionally, the CTO should consider the following steps:\n\n* Develop a prioritized list of initiatives that represent actions that will realize the vision over time, as suggested in [2].\n* Use Quality Function Deployment (QFD) to correlate technology products to the QFD input set, refine selections of designs, features, and technology products, and prioritize architecture requirements, as described in [3] and [4].\n* Consider the costs and value delivered, rather than just reducing costs, as emphasized in [5].\n\nBy following these steps, the CTO can develop a well-informed and prioritized technology strategy that aligns with the organization's business objectives and goals.",
+          "answer": "Based on the provided sources, a CTO should prioritize a three-year technology strategy by:\n\n1. Deriving the high-level goal for technology from the business strategy or a well-defined transformative business initiative [5].\n2. Tracing the technology goals back to the components of the business strategy [5].\n3. Identifying and prioritizing the requirements, evaluating and short-listing vendors before selecting a best-fit tool [1].\n4. Defining and including CIs (Configuration Items) that will provide the most business value in the short term (0\u20134 months) [1].\n5. Employing an iterative process to assess the maturity of the CMDB (Configuration Management Database) and enhance it in alignment with the organizational requirements [1].\n\nAdditionally, the CTO should consider the following:\n\n* Using a structured approach to define the IT services and related infrastructure components required to provision IT services [2].\n* Developing a prioritized list of initiatives that represent actions that will realize the vision over time [2].\n* Prioritizing and sequencing the architecture rollout phases to ensure a smooth transition between the current and future states [3, 4].\n* Considering the control costs, increasing time to market, enabling customers, improving quality of service, and improving the ability to answer questions from business users as key factors in technology planning [3, 4].\n\nBy following these steps, the CTO can ensure that the technology strategy is aligned with the business objectives and that the technology investments provide the maximum value to the organization.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
               "page": 20,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::page-20::chunk-75",
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::page-20::chunk-75",
               "score": 0.3245591
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-58",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 16,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-16::chunk-58",
               "score": 0.3298519
             },
             {
               "index": 3,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture and QFD.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture and QFD.pdf::chunk-17",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture and QFD.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture and QFD.pdf::page-5::chunk-17",
               "score": 0.35470396000000004
             },
             {
               "index": 4,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/BOEI - Architecture and QFD -   2003.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/BOEI - Architecture and QFD -   2003.pdf::chunk-17",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/BOEI - Architecture and QFD -   2003.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/BOEI - Architecture and QFD -   2003.pdf::page-5::chunk-17",
               "score": 0.35470396000000004
             },
             {
               "index": 5,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-3::chunk-9",
               "score": 0.334476
             }
           ],
@@ -275,36 +267,36 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.94,
+        "elapsed_sec": 5.17,
         "data": {
-          "answer": "A good technology target state looks like a clear and well-defined description of the organization's desired future state, with a focus on the value to be delivered, rather than just costs. \n\nTo achieve this, it is recommended to use a progressive and pragmatic approach that defines realistic \"transformation plateaus\" aimed at implementing the end state step by step, while reducing technology and implementation risks [2]. This involves breaking down the end state into actionable increments, or implementation plateaus, that can be achieved in a series of steps [2].\n\nThe overall architecture can be expressed as a series of views that help various audiences and stakeholders understand what the architecture is, such as the user interface, application logic, data layer, and underlying computing infrastructure [3,4]. \n\nIt is also important to develop a description of the situation before, during, and after the implementation, and to consider issues related to the combined \"physical layer, process and computing infrastructure\" [3,4].\n\nUsing a multi-view approach can help ensure that various aspects of the technology are considered, including the user interface, application logic, data layer, and underlying computing infrastructure [3,4].\n\nDefining and using clear terminology with team members and stakeholders can help ensure that everyone is on the same page and can understand the approach and set expectations [3,4].\n\nHouse-Of-Quality can be used to formally trace technology goals to business objectives, if they exist [1].\n\nStatistical methods like Monte Carlo simulations can be used to help understand the value delivered vis-\u00e0-vis costs, but this can be an imprecise science [1].",
+          "answer": "A good technology target state should be defined at a conceptual level, taking into account the high-level goal for technology that is derived from and traced back to the components of the business strategy [1]. This goal should focus on value delivered vis-\u00e0-vis costs, rather than just reducing costs [1].\n\nIn some cases, the technology necessary to implement the target state may not be ready yet, budgets may not be available, or key talents may not have been recruited yet, so the end state can and should remain defined at the conceptual level [2].\n\nA progressive and pragmatic approach is recommended to define realistic \"transformation plateaus\" (B1, B2, B3, etc.) aimed at implementing the end state step by step, while reducing technology and implementation risks [2]. This approach involves defining various implementation plateaus as stepping stones to reach the desired end state in actionable increments.\n\nThe overall architecture can be expressed as a series of views that help various audiences and stakeholders understand what the architecture is, including the user interface, the application logic, the data layer, and the underlying computing infrastructure [3,4].\n\nIn addition, it's essential to define and use terminology with team members and stakeholders to understand their preferences, explain the approach, and set expectations [3,4].",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-3::chunk-9",
               "score": 0.33544326
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture Concepts and How To Use Them To Design an Organizations.pdf",
               "page": 36,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecture Concepts and How To Use Them To Design an Organizations.pdf::page-36::chunk-96",
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecture Concepts and How To Use Them To Design an Organizations.pdf::page-36::chunk-96",
               "score": 0.35371434999999996
             },
             {
               "index": 3,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-99",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 25,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-25::chunk-99",
               "score": 0.3556266
             },
             {
               "index": 4,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-24",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf::page-7::chunk-24",
               "score": 0.34950329999999996
             }
           ],
@@ -343,36 +335,36 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 6.6,
+        "elapsed_sec": 6.17,
         "data": {
-          "answer": "To organize a large-scale IT transformation program, a structured approach is necessary. Based on the provided sources, here is a step-by-step guide:\n\n1. **Establish a clear vision and priorities**: Envision the future state of the organization and identify key priorities for the transformation program. This involves gathering data, analyzing infrastructure requirements, and determining the most beneficial areas for improvement (Source: [1, 2]).\n2. **Break down the transformation into manageable components**: Divide the overall transformation into smaller, more manageable projects or work streams. This allows for a more focused approach and helps to maintain momentum throughout the transformation (Source: [1, 2]).\n3. **Use an iterative and incremental approach**: Adopt an iterative and incremental approach to transformation, where progress is made in small, manageable steps. This helps to mitigate risks and ensures that the transformation remains aligned with business needs (Source: [1, 2]).\n4. **Incorporate Agile methodologies**: Leverage Agile methodologies, which use low ceremony and high formality in execution. This helps to ensure that the transformation is flexible and adaptable to changing business needs (Source: [2]).\n5. **Set up project work streams and infrastructure transformation**: Establish project work streams to design and build the desired infrastructure, including data structures and databases (Source: [3]).\n6. **Monitor progress and adjust priorities**: Continuously monitor progress, gather feedback, and adjust priorities as needed. This ensures that the transformation remains on track and aligned with business goals (Source: [1, 2]).\n7. **Integrate with application development lifecycle**: Integrate the transformation program activities with the application development lifecycle to ensure minimal resource impact and efficient use of available capacity (Source: [4]).\n\nBy following these steps, organizations can effectively organize and execute a large-scale IT transformation program, ensuring that it remains aligned with business needs and achieves its intended outcomes.",
+          "answer": "To organize a large-scale IT transformation program, consider the following steps:\n\n1. **Adopt a high level of formality and linearity in execution**: For large, enterprisewide projects, it is essential to adopt a high level of formality and linearity in execution, especially when employees are widely dispersed [1].\n2. **Envision your first day in leading an IT transformational change**: On your first day, focus on organization transformation, whether it is a wholesale multiyear project or the redesign of the inner workings of a single department [2].\n3. **Use a comprehensive but realistic data-gathering activity thread**: Conduct a comprehensive but realistic data-gathering activity thread to drive agreement on a future vision, priorities, and implementation road map [1].\n4. **Set up project work streams**: Establish project work streams to design and build the desired data structures and database as part of a larger infrastructure transformation [3].\n5. **Establish an iterative cycle with a feedback loop**: View the decision-making process as an iterative cycle with a feedback loop at each stage of the decision cycle, allowing for continuous improvement and customization as each initiative progresses [3].\n6. **Synchronize DSS transformation program activities with application development priorities**: Execute the transformation of Distributed Systems and Storage (DSS) in tight synchronization with the business and development teams, re-tooling over 70% of the estate to achieve the end state [4].\n7. **Change the engagement model with application development**: Transform the engagement model with application development from requesting specific infrastructure stacks to requesting infrastructure solutions based on capacity and functional requirements [4].\n\nBy following these steps, you can effectively organize and execute a large-scale IT transformation program.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-89",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 23,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-23::chunk-89",
               "score": 0.33767579999999997
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Architecting the IT Organization.pdf::chunk-14",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Architecting the IT Organization.pdf::page-5::chunk-14",
               "score": 0.34359837000000004
             },
             {
               "index": 3,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::chunk-88",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf",
+              "page": 22,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - IT Infrastructure.pdf::page-22::chunk-88",
               "score": 0.3419955
             },
             {
               "index": 4,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx",
               "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx::chunk-20",
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx::chunk-20",
               "score": 0.34262000000000004
             }
           ],
@@ -411,23 +403,30 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.22,
+        "elapsed_sec": 4.81,
         "data": {
-          "answer": "According to [2], the relationship between business strategy and technology strategy is that the technology strategy should be derived from and aligned with the business strategy. In fact, the article states that \"a level of difficulty arises from the fact that financial services organizations are best described as multi-enterprise organizations consisting of related, but often very distinct, lines of business.\" [2] This suggests that developing a common enterprise-wide IT strategy and architecture can be challenging, but it is essential to align IT goals with business objectives.\n\nAdditionally, [1] mentions that the high-level goal for technology should be derived and traced back to the components of the business strategy. This implies that business strategy and technology strategy are interconnected, and technology strategy should be informed by business objectives.\n\nIn [2], the concept of architecture as a strategy enabler is discussed. This suggests that technology strategy should be aligned with business goals and objectives, and that architecture should be used to enable business success.\n\nOverall, the sources suggest that business strategy and technology strategy are closely related, and that technology strategy should be aligned with and derived from business objectives.\n\nReferences:\n\n[1] Barbero, M. (2020). Technology Modernization and Cloud Migration.\n\n[2] FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.",
+          "answer": "According to the sources, the relationship between business strategy and technology strategy is that the technology strategy should be derived from and aligned with the business strategy. [1] states that the high-level goal for technology should be \"derived and traced back to the components of the business strategy\" (or a well-defined, transformative business initiative). [2] also emphasizes the importance of aligning IT strategy with business objectives, and that a good IT strategy is one that is \"well aligned with business goals and objectives\u2014and achievable in that they deliver incremental business value to sustain funding and are driven by practical solutions to real problems.\"\n\nIn addition, [2] suggests that creating an enterprise IT architecture is a strategic planning effort that can transform the way an organization operates, and that it requires a clear understanding of the business strategy and objectives. [3] provides a specific example of how a company, GTIS, is developing a three-year strategy and plan that is driven by both the Group IT and business objectives.\n\nOverall, the sources suggest that technology strategy should be closely tied to and aligned with business strategy, and that this alignment is critical for achieving business success.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-9",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-3::chunk-9",
               "score": 0.24396883999999996
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-1",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-1::chunk-1",
               "score": 0.2923205
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx::chunk-0",
+              "score": 0.30746746
             }
           ],
           "has_citations": true
@@ -439,10 +438,11 @@
         "citation_pass": true,
         "no_info_signal": false,
         "missing_keywords": [],
-        "citation_count": 2,
+        "citation_count": 3,
         "cited_sources": [
           "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf"
+          "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+          "GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).pptx"
         ]
       }
     },
@@ -463,15 +463,15 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 6.49,
+        "elapsed_sec": 6.83,
         "data": {
-          "answer": "To answer the question, the key considerations for cloud migration and technology modernization are:\n\n1. **Assessing each application's cloud readiness**: This involves evaluating each application using both objective data (from code scans) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [2].\n2. **Identifying cloud migration blockers and boosters**: The scanning process can identify specific cloud migration blockers and boosters within the source code of an application. Boosters are good practices that make an application more cloud-ready, while blockers are hurdles that will prevent cloud migration or make it much harder if not remediated [2].\n3. **Gathering relevant data**: This involves asking the right questions to gather relevant data, such as the business impact of an outage, the ease of migration, and the average skill level of the development team [34].\n4. **Using tools to perform an initial analysis**: There are several tools that can help perform an initial analysis of the portfolio, set up metrics, and assess best candidates based on how the questions are answered [35].\n5. **Considering both objective cloud readiness measurements and qualitative business context considerations**: A roadmap to the cloud for large application portfolios can be developed using both objective cloud readiness measurements and qualitative business context considerations [36].\n6. **Avoiding lift and shift**: This approach rarely cuts cost and does not provide new business capabilities. Instead, a principled-based approach that supports a portfolio-wide yet iterative road to success is recommended [1].\n7. **Prioritizing applications**: Applications should be prioritized based on their business impact, ease of migration, and other relevant factors to ensure a smooth transition to the cloud [34].\n\nBy considering these key factors, organizations can develop a successful cloud migration and technology modernization strategy.",
+          "answer": "To answer your question, the key considerations for cloud migration and technology modernization are:\n\n1. **Assessing application readiness**: Evaluate each application in the portfolio using objective data (from code scans) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [2].\n2. **Identifying cloud blockers and boosters**: Use scanning tools to identify specific cloud migration blockers and boosters within the source code of each application, including good practices that make an application more cloud-ready (e.g., using existing cloud-based encryption mechanisms) and hurdles that will prevent or complicate cloud migration (e.g., persistent storage, regulatory mandates) [2].\n3. **Gathering relevant data**: Use surveys to gather relevant data, focusing on asking the right questions and avoiding \"boiling the ocean\" [2].\n4. **Using a principle-based approach**: Adopt a principle-based approach that supports a portfolio-wide yet iterative road to success, considering both objective cloud readiness measurements and qualitative business context considerations [1].\n5. **Prioritizing applications**: Prioritize applications based on their business impact, cloud readiness, and development team's skill level, identifying potential impacts to customers, financial impact, and ease of migration [2].\n6. **Considering application properties**: Evaluate application properties, such as type, to identify potential redundancies or consolidation opportunities across the portfolio [2].\n7. **Leveraging tools and metrics**: Utilize tools that help perform an initial analysis of the portfolio, setting up metrics and assessing best candidates based on the answered questions [2].\n8. **Developing a roadmap**: Create a roadmap to the cloud using both objective cloud readiness measurements and qualitative business context considerations, considering a broad sense of how to proceed [2].\n\nThese considerations are essential for a successful cloud migration and technology modernization effort, allowing organizations to make informed decisions and prioritize applications effectively.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
               "page": 10,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-10::chunk-35",
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-10::chunk-35",
               "score": 0.24432003000000002
             }
           ],
@@ -507,22 +507,22 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 7.99,
+        "elapsed_sec": 7.44,
         "data": {
-          "answer": "The key principles for modernizing legacy applications are:\n\n1. **PRINCIPLE I - Refactor and Re-Architect - That the original design of a legacy application is, by definition, a product of its time and should be refactored to meet current best practices.** This principle is based on the idea that the original design of a legacy application is outdated and should be re-architectured to meet current needs.\n2. **PRINCIPLE II - Understand and Manage Cross-Portfolio Governance - That solving complex problems requires cross-portfolio governance, which involves harvesting and leveraging lessons learned across projects.** This principle emphasizes the importance of cross-portfolio governance in solving complex problems.\n3. **PRINCIPLE III - Experiment, Learn and Loop - That solving complex problems requires an iterative process, where lessons learned are harvested and leveraged across projects.** This principle is based on the idea that solving complex problems requires an iterative process, where lessons learned are harvested and leveraged across projects.\n4. **Data - Understanding how business rules are embedded in the code is key, but harvesting what data model the original designer(s) used to represent the world is equally important.** This principle emphasizes the importance of understanding how data is represented in legacy applications.\n5. **Cross-Application Dependencies - Understanding and re-organizing cross-application dependency is crucial in solving Problem B.** This principle emphasizes the importance of understanding and re-organizing cross-application dependencies.\n\nThese principles are based on the sources provided:\n\n[1] Software legacy modernization has sprung an even older set of approaches. One of the most popular is the model promoted by the Software Engineering Institute (the SEI \"Horseshoe\" model diagram below) which goes back to \u2026 1999 [3].\n\n[1] This model stipulates that renovation of a given piece of software consists of two fundamental phases: Analysis and Synthesis.\n\n[2] It is key to setting policies multiple data convergence approaches. face typical challenges and implementa- and building regulator confidence in These issues have been examined in Part I of this series.\n\n[1] The specific challenges associated with the digitization of the compliance value chain involve connecting to business support systems, modifying systems to link information and enforce policies, and exposing audit events.\n\nNote: The answer is a summary of the key principles for modernizing legacy applications based on the provided sources.",
+          "answer": "The key principles for modernizing legacy applications are outlined in the provided sources. According to the sources, the key principles are:\n\n1. **PRINCIPLE I - Identify, Understand and Prioritize**: This principle involves identifying the legacy application that requires modernization, understanding its current state, and prioritizing the modernization efforts based on business value and technical feasibility [1].\n2. **PRINCIPLE II - Renovation**: This principle involves analyzing the legacy code's structure and architecture, identifying potential application architecture issues, and modifying the architecture to address these issues [1].\n3. **PRINCIPLE III - Experiment, Learn and Loop**: This principle emphasizes the importance of iterating through the modernization process, harvesting and leveraging lessons learned, and continuously improving the modernization approach [1].\n4. **Data - Understanding the Data Model**: This principle highlights the importance of understanding the data model used by the original designer(s) to represent the world, which is essential for regulatory and compliance demands [1].\n5. **Cross-Application Dependencies - Identifying and Re-organizing**: This principle emphasizes the need to identify and re-organize cross-application dependencies, which is crucial for solving Problem B and achieving a seamless, superior user experience [1].\n\nAdditionally, the sources suggest that the Software Engineering Institute's (SEI) \"Horseshoe\" model diagram, which goes back to 1999, can be a useful approach for modernizing legacy applications [3]. This model involves two fundamental phases: Analysis and Synthesis, which are designed to identify and modify the application architecture to address potential issues [1].\n\nFurthermore, the sources highlight the importance of understanding and re-organizing cross-application dependencies through automated static pattern analysis and documentation [1]. This is essential for identifying opportunities to refactor application functionalities and restructure the application architecture [1].\n\nFinally, the sources suggest that Business Process Management (BPM) can provide a mechanism to supplement linkage data currently not required or being captured, and to escalate issues in a traceable manner [2].",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::chunk-22",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf::page-6::chunk-22",
               "score": 0.28665890000000005
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::chunk-73",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+              "page": 20,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::page-20::chunk-73",
               "score": 0.30041622999999995
             }
           ],
@@ -559,15 +559,15 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 7.04,
+        "elapsed_sec": 6.05,
         "data": {
-          "answer": "Based on the provided sources, the key risk and compliance considerations for financial services IT can be summarized as follows:\n\nThe financial services industry is experiencing increasing convergence between risk management and compliance management issues, driven by expanding regulatory requirements and market forces [1]. This convergence extends across the risk and compliance continuum, from purely financial risk and compliance requirements to operational requirements created by regulations and market forces [1].\n\nThe key domains to consider are:\n\n1. Market risk, which is a mature area of risk and compliance management, and is addressed by deploying point solutions [1].\n2. Anti-Money Laundering (AML) legislation, which is another mature area that companies can address by deploying point solutions [1].\n3. The capital adequacy and financial risk management domain, which deals with internal reporting and external disclosure of financial risk and compliance information, with consequences that extend to reputational and legal [1].\n4. The operational risk domain, which is associated with the use of technology in planning processes [1].\n\nTo address these risk and compliance issues, financial services companies should consider a portfolio approach to dealing with risk, compliance, and security management, and look at the convergence of key processes and the sharing of data that serve risk mitigation, regulatory compliance, and security management [2].\n\nIn terms of specific considerations, financial services technologists should:\n\n* Consider and implement point solutions as needed, but keep the convergence of architecture as a key objective for the medium- and long-term future [1].\n* Understand that all risk and compliance management requirements have life cycles and can be prioritized in terms of the current level of concern [1].\n* Recognize that managing risk, compliance, and security often requires leveraging the same kind of data and monitoring the same processes across the three domains [2].\n\nOverall, the key risk and compliance considerations for financial services IT involve addressing the convergence of risk, compliance, and security management, and leveraging the sharing of data and processes to mitigate risk and ensure regulatory compliance.",
+          "answer": "The key risk and compliance considerations for financial services IT, based on the provided source [1], are:\n\n1. Convergence of risk, compliance, and security management: The source emphasizes that risk, compliance, and security management are converging, and financial institutions should consider this convergence when managing their IT infrastructure.\n2. Regulatory compliance: The source highlights the importance of regulatory compliance, citing the Sarbanes-Oxley Act and Basel II as examples of regulatory mandates that financial institutions must address.\n3. Risk management: The source notes that risk management is a critical component of financial services IT, and that financial institutions should prioritize risk management to minimize reputational and legal consequences.\n4. Data and workflow infrastructure: The source emphasizes the importance of creating a holistic compliance framework that facilitates the right actions at the right time in response to or in anticipation of compliance-related issues.\n5. Operational risk: The source identifies operational risk as a key area of concern, particularly with the increasing demand to manage purely financial risk and compliance requirements that are dictated by government regulations and market forces.\n6. Reputational risk: The source highlights the importance of managing reputational risk, which is closely tied to compliance and regulatory requirements.\n7. Convergence of processes and data: The source notes that managing risk, compliance, and security often requires leveraging the same kind of data and monitoring the same processes across the three domains.\n\nOverall, the source suggests that financial services institutions should prioritize the convergence of risk, compliance, and security management, and focus on creating a holistic compliance framework that addresses these key considerations.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::chunk-16",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::page-6::chunk-16",
               "score": 0.17476106000000002
             }
           ],
@@ -603,15 +603,15 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 4.24,
+        "elapsed_sec": 5.22,
         "data": {
-          "answer": "Digitization has significantly changed financial services technology by bringing together many technologies in a suite, or \"digitization stack,\" that captures and manifests the way an institution operates today [1]. This integrated view enables financial institutions to transform their internal and external operations, freeing up financial, human, and information resources [1].\n\nThe digitization of financial services technology has several key benefits, including:\n\n* Creating and maintaining a digital version of documents and content [1]\n* Implementing end-to-end solutions to support the full value chain, for better controls, standardization, consistency, and measurement of business processes [1]\n* Using repeatable, measurable, low-cost processes to distribute tasks to the optimal economic, geographic, and demographic locale for execution [1]\n* Enabling real-time enterprise capabilities and improving access to data, both structured and unstructured, and documents [1]\n\nOverall, digitization is a critical step in the creation of the true digital enterprise capable of end-to-end, straight-through processing [1].",
+          "answer": "Digitization has significantly changed financial services technology by bringing together various technologies in a suite, or digitization stack, that captures and manifests the way an institution operates today [1]. This integration of technologies has enabled financial institutions to meet the demands of digitization, including the protection of digitized content, creating and maintaining digital identities, and improving security [1].\n\nThe digitization of financial services technology has also enabled the creation of end-to-end solutions that support the full value chain of internal and external operations, freeing up financial, human, and information resources [1]. This has been made possible by the convergence of various disciplines, such as business process management, content and document management, digital imaging, and workflow and collaboration software [1].\n\nFurthermore, digitization has been driven by three critical factors: the need for a renewed digitization push, the impact of government mandates, and the availability of new technologies [1]. The latter has enabled the creation of repeatable, measurable, low-cost processes that can be executed in real-time, facilitating end-to-end, straight-through processing [1].\n\nOverall, digitization has transformed the financial services industry by enabling the creation of the true digital enterprise capable of end-to-end, straight-through processing [1]. This has the potential to benefit virtually every aspect of the financial services business, from mortgage lending to capital markets [1].",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - Digitization.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - Digitization.pdf::chunk-123",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - Digitization.pdf",
+              "page": 34,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - Digitization.pdf::page-34::chunk-123",
               "score": 0.23342425
             }
           ],
@@ -647,22 +647,22 @@
       },
       "result": {
         "ok": true,
-        "elapsed_sec": 5.68,
+        "elapsed_sec": 5.64,
         "data": {
-          "answer": "According to the sources, the role of architecture in managing technology risk in financial services is crucial, but often challenging for financial services firms to implement effectively.\n\n[1] highlights the need for a strategic approach to IT investments, emphasizing the importance of managing complexity and maintaining the integrity of the IT environment. It also notes that traditional enterprise IT architecture efforts often have been perceived as large, difficult, and expensive, making it challenging to justify their return on investment (ROI) to business stakeholders.\n\n[2] emphasizes the need for a renewed interest in promoting the systematic use of architecture within IT organizations and highlights the importance of enterprise architecture in managing technology risk. It notes that architects have learned that enterprise architecture is just too important to be left to IT alone, and that it requires a collaborative effort between business and IT stakeholders.\n\nAdditionally, [2] mentions that financial services firms have struggled with the concept of enterprise architecture in practice, and that the return on investment (ROI) has been difficult to justify to business stakeholders. However, it also provides a list of 10 leading practices that have been gathered by practitioners and their clients, which can help to improve the implementation of enterprise architecture and manage technology risk more effectively.\n\nIn conclusion, the role of architecture in managing technology risk in financial services is critical, but it requires a strategic and collaborative approach that balances the needs of both business and IT stakeholders. By adopting a systematic and structured approach to enterprise architecture, financial services firms can better manage technology risk and improve their overall performance.",
+          "answer": "Based on the provided sources, the role of architecture in managing technology risk in financial services is crucial. It enables near real-time monitoring of the firm's exposure in several risk domains, such as market risk and client risk, by leveraging advanced application integration architecture [1]. This allows financial services firms to better manage complexity and maintain the integrity of the IT environment [2].\n\nFurthermore, enterprise IT architecture plays a vital role in managing technology risk by providing a strategic plan for the front-to-back office integration, which enables a consolidated process and technology platform across all mortgage products [2]. This approach has been successful in reducing risk and achieving efficiency, as seen in the case where a financial services institution succeeded in applying an architecture-driven approach [2].\n\nAdditionally, architects have learned that enterprise architecture is just too important to be ignored, and it requires a renewed emphasis among financial services firms to look at long-term, strategic planning after years of quarter-to-quarter focus on cost takeout [2]. The article also mentions that enterprise architecture initiatives have been perceived as large, difficult, and expensive, making it challenging to justify their return on investment (ROI) to business stakeholders [2].\n\nIn summary, the role of architecture in managing technology risk in financial services is to enable near real-time monitoring of risk exposure, provide a strategic plan for front-to-back office integration, and promote long-term, strategic planning to achieve efficiency and reduce risk.",
           "citations": [
             {
               "index": 1,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf",
               "page": 36,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::page-36::chunk-133",
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf::page-36::chunk-133",
               "score": 0.23354673000000004
             },
             {
               "index": 2,
-              "source": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
-              "page": null,
-              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/demo/demo_data/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::chunk-15",
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf::page-6::chunk-15",
               "score": 0.23872340000000003
             }
           ],

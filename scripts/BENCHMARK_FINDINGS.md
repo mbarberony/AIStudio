@@ -1,5 +1,5 @@
 # AIStudio — Benchmark Findings
-*Generated: 2026-03-15 21:46*
+*Generated: 2026-03-16 17:58*
 
 ## Configuration
 - **Corpus:** `demo`
@@ -11,7 +11,7 @@
 ## Summary
 - **Questions:** 12
 - **Passed:** 12/12 (100%)
-- **Avg latency:** 5.9s
+- **Avg latency:** 6.0s
 
 ## Infrastructure
 - Vector store: Qdrant 1.17.0 (Apple Silicon, local)
@@ -25,161 +25,161 @@
 
 | # | Description | Latency | Pass | Citations | Notes |
 |---|-------------|---------|------|-----------|-------|
-| 1 | What is QFD and how does it apply to technology architecture? | 5.22s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Tests retrieval of dedicated QFD documents (Architecture and QFD.pdf, BOEI - Architecture and QFD - 2003.pdf). Flagship demo question.
+| 1 | What is QFD and how does it apply to technology architecture? | 7.78s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Tests retrieval of dedicated QFD documents (Architecture and QFD.pdf, BOEI - Architecture and QFD - 2003.pdf). Flagship demo question.
  |
-| 2 | How do you design an IT organization around architectural principles? | 5.4s | ✅ | Architecture Concepts and How To Use The | Retrieves from Architecting the IT Organization and FS Journal. |
-| 3 | How do architecture concepts help design organizations? | 5.1s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Draws on the universal architecture toolset concept — one of the core intellectual contributions of the corpus.
+| 2 | How do you design an IT organization around architectural principles? | 6.27s | ✅ | Architecture Concepts and How To Use The | Retrieves from Architecting the IT Organization and FS Journal. |
+| 3 | How do architecture concepts help design organizations? | 4.76s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Draws on the universal architecture toolset concept — one of the core intellectual contributions of the corpus.
  |
-| 4 | How should a CTO prioritize a three-year technology strategy? | 5.51s | ✅ | FS Journal, Edited by M. Barbero - IT In | Consistently returns 5 citations across all models. Draws from FS Journal Strategy volume and Barbero 2020 modernization paper.
+| 4 | How should a CTO prioritize a three-year technology strategy? | 5.75s | ✅ | FS Journal, Edited by M. Barbero - IT In | Consistently returns 5 citations across all models. Draws from FS Journal Strategy volume and Barbero 2020 modernization paper.
  |
-| 5 | What does a good technology target state look like? | 5.94s | ✅ | Barbero - 2020 - Technology Modernizatio | Strong single-source answer from FS Journal Strategy volume. |
-| 6 | How do you organize a large-scale IT transformation program? | 6.6s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Draws from GTIS Strategy document and FS Journal. |
-| 7 | What is the relationship between business strategy and technology strategy? | 5.22s | ✅ | Barbero - 2020 - Technology Modernizatio | Core intellectual thread running through entire corpus — business strategy drives technology strategy, not the reverse.
+| 5 | What does a good technology target state look like? | 5.17s | ✅ | Barbero - 2020 - Technology Modernizatio | Strong single-source answer from FS Journal Strategy volume. |
+| 6 | How do you organize a large-scale IT transformation program? | 6.17s | ✅ | FS Journal, Edited by M-1. Barbero - Str | Draws from GTIS Strategy document and FS Journal. |
+| 7 | What is the relationship between business strategy and technology strategy? | 4.81s | ✅ | Barbero - 2020 - Technology Modernizatio | Core intellectual thread running through entire corpus — business strategy drives technology strategy, not the reverse.
  |
-| 8 | What are the key considerations for cloud migration and technology modernization? | 6.49s | ✅ | Barbero - 2020 - Technology Modernizatio | Draws directly from Barbero 2020 Technology Modernization paper — original work with a principled-based approach framework. Replaces enterprise AI reference architecture question (weak retrieval).
+| 8 | What are the key considerations for cloud migration and technology modernization? | 6.83s | ✅ | Barbero - 2020 - Technology Modernizatio | Draws directly from Barbero 2020 Technology Modernization paper — original work with a principled-based approach framework. Replaces enterprise AI reference architecture question (weak retrieval).
  |
-| 9 | What are the key principles for modernizing legacy applications? | 7.99s | ✅ | Barbero - 2020 - Technology Modernizatio | Strong retrieval from Barbero 2020 Technology Modernization paper — original work, highly specific content.
+| 9 | What are the key principles for modernizing legacy applications? | 7.44s | ✅ | Barbero - 2020 - Technology Modernizatio | Strong retrieval from Barbero 2020 Technology Modernization paper — original work, highly specific content.
  |
-| 10 | What are the key risk and compliance considerations for financial services IT? | 7.04s | ✅ | FS Journal, Edited by M. Barbero - RiskC | Retrieves from FS Journal Risk/Compliance/Security volume (2005). |
-| 11 | How has digitization changed financial services technology? | 4.24s | ✅ | FS Journal, Edited by M. Barbero - Digit | Retrieves from FS Journal Digitization volume. Clean single-source answer with good citation compliance.
+| 10 | What are the key risk and compliance considerations for financial services IT? | 6.05s | ✅ | FS Journal, Edited by M. Barbero - RiskC | Retrieves from FS Journal Risk/Compliance/Security volume (2005). |
+| 11 | How has digitization changed financial services technology? | 5.22s | ✅ | FS Journal, Edited by M. Barbero - Digit | Retrieves from FS Journal Digitization volume. Clean single-source answer with good citation compliance.
  |
-| 12 | What is the role of architecture in managing technology risk in financial services? | 5.68s | ✅ | FS Journal, Edited by M. Barbero - RiskC | Good synthesis question drawing on multiple FS Journal volumes. Strong closer for a demo sequence. |
+| 12 | What is the role of architecture in managing technology risk in financial services? | 5.64s | ✅ | FS Journal, Edited by M. Barbero - RiskC | Good synthesis question drawing on multiple FS Journal volumes. Strong closer for a demo sequence. |
 
 ## Detailed Results
 
 ### qfd_technology_architecture
 **Query:** What is QFD and how does it apply to technology architecture?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.22s | **Pass:** ✅
+**Latency:** 7.78s | **Pass:** ✅
 
 **Answer:**
-> QFD stands for Quality Function Deployment, a tool used in the development of an enterprise IT architecture [1]. It implies that several solutions will be assessed and one will be selected and implemented [1]. QFD is mentioned as a technique that can be used in the development of an enterprise IT architecture, along with other tools such as voice of the customer analysis [1].
+> Quality Function Deployment (QFD) is a methodology that can be applied to technology architecture to ensure that the design and implementation of technology solutions meet the needs and requirements of the business.
 
-In the context of technology architecture, QFD can be used to systematically define a coherent set of principles and sta...
+According to the provided sources, QFD is a tool that can be used in the development of an enterprise IT architecture [1]. It is based on the principles of quality development and is used to assess and select the best solutions to architectural or organizational problems. The QFD me...
 
 
 ### it_org_architectural_principles
 **Query:** How do you design an IT organization around architectural principles?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.4s | **Pass:** ✅
+**Latency:** 6.27s | **Pass:** ✅
 
 **Answer:**
-> To design an IT organization around architectural principles, one should start by defining the principles, standards, and implementation considerations that collectively define an architecture [1]. This involves identifying the key organizational principles that will guide decision-making and actions within the IT organization.
-
-These principles should be aligned with the business goals and objectives, and should take into account the specific needs and requirements of the organization. For exam...
+> Designing an IT organization around architectural principles involves several key steps and considerations. According to [1], defining an organizational architecture/model requires discipline and the definition of principles, standards, and implementation considerations. The first step in this process is to define the principles that will govern decisions and actions within the organization. These principles should be related to the use of outsourcing, for example, and influence the positioning ...
 
 
 ### architecture_concepts_organizations
 **Query:** How do architecture concepts help design organizations?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.1s | **Pass:** ✅
+**Latency:** 4.76s | **Pass:** ✅
 
 **Answer:**
-> Architecture concepts can help design organizations by providing a high-level primer on how to design "architecture," whether technology or organizational architecture. They also help architects think and work, and provide a way for them to contribute actively to the debate on how to structure the IT organization.
+> Architecture concepts help design organizations in several ways. Firstly, they provide a framework for thinking about and organizing complex systems, which can be applied to both technology and organizational architecture. This framework includes concepts such as governance models, processes, and organizational constructs, which are essential for effective organizational design [1].
 
-According to [1], architecture concepts can be applied to organizational design, particularly in terms of communication, project management, and knowledge management. The article also...
+Secondly, architecture concepts can help identify and address critical success factors, such as leveraging the be...
 
 
 ### cto_three_year_strategy
 **Query:** How should a CTO prioritize a three-year technology strategy?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.51s | **Pass:** ✅
+**Latency:** 5.75s | **Pass:** ✅
 
 **Answer:**
-> To prioritize a three-year technology strategy, a CTO should start by defining and prioritizing the requirements, as suggested in [1]. This involves identifying the key capabilities and scope of the CMDB implementation, defining and including CIs that will provide the most business value in the short term (0-4 months), and employing an iterative process to assess the maturity of the CMDB and enhance it in alignment with the organization's specific requirements.
+> Based on the provided sources, a CTO should prioritize a three-year technology strategy by:
 
-Next, the CTO should establish a ...
+1. Deriving the high-level goal for technology from the business strategy or a well-defined transformative business initiative [5].
+2. Tracing the technology goals back to the components of the business strategy [5].
+3. Identifying and prioritizing the requirements, evaluating and short-listing vendors before selecting a best-fit tool [1].
+4. Defining and including CIs (Configuration Items) that will pro...
 
 
 ### technology_target_state
 **Query:** What does a good technology target state look like?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.94s | **Pass:** ✅
+**Latency:** 5.17s | **Pass:** ✅
 
 **Answer:**
-> A good technology target state looks like a clear and well-defined description of the organization's desired future state, with a focus on the value to be delivered, rather than just costs. 
+> A good technology target state should be defined at a conceptual level, taking into account the high-level goal for technology that is derived from and traced back to the components of the business strategy [1]. This goal should focus on value delivered vis-à-vis costs, rather than just reducing costs [1].
 
-To achieve this, it is recommended to use a progressive and pragmatic approach that defines realistic "transformation plateaus" aimed at implementing the end state step by step, while reducing technology and implementation risks [2]. This involves breaking down the end state into actionable increments, or i...
+In some cases, the technology necessary to implement the target state may not be ready yet, budgets may not be available, or key talents may not have been recruited yet, so the end state can ...
 
 
 ### large_scale_it_transformation
 **Query:** How do you organize a large-scale IT transformation program?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 6.6s | **Pass:** ✅
+**Latency:** 6.17s | **Pass:** ✅
 
 **Answer:**
-> To organize a large-scale IT transformation program, a structured approach is necessary. Based on the provided sources, here is a step-by-step guide:
+> To organize a large-scale IT transformation program, consider the following steps:
 
-1. **Establish a clear vision and priorities**: Envision the future state of the organization and identify key priorities for the transformation program. This involves gathering data, analyzing infrastructure requirements, and determining the most beneficial areas for improvement (Source: [1, 2]).
-2. **Break down the transformation into manageable...
+1. **Adopt a high level of formality and linearity in execution**: For large, enterprisewide projects, it is essential to adopt a high level of formality and linearity in execution, especially when employees are widely dispersed [1].
+2. **Envision your first day in leading an IT transformational change**: On your first day, focus on organization transformation, whether it is a wholesale multiyear project or the r...
 
 
 ### business_technology_strategy
 **Query:** What is the relationship between business strategy and technology strategy?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.22s | **Pass:** ✅
+**Latency:** 4.81s | **Pass:** ✅
 
 **Answer:**
-> According to [2], the relationship between business strategy and technology strategy is that the technology strategy should be derived from and aligned with the business strategy. In fact, the article states that "a level of difficulty arises from the fact that financial services organizations are best described as multi-enterprise organizations consisting of related, but often very distinct, lines of business." [2] This suggests that developing a common enterprise-wide IT strategy and architect...
+> According to the sources, the relationship between business strategy and technology strategy is that the technology strategy should be derived from and aligned with the business strategy. [1] states that the high-level goal for technology should be "derived and traced back to the components of the business strategy" (or a well-defined, transformative business initiative). [2] also emphasizes the importance of aligning IT strategy with business objectives, and that a good IT strategy is one that ...
 
 
 ### cloud_migration_modernization
 **Query:** What are the key considerations for cloud migration and technology modernization?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 6.49s | **Pass:** ✅
+**Latency:** 6.83s | **Pass:** ✅
 
 **Answer:**
-> To answer the question, the key considerations for cloud migration and technology modernization are:
+> To answer your question, the key considerations for cloud migration and technology modernization are:
 
-1. **Assessing each application's cloud readiness**: This involves evaluating each application using both objective data (from code scans) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [2].
-2. **Identifying cloud migration blockers and boosters**: The scanning process can identify specific cloud mi...
+1. **Assessing application readiness**: Evaluate each application in the portfolio using objective data (from code scans) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [2].
+2. **Identifying cloud blockers and boosters**: Use scanning tools to identify specific cloud migration blockers and boosters...
 
 
 ### modernizing_legacy_applications
 **Query:** What are the key principles for modernizing legacy applications?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 7.99s | **Pass:** ✅
+**Latency:** 7.44s | **Pass:** ✅
 
 **Answer:**
-> The key principles for modernizing legacy applications are:
+> The key principles for modernizing legacy applications are outlined in the provided sources. According to the sources, the key principles are:
 
-1. **PRINCIPLE I - Refactor and Re-Architect - That the original design of a legacy application is, by definition, a product of its time and should be refactored to meet current best practices.** This principle is based on the idea that the original design of a legacy application is outdated and should be re-architectured to meet current needs.
-2. **PRINCIPLE II - Understand and Manage Cross-Portfolio Governance - That solving complex ...
+1. **PRINCIPLE I - Identify, Understand and Prioritize**: This principle involves identifying the legacy application that requires modernization, understanding its current state, and prioritizing the modernization efforts based on business value and technical feasibility [1].
+2. **PRINCIPLE II - Renovation**: This principle involves analyzing the legacy ...
 
 
 ### risk_compliance_financial_services
 **Query:** What are the key risk and compliance considerations for financial services IT?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 7.04s | **Pass:** ✅
+**Latency:** 6.05s | **Pass:** ✅
 
 **Answer:**
-> Based on the provided sources, the key risk and compliance considerations for financial services IT can be summarized as follows:
+> The key risk and compliance considerations for financial services IT, based on the provided source [1], are:
 
-The financial services industry is experiencing increasing convergence between risk management and compliance management issues, driven by expanding regulatory requirements and market forces [1]. This convergence extends across the risk and compliance continuum, from purely financial risk and compliance requirements to operational requirements created by regulations ...
+1. Convergence of risk, compliance, and security management: The source emphasizes that risk, compliance, and security management are converging, and financial institutions should consider this convergence when managing their IT infrastructure.
+2. Regulatory compliance: The source highlights the importance of regulatory compliance, citing the Sarbanes-Oxley Act and Basel II as examples o...
 
 
 ### digitization_financial_services
 **Query:** How has digitization changed financial services technology?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 4.24s | **Pass:** ✅
+**Latency:** 5.22s | **Pass:** ✅
 
 **Answer:**
-> Digitization has significantly changed financial services technology by bringing together many technologies in a suite, or "digitization stack," that captures and manifests the way an institution operates today [1]. This integrated view enables financial institutions to transform their internal and external operations, freeing up financial, human, and information resources [1].
+> Digitization has significantly changed financial services technology by bringing together various technologies in a suite, or digitization stack, that captures and manifests the way an institution operates today [1]. This integration of technologies has enabled financial institutions to meet the demands of digitization, including the protection of digitized content, creating and maintaining digital identities, and improving security [1].
 
-The digitization of financial services technology has several key benefits, including:
-
-* Creating and maintaining a d...
+The digitization of financial services technology has als...
 
 
 ### architecture_technology_risk
 **Query:** What is the role of architecture in managing technology risk in financial services?
 **Firm filter:** `none` | **Year filter:** `none`
-**Latency:** 5.68s | **Pass:** ✅
+**Latency:** 5.64s | **Pass:** ✅
 
 **Answer:**
-> According to the sources, the role of architecture in managing technology risk in financial services is crucial, but often challenging for financial services firms to implement effectively.
+> Based on the provided sources, the role of architecture in managing technology risk in financial services is crucial. It enables near real-time monitoring of the firm's exposure in several risk domains, such as market risk and client risk, by leveraging advanced application integration architecture [1]. This allows financial services firms to better manage complexity and maintain the integrity of the IT environment [2].
 
-[1] highlights the need for a strategic approach to IT investments, emphasizing the importance of managing complexity and maintaining the integrity of the IT environment. It also notes that traditional enterprise IT architecture efforts often have been perceived as large, difficult, and expensive, making it ...
+Furthermore, enterprise IT architecture plays a vital role in managing tech...
 
 
 ## Known Limitations
