@@ -254,9 +254,12 @@ def ingest_corpus(
 
                 _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
 
+                last_page: int | None = None
                 for i, c in enumerate(chunks):
                     page_match = _PAGE_RE.search(c)
-                    page_num = int(page_match.group(1)) if page_match else None
+                    if page_match:
+                        last_page = int(page_match.group(1))
+                    page_num = last_page  # carry forward last seen page
                     clean_text = _PAGE_RE.sub("", c).strip()
                     if page_num is not None:
                         chunk_id = f"{abs_path}::page-{page_num}::chunk-{i}"

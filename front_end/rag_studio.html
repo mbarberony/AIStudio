@@ -1030,7 +1030,7 @@
             const name = c.source.split('/').pop();
             const pageLabel = c.page ? `<span class="footnote-page">p. ${c.page}</span>` : '';
             const openUrl = c.page
-                ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}&page=${c.page}`
+                ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}#page=${c.page}`
                 : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
             const openLink = `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
             return `<div class="footnote" id="fn-${c.index}">
