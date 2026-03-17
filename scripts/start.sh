@@ -56,7 +56,10 @@ else
     echo ""
     cd "$REPO_ROOT"
     source "$VENV/bin/activate"
-    AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src         python3 -m local_llm_bot.app.ingest         --corpus demo         --root data/demo/demo_data
+    AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+        python3 -m local_llm_bot.app.ingest \
+        --corpus demo \
+        --root data/corpora/demo/uploads
     echo ""
     echo "✓ Demo corpus indexed and ready"
 fi
