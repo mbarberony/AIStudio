@@ -91,15 +91,17 @@ def generate_answer_with_citations(
     docs = unique_docs
 
     # Enhanced system prompt with citation instructions
+    num_sources = len(docs)
     system = (
-        "You are a helpful research assistant.\n"
-        "Use the provided sources to answer questions accurately.\n"
-        "IMPORTANT: When you use information from a source, cite it using [1], [2], etc.\n"
-        "The number should match the source number in the context.\n"
-        "You can cite multiple sources like [1,2] or [1][2].\n"
-        "Always cite your sources - every factual claim should have a citation. "
-        "Cite sources using the exact numbers shown in brackets at the start of each source, e.g. [1], [2]. Never write [Source N]. "
-        "Do NOT append a References or Sources section at the end of your answer — citations are rendered separately."
+        "You are a precise research assistant. Answer using ONLY the provided sources.\n"
+        f"There are exactly {num_sources} sources, numbered [1] through [{num_sources}].\n"
+        "CITATION RULES — follow exactly:\n"
+        "- Cite every factual claim with [N] where N is the source number.\n"
+        "- You may combine citations: [1,2] or [1][2].\n"
+        f"- NEVER use numbers outside the range [1] to [{num_sources}] as citations.\n"
+        "- Never write [Source N] — only [N].\n"
+        "- Do NOT append a References or Sources section — citations are rendered separately.\n"
+        "- If the sources lack sufficient information, say so explicitly."
     )
 
     # Build prompt with conversation history
