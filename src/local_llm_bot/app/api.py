@@ -595,6 +595,128 @@ async def delete_corpus(corpus_name: str) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Failed to delete corpus: {str(e)}") from e
 
 
+@app.delete("/corpus/{corpus_name}/file/{filename:path}")
+async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, Any]:
+    """
+    Remove a file from a corpus.
+    Moves file to uploads/trash/ (recoverable) and surgically removes its Qdrant chunks.
+    Does NOT require a full re-ingest.
+    """
+    _require_corpus(corpus_name)
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    uploads_dir = paths["base"] / "uploads"
+    file_path = uploads_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+
+    try:
+        file_path.resolve().relative_to(uploads_dir.resolve())
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail="Access denied") from e
+
+    deleted_chunks = 0
+
+    # Step 1: Remove chunks from Qdrant surgically
+    try:
+        from qdrant_client import QdrantClient
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        qc = QdrantClient(host="localhost", port=6333)
+        collection = f"aistudio_{corpus_name}"
+        scroll_result = qc.scroll(
+            collection_name=collection,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="source_path", match=MatchValue(value=str(file_path)))]
+            ),
+            limit=10000,
+            with_payload=False,
+        )
+        point_ids = [p.id for p in scroll_result[0]]
+        deleted_chunks = len(point_ids)
+        if point_ids:
+            qc.delete(collection_name=collection, points_selector=point_ids)
+    except Exception as e:
+        print(f"[delete_file] Qdrant cleanup warning: {e}")
+
+    # Step 2: Remove from manifest.jsonl
+    manifest_path = paths["base"] / "manifest.jsonl"
+    if manifest_path.exists():
+        lines = manifest_path.read_text().splitlines()
+        kept = [ln for ln in lines if str(file_path) not in ln]
+        manifest_path.write_text("\n".join(kept) + ("\n" if kept else ""))
+
+    # Step 3: Remove from index.jsonl
+    index_path = paths.get("index")
+    if index_path and Path(index_path).exists():
+        lines = Path(index_path).read_text().splitlines()
+        kept = [ln for ln in lines if str(file_path) not in ln]
+        Path(index_path).write_text("\n".join(kept) + ("\n" if kept else ""))
+
+    # Step 4: Move to trash (recoverable)
+    import time as _time
+
+    trash_dir = uploads_dir / "trash"
+    trash_dir.mkdir(parents=True, exist_ok=True)
+    trash_path = trash_dir / filename
+    if trash_path.exists():
+        stem, suffix = Path(filename).stem, Path(filename).suffix
+        trash_path = trash_dir / f"{stem}_{int(_time.time())}{suffix}"
+    shutil.move(str(file_path), str(trash_path))
+
+    return {
+        "status": "success",
+        "message": f"'{filename}' moved to trash. {deleted_chunks} chunks removed.",
+        "filename": filename,
+        "chunks_removed": deleted_chunks,
+        "trash_path": str(trash_path),
+    }
+
+
+@app.get("/corpus/{corpus_name}/trash")
+async def list_corpus_trash(corpus_name: str) -> dict[str, Any]:
+    """List files in the corpus trash folder."""
+    _require_corpus(corpus_name)
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    trash_dir = paths["base"] / "uploads" / "trash"
+    files = (
+        [f.name for f in sorted(trash_dir.iterdir()) if f.is_file()] if trash_dir.exists() else []
+    )
+    return {"corpus": corpus_name, "trash": files}
+
+
+@app.delete("/corpus/{corpus_name}/trash")
+async def empty_corpus_trash(corpus_name: str) -> dict[str, Any]:
+    """Permanently delete all files in the corpus trash folder."""
+    _require_corpus(corpus_name)
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    trash_dir = paths["base"] / "uploads" / "trash"
+    count = 0
+    if trash_dir.exists():
+        for f in trash_dir.iterdir():
+            if f.is_file():
+                f.unlink()
+                count += 1
+    return {"status": "success", "message": f"{count} file(s) permanently deleted from trash."}
+
+
+@app.get("/about")
+async def get_about() -> dict[str, Any]:
+    """Serve the about.md content for the About modal."""
+    repo_root = _get_repo_root()
+    for fname in ["about.md", "ABOUT.md", "about.txt"]:
+        about_path = repo_root / fname
+        if about_path.exists():
+            return {"content": about_path.read_text(encoding="utf-8"), "format": "markdown"}
+    return {
+        "content": "# AIStudio\n\nLocal RAG system — Apple Silicon, no cloud dependency.\n\nSee [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)",
+        "format": "markdown",
+    }
+
+
 # MODEL MANAGEMENT ENDPOINTS
 
 
