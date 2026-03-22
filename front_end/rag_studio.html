@@ -659,30 +659,41 @@
             <!-- Corpus -->
             <div class="section">
                 <div class="section-label">Corpus</div>
-                <select id="corpusSelect"><option value="">Loading…</option></select>
-                <div class="corpus-actions">
-                    <button class="action-btn" id="addFileBtn" title="Upload file to corpus">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Upload
-                    </button>
-                    <button class="action-btn" id="inspectBtn" title="Inspect corpus statistics">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        Stats
-                    </button>
-                    <button class="action-btn" id="newCorpusBtn" title="Create new corpus">
+                <div style="display:flex;justify-content:space-between;gap:4px;margin-bottom:6px;">
+                    <button class="action-btn" id="newCorpusBtn" title="Create new corpus" style="flex:1;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
                         New
                     </button>
-                    <button class="action-btn" id="aboutBtn" title="About AIStudio">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
-                        About
+                    <button class="action-btn" id="deleteCorpusBtn" title="Delete this corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                        Delete
+                    </button>
+                    <button class="action-btn" id="inspectBtn" title="Browse and manage files" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Stats
+                    </button>
+                </div>
+                <select id="corpusSelect"><option value="">Loading…</option></select>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+                    <span style="font-size:11px;font-weight:600;color:var(--text-mid);white-space:nowrap;">Files</span>
+                    <button class="action-btn" id="addFileBtn" title="Upload file to corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Add
+                    </button>
+                    <button class="action-btn" id="deleteFileBtn" title="Delete selected file" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                        Delete
+                    </button>
+                    <button class="action-btn" id="inspectFileBtn" title="Inspect files in corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Inspect
                     </button>
                 </div>
             </div>
 
             <!-- Parameters -->
             <div class="section">
-                <div class="section-label">Parameters</div>
+                <div class="section-label">Query Settings</div>
                 <div class="param-row">
                     <span class="param-label">Top K</span>
                     <input type="number" id="topK" min="1" max="20" value="5">
@@ -693,23 +704,18 @@
                 </div>
             </div>
 
-            <!-- Filters -->
+            <!-- Keywords -->
             <div class="section">
-                <div class="section-label">Filters <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
+                <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
                 <div class="param-row">
-                    <span class="param-label">Firm</span>
-                    <input type="text" id="filterFirm" placeholder="e.g. Goldman Sachs" style="width:140px;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
-                </div>
-                <div class="param-row">
-                    <span class="param-label">Year</span>
-                    <input type="text" id="filterYear" placeholder="e.g. 2026" style="width:80px;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);">
+                    <input type="text" id="filterKeywords" placeholder="e.g. Goldman Sachs, risk, 2026" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
                 </div>
             </div>
 
             <!-- Conversation -->
             <div class="section">
                 <div class="section-label">Conversation</div>
-                <div class="conv-meta" id="convMeta">No context in memory</div>
+                <div class="conv-meta" id="convMeta" style="display:none;"></div>
                 <button class="clear-btn" id="clearBtn">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                     Clear conversation
@@ -719,8 +725,8 @@
         </div>
 
         <div class="sidebar-footer">
-            <div class="copyright">
-                © M. Barbero 2025–2026 &nbsp;·&nbsp;
+            <div <div class="copyright">
+                © M. Barbero 2025–2026<br>
                 <a href="https://github.com/mbarberony/AIStudio" target="_blank">github.com/mbarberony</a>
             </div>
         </div>
@@ -730,6 +736,9 @@
     <main class="main">
         <div class="topbar">
             <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
+            </div>
             <div class="status-pill">
                 <div class="status-dot"></div>
                 <span id="statusText">Connected</span>
@@ -1082,7 +1091,7 @@
 
     // ── Corpus inspect ─────────────────────────────────────────────
     async function deleteFileFromCorpus(filename) {
-        const msg = 'Move "' + filename + '" to trash?\n\nThis removes it from the index. You can restore it manually from uploads/trash/.';
+        const msg = 'Move "' + filename + '" to trash?\n\nThis removes it from the index. Recoverable from uploads/trash/.';
         if (!confirm(msg)) return;
         try {
             const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(filename)}`, { method: 'DELETE' });
@@ -1102,9 +1111,15 @@
             const data = await res.json();
             hideEmpty();
 
+            // files can be strings or objects — normalise to string name
+            const rawFiles = data.files || [];
+            const fileNames = rawFiles.map(function(f) {
+                return (typeof f === 'string') ? f : (f.name || String(f));
+            });
+
             let fileRows = '';
-            if (data.files && data.files.length > 0) {
-                fileRows = data.files.map(function(f) {
+            if (fileNames.length > 0) {
+                fileRows = fileNames.map(function(f) {
                     const safe = f.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
                         + '<span style="flex:1;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + f + '">' + f + '</span>'
@@ -1138,17 +1153,16 @@
             const res = await fetch(`${API}/about`);
             const data = await res.json();
             hideEmpty();
-            // Simple markdown-ish render: bold headers, links
-            let content = data.content
+            let c = data.content
                 .replace(/^### (.+)$/gm, '<strong style="font-size:13px;color:var(--text-mid);">$1</strong>')
                 .replace(/^## (.+)$/gm, '<strong style="font-size:15px;">$1</strong>')
                 .replace(/^# (.+)$/gm, '<strong style="font-size:17px;">$1</strong>')
                 .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent);">$1</a>')
                 .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
                 .replace(/\n/g, '<br>');
-            addMessage('assistant', content, true);
+            addMessage('assistant', c, true);
         } catch (err) {
-            addMessage('assistant', 'About AIStudio — local RAG system, Apple Silicon, no cloud dependency.<br><a href="https://github.com/mbarberony/AIStudio" target="_blank" style="color:var(--accent);">github.com/mbarberony/AIStudio</a>', true);
+            addMessage('assistant', 'About AIStudio — local RAG system, Apple Silicon, no cloud dependency.', true);
         }
     }
 
@@ -1167,7 +1181,7 @@
             await loadCorpora();
             corpusSelect.value = name;
             setCorpus(name);
-            addMessage('assistant', `✓ Corpus <strong>${name}</strong> created. Use Upload to add files.`, true);
+            addMessage('assistant', `✓ Corpus <strong>${name}</strong> created. Click <strong>Add</strong> to upload files.`, true);
         } catch (err) {
             addMessage('assistant', `Error creating corpus: ${err.message}`, false);
         }
@@ -1262,7 +1276,30 @@
 
     document.getElementById('addFileBtn').addEventListener('click', openUpload);
     document.getElementById('inspectBtn').addEventListener('click', inspectCorpus);
-    document.getElementById('aboutBtn').addEventListener('click', showAbout);
+    document.getElementById('inspectFileBtn').addEventListener('click', inspectCorpus);
+    document.getElementById('deleteFileBtn').addEventListener('click', function() {
+        const msg = 'Select a file to delete by clicking the trash icon in the Files inspector (click Inspect first).';
+        addMessage('assistant', msg, false);
+        inspectCorpus();
+    });
+    document.getElementById('deleteCorpusBtn').addEventListener('click', async function() {
+        if (!currentCorpus) return;
+        const typed = window.prompt('Type YES to move corpus "' + currentCorpus + '" to Trash and remove all its index data.\n\nTo restore, see HOW_TO.md.');
+        if (!typed || typed.trim().toUpperCase() !== 'YES') {
+            addMessage('assistant', 'Corpus deletion cancelled.', false);
+            return;
+        }
+        try {
+            const res = await fetch(API + '/corpus/' + currentCorpus + '?confirm=yes', { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+            addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see HOW_TO.md.', true);
+            await loadCorpora();
+        } catch (err) {
+            addMessage('assistant', 'Error: ' + err.message, false);
+        }
+    });
+    // About button wired inline via onclick in header
     document.getElementById('newCorpusBtn').addEventListener('click', createCorpus);
     document.getElementById('clearBtn').addEventListener('click', clearConversation);
 

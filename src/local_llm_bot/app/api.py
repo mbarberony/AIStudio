@@ -405,20 +405,13 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count
 
     # List files in corpus
-    files = []
-    corpus_dir = paths["base"]
-    if corpus_dir.exists():
-        for file_path in corpus_dir.rglob("*"):
-            if file_path.is_file() and not file_path.name.startswith("."):
-                relative_path = file_path.relative_to(corpus_dir)
-                files.append(
-                    {
-                        "name": file_path.name,
-                        "path": str(relative_path),
-                        "size": file_path.stat().st_size,
-                        "type": file_path.suffix,
-                    }
-                )
+    # Return plain filenames from uploads/ only
+    uploads_dir = paths["base"] / "uploads"
+    files: list[str] = []
+    if uploads_dir.exists():
+        files = sorted(
+            f.name for f in uploads_dir.iterdir() if f.is_file() and not f.name.startswith(".")
+        )
 
     return {
         "name": corpus_name,
@@ -426,7 +419,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "document_count": doc_count,
         "chunk_count": qdrant_chunk_count,
         "size_bytes": size_bytes,
-        "files": files[:50],  # Limit to 50 files for performance
+        "files": files,
         "file_count": len(files),
         "stats": stats,
         "paths": {
@@ -566,14 +559,20 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
 
 
 @app.delete("/corpus/{corpus_name}")
-async def delete_corpus(corpus_name: str) -> dict[str, Any]:
+async def delete_corpus(corpus_name: str, confirm: str = "") -> dict[str, Any]:
     """
-    Delete a corpus and all its data.
-    WARNING: This is irreversible!
+    Move a corpus to Mac Trash (~/.Trash) and delete its Qdrant collection.
+    Requires confirm=yes query parameter.
+    To restore: move folder from ~/.Trash back to data/corpora/ and re-ingest.
+    See HOW_TO.md for recovery instructions.
     """
+    if confirm.lower() != "yes":
+        raise HTTPException(
+            status_code=400, detail="Confirmation required. Pass ?confirm=yes to proceed."
+        )
+
     _require_corpus(corpus_name)
 
-    # Prevent deletion of default corpus
     if corpus_name == "default":
         raise HTTPException(status_code=403, detail="Cannot delete the default corpus")
 
@@ -581,15 +580,32 @@ async def delete_corpus(corpus_name: str) -> dict[str, Any]:
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
     corpus_dir = paths["base"]
 
+    # Step 1: Delete Qdrant collection
     try:
-        # Delete corpus directory
+        from qdrant_client import QdrantClient
+
+        qc = QdrantClient(host="localhost", port=6333)
+        qc.delete_collection(f"aistudio_{corpus_name}")
+    except Exception as e:
+        print(f"[delete_corpus] Qdrant cleanup warning: {e}")
+
+    # Step 2: Move corpus folder to Mac Trash (recoverable)
+    try:
+        trash_dir = Path.home() / ".Trash"
+        trash_dir.mkdir(exist_ok=True)
+        dest = trash_dir / f"AIStudio_{corpus_name}"
+        if dest.exists():
+            import time as _time
+
+            dest = trash_dir / f"AIStudio_{corpus_name}_{int(_time.time())}"
         if corpus_dir.exists():
-            shutil.rmtree(corpus_dir)
+            shutil.move(str(corpus_dir), str(dest))
 
         return {
             "status": "success",
-            "message": f"Corpus '{corpus_name}' deleted successfully",
+            "message": f"Corpus '{corpus_name}' moved to Trash. To restore, see HOW_TO.md.",
             "name": corpus_name,
+            "trash_path": str(dest),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete corpus: {str(e)}") from e
@@ -597,11 +613,7 @@ async def delete_corpus(corpus_name: str) -> dict[str, Any]:
 
 @app.delete("/corpus/{corpus_name}/file/{filename:path}")
 async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, Any]:
-    """
-    Remove a file from a corpus.
-    Moves file to uploads/trash/ (recoverable) and surgically removes its Qdrant chunks.
-    Does NOT require a full re-ingest.
-    """
+    """Move a file to trash and remove its Qdrant chunks surgically."""
     _require_corpus(corpus_name)
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
@@ -617,8 +629,6 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         raise HTTPException(status_code=403, detail="Access denied") from e
 
     deleted_chunks = 0
-
-    # Step 1: Remove chunks from Qdrant surgically
     try:
         from qdrant_client import QdrantClient
         from qdrant_client.models import FieldCondition, Filter, MatchValue
@@ -638,23 +648,18 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         if point_ids:
             qc.delete(collection_name=collection, points_selector=point_ids)
     except Exception as e:
-        print(f"[delete_file] Qdrant cleanup warning: {e}")
+        print(f"[delete_file] Qdrant warning: {e}")
 
-    # Step 2: Remove from manifest.jsonl
     manifest_path = paths["base"] / "manifest.jsonl"
     if manifest_path.exists():
-        lines = manifest_path.read_text().splitlines()
-        kept = [ln for ln in lines if str(file_path) not in ln]
+        kept = [ln for ln in manifest_path.read_text().splitlines() if str(file_path) not in ln]
         manifest_path.write_text("\n".join(kept) + ("\n" if kept else ""))
 
-    # Step 3: Remove from index.jsonl
     index_path = paths.get("index")
     if index_path and Path(index_path).exists():
-        lines = Path(index_path).read_text().splitlines()
-        kept = [ln for ln in lines if str(file_path) not in ln]
+        kept = [ln for ln in Path(index_path).read_text().splitlines() if str(file_path) not in ln]
         Path(index_path).write_text("\n".join(kept) + ("\n" if kept else ""))
 
-    # Step 4: Move to trash (recoverable)
     import time as _time
 
     trash_dir = uploads_dir / "trash"
@@ -670,47 +675,17 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         "message": f"'{filename}' moved to trash. {deleted_chunks} chunks removed.",
         "filename": filename,
         "chunks_removed": deleted_chunks,
-        "trash_path": str(trash_path),
     }
-
-
-@app.get("/corpus/{corpus_name}/trash")
-async def list_corpus_trash(corpus_name: str) -> dict[str, Any]:
-    """List files in the corpus trash folder."""
-    _require_corpus(corpus_name)
-    repo_root = _get_repo_root()
-    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    trash_dir = paths["base"] / "uploads" / "trash"
-    files = (
-        [f.name for f in sorted(trash_dir.iterdir()) if f.is_file()] if trash_dir.exists() else []
-    )
-    return {"corpus": corpus_name, "trash": files}
-
-
-@app.delete("/corpus/{corpus_name}/trash")
-async def empty_corpus_trash(corpus_name: str) -> dict[str, Any]:
-    """Permanently delete all files in the corpus trash folder."""
-    _require_corpus(corpus_name)
-    repo_root = _get_repo_root()
-    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    trash_dir = paths["base"] / "uploads" / "trash"
-    count = 0
-    if trash_dir.exists():
-        for f in trash_dir.iterdir():
-            if f.is_file():
-                f.unlink()
-                count += 1
-    return {"status": "success", "message": f"{count} file(s) permanently deleted from trash."}
 
 
 @app.get("/about")
 async def get_about() -> dict[str, Any]:
-    """Serve the about.md content for the About modal."""
+    """Serve about.md content for the About modal."""
     repo_root = _get_repo_root()
-    for fname in ["about.md", "ABOUT.md", "about.txt"]:
-        about_path = repo_root / fname
-        if about_path.exists():
-            return {"content": about_path.read_text(encoding="utf-8"), "format": "markdown"}
+    for fname in ["about.md", "ABOUT.md"]:
+        p = repo_root / fname
+        if p.exists():
+            return {"content": p.read_text(encoding="utf-8"), "format": "markdown"}
     return {
         "content": "# AIStudio\n\nLocal RAG system — Apple Silicon, no cloud dependency.\n\nSee [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)",
         "format": "markdown",
