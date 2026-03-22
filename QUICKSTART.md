@@ -353,7 +353,7 @@ python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model l
 
 Prints pass/fail with latency per question, writes `scripts/benchmark_results.json`
 and updates `scripts/BENCHMARK_FINDINGS.md`. Question files auto-detected from
-`data/corpora/{corpus}/{corpus}_questions.yaml`.
+`benchmarks/{corpus}_questions.yaml`.
 
 ---
 
