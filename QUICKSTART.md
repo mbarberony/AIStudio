@@ -99,7 +99,7 @@ ollama pull llama3.1:70b     # ~128GB RAM required, best quality
 
 > On Apple Silicon, warm `llama3.1:70b` and warm `llama3.1:8b` have identical
 > query latency (~6–7s). Once loaded into unified memory, model size stops
-> being a latency variable. See BENCHMARK_FINDINGS.md.
+> being a latency variable. See [benchmarks/](benchmarks/) for full analysis.
 
 ---
 
@@ -222,7 +222,7 @@ Try these questions to start:
 > 20 years of original thought leadership. The corpus and the tool are the
 > same proof point.
 >
-> Run `python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3`
+> Run `python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3`
 > to validate all 12 benchmark questions automatically.
 
 ### Option B — Your Own Documents
@@ -342,20 +342,27 @@ Add to `~/.zshrc` to make permanent.
 cd ~/Developer/AIStudio && source .venv/bin/activate
 
 # Demo corpus — 12 curated questions, auto-detected question file
-python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
 
-# SEC 10-K corpus — requires ~/Downloads/sec_10k_corpus/ (not included in repo)
-python3 scripts/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
+# SEC 10-K corpus — download first (not included in repo, ~2 GB)
+# Step 1: Download filings from SEC EDGAR (~5 min, be polite to their servers)
+python3 scripts/download_sec_corpus.py --out data/corpora/sec_10k/uploads --firms 25 --years 2
+
+# Step 2: Ingest (~34 min, 54 chunks/sec)
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
+  --corpus sec_10k --root data/corpora/sec_10k/uploads
+
+# Step 3: Benchmark
+python3 benchmarks/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
 
 # Run with 70b model
-python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
+python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
 ```
 
-Prints pass/fail with latency per question, writes `scripts/benchmark_results.json`
-and updates `scripts/BENCHMARK_FINDINGS.md`. Question files auto-detected from
-`benchmarks/{corpus}_questions.yaml`.
+Prints pass/fail with latency per question, writes timestamped JSON and Markdown reports to `benchmarks/reports/`. Question files
+auto-detected from `benchmarks/{corpus}_questions.yaml`.
 
 ---
 
 For architecture context, see [docs/architecture_decisions.md](docs/architecture_decisions.md).
-For benchmark results, see [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md).
+For benchmark results, see [benchmarks/](benchmarks/) for timestamped reports.

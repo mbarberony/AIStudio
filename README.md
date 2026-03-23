@@ -66,7 +66,7 @@ distinctive.
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are
 statistically identical in query latency on Apple Silicon (~6–7s average).
 Once loaded into unified memory, model size stops being a latency variable.
-See [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md).
+See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
 
 ---
 
@@ -233,6 +233,18 @@ Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in
 Docker and deployed to ECS Fargate. No code changes required.
 Target release: v3.0.
 
+## Performance Findings
+
+Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
+
+- **Sub-7s latency** per query once the model is warm — including complex multi-source synthesis
+- **99.1% pass rate** across 108 Q/A pairs (9 runs × 12 questions, identical conditions)
+- **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at 6.9–7.2s; the bottleneck is output token generation, not parameter count
+- **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
+- **Stable across successive runs** — no thermal throttling or memory pressure observed
+
+→ [Full benchmark analysis and measurement methodology](llm_analysis/HELP%20-%20AIStudio%20-%20RAG%20Performance%20Findings%20-%202026-03-22.md)
+
 ---
 
 ## Benchmark
@@ -247,8 +259,7 @@ ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 105,964 chunks
 ```
 
-See [BENCHMARK_FINDINGS.md](BENCHMARK_FINDINGS.md) for full analysis including
-cold vs warm latency breakdown and cross-model comparison.
+See [benchmarks/](benchmarks/) for the full benchmark harness, timestamped reports, and question sets.
 
 ---
 
