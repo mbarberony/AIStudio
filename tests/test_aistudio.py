@@ -43,6 +43,7 @@ import requests
 # Test runner
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Result:
     name: str
@@ -81,7 +82,14 @@ def run_test(suite: Suite, name: str, fn: Callable) -> None:
     except AssertionError as e:
         suite.add(Result(name=name, passed=False, message=str(e), duration=time.time() - t0))
     except Exception as e:
-        suite.add(Result(name=name, passed=False, message=f"{type(e).__name__}: {e}", duration=time.time() - t0))
+        suite.add(
+            Result(
+                name=name,
+                passed=False,
+                message=f"{type(e).__name__}: {e}",
+                duration=time.time() - t0,
+            )
+        )
 
 
 def assert_eq(actual: Any, expected: Any, label: str = "") -> None:
@@ -106,6 +114,7 @@ def assert_type(value: Any, typ: type, label: str = "") -> None:
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
+
 class Client:
     def __init__(self, base: str):
         self.base = base.rstrip("/")
@@ -120,8 +129,14 @@ class Client:
     def delete(self, path: str, **kwargs) -> requests.Response:
         return self.session.delete(f"{self.base}{path}", timeout=120, **kwargs)
 
-    def ask(self, query: str, corpus: str = "demo", top_k: int = 3,
-            temperature: float = 0.3, conversation_history=None) -> dict:
+    def ask(
+        self,
+        query: str,
+        corpus: str = "demo",
+        top_k: int = 3,
+        temperature: float = 0.3,
+        conversation_history=None,
+    ) -> dict:
         body = {
             "query": query,
             "corpus": corpus,
@@ -138,6 +153,7 @@ class Client:
 # ---------------------------------------------------------------------------
 # Test groups
 # ---------------------------------------------------------------------------
+
 
 def test_health(c: Client) -> Suite:
     suite = Suite("Health & Connectivity")
@@ -183,12 +199,10 @@ def test_models(c: Client) -> Suite:
         r = c.get("/models")
         models = r.json()
         # id may be empty if Ollama SDK changed response shape; check name too
-        all_text = " ".join(
-            (m.get("id", "") + " " + m.get("name", "")).lower()
-            for m in models
+        all_text = " ".join((m.get("id", "") + " " + m.get("name", "")).lower() for m in models)
+        assert "8b" in all_text or "llama" in all_text, (
+            f"No llama/8b model found. Model entries: {[{k: m.get(k) for k in ('id', 'name')} for m in models]}"
         )
-        assert "8b" in all_text or "llama" in all_text, \
-            f"No llama/8b model found. Model entries: {[{k: m.get(k) for k in ('id','name')} for m in models]}"
 
     run_test(suite, "llama3.1:8b (or similar) in model list with non-empty id+name", check_has_8b)
 
@@ -301,8 +315,9 @@ def test_ask(c: Client) -> Suite:
 
     def check_citations_are_list():
         data = c.ask("What is enterprise architecture?", top_k=3)
-        assert isinstance(data["citations"], (list, type(None))), \
+        assert isinstance(data["citations"], list | type(None)), (
             f"citations should be list or null, got {type(data['citations'])}"
+        )
 
     run_test(suite, "citations field is list or null", check_citations_are_list)
 
@@ -320,16 +335,18 @@ def test_ask(c: Client) -> Suite:
 
     def check_bad_corpus():
         r = c.post("/ask", json={"query": "test", "corpus": "_nonexistent_corpus_xyz"})
-        assert r.status_code in (400, 404, 422, 500), \
+        assert r.status_code in (400, 404, 422, 500), (
             f"Expected error status for missing corpus, got {r.status_code}"
+        )
 
     run_test(suite, "Missing corpus returns error status (4xx/5xx)", check_bad_corpus)
 
     def check_empty_query_rejected():
         r = c.post("/ask", json={"query": "", "corpus": "demo"})
         # api.py now raises HTTPException(400) for empty query strings
-        assert r.status_code in (400, 422), \
+        assert r.status_code in (400, 422), (
             f"Expected 400 or 422 for empty query, got {r.status_code}"
+        )
 
     run_test(suite, "Empty query does not crash (200 or 4xx)", check_empty_query_rejected)
 
@@ -353,13 +370,19 @@ def test_citations(c: Client) -> Suite:
         assert data["answer"].strip(), "Answer must not be empty for a known-good query"
         # Soft check: log if no citations were returned but don't fail
         if not data["has_citations"]:
-            print(f"\n      ⚠ No citations returned (model answered from training). Answer: {data['answer'][:120]}...")
+            print(
+                f"\n      ⚠ No citations returned (model answered from training). Answer: {data['answer'][:120]}..."
+            )
 
-    run_test(suite, "has_citations=True and citations non-empty for QFD query", check_citations_present_on_good_query)
+    run_test(
+        suite,
+        "has_citations=True and citations non-empty for QFD query",
+        check_citations_present_on_good_query,
+    )
 
     def check_citation_indices_are_positive():
         data = c.ask("What is enterprise architecture?", top_k=5)
-        for cit in (data.get("citations") or []):
+        for cit in data.get("citations") or []:
             assert cit["index"] > 0, f"citation index must be > 0, got {cit['index']}"
 
     run_test(suite, "All citation indices are > 0", check_citation_indices_are_positive)
@@ -375,21 +398,25 @@ def test_citations(c: Client) -> Suite:
 
         # Extract all [N] and [Source N] references from the answer
         cited_in_text = set()
-        for m in re.finditer(r'\[(?:Source\s+)?(\d+)\]', answer, re.IGNORECASE):
+        for m in re.finditer(r"\[(?:Source\s+)?(\d+)\]", answer, re.IGNORECASE):
             cited_in_text.add(int(m.group(1)))
-
 
         # Every index cited in text should be in the returned citations list
         missing = cited_in_text - returned_indices
-        assert not missing, \
-            f"Indices {missing} appear in answer text but not in citations list.\n" \
+        assert not missing, (
+            f"Indices {missing} appear in answer text but not in citations list.\n"
             f"Answer snippet: {answer[:300]}\nReturned indices: {returned_indices}"
+        )
 
-    run_test(suite, "Indices in answer text match returned citations list", check_citation_indices_match_answer)
+    run_test(
+        suite,
+        "Indices in answer text match returned citations list",
+        check_citation_indices_match_answer,
+    )
 
     def check_source_paths_nonempty():
         data = c.ask("How does architecture support risk management?", top_k=5)
-        for cit in (data.get("citations") or []):
+        for cit in data.get("citations") or []:
             assert cit["source"].strip(), f"citation {cit['index']} has empty source"
 
     run_test(suite, "All citation sources are non-empty strings", check_source_paths_nonempty)
@@ -397,8 +424,7 @@ def test_citations(c: Client) -> Suite:
     def check_no_duplicate_indices():
         data = c.ask("What are the key considerations for cloud migration?", top_k=5)
         indices = [c["index"] for c in (data.get("citations") or [])]
-        assert len(indices) == len(set(indices)), \
-            f"Duplicate citation indices: {indices}"
+        assert len(indices) == len(set(indices)), f"Duplicate citation indices: {indices}"
 
     run_test(suite, "No duplicate citation indices in response", check_no_duplicate_indices)
 
@@ -420,6 +446,26 @@ def test_citations(c: Client) -> Suite:
             assert cit["source"].strip(), f"Citation {cit['index']} has empty source"
 
     run_test(suite, "Regression: [Source N] pattern correctly extracted", check_source_4_pattern)
+
+    def check_citations_isolated_across_turns():
+        """Regression: citation indices in turn 2 must be self-consistent and start at 1.
+        Guards against the responseCounter bug where fn-1 IDs collide across turns."""
+        data2 = c.ask("What are the key considerations for cloud migration?", top_k=5)
+        cits2 = data2.get("citations") or []
+        if not cits2:
+            return  # soft skip — model answered without citations
+        indices2 = sorted(cit["index"] for cit in cits2)
+        assert indices2[0] == 1, f"Turn 2 citation indices must start at 1, got {indices2}"
+        assert len(indices2) == len(set(indices2)), f"Duplicate indices in turn 2: {indices2}"
+        assert indices2 == list(range(1, len(indices2) + 1)), (
+            f"Turn 2 indices not contiguous from 1: {indices2}"
+        )
+
+    run_test(
+        suite,
+        "Citation indices reset correctly across turns (responseCounter)",
+        check_citations_isolated_across_turns,
+    )
 
     return suite
 
@@ -459,16 +505,24 @@ def test_conversation_memory(c: Client) -> Suite:
         (we can't assert exact content, but it must not error or return empty)."""
         history = [
             {"role": "user", "content": "What is QFD?"},
-            {"role": "assistant", "content": "QFD is Quality Function Deployment, used to translate customer needs into design specifications."},
+            {
+                "role": "assistant",
+                "content": "QFD is Quality Function Deployment, used to translate customer needs into design specifications.",
+            },
         ]
         data = c.ask("What are its main use cases?", top_k=3, conversation_history=history)
         assert data["answer"].strip(), "follow-up with history returned empty answer"
         # A reasonable model with context should mention something related
         # (soft check — we just confirm it isn't a generic error message)
-        assert "error" not in data["answer"].lower()[:50], \
+        assert "error" not in data["answer"].lower()[:50], (
             f"Answer looks like an error: {data['answer'][:100]}"
+        )
 
-    run_test(suite, "Follow-up with history returns coherent non-empty answer", check_history_influences_followup)
+    run_test(
+        suite,
+        "Follow-up with history returns coherent non-empty answer",
+        check_history_influences_followup,
+    )
 
     return suite
 
@@ -478,7 +532,10 @@ def test_retrieval(c: Client) -> Suite:
     print(f"\n── {suite.name} ──")
 
     def check_debug_retrieve():
-        r = c.post("/debug/retrieve", json={"query": "enterprise architecture", "corpus": "demo", "top_k": 3})
+        r = c.post(
+            "/debug/retrieve",
+            json={"query": "enterprise architecture", "corpus": "demo", "top_k": 3},
+        )
         assert r.status_code == 200, f"status {r.status_code}: {r.text[:200]}"
         data = r.json()
         assert_in("docs", data)
@@ -487,8 +544,9 @@ def test_retrieval(c: Client) -> Suite:
         assert len(docs) > 0, "No docs returned from retrieval"
         for doc in docs:
             # API returns content_preview (truncated) not full content
-            assert "content_preview" in doc or "content" in doc, \
+            assert "content_preview" in doc or "content" in doc, (
                 f"doc missing content/content_preview. Keys: {list(doc.keys())}"
+            )
             assert_in("source", doc)
 
     run_test(suite, "POST /debug/retrieve returns docs with content + source", check_debug_retrieve)
@@ -508,6 +566,7 @@ def test_retrieval(c: Client) -> Suite:
 # ---------------------------------------------------------------------------
 # Unit tests for rag_core internals (no running server needed)
 # ---------------------------------------------------------------------------
+
 
 def test_rag_core_units() -> Suite:
     suite = Suite("rag_core Unit Tests (no server)")
@@ -562,34 +621,42 @@ def test_rag_core_units() -> Suite:
         """Regression: [Source N] pattern must be handled by citation extraction."""
         # Simulate what the model returns and what the regex in rag_core should catch
         import re
+
         answer = "Based on [Source 1] and [Source 3], QFD is used for..."
         # Pattern 1: numeric [1], [1,2]
-        pattern1 = re.findall(r'\[(\d+(?:,\d+)*)\]', answer)
+        pattern1 = re.findall(r"\[(\d+(?:,\d+)*)\]", answer)
         # Pattern 2: [Source N]
-        pattern2 = re.findall(r'\[Source\s+(\d+)\]', answer, re.IGNORECASE)
+        pattern2 = re.findall(r"\[Source\s+(\d+)\]", answer, re.IGNORECASE)
         all_indices = set()
         for p in pattern1:
-            for n in p.split(','):
+            for n in p.split(","):
                 all_indices.add(int(n.strip()))
         for n in pattern2:
             all_indices.add(int(n))
         assert 1 in all_indices, f"Index 1 not found. Got: {all_indices}"
         assert 3 in all_indices, f"Index 3 not found. Got: {all_indices}"
 
-    run_test(suite, "Regex correctly extracts both [N] and [Source N] patterns", check_citation_regex_source_pattern)
+    run_test(
+        suite,
+        "Regex correctly extracts both [N] and [Source N] patterns",
+        check_citation_regex_source_pattern,
+    )
 
     def check_citation_regex_spaced_comma():
         """Regression: [1, 2] (space after comma) should parse as two citations."""
         import re
+
         answer = "See [1, 2] for details."
-        matches = re.findall(r'\[(\d+(?:,\s*\d+)*)\]', answer)
+        matches = re.findall(r"\[(\d+(?:,\s*\d+)*)\]", answer)
         indices = set()
         for m in matches:
-            for n in m.split(','):
+            for n in m.split(","):
                 indices.add(int(n.strip()))
         assert 1 in indices and 2 in indices, f"Expected {{1,2}}, got {indices}"
 
-    run_test(suite, "Regex handles [1, 2] with space after comma", check_citation_regex_spaced_comma)
+    run_test(
+        suite, "Regex handles [1, 2] with space after comma", check_citation_regex_spaced_comma
+    )
 
     return suite
 
@@ -599,14 +666,14 @@ def test_rag_core_units() -> Suite:
 # ---------------------------------------------------------------------------
 
 GROUP_MAP = {
-    "health":       test_health,
-    "models":       test_models,
-    "config":       test_config,
-    "corpora":      test_corpora,
-    "api":          test_ask,
-    "citations":    test_citations,
-    "memory":       test_conversation_memory,
-    "retrieval":    test_retrieval,
+    "health": test_health,
+    "models": test_models,
+    "config": test_config,
+    "corpora": test_corpora,
+    "api": test_ask,
+    "citations": test_citations,
+    "memory": test_conversation_memory,
+    "retrieval": test_retrieval,
 }
 
 UNIT_GROUPS = {
@@ -617,17 +684,18 @@ UNIT_GROUPS = {
 def main():
     parser = argparse.ArgumentParser(description="AIStudio Integration Tests")
     parser.add_argument(
-        "--base-url", default="http://localhost:8000",
-        help="API base URL (default: http://localhost:8000)"
+        "--base-url",
+        default="http://localhost:8000",
+        help="API base URL (default: http://localhost:8000)",
     )
     parser.add_argument(
-        "--group", default="all",
+        "--group",
+        default="all",
         choices=["all"] + list(GROUP_MAP) + list(UNIT_GROUPS),
-        help="Test group to run (default: all)"
+        help="Test group to run (default: all)",
     )
     parser.add_argument(
-        "--skip-units", action="store_true",
-        help="Skip unit tests (useful if src not on path)"
+        "--skip-units", action="store_true", help="Skip unit tests (useful if src not on path)"
     )
     args = parser.parse_args()
 
