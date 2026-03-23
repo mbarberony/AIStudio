@@ -154,6 +154,9 @@ def generate_answer_with_citations(
 
 app = FastAPI(title="AIStudio Local LLM Bot")
 
+# In-memory ingest status keyed by corpus name
+_ingest_status: dict[str, dict] = {}
+
 # Add CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
@@ -444,13 +447,20 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         str(uploads_dir),
     ]
     env = {**os.environ, "PYTHONPATH": "src"}
+    _ingest_status[corpus_name] = {
+        "status": "running",
+        "chunks_written": 0,
+        "message": "Indexing...",
+    }
     proc = await asyncio.create_subprocess_exec(
         *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode == 0:
+        _ingest_status[corpus_name] = {"status": "done", "chunks_written": 0, "message": "Done"}
         print(f"[ingest] Auto-ingest for '{corpus_name}' complete.")
     else:
+        _ingest_status[corpus_name] = {"status": "error", "chunks_written": 0, "message": "Failed"}
         print(f"[ingest] Auto-ingest failed:\n{stderr.decode()}")
 
 
@@ -503,6 +513,15 @@ async def upload_to_corpus(
 
 class CreateCorpusRequest(BaseModel):
     name: str
+
+
+@app.get("/corpus/{corpus_name}/ingest-status")
+async def get_ingest_status(corpus_name: str) -> dict:
+    """Poll ingestion progress. status: idle|running|done|error"""
+    return _ingest_status.get(
+        corpus_name,
+        {"status": "idle", "chunks_written": 0, "message": "No recent ingestion"},
+    )
 
 
 @app.post("/corpus/create")

@@ -219,7 +219,8 @@
         }
 
         .copyright {
-            font-size: 10px;
+            font-size: 13px;
+            text-align: left;
             color: var(--text-dim);
             line-height: 1.6;
         }
@@ -725,7 +726,7 @@
         </div>
 
         <div class="sidebar-footer">
-            <div <div class="copyright">
+            <div class="copyright">
                 © M. Barbero 2025–2026<br>
                 <a href="https://github.com/mbarberony/AIStudio" target="_blank">github.com/mbarberony</a>
             </div>
@@ -1230,6 +1231,37 @@
         document.getElementById('confirmUpload').disabled = false;
     }
 
+
+    async function pollIngestStatus(corpus, statusEl) {
+        const maxPolls = 120;
+        let polls = 0;
+        return new Promise(resolve => {
+            const interval = setInterval(async () => {
+                polls++;
+                try {
+                    const r = await fetch(`${API}/corpus/${corpus}/ingest-status`);
+                    const d = await r.json();
+                    if (d.status === 'running') {
+                        statusEl.textContent = 'Indexing… ' + d.chunks_written + ' chunks';
+                    } else if (d.status === 'done') {
+                        statusEl.textContent = 'Done — chunks indexed';
+                        clearInterval(interval);
+                        resolve('done');
+                    } else if (d.status === 'error') {
+                        statusEl.textContent = 'Ingestion failed — check server logs';
+                        clearInterval(interval);
+                        resolve('error');
+                    }
+                } catch (_) {}
+                if (polls >= maxPolls) {
+                    statusEl.textContent = 'Ingestion taking longer than expected';
+                    clearInterval(interval);
+                    resolve('timeout');
+                }
+            }, 2000);
+        });
+    }
+
     async function uploadFile() {
         const files = (window.selectedFiles && window.selectedFiles.length)
             ? window.selectedFiles
@@ -1246,7 +1278,9 @@
                 const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-                addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small style="color:var(--text-dim)">Ingestion started — chunks will be available shortly.</small>`, true);
+                const msgDiv = addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small class='ingest-status' style='color:var(--text-dim)'>Indexing…</small>`, true);
+                const statusEl = msgDiv ? msgDiv.querySelector('.ingest-status') : null;
+                if (statusEl) pollIngestStatus(currentCorpus, statusEl);
             } catch (err) {
                 addMessage('assistant', `Error uploading ${file.name}: ${err.message}`, false);
             }
