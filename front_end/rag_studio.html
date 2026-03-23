@@ -801,6 +801,7 @@
     let currentCorpus = null;
     let isLoading = false;
     let conversationHistory = [];
+    let responseCounter = 0;
     const MAX_TURNS = 10;
     window.window.selectedFile = null; window.selectedFiles = [];
 
@@ -955,8 +956,9 @@
                 .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
                 .join('');
             if (data.citations && data.citations.length) {
-                html = parseCitations(html, data.citations);
-                html += renderFootnotes(data.citations);
+                responseCounter++;
+                html = parseCitations(html, data.citations, responseCounter);
+                html += renderFootnotes(data.citations, responseCounter);
             }
 
             addMessage('assistant', html, true);
@@ -1013,14 +1015,14 @@
     }
 
     // ── Citations ──────────────────────────────────────────────────
-    function parseCitations(html, citations) {
+    function parseCitations(html, citations, rc) {
         // Build a set of valid citation indices from what the API actually returned
         const validIdx = new Set(citations.map(c => String(c.index)));
 
         // [Source N] and [source N] — only linkify if index is valid
         html = html.replace(/\[(?:Source\s+|source\s+)(\d+)\]/gi,
             (match, n) => validIdx.has(n)
-                ? `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`
+                ? `<a href="#fn-${rc}-${n}" class="citation-ref">[${n}]</a>`
                 : match);
 
         // [1], [1,2], [1, 2] — only linkify valid indices
@@ -1028,7 +1030,7 @@
             const parts = nums.split(',').map(n => n.trim());
             const linked = parts.map(n =>
                 validIdx.has(n)
-                    ? `<a href="#fn-${n}" class="citation-ref">[${n}]</a>`
+                    ? `<a href="#fn-${rc}-${n}" class="citation-ref">[${n}]</a>`
                     : `[${n}]`
             );
             // If all parts were invalid, return original match unchanged
@@ -1037,7 +1039,7 @@
         return html;
     }
 
-    function renderFootnotes(citations) {
+    function renderFootnotes(citations, rc) {
         if (!citations || !citations.length) return '';
         const items = citations.map(c => {
             const name = c.source.split('/').pop();
@@ -1046,7 +1048,7 @@
                 ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}#page=${c.page}`
                 : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
             const openLink = `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
-            return `<div class="footnote" id="fn-${c.index}">
+            return `<div class="footnote" id="fn-${rc}-${c.index}">
                 <span class="footnote-num">[${c.index}]</span>
                 <span class="footnote-name">${name}</span>
                 ${pageLabel}
