@@ -1232,9 +1232,13 @@
     }
 
 
-    async function pollIngestStatus(corpus, statusEl) {
+    async function pollIngestStatus(corpus, statusEl, estimated) {
         const maxPolls = 120;
         let polls = 0;
+        // Build progress bar container
+        statusEl.innerHTML = '<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="pbar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div><span id="ptext" style="font-size:11px">Indexing…</span>';
+        const bar = statusEl.querySelector('#pbar');
+        const txt = statusEl.querySelector('#ptext');
         return new Promise(resolve => {
             const interval = setInterval(async () => {
                 polls++;
@@ -1242,19 +1246,24 @@
                     const r = await fetch(`${API}/corpus/${corpus}/ingest-status`);
                     const d = await r.json();
                     if (d.status === 'running') {
-                        statusEl.textContent = 'Indexing… ' + d.chunks_written + ' chunks';
+                        const pct = estimated > 0 ? Math.min(80, Math.round(d.chunks_written / estimated * 80)) : Math.min(75, polls * 3);
+                        if (bar) bar.style.width = pct + '%';
+                        if (txt) txt.textContent = estimated > 0
+                            ? 'Indexing… ' + d.chunks_written + ' / ~' + estimated + ' chunks'
+                            : 'Indexing…';
                     } else if (d.status === 'done') {
-                        statusEl.textContent = 'Done — chunks indexed';
+                        if (bar) bar.style.width = '100%';
+                        if (txt) txt.textContent = 'Done — indexed successfully';
                         clearInterval(interval);
                         resolve('done');
                     } else if (d.status === 'error') {
-                        statusEl.textContent = 'Ingestion failed — check server logs';
+                        if (txt) txt.textContent = 'Ingestion failed — check server logs';
                         clearInterval(interval);
                         resolve('error');
                     }
                 } catch (_) {}
                 if (polls >= maxPolls) {
-                    statusEl.textContent = 'Ingestion taking longer than expected';
+                    if (txt) txt.textContent = 'Ingestion taking longer than expected';
                     clearInterval(interval);
                     resolve('timeout');
                 }
@@ -1278,9 +1287,10 @@
                 const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-                const msgDiv = addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small class='ingest-status' style='color:var(--text-dim)'>Indexing…</small>`, true);
+                const estimated = Math.round(file.size / 350);
+                const msgDiv = addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small class='ingest-status' style='color:var(--text-dim);display:block'></small>`, true);
                 const statusEl = msgDiv ? msgDiv.querySelector('.ingest-status') : null;
-                if (statusEl) pollIngestStatus(currentCorpus, statusEl);
+                if (statusEl) pollIngestStatus(currentCorpus, statusEl, estimated);
             } catch (err) {
                 addMessage('assistant', `Error uploading ${file.name}: ${err.message}`, false);
             }
