@@ -10,9 +10,7 @@
 **Current stack:** local Ollama inference · Qdrant vector storage · FastAPI ·
 pdfplumber page-aware PDF extraction · CrossEncoder reranker · 143 SEC 10-K filings at 105,964 chunks · benchmark harness · CI/CD pipeline.
 
-If you're reviewing this as part of evaluating my background: the goal is to
-show implementation-level AI engagement, not whiteboard-level. The architecture
-choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
+The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
 
 ---
 
