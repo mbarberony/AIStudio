@@ -5,15 +5,9 @@ import json
 import os
 from pathlib import Path
 
-import pytest
-
 # Force JSONL retrieval no matter what config/env says
 
 
-@pytest.mark.xfail(
-    reason="rag_core always tries Qdrant first regardless of monkeypatch — requires Qdrant running",
-    strict=False,
-)
 def test_retrieve_finds_hits_jsonl(monkeypatch, tmp_path: Path) -> None:
     # Force JSONL retrieval for this test run
     os.environ["AISTUDIO_USE_CHROMA"] = "false"
