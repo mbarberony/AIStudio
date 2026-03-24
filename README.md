@@ -63,6 +63,8 @@ technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal
 article — original work, not sample data. That is what makes the demo corpus
 distinctive.
 
+**AIStudio as its own corpus:** AIStudio can ingest its own documentation — architecture decisions, benchmarks, guides — and answer questions about itself. Asking *"What embedding model does AIStudio use?"* or *"How does the reranker work?"* returns cited answers from the actual codebase docs. The tool and its own knowledge base are the same system.
+
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are
 statistically identical in query latency on Apple Silicon (~6–7s average).
 Once loaded into unified memory, model size stops being a latency variable.
