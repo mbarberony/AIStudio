@@ -2,86 +2,80 @@
 
 # AIStudio
 
-> AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled
-> systems behave under real operational constraints — retrieval quality,
-> vocabulary mismatch, metadata filtering, observability, and deployment
-> trade-offs — before those issues get hidden behind abstractions.
+> *AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled systems behave under real operational constraints — retrieval quality, vocabulary mismatch, metadata filtering, observability, and deployment trade-offs — before those issues get hidden behind abstractions.*
+>
+> **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (v3.0) · AWS ECS (v3.0)
+>
+> The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
 
-**Current stack:** local Ollama inference · Qdrant vector storage · FastAPI ·
-pdfplumber page-aware PDF extraction · CrossEncoder reranker · 143 SEC 10-K filings at 105,964 chunks · benchmark harness · CI/CD pipeline.
+---
 
-The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
+## Point of View
+
+**[Agentic AI in Financial Services: Some Reflections](docs/agentic_ai_pov.pdf)**
+
+This work is one aspect of the author's work in AI. It explores the transition from descriptive to generative to agentic AI, the practical constraints on autonomous systems today, and a framework for thinking about where AI adds durable value versus where human judgment remains irreplaceable. Written December 2025.
 
 ---
 
 ## What This Does
 
-AIStudio gives you a **private, local search engine over your own documents** —
-running entirely on your Mac, with no data leaving your machine and no external
-API dependency.
+AIStudio gives you a **private, local search engine over your own documents** — running entirely on your Mac, with no data leaving your machine and no external API dependency.
 
-**What you actually see and do:**
+### What you actually see and do
 
-A browser-based interface lets you manage document collections and query
-them conversationally. Three main areas:
+A browser-based interface lets you manage document collections and query them conversationally. Three main areas:
 
-- **Corpus Manager** — create named collections of documents, upload PDFs,
-  Word docs, PowerPoints, Excel files, or Markdown, and trigger indexing.
-  Each corpus is independently searchable.
+- **Corpus Manager** — create named collections of documents, upload PDFs, Word docs, PowerPoints, Excel files, or Markdown, and trigger indexing. Each corpus is independently searchable.
 
-- **Chat Interface** — ask questions in plain English and get answers grounded
-  in your documents, with inline source citations (`[1]`, `[2]`) and a
-  References section showing exactly which document and passage each answer
-  came from.
+- **Chat Interface** — ask questions in plain English and get answers grounded in your documents, with inline source citations (`[1]`, `[2]`) and a References section showing exactly which document and passage each answer came from.
 
-- **Filters** — optional firm and year filters narrow retrieval to a specific
-  source before the query runs. Filtering happens at the vector layer — not
-  post-hoc on results.
+- **Filters** — optional firm and year filters narrow retrieval to a specific source before the query runs. Filtering happens at the system (vector) layer — not post-hoc on results.
 
 **Two corpora ship with AIStudio, each proving something different:**
 
-**SEC 10-K corpus — technical scale:** 143 annual filings from 25 financial
-services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and
-others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4
-MacBook Pro. This corpus demonstrates production-grade retrieval — metadata
-filtering, vocabulary mismatch handling via CrossEncoder reranker, and
-page-aware citations at scale.
+**Demo corpus — 20 years of original thought leadership:** AIStudio ships with a curated set of 15 documents spanning 2003–2021 — IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, and AI reference architecture. These are original works: articles edited for practitioner journals, engagement frameworks, and strategy documents produced across senior technology roles at major financial institutions. Querying this corpus is querying the intellectual capital of a 20-year career. The corpus and the tool are the same proof point.
 
-**Demo corpus — 20 years of original thought leadership:** AIStudio ships with
-a curated set of 15 documents spanning 2003–2021 — IT strategy frameworks,
-enterprise architecture methodology, financial services technology journals,
-cloud migration analysis, and AI reference architecture. These are original
-works: articles edited for practitioner journals, engagement frameworks, and
-strategy documents produced across senior technology roles at major financial
-institutions. Querying this corpus is querying the intellectual capital of a
-20-year career. The corpus and the tool are the same proof point.
+A reviewer who asks *"What is the relationship between business strategy and technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal article — original work, not sample data. That is what makes the demo corpus distinctive.
 
-A reviewer who asks *"What is the relationship between business strategy and
-technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal
-article — original work, not sample data. That is what makes the demo corpus
-distinctive.
+**AIStudio as its own corpus:** AIStudio's documentation — architecture decisions, benchmark methodology, retrieval guides — is available as a corpus in the standard interface. Asking *"What embedding model does AIStudio use?"* or *"How does the reranker work?"* returns cited answers from the actual codebase docs. The tool documents itself.
 
-**AIStudio as its own corpus:** AIStudio's documentation — architecture
-decisions, benchmark methodology, retrieval guides — is available as a
-corpus in the standard interface. Asking *"What embedding model does
-AIStudio use?"* or *"How does the reranker work?"* returns cited answers
-from the actual codebase docs. The tool documents itself.
+**On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average). Once loaded into unified memory, model size stops being a latency variable. See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
 
-**On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are
-statistically identical in query latency on Apple Silicon (~6–7s average).
-Once loaded into unified memory, model size stops being a latency variable.
-See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
+The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — exploring 143 annual filings from 25 financial services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4 MacBook Pro. Due to their size, the files for this corpus are not shipped with the app but need to be downloaded from the SEC first. More importantly, ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus.
+
+---
+
+## Quickstart
+
+See [QUICKSTART.md](QUICKSTART.md) to get a running instance in under 30 minutes.
+
+**TL;DR for experienced users:**
+```bash
+# 1. Install Qdrant (not in Homebrew — binary install required)
+curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
+mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+
+# 2. Clone and set up
+git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
+python3.13 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Start everything
+scripts/start.sh
+
+# 4. Open UI
+open front_end/rag_studio.html
+```
 
 ---
 
 ## Current Status
 
-Core RAG loop working end-to-end on a 106K-chunk production corpus.
-Qdrant vector store (Rust-based) replaced ChromaDB after ChromaDB crashed
-at 32K chunks. Metadata filtering (firm, year) implemented end-to-end —
-backend, API, and UI. CI/CD pipeline green on every push.
+Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vector store (Rust-based) replaced ChromaDB after ChromaDB crashed at 32K chunks. Metadata filtering (firm, year) implemented end-to-end — backend, API, and UI. CI/CD pipeline green on every push.
 
-**Working today:**
+### Working today
+
 - Document ingestion: PDF, Word, PowerPoint, Excel, Markdown, HTML
 - Vector search via Qdrant 1.17.0 with cosine similarity
 - Metadata filtering — firm and year filters at the vector layer
@@ -89,20 +83,21 @@ backend, API, and UI. CI/CD pipeline green on every push.
 - Browser UI — corpus selector, model selector, parameters, filters, chat
 - FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
 - Auto-launch script — `scripts/start.sh` starts all four processes
-- Benchmark harness — `scripts/benchmark.py` with CLI flags, auto-generates findings
+- Benchmark harness — `benchmarks/benchmark.py` with CLI flags, auto-generates findings
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
 - Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 
-**Recently completed (Beta):**
+### Recently completed (Beta)
+
 - CrossEncoder reranker (ms-marco-MiniLM) — fixes vocabulary mismatch ✅
 - Page-aware PDF chunking via pdfplumber — page numbers in citations ✅
-- PDF viewer — Open ↗ links in References section, works in all browsers ✅
+- PDF viewer — direct access to source page from inline citation ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
 - Demo corpus benchmark: 11/12 questions pass, 6.3s avg latency ✅
 
-**In progress:**
-- Citation compliance — stricter prompt for edge cases
+### In progress
+
 - Relevance threshold — discard low-scoring chunks
 - XBRL noise stripping in HTML ingestion
 - Remove file from corpus UI
@@ -115,12 +110,11 @@ backend, API, and UI. CI/CD pipeline green on every push.
 |------------|------|------|
 | ✅ CrossEncoder reranker | PDF viewer click → source page | Docker + AWS ECS Fargate |
 | ✅ Page-aware PDF chunking | PDF image identification + citation | Multi-user + shared corpora |
-| ✅ PDF viewer Open ↗ links | OBE clean install validation | GPU inference (Inferentia2) |
+| ✅ PDF viewer Open ↗ links | Clean install validation | GPU inference (Inferentia2) |
 | ✅ `--force` atomic ingest | MacBook Air validation | Compiled installer (.dmg) |
-| Citation compliance fix | Benchmark comparison tooling | urCrew integration |
+| Relevance threshold | Benchmark comparison tooling | urCrew integration |
 
-See [docs/roadmap.md](docs/roadmap.md) for the full phased plan.
-Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
+See [docs/roadmap.md](docs/roadmap.md) for the full phased plan. Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
 
 ---
 
@@ -182,8 +176,7 @@ flowchart TD
 
 ## Architecture — Cloud (v3.0 Roadmap)
 
-The local four-process pattern maps directly to a containerized cloud deployment.
-Each process becomes a container; Qdrant and Ollama have official Docker images.
+The local four-process pattern maps directly to a containerized cloud deployment. Each process becomes a container; Qdrant and Ollama have official Docker images.
 
 ```mermaid
 flowchart TD
@@ -232,10 +225,9 @@ flowchart TD
     style ALB fill:#2e1a0a,stroke:#d97b4a,color:#e0e0e0
 ```
 
-**Local → cloud is a container boundary, not an architecture change.**
-Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in
-Docker and deployed to ECS Fargate. No code changes required.
-Target release: v3.0.
+**Local → cloud (Release 2.0) is a container boundary, not an architecture change.** Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in Docker and deployed to ECS Fargate. No code changes required.
+
+---
 
 ## Performance Findings
 
@@ -246,6 +238,8 @@ Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at 6.9–7.2s; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
+
+Testing spans the Apple Silicon performance spectrum: the M4 Max (128GB) establishes the baseline above. The same system runs correctly on an M4 Air — the other end of the Apple Silicon range — with approximately 40% higher latency under equivalent conditions. Systematic benchmark data on the Air is being collected. The goal is to characterize behavior across the full range of likely deployment hardware, not just optimal conditions.
 
 → [Full benchmark analysis and measurement methodology](llm_analysis/HELP%20-%20AIStudio%20-%20RAG%20Performance%20Findings%20-%202026-03-22.md)
 
@@ -267,41 +261,4 @@ See [benchmarks/](benchmarks/) for the full benchmark harness, timestamped repor
 
 ---
 
-## Quickstart
-
-See [QUICKSTART.md](QUICKSTART.md) to get a running instance in under 30 minutes.
-
-**TL;DR for experienced users:**
-```bash
-# 1. Install Qdrant (not in Homebrew — binary install required)
-curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
-mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
-
-# 2. Clone and set up
-git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# 3. Start everything
-~/Developer/AIStudio/scripts/start.sh
-
-# 4. Open UI
-open front_end/rag_studio.html
-```
-
----
-
-## Point of View
-
-**[Agentic AI in Financial Services: Some Reflections](docs/agentic_ai_pov.pdf)**
-
-Explores the transition from descriptive to generative to agentic AI, the
-practical constraints on autonomous systems today, and a framework for thinking
-about where AI adds durable value versus where human judgment remains
-irreplaceable. Written December 2025.
-
----
-
-## Stack
-
-Python · FastAPI · Qdrant · Ollama · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber · Docker (v3.0) · AWS ECS (v3.0)
+**Manuel Barbero** · [mbarberony@gmail.com](mailto:mbarberony@gmail.com) · [linkedin.com/in/mbarberony](https://www.linkedin.com/in/mbarberony) · [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)
