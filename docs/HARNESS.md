@@ -1,12 +1,8 @@
 # Benchmark Harness
 
-AIStudio ships with a benchmark harness (`run_demo.py`) that lets you run
-a structured question set against any corpus and produce a timestamped
-markdown report. It is designed for the demo corpus out of the box, but
-works with any corpus and any question file you provide.
+AIStudio ships with a benchmark harness (`benchmarks/benchmark.py`) that runs a structured question set against any corpus and produces timestamped reports. It is designed for the demo corpus out of the box but works with any corpus and any YAML question file you provide.
 
-This document explains how to bring your own corpus and questions, how to
-interpret reports, and what's coming next for cross-run comparison.
+Reports are written to `benchmarks/reports/` as paired `.md` and `.json` files, named by corpus and timestamp.
 
 ---
 
@@ -16,41 +12,53 @@ Make sure the backend is running, then from the repo root:
 
 ```bash
 source .venv/bin/activate
-python run_demo.py
+python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
 ```
 
-This runs all 17 demo questions against the `demo` corpus using the default
-model and writes a report to `data/demo/reports/`.
-
-To re-ingest the corpus first:
-
-```bash
-python run_demo.py --ingest
-```
+This runs all 12 demo questions against the `demo` corpus and writes a timestamped report to `benchmarks/reports/`.
 
 ---
 
 ## CLI Reference
 
 ```
-python run_demo.py [OPTIONS]
+python benchmarks/benchmark.py [OPTIONS]
 
 Options:
-  --config FILE         Path to JSON config file (default: run_demo_config.json)
-  --api-base URL        Backend URL (default: http://localhost:8000)
   --corpus NAME         Corpus to query (default: demo)
-  --model NAME          Ollama model name (default: llama3.1:70b)
-  --temperature FLOAT   Sampling temperature 0.0–1.0 (default: 0.3)
-  --k INT               Chunks retrieved per query (default: 5)
-  --questions FILE      Path to question file (default: data/demo/demo_questions.json)
-  --report-dir DIR      Output directory for reports (default: data/demo/reports)
-  --corpus-root DIR     Document root used when --ingest is set
-  --ingest              Re-ingest corpus before running queries
+  --top-k INT           Chunks retrieved per query (default: 5)
+  --temperature FLOAT   LLM sampling temperature 0.0–2.0 (default: 0.3)
+  --model NAME          Ollama model name (default: API default)
+  --questions FILE      Path to YAML question file (auto-detected from corpus name if omitted)
+  --api URL             Backend URL (default: http://localhost:8000)
+  --no-markdown         Skip writing .md report
+  --full                Include full answers in report (default: first 4 paragraphs)
   -h, --help            Show this help message
 ```
 
-All options default to values in `run_demo_config.json`. CLI flags override
-the config file for a single run without editing it.
+Question files are auto-detected: for `--corpus demo`, the harness looks for
+`benchmarks/demo_questions.yaml` automatically. For custom corpora, pass `--questions`.
+
+---
+
+## Question File Format
+
+Questions are YAML files organized by topic. Each question has an `id`, a `question` string, optional `keywords` for retrieval hints, and optional `notes`:
+
+```yaml
+- topic: Architecture Methodology
+  questions:
+    - id: my_first_question
+      question: What is the relationship between business strategy and technology strategy?
+      keywords: [business, strategy, technology]
+      notes: Core intellectual thread — business strategy drives technology strategy.
+
+    - id: my_second_question
+      question: How do you design an IT organization around architectural principles?
+      keywords: [organization, architecture, principles]
+```
+
+Place question files in `benchmarks/` named `{corpus}_questions.yaml` for auto-detection.
 
 ---
 
@@ -58,107 +66,56 @@ the config file for a single run without editing it.
 
 ### 1. Create and ingest your corpus
 
-Create a corpus via the UI or API, ingest your documents:
+Create a corpus via the UI, then ingest your documents:
 
 ```bash
-PYTHONPATH=src python -m local_llm_bot.app.ingest \
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
   --corpus my_corpus \
-  --root /path/to/my/documents
+  --root data/corpora/my_corpus/uploads
 ```
 
 ### 2. Write a question file
 
-Create a JSON file following this structure:
+Create `benchmarks/my_corpus_questions.yaml` following the format above.
 
-```json
-[
-  {
-    "topic": "Topic Name",
-    "questions": [
-      "First question?",
-      "Second question?"
-    ]
-  },
-  {
-    "topic": "Another Topic",
-    "questions": [
-      "Third question?"
-    ]
-  }
-]
-```
-
-Topics are used to group results in the report. You can have as many topics
-and questions as you like.
-
-### 3. Run against your corpus
+### 3. Run the benchmark
 
 ```bash
-python run_demo.py \
-  --corpus my_corpus \
-  --questions /path/to/my_questions.json \
-  --report-dir /path/to/my/reports
-```
-
-Or create your own config file (e.g. `my_config.json`) and point to it:
-
-```bash
-python run_demo.py --config my_config.json
-```
-
-A config file has this shape (all fields optional — missing fields fall back
-to built-in defaults):
-
-```json
-{
-  "api_base": "http://localhost:8000",
-  "corpus": "my_corpus",
-  "model": "llama3.1:70b",
-  "temperature": 0.3,
-  "k": 5,
-  "question_file": "data/my_corpus/my_questions.json",
-  "report_dir": "data/my_corpus/reports",
-  "corpus_root": "data/my_corpus/documents",
-  "ingest": false
-}
+python benchmarks/benchmark.py --corpus my_corpus --top-k 5 --temperature 0.3
 ```
 
 ---
 
-## Running Benchmarks
-
-The harness is designed for systematic benchmarking — varying model, chunking
-strategy, temperature, or retrieval depth across runs.
+## Running Systematic Benchmarks
 
 ### Compare models
 
 ```bash
-python run_demo.py --model llama3.2:3b   --report-dir data/demo/reports
-python run_demo.py --model llama3.1:70b  --report-dir data/demo/reports
-python run_demo.py --model mistral:7b    --report-dir data/demo/reports
-```
-
-Each run produces a separate timestamped report named after the model:
-```
-reports/report_2026-03-10_14-00_llama3.2-3b.md
-reports/report_2026-03-10_14-12_llama3.1-70b.md
-reports/report_2026-03-10_14-45_mistral-7b.md
+python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:8b
+python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
+python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model mistral:7b
 ```
 
 ### Compare retrieval depth
 
 ```bash
-python run_demo.py --k 3
-python run_demo.py --k 5
-python run_demo.py --k 10
+python benchmarks/benchmark.py --corpus demo --top-k 3
+python benchmarks/benchmark.py --corpus demo --top-k 5
+python benchmarks/benchmark.py --corpus demo --top-k 10
 ```
 
 ### Compare temperature
 
 ```bash
-python run_demo.py --temperature 0.0
-python run_demo.py --temperature 0.3
-python run_demo.py --temperature 0.7
+python benchmarks/benchmark.py --corpus demo --temperature 0.0
+python benchmarks/benchmark.py --corpus demo --temperature 0.3
+python benchmarks/benchmark.py --corpus demo --temperature 0.7
+```
+
+Each run produces a separate timestamped report in `benchmarks/reports/`:
+```
+benchmarks/reports/benchmark_demo_2026-03-19_23-50.md
+benchmarks/reports/benchmark_demo_2026-03-19_23-50.json
 ```
 
 ---
@@ -167,40 +124,38 @@ python run_demo.py --temperature 0.7
 
 Each report contains:
 
-**Header** — full config snapshot (model, corpus, temperature, k, timestamp)
-so every report is self-describing and reproducible.
+**Configuration** — full snapshot (corpus, model, top-k, temperature, timestamp) so every report is self-describing and reproducible.
 
-**Summary table** — total questions, success/error counts, total runtime,
-avg/min/max latency.
+**Summary** — total questions, pass rate, average latency.
 
-**Results by topic** — for each question: the answer, sources with document
-names and chunk indices, and latency in seconds.
+**Infrastructure** — vector store, embedding model, reranker, corpus stats.
 
-The first query in a session is typically slow (20–50s) because the LLM
-loads into memory. Subsequent queries are faster (5–15s). This is reflected
-in the min/max latency in the summary.
+**Results table** — per question: latency, pass/fail, citation sources, notes.
+
+**Detailed results** — full answer text with inline citations, per question.
+
+**Known limitations** — retrieval quality notes, corpus-specific issues.
+
+The first query in a cold session is slow (20–50s) while the LLM loads into memory. Subsequent queries run at ~6–7s warm on Apple Silicon. The benchmark summary reflects warm latency once the first query completes.
+
+---
+
+## SEC 10-K Corpus
+
+To benchmark against the full 143-filing SEC corpus:
+
+```bash
+python benchmarks/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
+```
+
+The SEC corpus must be downloaded and ingested first — see QUICKSTART.md for instructions. Ingest takes ~34 minutes on M4 Max.
 
 ---
 
 ## What's Coming
 
-Cross-run comparison and programmatic analysis are on the roadmap for v1.0:
-
-- **JSON report output** — machine-readable companion to the markdown report,
-  enabling automated comparison across runs
-- **Compare script** — `compare_runs.py` to diff two or more reports on
-  latency, answer length, source overlap, and topic-level performance
-- **Benchmark dashboard** — visual summary across all runs for a given corpus
+- **Cross-run comparison** — diff two reports on latency, answer quality, source overlap
+- **Hardware metadata** — machine specs recorded in report header for M4 Air vs M4 Max comparisons
+- **Model quality evaluation** — human eval framework for 8b vs 70b answer quality (latency is already characterized)
 
 See `docs/roadmap.md` for the full roadmap.
-
----
-
-## Notes
-
-- Reports are written to `data/demo/reports/` by default, which is gitignored.
-  Commit reports you want to preserve by moving them to `docs/` or similar.
-- The harness calls the `/query` endpoint directly. Make sure the backend
-  is running before starting a run (`uvicorn` in a separate terminal).
-- Timeout per query is 300 seconds. For very large models or long documents
-  this may need to be increased in `run_demo.py`.

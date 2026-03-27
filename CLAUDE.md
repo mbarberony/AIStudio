@@ -31,10 +31,11 @@ make coverage               # unit tests with coverage report
 .venv/bin/python -m pytest tests/test_corpus_paths.py::TestCorpusPaths::test_some_method -v -m unit
 
 # Ingestion
-python -m local_llm_bot.app.ingest --corpus demo --root data/corpora/demo/uploads
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
+  --corpus demo --root data/corpora/demo/uploads
 
 # Benchmarks
-python run_demo.py --model llama3.1:8b --k 5 --corpus demo
+python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
 ```
 
 ## Architecture
@@ -84,4 +85,8 @@ Frontend is a single vanilla JS file: `front_end/rag_studio.html`
 
 ## Corpus Data Model
 
-Corpora live in `data/corpora/{name}/` with `manifest.jsonl` (file metadata + ingest status), `index.jsonl` (lexical fallback), and `uploads/` directory. Each corpus maps to a Qdrant collection named `aistudio_{name}`.
+Corpora live in `data/corpora/{name}/` with `manifest.jsonl` (file metadata + ingest status), `index.jsonl` (lexical fallback), and `uploads/` directory. Each corpus maps to a Qdrant collection named `aistudio_{name}`. Deleted files move to `uploads/trash/` — recoverable manually.
+
+## Benchmark Harness
+
+Questions live in `benchmarks/demo_questions.yaml` (auto-detected for `--corpus demo`). Reports are written to `benchmarks/reports/` as timestamped `.md` and `.json` pairs. See `docs/HARNESS.md` for full usage.
