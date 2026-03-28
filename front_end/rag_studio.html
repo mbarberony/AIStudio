@@ -710,7 +710,7 @@
             <div class="section">
                 <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
                 <div class="param-row">
-                    <input type="text" id="filterKeywords" placeholder="e.g. Goldman Sachs, risk, 2026" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
+                    <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
                 </div>
             </div>
 
@@ -740,10 +740,10 @@
             <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
             <div style="display:flex;align-items:center;gap:8px;">
                 <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
-            </div>
-            <div class="status-pill">
-                <div class="status-dot"></div>
-                <span id="statusText">Connected</span>
+                <div class="status-pill">
+                    <div class="status-dot"></div>
+                    <span id="statusText">Connected</span>
+                </div>
             </div>
         </div>
 
@@ -816,8 +816,7 @@
     const modelSelect  = document.getElementById('modelSelect');
     const topKInput    = document.getElementById('topK');
     const tempInput    = document.getElementById('temperature');
-    const filterFirm   = document.getElementById('filterFirm');
-    const filterYear   = document.getElementById('filterYear');
+    const filterKeywords = document.getElementById('filterKeywords');
     const convMeta     = document.getElementById('convMeta');
     const topbarTitle  = document.getElementById('topbarTitle');
     const statusText   = document.getElementById('statusText');
@@ -934,8 +933,7 @@
                 corpus: currentCorpus,
                 top_k: parseInt(topKInput.value) || 5,
                 temperature: parseFloat(tempInput.value) || 0.3,
-                ...(filterFirm.value.trim()  && { firm: filterFirm.value.trim() }),
-                ...(filterYear.value.trim()  && { year: filterYear.value.trim() }),
+                // Keywords filter — firm/year wiring TODO (PIPELINE Wave 1)
                 conversation_history: conversationHistory.length > 1 ? conversationHistory.slice(0, -1) : null
             };
 
