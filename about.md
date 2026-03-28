@@ -1,20 +1,17 @@
-# AIStudio
+**Version:** Beta
 
-Local RAG system — Apple Silicon, no cloud dependency.
+## What it does
+Enables users to ingest documents as distinct corpora, ask questions, and get cited answers — entirely local, no data leaves your machine. Built for Apple Silicon, no cloud dependency.
 
-**Version:** Beta | **Built by:** Manuel Barbero
-**Repo:** [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)
+## Demo Corpus
+15 documents on IT architecture, technology strategy, and financial services based on the author's twenty years of output as a thought leader. Ask it anything.
 
-## Components
+## Architecture and Components
+- **Architecture:** See [Architecture decisions](https://github.com/mbarberony/AIStudio/blob/main/docs/architecture_decisions.md)
 - **Vector store:** Qdrant 1.17.0
 - **Embeddings:** nomic-embed-text (768 dimensions)
 - **Reranker:** CrossEncoder ms-marco-MiniLM-L-6-v2
-- **LLM:** Ollama — llama3.1:8b default, 70b optional
+- **LLM:** Ollama — ships with llama3.1:8b; llama3.1:70b tested. See [Updating LLM options](https://github.com/mbarberony/AIStudio/blob/main/docs/architecture_decisions.md) for details.
 
-[Architecture decisions →](docs/architecture_decisions.md)
-
-## What it does
-Ingest documents, ask questions, get cited answers — entirely local, no data leaves your machine.
-
-## Demo corpus
-15 documents on IT architecture, technology strategy, and financial services. Ask it anything.
+---
+Manuel Barbero | [mbarberony@gmail.com](mailto:mbarberony@gmail.com) | [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)

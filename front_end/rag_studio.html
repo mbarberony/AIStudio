@@ -1154,15 +1154,37 @@
         try {
             const res = await fetch(`${API}/about`);
             const data = await res.json();
-            hideEmpty();
             let c = data.content
-                .replace(/^### (.+)$/gm, '<strong style="font-size:13px;color:var(--text-mid);">$1</strong>')
-                .replace(/^## (.+)$/gm, '<strong style="font-size:15px;">$1</strong>')
-                .replace(/^# (.+)$/gm, '<strong style="font-size:17px;">$1</strong>')
+                .replace(/^### (.+)$/gm, '<h4 style="margin:12px 0 4px;font-size:13px;color:var(--text-mid);">$1</h4>')
+                .replace(/^## (.+)$/gm, '<h3 style="margin:16px 0 6px;font-size:15px;">$1</h3>')
+                .replace(/^# (.+)$/gm, '')  // title rendered separately above
                 .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent);">$1</a>')
                 .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br>');
-            addMessage('assistant', c, true);
+                .replace(/^- (.+)$/gm, '<li style="margin:3px 0;">$1</li>')
+                .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul style="margin:6px 0 6px 16px;padding:0;">$&</ul>')
+                .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">')
+                .replace(/\n\n/g, '')
+                .replace(/\n/g, ' ');
+            // Render footer line centered after hr
+            c = c.replace(/(<hr[^>]*>)(.+)$/, '$1<div style="text-align:center;font-size:12px;color:var(--text-mid);margin-top:10px;line-height:1.8;">$2</div>');
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-panel);border-radius:16px;padding:32px 36px;width:540px;min-height:200px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.22);position:relative;resize:both;">
+                    <div style="font-size:20px;font-weight:700;margin-bottom:16px;letter-spacing:-0.5px;font-family:inherit;">
+                        <span style="color:var(--text);">AI</span><span style="color:var(--accent);">Studio</span>
+                    </div>
+                    <div style="font-size:14px;line-height:1.6;color:var(--text);">${c}</div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+                        <button onclick="this.closest('[style*=fixed]').remove()"
+                            style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;">
+                            Close
+                        </button>
+                    </div>
+                </div>`;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
         } catch (err) {
             addMessage('assistant', 'About AIStudio — local RAG system, Apple Silicon, no cloud dependency.', true);
         }
