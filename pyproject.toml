@@ -30,7 +30,7 @@ combine-as-imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --ignore=tests/test_aistudio.py"
+addopts = "-q --ignore=tests/test_aistudio.py -m \"not integration\""
 markers = [
   "unit: fast tests that do not require external services",
   "integration: tests that exercise API boundaries or external components",
