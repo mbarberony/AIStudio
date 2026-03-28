@@ -715,8 +715,13 @@ async def get_about() -> dict[str, Any]:
                 text, href = m.group(1), m.group(2)
                 if href.startswith(("http", "mailto", "file://")):
                     return m.group(0)  # leave absolute links alone
+                # Split anchor from path before resolving
+                anchor = ""
+                if "#" in href:
+                    href, anchor = href.split("#", 1)
+                    anchor = f"#{anchor}"
                 abs_path = (repo_root / href).resolve()
-                return f"[{text}](file://{abs_path})"
+                return f"[{text}](file://{abs_path}{anchor})"
 
             content = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", rewrite_link, content)
             return {"content": content, "format": "markdown"}

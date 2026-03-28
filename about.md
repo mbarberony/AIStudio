@@ -9,11 +9,11 @@ For more information, see [README.pdf](README.pdf).
 15 documents on IT architecture, technology strategy, and financial services based on the author's twenty years of output as a thought leader. Ask it anything.
 
 ## Architecture and Components
-- **Architecture:** See [Architecture decisions](docs/architecture_decisions.md)
+- **Architecture:** See [Architecture decisions](docs/architecture_decisions.pdf)
 - **Vector store:** Qdrant 1.17.0
 - **Embeddings:** nomic-embed-text (768 dimensions)
 - **Reranker:** CrossEncoder ms-marco-MiniLM-L-6-v2
-- **LLM:** Ollama — ships with llama3.1:8b; llama3.1:70b tested. See [Updating LLM options](HOWTO.md#updating-llm-options) for details.
+- **LLM:** Ollama — ships with llama3.1:8b; llama3.1:70b tested. See [Updating LLM options](HOWTO.md) for details.
 
 ---
 Manuel Barbero | [mbarberony@gmail.com](mailto:mbarberony@gmail.com) | [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)
