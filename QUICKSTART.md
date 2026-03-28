@@ -158,6 +158,16 @@ source ~/.zshrc
 This adds `ais_start`, `ais_stop`, `ais_bench`, `ais_sec_download`, and `ais_help`
 to your terminal. Run `ais_help` at any time for a quick reference.
 
+Every command supports `--help` for usage details:
+```bash
+ais_start --help
+ais_bench --help
+```
+
+> **Note:** After running `install.sh`, always `source ~/.zshrc` on its own line
+> before using any `ais_*` command. Do not chain: `source ~/.zshrc && ais_start`
+> will fail. Run `source ~/.zshrc` first, then `ais_start`.
+
 ---
 
 ## 8. Set Up Python Virtual Environment
