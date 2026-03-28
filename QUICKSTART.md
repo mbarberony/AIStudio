@@ -146,7 +146,21 @@ git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 
 ---
 
-## 7. Set Up Python Virtual Environment
+## 7. Install User Commands (Optional)
+
+After cloning, run the one-time installer to add `ais_*` commands to your shell:
+
+```bash
+bash ~/Developer/AIStudio/install.sh
+source ~/.zshrc
+```
+
+This adds `ais_start`, `ais_stop`, `ais_bench`, `ais_sec_download`, and `ais_help`
+to your terminal. Run `ais_help` at any time for a quick reference.
+
+---
+
+## 8. Set Up Python Virtual Environment
 
 ```bash
 python3.13 -m venv .venv
@@ -159,7 +173,7 @@ Your prompt will show `(.venv)` when active.
 
 ---
 
-## 8. Start All Services
+## 9. Start All Services
 
 AIStudio requires four processes: Ollama, Qdrant, FastAPI backend, and the
 frontend. The auto-launch script handles all of them:
@@ -193,7 +207,7 @@ Expected: `{"status": "ok"}`
 
 ---
 
-## 9. Ingest Documents
+## 10. Ingest Documents
 
 A **corpus** is a named collection of documents AIStudio indexes and makes
 searchable.
@@ -206,7 +220,7 @@ AIStudio ships with a curated demo corpus. To ingest it:
 cd ~/Developer/AIStudio && source .venv/bin/activate
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus demo \
-  --root data/demo/demo_data
+  --root data/corpora/demo/uploads
 ```
 
 Try these questions to start:
@@ -240,7 +254,7 @@ You can also upload documents directly from the UI using the **Upload** button.
 
 ---
 
-## 10. Open the Frontend
+## 11. Open the Frontend
 
 ```bash
 open ~/Developer/AIStudio/front_end/rag_studio.html
@@ -254,14 +268,15 @@ Leave them blank for cross-corpus queries. Type a firm name (e.g.
 
 ---
 
-## 11. Tuning Parameters
+## 12. Tuning Parameters
+
+These controls appear in the **Query Settings** section of the left sidebar.
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
-| Top K | 5 | Number of chunks retrieved per query. Higher = more context, slower. Try 10 for large corpora. |
-| Temperature | 0.3 | LLM creativity. Lower = more factual and consistent. Higher = more varied. Keep at 0.3 for document Q&A. |
-| Firm | (empty) | Restricts retrieval to chunks from this firm. Must match ingested firm name exactly. |
-| Year | (empty) | Restricts retrieval to this filing year. Use the filing year (e.g. `2026` for fiscal year 2025 filings). |
+| **Top K** | 5 | Chunks retrieved from the vector store per query. Higher = more context but may introduce noise. Try 10 for large corpora. |
+| **Temperature** | 0.3 | LLM response randomness. Lower = more focused and deterministic. Higher = more varied. Keep at 0.3 for document Q&A. |
+| **Keywords** | (empty) | Optional filter — restricts retrieval to chunks containing these keywords before the query runs. Comma-separated. |
 
 ---
 
@@ -321,7 +336,7 @@ add `export PATH="$HOME/bin:$PATH"` to `~/.zshrc`.
 old/new chunk formats. Re-ingest with `--force` to wipe and rebuild cleanly:
 ```bash
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus demo --root data/demo/demo_data --force
+  --corpus demo --root data/corpora/demo/uploads --force
 ```
 
 ---

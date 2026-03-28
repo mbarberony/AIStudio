@@ -1,47 +1,27 @@
+# macOS download artifacts
 README (1).md
 .DS_Store
 **/.DS_Store
+
+# Python
 __pycache__/
 *.py[cod]
 .venv/
 .env
+
+# IDE
 .vscode/
 .idea/
+
+# Logs
 *.log
+
+# Data — runtime (never committed)
 data/corpora/
 data/conversations/
 **/chroma/
+
+# Data — demo corpus is committed intentionally
+# The !data/demo/ exception must come AFTER the data/ exclusion
 !data/demo/
 !data/demo/**
-data/demo/reports/
-data/demo/.DS_Store
-src/*.egg-info/
-.DS_Store
-**/.DS_Store
-.coverage
-.coverage
-meta/
-!data/corpora/demo/index.jsonl
-!data/corpora/demo/manifest.jsonl
-!data/corpora/demo/demo_questions.yaml
-!data/corpora/demo/
-!data/corpora/demo/index.jsonl
-!data/corpora/demo/manifest.jsonl
-!data/corpora/demo/demo_questions.yaml
-# Keep everything else in data/corpora/ ignored
-data/corpora/sec_10k/
-data/corpora/fr_10k/
-!data/corpora/demo/uploads/
-!data/corpora/demo/uploads/*
-QuickReferenceGuide.docx
-QuickReferenceGuide.md
-QuickReferenceGuide.md
-QuickReferenceGuide.docx
-QuickReferenceGuide.md
-QuickReferenceGuide.docx
-benchmarks/reports/
-BASH_CHEATSHEET.md
-BASH_CHEATSHEET.md
-BASH_CHEATSHEET.md
-BASH_CHEATSHEET.md
-scripts/bundle_session.sh
