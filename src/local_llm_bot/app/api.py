@@ -699,14 +699,29 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
 
 @app.get("/about")
 async def get_about() -> dict[str, Any]:
-    """Serve about.md content for the About modal."""
+    """Serve about.md content for the About modal.
+    Rewrites relative markdown links to absolute file:// paths so they work
+    offline without any external dependency."""
+    import re
+
     repo_root = _get_repo_root()
     for fname in ["about.md", "ABOUT.md"]:
         p = repo_root / fname
         if p.exists():
-            return {"content": p.read_text(encoding="utf-8"), "format": "markdown"}
+            content = p.read_text(encoding="utf-8")
+
+            # Rewrite relative links [text](relative/path) → [text](file:///abs/path)
+            def rewrite_link(m: re.Match) -> str:
+                text, href = m.group(1), m.group(2)
+                if href.startswith(("http", "mailto", "file://")):
+                    return m.group(0)  # leave absolute links alone
+                abs_path = (repo_root / href).resolve()
+                return f"[{text}](file://{abs_path})"
+
+            content = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", rewrite_link, content)
+            return {"content": content, "format": "markdown"}
     return {
-        "content": "# AIStudio\n\nLocal RAG system — Apple Silicon, no cloud dependency.\n\nSee [github.com/mbarberony/AIStudio](https://github.com/mbarberony/AIStudio)",
+        "content": "# AIStudio\n\nLocal RAG system — Apple Silicon, no cloud dependency.",
         "format": "markdown",
     }
 
