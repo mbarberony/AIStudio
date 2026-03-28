@@ -1,174 +1,106 @@
-# HOWTO — AIStudio Operational Guide
+# HOWTO — AIStudio User Guide
 
-Practical recipes for day-to-day AIStudio use.
-Not a getting-started guide (see QUICKSTART.md) — reach for this when
-something is behaving unexpectedly or you need to do something specific.
+Practical answers for day-to-day AIStudio use.
+Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
+you need to do something specific or something isn't working as expected.
+
+**Version:** Beta
 
 ---
 
 ## Shell & Terminal
 
-**zsh and special characters:**
-Always use single quotes when echoing strings containing `!` or `$`:
+**What is the shell?**
+The shell (Terminal) is a text-based interface for running commands on your Mac.
+AIStudio setup and management uses the shell for tasks the UI doesn't cover — like
+installing models or ingesting a new corpus. New to the shell?
+See [Apple's Terminal User Guide](https://support.apple.com/guide/terminal/welcome/mac).
+
+**How do I open the Terminal?**
+Press `Cmd+Space`, type `Terminal`, press Enter. Or open Finder →
+Applications → Utilities → Terminal.
+
+**Why does my terminal say "command not found" when I paste commands?**
+Two common causes:
+- You pasted a `#` comment line — zsh tries to execute it. Paste only the commands,
+  not the comment lines.
+- Your AIStudio aliases aren't loaded yet. Run:
 ```bash
-echo '!data/corpora/demo/'        # correct
-echo "!data/corpora/demo/"        # wrong — zsh interprets ! as history expansion
+source ~/.zshrc
 ```
-
-**Emptying a file safely:**
-Use `truncate` instead of `>` — the redirect operator can leave your prompt
-hanging in zsh if something goes wrong:
-```bash
-truncate -s 0 ~/Developer/AIStudio/data/corpora/demo/manifest.jsonl
-```
-
-**Don't paste comment lines:**
-When copying multi-line commands, paste only the commands — not `#` comment
-lines. zsh will try to execute them and produce `command not found` errors.
-
-**PATH not updated in existing tabs:**
-After adding something to `~/.zshrc`, run `source ~/.zshrc` in every open
-terminal tab. New tabs pick up changes automatically; existing ones don't.
-
-**Aliases not available after `source ~/.zshrc &&` chaining:**
-zsh aliases defined during a `source` call are not available in the same `&&`
-chain. Always run `source ~/.zshrc` on its own line first:
-```bash
-source ~/.zshrc   # must be its own line
-ais_start         # then call the alias
-```
-Not: `source ~/.zshrc && ais_start` — this will fail with `command not found`.
+Then try the command again on its own line. Do not chain: `source ~/.zshrc && ais_start`
+will fail. Run `source ~/.zshrc` first, then `ais_start`.
 
 ---
 
-## User Commands (ais_*)
+## Using AIStudio
 
-After running `bash install.sh` from the repo root, these aliases are available
-from any terminal:
+After running `bash install.sh` and `source ~/.zshrc`, these commands are available:
 
 | Command | What it does |
 |---|---|
-| `ais_start` | Start all services (Qdrant, Ollama, FastAPI, opens UI) |
+| `ais_start` | Start all services and open the UI in your browser |
 | `ais_stop` | Stop all services |
-| `ais_bench` | Run benchmark on demo corpus with default settings |
-| `ais_sec_download` | Download SEC 10-K corpus from EDGAR (~500MB) |
-| `ais_help` | Print user command reference |
+| `ais_bench` | Run a benchmark on the demo corpus |
+| `ais_sec_download` | Download the SEC 10-K corpus from EDGAR (~500MB) |
+| `ais_help` | Print this command reference |
 
-Run `ais_help` at any time for a quick reminder.
-Every `ais_*` command supports `--help` for usage details:
+Every command supports `--help`:
 ```bash
 ais_start --help
 ais_bench --help
-```
-
-**Promoting files from ~/Downloads to the repo:**
-Always use `ais_deploy` — never bare `cp`. macOS appends `(N)` to duplicate
-filenames (e.g. `rag_studio (1).html`), which breaks `cp` silently.
-`ais_deploy` strips the suffix, finds the correct destination automatically,
-and runs lint:
-```bash
-ais_deploy rag_studio.html
-ais_deploy PIPELINE.md          # works for meta/ files too
-ais_deploy api.py rag_studio.html   # multiple files in one shot
-```
-
----
-
-## FastAPI Backend
-
-**Port already in use:**
-```bash
-kill $(lsof -ti:8000)
-```
-`lsof -ti:8000` returns the PID of whatever is using port 8000; `kill` sends
-SIGTERM to it. Then restart with `ais_start`.
-
-**Keep model warm between queries:**
-Always start uvicorn with `OLLAMA_KEEP_ALIVE=30m`:
-```bash
-OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-  uvicorn local_llm_bot.app.api:app --reload --port 8000
-```
-Without this, the model unloads after each query and the next one takes 20–50s.
-
-**Backend changes not reflected:**
-uvicorn `--reload` watches for file changes. If changes still don't appear,
-kill and restart:
-```bash
-kill $(lsof -ti:8000)
-```
-
----
-
-## Qdrant
-
-**Qdrant persists across restarts:**
-All collections and chunks are stored in `~/qdrant_storage/` on disk. When
-you restart Qdrant or reboot your Mac, everything is restored automatically.
-You do not need to re-ingest after a restart.
-
-**Check collection chunk counts:**
-```bash
-curl -s http://localhost:6333/collections/aistudio_demo | python3 -m json.tool | grep points_count
-curl -s http://localhost:6333/collections/aistudio_sec_10k | python3 -m json.tool | grep points_count
-```
-
-**Wipe and rebuild a collection:**
-Use `--force` to atomically wipe Qdrant + JSONL artifacts and re-ingest clean:
-```bash
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus demo --root data/corpora/demo/uploads --force
-```
-
-**List all collections:**
-```bash
-curl -s http://localhost:6333/collections | python3 -m json.tool
 ```
 
 ---
 
 ## Corpus Management
 
-**Standard ingest command:**
+**How do I ingest a new corpus?**
 ```bash
 cd ~/Developer/AIStudio && source .venv/bin/activate
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads
 ```
 
-**Force re-ingest (wipes everything first):**
+**How do I re-ingest a corpus from scratch?**
+Add `--force` — atomically wipes and rebuilds:
 ```bash
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads --force
 ```
 
-**Recovering a deleted file:**
-When you delete a file from a corpus via the UI, it moves to
-`data/corpora/<name>/uploads/trash/` — it is NOT permanently deleted.
-To restore it:
+**What happens when I delete a file from a corpus — is it gone forever?**
+No. Deleted files move to `data/corpora/<name>/uploads/trash/` — not permanently deleted.
+
+**How do I recover a file I accidentally deleted from a corpus?**
 ```bash
 # See what's in trash
 ls ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/
 
-# Move it back to uploads
+# Move it back
 mv ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/<filename> \
    ~/Developer/AIStudio/data/corpora/<name>/uploads/
 
-# Re-ingest to restore it to the vector store
+# Re-ingest to restore it
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads --force
 ```
 
-**Recovering a deleted corpus:**
-When you delete an entire corpus via the UI, the folder moves to
-`~/.Trash/AIStudio_<name>/`. To restore:
+**What happens when I delete an entire corpus — is it gone forever?**
+No. The corpus folder moves to `~/.Trash/AIStudio_<name>/`.
+
+**How do I recover a corpus I accidentally deleted?**
 ```bash
 mv ~/.Trash/AIStudio_<name> ~/Developer/AIStudio/data/corpora/<name>
 # Then re-ingest as above
 ```
 
-**Ingest the SEC 10-K corpus:**
-Download first using `ais_sec_download`, then:
+**How do I ingest the SEC 10-K corpus?**
+Download first:
+```bash
+ais_sec_download
+```
+Then ingest:
 ```bash
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus sec_10k --root ~/Downloads/sec_10k_corpus --force
@@ -177,75 +109,83 @@ Allow ~34 minutes. Safe to run in background.
 
 ---
 
-## Tests
+## Installing and Managing LLMs
 
-**Default test run (unit tests only, no backend needed):**
+**How do I see what models are installed?**
 ```bash
-make test
-# or: ais_test
+ollama list
 ```
-31 tests, runs in ~4 seconds. Integration tests are excluded by default.
 
-**Integration tests (requires Qdrant + Ollama running):**
+**How do I install a new LLM?**
 ```bash
-make test-integration
+ollama pull llama3.1:8b       # ~5GB — recommended default, fast
+ollama pull llama3.1:70b      # ~42GB — best quality, requires ~64GB RAM
+ollama pull mistral:7b        # ~4.4GB — alternative option
 ```
-Runs tests marked `@pytest.mark.integration`. Start services first with `ais_start`.
+Once pulled, the model appears automatically in the **Model** dropdown in the UI.
+No restart required.
 
-**Why the split:** `test_retrieve_finds_hits_jsonl` requires a live Qdrant connection.
-Marked `@pytest.mark.integration` so `make test` stays fast and offline-safe.
+**Which model should I choose?**
+On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
+(~6–7s) once warm. Choose based on available RAM:
+- `llama3.1:8b` — 8GB RAM minimum, recommended for most users
+- `llama3.1:70b` — 64GB+ RAM, best answer quality
+- `mistral:7b` — good alternative on constrained hardware
+
+**How do I remove a model I no longer need?**
+```bash
+ollama rm mistral:7b
+```
+
+See the [Ollama model library](https://ollama.com/library) for all available models.
+
+---
+
+## Query Settings
+
+The **Query Settings** panel in the sidebar controls how AIStudio retrieves and
+generates answers. These settings apply to every query until you change them.
+
+**Top K** — *How many document chunks to retrieve*
+The number of passages retrieved from your corpus before generating an answer.
+Higher values give the model more context but increase latency slightly.
+- Default: `5` — good for most queries
+- Try `10` for complex questions spanning multiple documents
+- Try `3` for faster responses on focused questions
+Adjust using the **Top K** input field in the sidebar.
+
+**Temperature** — *How creative vs. precise the answer is*
+Controls randomness in the model's output.
+- `0.1–0.3` — precise, factual, stays close to the source documents. Best for research.
+- `0.5–0.7` — more varied, synthesizes across sources. Better for summaries.
+- Default: `0.3` — recommended starting point
+Adjust using the **Temperature** input field in the sidebar.
+
+**Keywords (optional)** — *Pre-filter the corpus before retrieval*
+Enter comma-separated terms to narrow retrieval to chunks containing those keywords.
+Useful when your corpus spans multiple topics and you want to focus on a specific area.
+Example: `Goldman Sachs, 2024, risk`
+Leave blank for full corpus retrieval.
+Enter keywords in the **Keywords** field in the sidebar.
 
 ---
 
 ## Benchmark
 
+**How do I run a benchmark?**
+```bash
+ais_bench
+```
+Or with custom settings:
 ```bash
 cd ~/Developer/AIStudio && source .venv/bin/activate
-
-# Demo corpus — 12 curated questions, YAML auto-detected
 python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
-
-# With specific model
 python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
-
-# SEC 10-K corpus
-python3 benchmarks/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
-
-# See all flags
-python3 benchmarks/benchmark.py --help
+python3 benchmarks/benchmark.py --help    # all options
 ```
-
-Reports written to `benchmarks/reports/` as timestamped `.md` and `.json` pairs.
-
----
-
-## Frontend / Browser
-
-**Hard-refresh after HTML changes:**
-After deploying `rag_studio.html`, always hard-refresh:
-- **Chrome / Safari (macOS):** `Cmd+Shift+R`
-
-A normal reload (`Cmd+R`) serves the cached version and changes won't appear.
-
-**Open ↗ links open to page 1:**
-Known Beta limitation — Chrome and Safari don't honor `#page=N` fragments for
-proxied PDFs. The cited page number is correct and visible in the References
-section. Full scroll-to-page requires pdfjs viewer (v2.0 roadmap).
+Reports are written to `benchmarks/reports/` as timestamped `.md` and `.json` pairs.
 
 ---
 
-## Git & Pre-commit
-
-**Pre-commit ruff reformatting loop:**
-When `git commit` triggers ruff and files are reformatted, the commit is
-aborted. Re-stage the reformatted files and commit again:
-```bash
-git add <files>
-git commit -m "your message"
-```
-Ruff modifies on the first pass, then passes on the second. This is by design.
-
----
-
-For architecture context, see [docs/architecture_decisions.md](docs/architecture_decisions.md).
+For architecture context, see [docs/architecture_decisions.pdf](docs/architecture_decisions.pdf).
 For getting started, see [QUICKSTART.md](QUICKSTART.md).
