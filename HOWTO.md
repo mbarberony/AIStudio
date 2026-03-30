@@ -8,19 +8,31 @@ you need to do something specific or something isn't working as expected.
 
 ---
 
+## Contents
+
+- [Shell & Terminal](#shell--terminal)
+- [Using AIStudio](#using-aistudio)
+- [Corpus Management](#corpus-management)
+- [Installing and Managing LLMs](#installing-and-managing-llms)
+- [Query Settings](#query-settings)
+- [Benchmark](#benchmark)
+
+---
+
+
 ## Shell & Terminal
 
-**What is the shell?**
+***What is the shell?***
 The shell (Terminal) is a text-based interface for running commands on your Mac.
 AIStudio setup and management uses the shell for tasks the UI doesn't cover — like
 installing models or ingesting a new corpus. New to the shell?
 See [Apple's Terminal User Guide](https://support.apple.com/guide/terminal/welcome/mac).
 
-**How do I open the Terminal?**
+***How do I open the Terminal?***
 Press `Cmd+Space`, type `Terminal`, press Enter. Or open Finder →
 Applications → Utilities → Terminal.
 
-**Why does my terminal say "command not found" when I paste commands?**
+***Why does my terminal say "command not found" when I paste commands?***
 Two common causes:
 - You pasted a `#` comment line — zsh tries to execute it. Paste only the commands,
   not the comment lines.
@@ -53,26 +65,59 @@ ais_bench --help
 
 ---
 
+## Upgrading AIStudio
+
+**How do I upgrade AIStudio when a new version is released?**
+
+Pull the latest code from GitHub:
+```bash
+cd ~/Developer/AIStudio && git pull
+```
+
+Then update Python dependencies in case new packages were added:
+```bash
+source .venv/bin/activate && pip install -r requirements.txt
+```
+
+Then restart:
+```bash
+ais_start
+```
+
+**Does upgrading delete my corpus data?**
+No. Your corpus data lives in `~/qdrant_storage/` on disk — completely separate from the AIStudio codebase. It persists across upgrades, restarts, and reboots. You never need to re-ingest after a routine upgrade.
+
+**When would I need to re-ingest after an upgrade?**
+Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, run:
+```bash
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest   --corpus <name> --root data/corpora/<name>/uploads --force
+```
+The `--force` flag wipes and rebuilds the corpus cleanly.
+
+**The demo corpus re-ingests automatically** on first `ais_start` after an upgrade if needed.
+
+---
+
 ## Corpus Management
 
-**How do I ingest a new corpus?**
+***How do I ingest a new corpus?***
 ```bash
 cd ~/Developer/AIStudio && source .venv/bin/activate
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads
 ```
 
-**How do I re-ingest a corpus from scratch?**
+***How do I re-ingest a corpus from scratch?***
 Add `--force` — atomically wipes and rebuilds:
 ```bash
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads --force
 ```
 
-**What happens when I delete a file from a corpus — is it gone forever?**
+***What happens when I delete a file from a corpus — is it gone forever?***
 No. Deleted files move to `data/corpora/<name>/uploads/trash/` — not permanently deleted.
 
-**How do I recover a file I accidentally deleted from a corpus?**
+***How do I recover a file I accidentally deleted from a corpus?***
 ```bash
 # See what's in trash
 ls ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/
@@ -86,16 +131,16 @@ AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus <name> --root data/corpora/<name>/uploads --force
 ```
 
-**What happens when I delete an entire corpus — is it gone forever?**
+***What happens when I delete an entire corpus — is it gone forever?***
 No. The corpus folder moves to `~/.Trash/AIStudio_<name>/`.
 
-**How do I recover a corpus I accidentally deleted?**
+***How do I recover a corpus I accidentally deleted?***
 ```bash
 mv ~/.Trash/AIStudio_<name> ~/Developer/AIStudio/data/corpora/<name>
 # Then re-ingest as above
 ```
 
-**How do I ingest the SEC 10-K corpus?**
+***How do I ingest the SEC 10-K corpus?***
 Download first:
 ```bash
 ais_sec_download
@@ -111,12 +156,12 @@ Allow ~34 minutes. Safe to run in background.
 
 ## Installing and Managing LLMs
 
-**How do I see what models are installed?**
+***How do I see what models are installed?***
 ```bash
 ollama list
 ```
 
-**How do I install a new LLM?**
+***How do I install a new LLM?***
 ```bash
 ollama pull llama3.1:8b       # ~5GB — recommended default, fast
 ollama pull llama3.1:70b      # ~42GB — best quality, requires ~64GB RAM
@@ -125,14 +170,14 @@ ollama pull mistral:7b        # ~4.4GB — alternative option
 Once pulled, the model appears automatically in the **Model** dropdown in the UI.
 No restart required.
 
-**Which model should I choose?**
+***Which model should I choose?***
 On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 (~6–7s) once warm. Choose based on available RAM:
 - `llama3.1:8b` — 8GB RAM minimum, recommended for most users
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 
-**How do I remove a model I no longer need?**
+***How do I remove a model I no longer need?***
 ```bash
 ollama rm mistral:7b
 ```
@@ -172,7 +217,7 @@ Enter keywords in the **Keywords** field in the sidebar.
 
 ## Benchmark
 
-**How do I run a benchmark?**
+***How do I run a benchmark?***
 ```bash
 ais_bench
 ```
