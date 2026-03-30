@@ -8,6 +8,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="$REPO_ROOT/.venv/bin/python3"
 SCRIPT="$REPO_ROOT/scripts/update_help_corpus.py"
 
+if [[ "$1" == "--version" ]]; then
+    echo "ais_update_help v$VERSION"
+    exit 0
+fi
+
 if [[ "$1" == "--help" ]]; then
     echo "ais_update_help v$VERSION"
     echo ""

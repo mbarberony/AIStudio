@@ -103,6 +103,11 @@ def generate_pdf(subject: dict, repo_root: Path, uploads_dir: Path) -> bool:
     uploads_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(pdf_path), str(corpus_dest))
     print(f"  ✓ {pdf_name} → {corpus_dest}")
+
+    # Also copy to ~/Downloads for manual testing and UI re-ingestion
+    downloads_dest = Path.home() / "Downloads" / pdf_name
+    shutil.copy2(str(pdf_path), str(downloads_dest))
+    print(f"  ✓ {pdf_name} → ~/Downloads/")
     return True
 
 
