@@ -61,7 +61,7 @@ def generate_pdf(subject: dict, repo_root: Path, uploads_dir: Path) -> bool:
     body = md.convert(md_text)
 
     css = f"""
-  @page {{ margin: 2cm 2cm 2.8cm 2cm; @bottom-center {{ content: "{pdf_name}    |    AIStudio    |    {today}"; font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #999999; }} }}
+  @page {{ margin: 2cm 2cm 2.8cm 2cm; @bottom-center {{ content: "{pdf_name}    |    AIStudio    |    {today}    |    Page " counter(page) " of " counter(pages); font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #999999; }} }}
   body {{ font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; }}
   h1 {{ font-size: 22pt; color: #1a1a2e; border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-top: 24px; }}
   h2 {{ font-size: 16pt; color: #16213e; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-top: 20px; }}

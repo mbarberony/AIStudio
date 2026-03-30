@@ -15,7 +15,7 @@ you need to do something specific or something isn't working as expected.
 - [Corpus Management](#corpus-management)
 - [Installing and Managing LLMs](#installing-and-managing-llms)
 - [Query Settings](#query-settings)
-- [Benchmark](#benchmark)
+- [Benchmark & Corpus Testing](#benchmark--corpus-testing)
 
 ---
 
@@ -215,20 +215,43 @@ Enter keywords in the **Keywords** field in the sidebar.
 
 ---
 
-## Benchmark
+## Benchmark & Corpus Testing
 
-***How do I run a benchmark?***
+The benchmark harness serves two purposes:
+- **Performance** — measures query latency per question
+- **Veracity** — validates answer quality against a questions file
+
+***How do I run a benchmark on the demo corpus?***
 ```bash
 ais_bench
 ```
-Or with custom settings:
+
+***How do I benchmark a different corpus?***
 ```bash
-cd ~/Developer/AIStudio && source .venv/bin/activate
-python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
-python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
-python3 benchmarks/benchmark.py --help    # all options
+ais_bench --corpus help
+ais_bench --corpus sec_10k --top-k 10
 ```
-Reports are written to `benchmarks/reports/` as timestamped `.md` and `.json` pairs.
+
+***How do I test with a specific model or settings?***
+```bash
+ais_bench --corpus demo --model llama3.1:70b --top-k 10 --temperature 0.1
+```
+
+***How do I write my own test questions for a corpus?***
+Create `benchmarks/<corpus_name>_questions.yaml`:
+```yaml
+- topic: Getting Started
+  questions:
+    - id: start_aistudio
+      question: How do I start AIStudio?
+      notes: Should reference ais_start command
+```
+Run `ais_bench --corpus <n>` — the questions file is auto-detected by corpus name.
+
+***Where do reports go?***
+`benchmarks/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
+
+For full benchmark documentation see [HARNESS.pdf](docs/HARNESS.pdf).
 
 ---
 
