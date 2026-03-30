@@ -26,6 +26,11 @@ python-docx
 python-pptx
 beautifulsoup4
 
+# PDF generation (operator tooling — ais_update_help, PDF companions for docs)
+# Requires system dependency: brew install pango
+weasyprint
+markdown
+
 # Development
 pre-commit
 pytest
