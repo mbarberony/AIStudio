@@ -47,7 +47,7 @@ will fail. Run `source ~/.zshrc` first, then `ais_start`.
 
 ## Using AIStudio
 
-After running `bash install.sh` and `source ~/.zshrc`, these commands are available:
+After installation (see QUICKSTART.md), these commands are available from any terminal:
 
 | Command | What it does |
 |---|---|
@@ -132,13 +132,21 @@ AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
 ```
 
 ***What happens when I delete an entire corpus — is it gone forever?***
-No. The corpus folder moves to `~/.Trash/AIStudio_<name>/`.
+No. The corpus folder moves to `~/.Trash/`. The folder is renamed to avoid conflicts with previous deletions — it will be named `AIStudio_<name>` or `AIStudio_<name>_<timestamp>` if a folder with that name already exists in Trash.
 
 ***How do I recover a corpus I accidentally deleted?***
+First find the folder in Trash — it may have a timestamp suffix:
+```bash
+ls ~/.Trash/ | grep AIStudio_<name>
+```
+Then move it back and re-ingest:
 ```bash
 mv ~/.Trash/AIStudio_<name> ~/Developer/AIStudio/data/corpora/<name>
-# Then re-ingest as above
+# Or if it has a timestamp suffix:
+mv ~/.Trash/AIStudio_<name>_<timestamp> ~/Developer/AIStudio/data/corpora/<name>
+# Then re-ingest
 ```
+Then re-upload the files via the UI (Add button) to restore the corpus in Qdrant.
 
 ***How do I ingest the SEC 10-K corpus?***
 Download first:
