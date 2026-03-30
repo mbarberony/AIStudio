@@ -120,12 +120,18 @@ def main():
     import yaml
 
     repo_root = Path(args.repo_root)
-    manifest_path = repo_root / "data/corpora/help/help_manifest.yaml"
-    uploads_dir = repo_root / "data/corpora/help/uploads"
+    # Manifest lives in meta/ — survives corpus deletion
+    manifest_path = repo_root / "meta" / "help_manifest.yaml"
+    uploads_dir = repo_root / "data" / "corpora" / "help" / "uploads"
 
     if not manifest_path.exists():
         print(f"❌ Manifest not found: {manifest_path}")
+        print("   Deploy it first: ais_deploy help_manifest.yaml")
         sys.exit(1)
+
+    # Create corpus directory structure if it doesn't exist
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    print(f"  ✓ Corpus directory ready: {uploads_dir}")
 
     with open(manifest_path) as f:
         manifest = yaml.safe_load(f)
