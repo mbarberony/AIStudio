@@ -152,7 +152,32 @@ git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 
 ---
 
-## 7. Set Up Python Virtual Environment
+## 7. Install AIStudio Commands
+
+This installs the `ais_*` command aliases into your shell — `ais_start`, `ais_stop`,
+`ais_bench`, `ais_sec_download`, and others (used in the rest of this tutorial).
+Enter this in your terminal window:
+
+```bash
+cd ~/Developer/AIStudio
+bash install.sh
+source ~/.zshrc
+```
+
+Verify:
+```bash
+ais_help
+```
+
+Expected: a list of available `ais_*` commands. If you see `command not found`,
+run `source ~/.zshrc` and try again.
+
+> **What install.sh does:** Adds `ais_*` aliases to `~/.zshrc` and confirms
+> your environment is correctly wired. Safe to run multiple times.
+
+---
+
+## 8. Set Up Python Virtual Environment
 
 ```bash
 python3.13 -m venv .venv
@@ -165,7 +190,7 @@ Your prompt will show `(.venv)` when active.
 
 ---
 
-## 8. Start All Services
+## 9. Start All Services
 
 AIStudio requires four processes: Ollama, Qdrant, FastAPI backend, and the
 frontend. The auto-launch script handles all of them:
@@ -199,7 +224,7 @@ Expected: `{"status": "ok"}`
 
 ---
 
-## 9. Ingest Documents
+## 10. Ingest Documents
 
 A **corpus** is a named collection of documents AIStudio indexes and makes
 searchable.
@@ -246,7 +271,7 @@ You can also upload documents directly from the UI using the **Upload** button.
 
 ---
 
-## 10. Open the Frontend
+## 11. Open the Frontend
 
 ```bash
 open ~/Developer/AIStudio/front_end/rag_studio.html
@@ -260,7 +285,7 @@ Leave them blank for cross-corpus queries. Type a firm name (e.g.
 
 ---
 
-## 11. Tuning Parameters
+## 12. Tuning Parameters
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
@@ -350,19 +375,26 @@ cd ~/Developer/AIStudio && source .venv/bin/activate
 # Demo corpus — 12 curated questions, auto-detected question file
 python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
 
-# SEC 10-K corpus — download first (not included in repo, ~2 GB)
-# Step 1: Download filings from SEC EDGAR (~5 min, be polite to their servers)
-python3 scripts/download_sec_corpus.py --out data/corpora/sec_10k/uploads --firms 25 --years 2
+# SEC 10-K corpus — requires downloading filings first (not in repo, ~2 GB)
+# This is one of the few cases where you'll run terminal commands directly.
+# ais_sec_download handles the SEC EDGAR protocol automatically.
+# The ingest step that follows is identical to ingesting any corpus you build yourself.
 
-# Step 2: Ingest (~34 min, 54 chunks/sec)
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus sec_10k --root data/corpora/sec_10k/uploads
+# Step 1: Download filings to ~/Downloads (~5 min, ~2 GB)
+ais_sec_download
 
-# Step 3: Benchmark
-python3 benchmarks/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
+# Step 2: Ingest the files using the AIStudio UI
+# Open AIStudio, create a corpus named 'sec_10k', and upload the files
+# from ~/Downloads/sec_10k/ using the Upload button.
+# Allow ~34 minutes for ingestion. This is the same process as any corpus.
+# See HOWTO.md — "How do I ingest the SEC 10-K corpus?" for full instructions.
+
+# Step 3: Benchmark (once ingestion is complete)
+# See HOWTO.md — "How do I benchmark a different corpus?" for full options.
+ais_bench --corpus sec_10k --top-k 10
 
 # Run with 70b model
-python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
+ais_bench --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
 ```
 
 Prints pass/fail with latency per question, writes timestamped JSON and Markdown reports to `benchmarks/reports/`. Question files

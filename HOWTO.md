@@ -47,14 +47,15 @@ will fail. Run `source ~/.zshrc` first, then `ais_start`.
 
 ## Using AIStudio
 
-After installation (see QUICKSTART.md), these commands are available from any terminal:
+After installation (see QUICKSTART.md Step 7), these commands are available from any terminal.
+If a command is not found, run `source ~/.zshrc` first.
 
 | Command | What it does |
 |---|---|
 | `ais_start` | Start all services and open the UI in your browser |
 | `ais_stop` | Stop all services |
 | `ais_bench` | Run a benchmark on the demo corpus |
-| `ais_sec_download` | Download the SEC 10-K corpus from EDGAR (~500MB) |
+| `ais_sec_download` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:
@@ -149,16 +150,34 @@ mv ~/.Trash/AIStudio_<name>_<timestamp> ~/Developer/AIStudio/data/corpora/<name>
 Then re-upload the files via the UI (Add button) to restore the corpus in Qdrant.
 
 ***How do I ingest the SEC 10-K corpus?***
-Download first:
+
+The SEC 10-K corpus is a special case. AIStudio provides `ais_sec_download` because
+the SEC EDGAR filing system uses a specific access protocol — this automates what
+would otherwise be a complex multi-step download. But the ingest step that follows
+is **identical to ingesting any corpus you bring yourself**. The download step is
+what's special.
+
+This is one of the few places in AIStudio where you'll run terminal commands
+directly. We expose it deliberately — understanding how large corpora are built
+is part of what makes AIStudio a learning tool, not just a product.
+
+**Step 1 — Download the filings to ~/Downloads/sec_10k/ (~5 min, ~2 GB):**
 ```bash
 ais_sec_download
 ```
-Then ingest:
-```bash
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus sec_10k --root ~/Downloads/sec_10k_corpus --force
-```
-Allow ~34 minutes. Safe to run in background.
+
+**Step 2 — Ingest using the AIStudio UI:**
+
+Open AIStudio, create a new corpus named `sec_10k`, then upload the files
+from `~/Downloads/sec_10k/` using the **Upload** button. This is the same
+process as ingesting any corpus you build yourself — the download step is
+what's special.
+
+Allow ~34 minutes for ingestion to complete.
+
+> **Why ~/Downloads?** You own the downloaded files — ~2 GB of SEC filings
+> you may want to reuse, inspect, or build a different subset from.
+> They stay in `~/Downloads/sec_10k/` until you decide what to do with them.
 
 ---
 
