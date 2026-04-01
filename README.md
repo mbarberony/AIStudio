@@ -56,16 +56,13 @@ See [QUICKSTART.md](QUICKSTART.md) to get a running instance in under 30 minutes
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 
-# 2. Clone and set up
+# 2. Clone and install
 git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+./ais_install
+source ~/.zshrc
 
 # 3. Start everything
-scripts/start.sh
-
-# 4. Open UI
-open front_end/rag_studio.html
+ais_start
 ```
 
 ---
@@ -82,8 +79,8 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - RAG query with inline citations and source references
 - Browser UI — corpus selector, model selector, parameters, filters, chat
 - FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
-- Auto-launch script — `scripts/start.sh` starts all four processes
-- Benchmark harness — `benchmarks/benchmark.py` with CLI flags, auto-generates findings
+- Auto-launch script — `ais_start` starts all four processes
+- Benchmark harness — `ais_bench` with CLI flags, auto-generates findings
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
 - Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 

@@ -155,16 +155,16 @@ git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 ## 7. Install AIStudio Commands
 
 This installs the `ais_*` command aliases into your shell — `ais_start`, `ais_stop`,
-`ais_bench`, `ais_sec_download`, and others (used in the rest of this tutorial).
+`ais_restart`, `ais_bench`, `ais_sec_download`, and others (used in the rest of this tutorial).
 Enter this in your terminal window:
 
 ```bash
 cd ~/Developer/AIStudio
-bash install.sh
-source ~/.zshrc
+./ais_install
 ```
 
-Verify:
+`ais_install` will prompt you to run `source ~/.zshrc` at the end — do that, then verify:
+
 ```bash
 ais_help
 ```
@@ -172,34 +172,35 @@ ais_help
 Expected: a list of available `ais_*` commands. If you see `command not found`,
 run `source ~/.zshrc` and try again.
 
-> **What install.sh does:** Adds `ais_*` aliases to `~/.zshrc` and confirms
-> your environment is correctly wired. Safe to run multiple times.
+> **What `./ais_install` does:** Creates the Python virtual environment, installs
+> all dependencies, and adds `ais_*` aliases to `~/.zshrc`. Safe to run multiple times.
 
 ---
 
-## 8. Set Up Python Virtual Environment
+## 8. Activate the Virtual Environment
+
+`./ais_install` creates and populates the Python virtual environment automatically.
+Each time you open a new terminal tab, activate it before running any AIStudio commands:
 
 ```bash
-python3.13 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+source ~/Developer/AIStudio/.venv/bin/activate
 ```
 
-Your prompt will show `(.venv)` when active.
-**Run `source .venv/bin/activate` every time you open a new terminal tab.**
+Your prompt will show `(.venv)` when active. `ais_start` handles this automatically —
+you only need to activate manually if running Python commands directly.
 
 ---
 
 ## 9. Start All Services
 
 AIStudio requires four processes: Ollama, Qdrant, FastAPI backend, and the
-frontend. The auto-launch script handles all of them:
+frontend. Start them all with:
 
 ```bash
-~/Developer/AIStudio/scripts/start.sh
+ais_start
 ```
 
-The script checks whether each service is already running before starting it —
+`ais_start` checks whether each service is already running before starting it —
 safe to run multiple times.
 
 **To start manually instead:**
@@ -253,8 +254,7 @@ Try these questions to start:
 > 20 years of original thought leadership. The corpus and the tool are the
 > same proof point.
 >
-> Run `python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3`
-> to validate all 12 benchmark questions automatically.
+> Run `ais_bench` to validate all 12 benchmark questions automatically.
 
 ### Option B — Your Own Documents
 
@@ -373,7 +373,7 @@ Add to `~/.zshrc` to make permanent.
 cd ~/Developer/AIStudio && source .venv/bin/activate
 
 # Demo corpus — 12 curated questions, auto-detected question file
-python3 benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+ais_bench
 
 # SEC 10-K corpus — requires downloading filings first (not in repo, ~2 GB)
 # This is one of the few cases where you'll run terminal commands directly.

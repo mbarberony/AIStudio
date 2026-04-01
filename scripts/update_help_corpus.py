@@ -163,9 +163,10 @@ def main():
     print(f"  Updated: {len(updated)}")
     for s in updated:
         print(f"    ✓ {s}")
-    print("\n  Next step — re-ingest help corpus:")
-    print("  AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \\")
-    print("    --corpus help --root data/corpora/help/uploads --force")
+    print("\n  Next step — re-ingest help corpus via the UI:")
+    print("    1. Open AIStudio")
+    print("    2. Select the 'help' corpus")
+    print("    3. Click Add and select all PDFs from ~/Downloads/")
 
 
 if __name__ == "__main__":
