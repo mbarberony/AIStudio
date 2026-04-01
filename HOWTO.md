@@ -47,13 +47,15 @@ will fail. Run `source ~/.zshrc` first, then `ais_start`.
 
 ## Using AIStudio
 
-After installation (see QUICKSTART.md Step 7), these commands are available from any terminal.
+After running `./ais_install` from the repo root (see QUICKSTART.md), these commands are available from any terminal.
 If a command is not found, run `source ~/.zshrc` first.
 
 | Command | What it does |
 |---|---|
+| `ais_install` | Install AIStudio — run once after cloning |
 | `ais_start` | Start all services and open the UI in your browser |
 | `ais_stop` | Stop all services |
+| `ais_restart` | Stop then restart all services |
 | `ais_bench` | Run a benchmark on the demo corpus |
 | `ais_sec_download` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
 | `ais_help` | Print this command reference |
@@ -102,18 +104,10 @@ The `--force` flag wipes and rebuilds the corpus cleanly.
 ## Corpus Management
 
 ***How do I ingest a new corpus?***
-```bash
-cd ~/Developer/AIStudio && source .venv/bin/activate
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus <name> --root data/corpora/<name>/uploads
-```
+Use the UI — open AIStudio, create a new corpus using the **New** button, then upload your files using the **Add** button. AIStudio handles ingestion automatically and shows progress in the chat area.
 
 ***How do I re-ingest a corpus from scratch?***
-Add `--force` — atomically wipes and rebuilds:
-```bash
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus <name> --root data/corpora/<name>/uploads --force
-```
+Delete the corpus using the **Delete Corpus** button in the UI (type YES to confirm — it moves to Trash, recoverable). Then create a new corpus with the same name and re-upload your files via **Add**. AIStudio ingests everything in one pass.
 
 ***What happens when I delete a file from a corpus — is it gone forever?***
 No. Deleted files move to `data/corpora/<name>/uploads/trash/` — not permanently deleted.

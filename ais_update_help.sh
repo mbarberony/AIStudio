@@ -27,9 +27,10 @@ if [[ "$1" == "--help" ]]; then
     echo "  3. Copies PDFs to data/corpora/help/uploads/"
     echo "  4. Updates last_updated in manifest"
     echo ""
-    echo "After running, re-ingest the help corpus:"
-    echo "  AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \\"
-    echo "    --corpus help --root data/corpora/help/uploads --force"
+    echo "After running, re-ingest the help corpus via the UI:"
+    echo "  1. Open AIStudio"
+    echo "  2. Select the 'help' corpus"
+    echo "  3. Click Add and select all PDFs from ~/Downloads/"
     exit 0
 fi
 
