@@ -781,7 +781,7 @@
 <!-- Upload Modal -->
 <div class="modal" id="uploadModal">
     <div class="modal-box">
-        <div class="modal-title">Upload file to corpus</div>
+        <div class="modal-title" id="uploadModalTitle" style="text-align:center;">Adding Files to Corpus</div>
         <div class="file-zone" id="dropZone">
             <div class="file-zone-icon">📄</div>
             <div>Drop your file here or click to browse</div>
@@ -1093,13 +1093,21 @@
 
     // ── Corpus inspect ─────────────────────────────────────────────
     async function deleteFileFromCorpus(filename) {
-        const msg = 'Move "' + filename + '" to trash?\n\nThis removes it from the index. Recoverable from uploads/trash/.';
-        if (!confirm(msg)) return;
+        const confirmed = await showModal({
+            title: "Remove File from Corpus \'" + currentCorpus + "\'",
+            body: '<strong>' + filename + '</strong> will be moved to trash and removed from the search index. Recoverable from <code>uploads/trash/</code>.',
+            confirmLabel: 'Type YES to confirm',
+            requireYes: true,
+        });
+        if (!confirmed) {
+            addMessage('assistant', 'File removal cancelled.', false);
+            return;
+        }
         try {
             const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(filename)}`, { method: 'DELETE' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-            addMessage('assistant', '<strong>' + filename + '</strong> moved to trash — ' + data.chunks_removed + ' chunks removed from index.', true);
+            addMessage('assistant', '<strong>' + filename + '</strong> moved to trash and removed from the search index.', true);
             inspectCorpus();
         } catch (err) {
             addMessage('assistant', 'Error: ' + err.message, false);
@@ -1212,31 +1220,92 @@
         }
     }
 
-    function showNameModal(label) {
+    // ── Modal helpers ──────────────────────────────────────────────
+    // showModal(config) — single shared modal factory used by all four modal types.
+    // config: { title, body, confirmLabel, cancelLabel, requireYes, inputPlaceholder }
+    // Returns Promise<string|boolean|null>:
+    //   requireYes=true  → resolves true if user typed YES, null if cancelled
+    //   inputPlaceholder → resolves trimmed input string, null if cancelled
+    //   otherwise        → resolves true on confirm, null on cancel
+    function showModal(cfg) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+            const isYes    = !!cfg.requireYes;
+            const isInput  = !!cfg.inputPlaceholder && !isYes;
+            const isDanger = isYes;
+
+            let innerBody = cfg.body ? `<div style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.5;">${cfg.body}</div>` : '';
+
+            let inputHtml = '';
+            if (isYes) {
+                inputHtml = `<input id="_modalInput" type="text" placeholder="Type YES to confirm"
+                    style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;
+                    font-size:14px;outline:none;box-sizing:border-box;margin-bottom:4px;letter-spacing:0.05em;">`;
+            } else if (isInput) {
+                inputHtml = `<input id="_modalInput" type="text" placeholder="${cfg.inputPlaceholder}"
+                    style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;
+                    font-size:15px;outline:none;box-sizing:border-box;">`;
+            }
+
+            const confirmColor = isDanger ? '#dc2626' : '#2563eb';
             overlay.innerHTML = `
-                <div style="background:white;border-radius:16px;padding:28px 32px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-                    <div style="font-size:17px;font-weight:600;margin-bottom:16px;">${label}</div>
-                    <input id="corpusNameInput" type="text" placeholder="e.g. sec_10k" style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;font-size:15px;outline:none;box-sizing:border-box;">
+                <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
+                    border-radius:16px;padding:28px 32px;width:420px;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:18px;
+                        color:var(--text,#111);">${cfg.title}</div>
+                    ${innerBody}
+                    ${inputHtml}
                     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
-                        <button id="corpusNameCancel" style="padding:8px 18px;border-radius:8px;border:1.5px solid #d0d5dd;background:white;cursor:pointer;font-size:14px;">Cancel</button>
-                        <button id="corpusNameOk" style="padding:8px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:14px;font-weight:600;">Create</button>
+                        <button id="_modalCancel" style="padding:9px 18px;border-radius:8px;
+                            border:1.5px solid var(--border,#d0d5dd);background:transparent;
+                            cursor:pointer;font-size:13px;font-weight:500;
+                            color:var(--text-mid,#555);">${cfg.cancelLabel || 'Cancel'}</button>
+                        <button id="_modalOk" style="padding:9px 18px;border-radius:8px;border:none;
+                            background:${confirmColor};color:white;cursor:pointer;
+                            font-size:13px;font-weight:600;">${cfg.confirmLabel || 'OK'}</button>
                     </div>
                 </div>`;
+
             document.body.appendChild(overlay);
-            const input = overlay.querySelector('#corpusNameInput');
-            input.focus();
+            const input = overlay.querySelector('#_modalInput');
+            if (input) input.focus();
+
             const finish = (val) => { document.body.removeChild(overlay); resolve(val); };
-            overlay.querySelector('#corpusNameOk').onclick = () => finish(input.value.trim() || null);
-            overlay.querySelector('#corpusNameCancel').onclick = () => finish(null);
-            input.onkeydown = (e) => { if (e.key === 'Enter') finish(input.value.trim() || null); if (e.key === 'Escape') finish(null); };
+
+            overlay.querySelector('#_modalOk').onclick = () => {
+                if (isYes) {
+                    const v = input ? input.value.trim().toUpperCase() : '';
+                    if (v !== 'YES') { input.style.borderColor = '#dc2626'; input.focus(); return; }
+                    finish(true);
+                } else if (isInput) {
+                    finish(input ? (input.value.trim() || null) : null);
+                } else {
+                    finish(true);
+                }
+            };
+            overlay.querySelector('#_modalCancel').onclick = () => finish(null);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+            if (input) input.onkeydown = (e) => {
+                if (e.key === 'Enter') overlay.querySelector('#_modalOk').click();
+                if (e.key === 'Escape') finish(null);
+            };
+        });
+    }
+
+    function showNameModal(label) {
+        return showModal({
+            title: 'New Corpus',
+            body: label,
+            inputPlaceholder: 'e.g. sec_10k',
+            confirmLabel: 'Create',
         });
     }
 
     // ── File upload ────────────────────────────────────────────────
-    function openUpload() { uploadModal.classList.add('open'); const el = document.getElementById('uploadCorpusName'); if(el) el.textContent = currentCorpus; }
+    function openUpload() { uploadModal.classList.add('open'); const t = document.getElementById('uploadModalTitle'); if(t) t.textContent = "Adding Files to Corpus '" + currentCorpus + "'"; const el = document.getElementById('uploadCorpusName'); if(el) el.textContent = currentCorpus; }
     function closeUpload() {
         uploadModal.classList.remove('open');
         window.selectedFile = null; window.selectedFiles = [];
@@ -1255,12 +1324,13 @@
 
 
     async function pollIngestStatus(corpus, statusEl, estimated) {
-        const maxPolls = 120;
+        const maxPolls = 300; // 10 min at 2s intervals — enough for large corpora (SEC = ~4 min)
         let polls = 0;
+        const uid = 'pb_' + Date.now();
         // Build progress bar container
-        statusEl.innerHTML = '<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="pbar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div><span id="ptext" style="font-size:11px">Indexing…</span>';
-        const bar = statusEl.querySelector('#pbar');
-        const txt = statusEl.querySelector('#ptext');
+        statusEl.innerHTML = `<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="${uid}_bar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div><span id="${uid}_txt" style="font-size:11px">Indexing…</span>`;
+        const bar = statusEl.querySelector(`#${uid}_bar`);
+        const txt = statusEl.querySelector(`#${uid}_txt`);
         return new Promise(resolve => {
             const interval = setInterval(async () => {
                 polls++;
@@ -1268,24 +1338,33 @@
                     const r = await fetch(`${API}/corpus/${corpus}/ingest-status`);
                     const d = await r.json();
                     if (d.status === 'running') {
-                        const pct = estimated > 0 ? Math.min(80, Math.round(d.chunks_written / estimated * 80)) : Math.min(75, polls * 3);
+                        // Use real chunk count if available, else fall back to file-based estimate
+                        let pct;
+                        if (d.files_total > 0) {
+                            pct = Math.min(95, Math.round(d.files_processed / d.files_total * 95));
+                        } else if (estimated > 0 && d.chunks_written > 0) {
+                            pct = Math.min(95, Math.round(d.chunks_written / estimated * 95));
+                        } else {
+                            pct = Math.min(75, polls * 2);
+                        }
                         if (bar) bar.style.width = pct + '%';
-                        if (txt) txt.textContent = estimated > 0
-                            ? 'Indexing… ' + d.chunks_written + ' / ~' + estimated + ' chunks'
-                            : 'Indexing…';
+                        if (txt) txt.textContent = d.message || 'Indexing…';
                     } else if (d.status === 'done') {
                         if (bar) bar.style.width = '100%';
-                        if (txt) txt.textContent = 'Done — indexed successfully';
+                        // Show final summary: files · chunks · time
+                        const summary = d.summary || d.message || 'Indexed successfully';
+                        if (txt) txt.textContent = '✓ ' + summary;
                         clearInterval(interval);
                         resolve('done');
                     } else if (d.status === 'error') {
-                        if (txt) txt.textContent = 'Ingestion failed — check server logs';
+                        if (txt) txt.textContent = '✗ Ingestion failed — check server logs';
                         clearInterval(interval);
                         resolve('error');
                     }
                 } catch (_) {}
                 if (polls >= maxPolls) {
-                    if (txt) txt.textContent = 'Ingestion taking longer than expected';
+                    // Timeout is not failure — ingest may still be running for very large corpora
+                    if (txt) txt.textContent = 'Still indexing — check Stats when complete';
                     clearInterval(interval);
                     resolve('timeout');
                 }
@@ -1302,6 +1381,12 @@
         document.getElementById('confirmUpload').disabled = true;
         closeUpload();
         hideEmpty();
+
+        // Phase 1: Upload all files first (save to disk only, no ingest yet).
+        // Concurrent ingest processes stomp on each other in Qdrant — we upload
+        // everything, then fire ONE ingest pass over the full uploads/ directory.
+        const saved = [];
+        let totalBytes = 0;
         for (const file of files) {
             const fd = new FormData();
             fd.append('file', file);
@@ -1309,14 +1394,33 @@
                 const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-                const estimated = Math.round(file.size / 350);
-                const msgDiv = addMessage('assistant', `✓ <strong>${file.name}</strong> added to <em>${currentCorpus}</em>.<br><small class='ingest-status' style='color:var(--text-dim);display:block'></small>`, true);
-                const statusEl = msgDiv ? msgDiv.querySelector('.ingest-status') : null;
-                if (statusEl) pollIngestStatus(currentCorpus, statusEl, estimated);
+                saved.push(file.name);
+                totalBytes += file.size;
             } catch (err) {
-                addMessage('assistant', `Error uploading ${file.name}: ${err.message}`, false);
+                addMessage('assistant', `✗ Error saving ${file.name}: ${err.message}`, false);
             }
         }
+
+        if (saved.length === 0) { window.selectedFiles = []; return; }
+
+        // Show batch summary + single progress bar for the one ingest run
+        const label = saved.length === 1
+            ? `<strong>${saved[0]}</strong>`
+            : `<strong>${saved.length} files</strong>`;
+        const msgDiv = addMessage('assistant',
+            `✓ ${label} saved — being ingested into corpus <em>'${currentCorpus}'</em>.<br><small class='ingest-status' style='color:var(--text-dim);display:block'></small>`,
+            true);
+        const statusEl = msgDiv ? msgDiv.querySelector('.ingest-status') : null;
+
+        // Phase 2: Trigger ONE ingest pass for the whole corpus
+        try {
+            const estimated = Math.round(totalBytes / 350);
+            await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
+            if (statusEl) pollIngestStatus(currentCorpus, statusEl, estimated);
+        } catch (err) {
+            if (statusEl) statusEl.textContent = `Ingest trigger failed: ${err.message}`;
+        }
+
         window.selectedFiles = [];
     }
 
@@ -1352,8 +1456,13 @@
     });
     document.getElementById('deleteCorpusBtn').addEventListener('click', async function() {
         if (!currentCorpus) return;
-        const typed = window.prompt('Type YES to move corpus "' + currentCorpus + '" to Trash and remove all its index data.\n\nTo restore, see HOW_TO.md.');
-        if (!typed || typed.trim().toUpperCase() !== 'YES') {
+        const confirmed = await showModal({
+            title: "Delete Corpus \'" + currentCorpus + "\'",
+            body: 'All files and index data will be moved to Trash. This corpus will no longer be available for queries. To restore, see HOWTO.',
+            confirmLabel: 'Delete',
+            requireYes: true,
+        });
+        if (!confirmed) {
             addMessage('assistant', 'Corpus deletion cancelled.', false);
             return;
         }
@@ -1361,7 +1470,12 @@
             const res = await fetch(API + '/corpus/' + currentCorpus + '?confirm=yes', { method: 'DELETE' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
-            addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see HOW_TO.md.', true);
+            fetch(`${API}/howto`).then(r=>r.json()).then(d=>{
+                const link = d.url ? `<a href="${d.url}" target="_blank">HOWTO</a>` : 'HOWTO';
+                addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see ' + link + '.', true);
+            }).catch(()=>{
+                addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see HOWTO.', true);
+            });
             await loadCorpora();
         } catch (err) {
             addMessage('assistant', 'Error: ' + err.message, false);

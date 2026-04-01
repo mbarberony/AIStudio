@@ -1,0 +1,63 @@
+#!/usr/bin/env zsh
+# ais_install — AIStudio User Installer
+# Bootstraps a fresh clone: sets up Python venv, installs dependencies,
+# writes ais_* user aliases to ~/.zshrc, and sources them immediately.
+#
+# Usage (from repo root, one-time after clone):
+#   ./ais_install
+#
+# After running: all ais_* commands are available in this terminal and
+# every new terminal automatically. No other setup steps needed.
+#
+# Version: 1.0.0
+
+VERSION="1.0.0"
+REPO="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ "$1" == "--version" ]]; then echo "ais_install v$VERSION"; exit 0; fi
+if [[ "$1" == "--help" ]]; then
+    echo "ais_install v$VERSION"
+    echo ""
+    echo "Usage: ./ais_install"
+    echo ""
+    echo "Run once from the repo root after cloning AIStudio."
+    echo "Sets up the Python environment and installs all ais_* user commands."
+    echo ""
+    echo "Operator? After this completes, run: ais_install_ops"
+    exit 0
+fi
+
+echo ""
+echo "+============================================================+"
+echo "|           AIStudio — User Install  v$VERSION               |"
+echo "+============================================================+"
+echo ""
+
+# ── Step 1: Python venv ───────────────────────────────────────────
+if [[ ! -d "$REPO/.venv" ]]; then
+    echo "▶ Creating Python virtual environment..."
+    python3 -m venv "$REPO/.venv"
+    echo "✓ Virtual environment created"
+else
+    echo "✓ Virtual environment already exists"
+fi
+
+# ── Step 2: Install dependencies ─────────────────────────────────
+echo "▶ Installing Python dependencies..."
+source "$REPO/.venv/bin/activate"
+pip install -r "$REPO/requirements.txt" --quiet
+echo "✓ Dependencies installed"
+
+# ── Step 3: Install user aliases ─────────────────────────────────
+echo "▶ Installing ais_* commands..."
+bash "$REPO/install.sh"
+
+echo ""
+echo "✅ AIStudio installed. Commands available:"
+echo "    ais_start    — start AIStudio"
+echo "    ais_stop     — stop AIStudio"
+echo "    ais_restart  — restart AIStudio"
+echo "    ais_help     — show all commands"
+echo ""
+echo "Run ais_start to launch."
+echo "Operator? Run: ais_install_ops"

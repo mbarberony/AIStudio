@@ -433,9 +433,17 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
 
 
 async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
-    """Run ingest as a background task after upload."""
+    """Run ingest as a background task after upload.
+
+    Streams stderr line-by-line to parse tqdm progress output in real time.
+    tqdm emits lines like:
+      Process: 100%|...| 143/143 [03:46<00:00, 1.59s/file, chunks=105964, failed=0, processed=143, skipped=0]
+    We parse chunks=N, processed=N, and elapsed time so the UI can show live progress.
+    """
     import os
+    import re
     import sys
+    import time
 
     cmd = [
         sys.executable,
@@ -446,22 +454,131 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         "--root",
         str(uploads_dir),
     ]
-    env = {**os.environ, "PYTHONPATH": "src"}
+    env = {**os.environ, "PYTHONPATH": "src", "PYTHONUNBUFFERED": "1"}
+    start_time = time.time()
     _ingest_status[corpus_name] = {
         "status": "running",
         "chunks_written": 0,
-        "message": "Indexing...",
+        "files_processed": 0,
+        "files_total": 0,
+        "elapsed_sec": 0,
+        "message": "Indexing…",
     }
+
     proc = await asyncio.create_subprocess_exec(
-        *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *cmd,
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate()
+
+    # Stream stderr lines as they arrive — tqdm writes progress to stderr.
+    # tqdm emits two bar types:
+    #   Discover: N file [...]           — file discovery phase, no chunks
+    #   Process:  N%|...| N/N [..., chunks=N, processed=N, ...]  — actual indexing
+    # We track the last Process line separately so the final summary uses
+    # real chunk/file counts, not the Discover line which has no chunks.
+    async def _stream_stderr() -> str:
+        last_process_line = ""
+        assert proc.stderr is not None
+        async for raw in proc.stderr:
+            line = raw.decode(errors="replace").strip()
+            if not line:
+                continue
+            elapsed = int(time.time() - start_time)
+
+            # Only parse lines from the Process bar (has chunks= or N/N pattern with %)
+            is_process_line = "chunks=" in line or (
+                "%" in line and re.search(r"\|\s*\d+/\d+", line)
+            )
+            if not is_process_line:
+                continue
+
+            last_process_line = line
+
+            # Parse tqdm postfix fields: chunks=N, processed=N, failed=N
+            chunks = 0
+            files_processed = 0
+            files_total = 0
+
+            m_chunks = re.search(r"chunks=(\d+)", line)
+            if m_chunks:
+                chunks = int(m_chunks.group(1))
+
+            m_proc = re.search(r"processed=(\d+)", line)
+            if m_proc:
+                files_processed = int(m_proc.group(1))
+
+            # Parse "N/N" from tqdm bar: "143/143"
+            m_total = re.search(r"\|\s*(\d+)/(\d+)", line)
+            if m_total:
+                files_processed = files_processed or int(m_total.group(1))
+                files_total = int(m_total.group(2))
+
+            # Build human message
+            if chunks > 0 and files_total > 0:
+                msg = f"{files_processed}/{files_total} files · {chunks:,} chunks"
+            elif files_total > 0:
+                msg = f"{files_processed}/{files_total} files"
+            else:
+                msg = "Indexing…"
+
+            _ingest_status[corpus_name] = {
+                "status": "running",
+                "chunks_written": chunks,
+                "files_processed": files_processed,
+                "files_total": files_total,
+                "elapsed_sec": elapsed,
+                "message": msg,
+            }
+        return last_process_line
+
+    # Drain stdout silently (keep pipe from blocking)
+    async def _drain_stdout() -> None:
+        assert proc.stdout is not None
+        async for _ in proc.stdout:
+            pass
+
+    last_line, _ = await asyncio.gather(_stream_stderr(), _drain_stdout())
+    await proc.wait()
+
+    elapsed = int(time.time() - start_time)
+    mins, secs = divmod(elapsed, 60)
+    elapsed_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+
     if proc.returncode == 0:
-        _ingest_status[corpus_name] = {"status": "done", "chunks_written": 0, "message": "Done"}
-        print(f"[ingest] Auto-ingest for '{corpus_name}' complete.")
+        # Extract final counts from last tqdm line
+        final_chunks = 0
+        final_files = 0
+        m_chunks = re.search(r"chunks=(\d+)", last_line)
+        if m_chunks:
+            final_chunks = int(m_chunks.group(1))
+        m_total = re.search(r"\|\s*(\d+)/(\d+)", last_line)
+        if m_total:
+            final_files = int(m_total.group(2))
+
+        summary = f"{final_files} files · {final_chunks:,} chunks · {elapsed_str}"
+        _ingest_status[corpus_name] = {
+            "status": "done",
+            "chunks_written": final_chunks,
+            "files_processed": final_files,
+            "files_total": final_files,
+            "elapsed_sec": elapsed,
+            "elapsed_str": elapsed_str,
+            "summary": summary,
+            "message": summary,
+        }
+        print(f"[ingest] '{corpus_name}' complete — {summary}")
     else:
-        _ingest_status[corpus_name] = {"status": "error", "chunks_written": 0, "message": "Failed"}
-        print(f"[ingest] Auto-ingest failed:\n{stderr.decode()}")
+        _ingest_status[corpus_name] = {
+            "status": "error",
+            "chunks_written": 0,
+            "files_processed": 0,
+            "files_total": 0,
+            "elapsed_sec": elapsed,
+            "message": "Ingestion failed — check server logs",
+        }
+        print(f"[ingest] '{corpus_name}' failed after {elapsed_str}:\n{last_line}")
 
 
 @app.post("/corpus/{corpus_name}/upload")
@@ -496,12 +613,12 @@ async def upload_to_corpus(
 
         file_size = len(content)
 
-        # Auto-ingest in background
-        asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir))
-
+        # File saved only — ingest triggered separately via POST /corpus/{name}/ingest
+        # Batch uploads must NOT each spawn their own ingest: concurrent processes
+        # stomp on each other in Qdrant, causing false error status.
         return {
-            "status": "success",
-            "message": "File uploaded and ingestion started.",
+            "status": "saved",
+            "message": "File saved. Call /ingest to index.",
             "filename": file.filename,
             "file_path": str(file_path),
             "size_bytes": file_size,
@@ -509,6 +626,25 @@ async def upload_to_corpus(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}") from e
+
+
+@app.post("/corpus/{corpus_name}/ingest")
+async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
+    """
+    Trigger a single ingest pass over all files in uploads/.
+    Call once after all files are uploaded — never per-file.
+    Guards against concurrent runs (returns already_running if busy).
+    """
+    _require_corpus(corpus_name)
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    uploads_dir = paths["base"] / "uploads"
+
+    if _ingest_status.get(corpus_name, {}).get("status") == "running":
+        return {"status": "already_running", "message": "Ingestion already in progress."}
+
+    asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir))
+    return {"status": "started", "message": f"Ingestion started for corpus '{corpus_name}'."}
 
 
 class CreateCorpusRequest(BaseModel):
@@ -729,6 +865,20 @@ async def get_about() -> dict[str, Any]:
         "content": "# AIStudio\n\nLocal RAG system — Apple Silicon, no cloud dependency.",
         "format": "markdown",
     }
+
+
+@app.get("/howto")
+async def get_howto() -> dict[str, Any]:
+    """Serve HOWTO.md as a local file:// URL redirect.
+    Returns the absolute path so the frontend can open it directly.
+    Used by the corpus-deleted message link: see HOWTO.
+    """
+    repo_root = _get_repo_root()
+    for fname in ["HOWTO.md", "howto.md"]:
+        p = repo_root / fname
+        if p.exists():
+            return {"path": str(p.resolve()), "url": f"file://{p.resolve()}"}
+    return {"path": "", "url": ""}
 
 
 # MODEL MANAGEMENT ENDPOINTS

@@ -25,8 +25,10 @@ fi
 cat >> "$ZSHRC" << BLOCK
 
 # ── AIStudio User Commands ──────────────────────────────────────────────────
+alias ais_install='$REPO/ais_install'
 alias ais_start='$REPO/scripts/start.sh'
 alias ais_stop='$REPO/scripts/stop.sh'
+alias ais_restart='$REPO/scripts/stop.sh && $REPO/scripts/start.sh'
 alias ais_bench='$REPO/ais_bench.sh'
 alias ais_sec_download='$REPO/ais_sec_download.sh'
 alias ais_help='$REPO/ais_help.sh'
@@ -39,8 +41,10 @@ sudo chmod +x /usr/local/bin/install_ops
 
 echo ""
 echo "✓ AIStudio user commands installed:"
+echo "    ais_install      — re-run user install (alias refresh etc.)"
 echo "    ais_start        — start all services and open the UI"
 echo "    ais_stop         — stop all services"
+echo "    ais_restart      — stop then restart all services"
 echo "    ais_bench        — run the demo corpus benchmark"
 echo "    ais_sec_download — download SEC 10-K filings from EDGAR"
 echo "    ais_help         — show this command reference"
