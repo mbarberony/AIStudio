@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# ais_update_help.sh — AIStudio Help Corpus Updater
+# ais_update_help_ops.sh — AIStudio Help Corpus Updater (Operator only)
 # Version: 1.1.0
 # Regenerates help corpus PDFs and copies to data/corpora/help/uploads/
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="$REPO_ROOT/.venv/bin/python3"
 SCRIPT="$REPO_ROOT/scripts/update_help_corpus.py"
 
 if [[ "$1" == "--version" ]]; then
-    echo "ais_update_help v$VERSION"
+    echo "ais_update_help_ops v$VERSION"
     exit 0
 fi
 
 if [[ "$1" == "--help" ]]; then
-    echo "ais_update_help v$VERSION"
+    echo "ais_update_help_ops v$VERSION"
     echo ""
     echo "Usage:"
-    echo "  ais_update_help              Update all help corpus subjects"
-    echo "  ais_update_help <subject>    Update one subject (e.g. howto, readme, quickstart)"
-    echo "  ais_update_help --help       Show this help"
+    echo "  ais_update_help_ops              Update all help corpus subjects"
+    echo "  ais_update_help_ops <subject>    Update one subject (e.g. howto, readme, quickstart)"
+    echo "  ais_update_help_ops --help       Show this help"
     echo ""
     echo "What it does:"
     echo "  1. Reads data/corpora/help/help_manifest.yaml"
