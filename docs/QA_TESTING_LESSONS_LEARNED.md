@@ -215,12 +215,16 @@ OBE on a truly clean machine should be run after every significant release.
 
 Questions that produced strong answers on both llama3.1:8b and mistral:7b:
 
-| Question | Notes |
-|----------|-------|
-| *"Explain the concept of plateau and its use in the context of planning"* | Best overall — grounded in 2006 FS Journal |
-| *"Why should you not spend too much time on intermediary plateaus?"* | Great follow-up to above |
-| *"How should a CTO prioritize a three-year technology strategy?"* | Strong, multi-source answer |
-| *"What are the key principles for modernizing legacy applications?"* | ~22s, good results on both models |
+1. "Explain the concept of plateau and its use in the context of planning"
+2. "Why should you not spend too much time on intermediary plateaus?"
+3. "How should a CTO prioritize a three-year technology strategy?"
+4. "What are the key principles for modernizing legacy applications?"
+
+**Notes on these questions:**
+- Question 1 is best overall — grounded in the 2006 FS Journal article
+- Question 2 is a great follow-up to question 1
+- Question 3 produces a strong multi-source answer
+- Question 4 takes ~22s but good results on both models
 
 **Avoid as demo questions:**
 - Questions about CMDB — retrieves IT Infrastructure doc first, less relevant

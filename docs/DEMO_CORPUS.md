@@ -78,6 +78,18 @@ These questions are designed to showcase both retrieval quality and the
 depth of the corpus. They work well for demonstrating AIStudio to
 technical reviewers or potential users.
 
+The complete machine-readable question set lives in `benchmarks/demo_questions.yaml`
+(12 questions across 4 topics, all validated against the corpus). Run `ais_bench`
+to execute them as a benchmark.
+
+**Mac Air OBE-validated questions** (strongest answers, both llama3.1:8b and mistral:7b):
+1. "Explain the concept of plateau and its use in the context of planning"
+2. "Why should you not spend too much time on intermediary plateaus?"
+3. "How should a CTO prioritize a three-year technology strategy?"
+4. "What are the key principles for modernizing legacy applications?"
+
+See `docs/QA_TESTING_LESSONS_LEARNED.md` for the full clean install validation report.
+
 **Strategy & Leadership**
 - What is the Air Traffic Controller model and how does it apply to IT strategy?
 - How should a CTO prioritize a three-year technology strategy?
