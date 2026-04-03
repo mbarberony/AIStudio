@@ -675,7 +675,9 @@
                         Stats
                     </button>
                 </div>
-                <select id="corpusSelect"><option value="">Loading…</option></select>
+                <div style="position:relative;z-index:100;overflow:visible;">
+                <select id="corpusSelect" style="position:relative;z-index:100;"><option value="">Loading…</option></select>
+                </div>
                 <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
                     <span style="font-size:11px;font-weight:600;color:var(--text-mid);white-space:nowrap;">Files</span>
                     <button class="action-btn" id="addFileBtn" title="Upload file to corpus" style="flex:1;">
@@ -740,7 +742,6 @@
             <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
             <div style="display:flex;align-items:center;gap:8px;">
                 <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
-                <button onclick="showHelp()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">Help</button>
                 <div class="status-pill">
                     <div class="status-dot"></div>
                     <span id="statusText">Connected</span>
@@ -871,16 +872,10 @@
                 setCorpus(null);
                 return;
             }
-            const userCorpora = corpora.filter(c => c.name !== 'help');
-            if (!userCorpora.length) {
-                corpusSelect.innerHTML = '<option value="">No corpora — create one</option>';
-                setCorpus(null);
-                return;
-            }
-            corpusSelect.innerHTML = userCorpora
+            corpusSelect.innerHTML = corpora
                 .map(c => `<option value="${c.name}">${c.name}</option>`)
                 .join('');
-            setCorpus(userCorpora[0].name);
+            setCorpus(corpora[0].name);
         } catch {
             corpusSelect.innerHTML = '<option value="">Error loading corpora</option>';
             setCorpus(null);
@@ -964,7 +959,9 @@
                 .join('');
             if (data.citations && data.citations.length) {
                 responseCounter++;
-                html = parseCitations(html, data.citations, responseCounter);
+                // Clean up any raw file paths the LLM included in its response
+        html = html.replace(/(?:\/[^\s<"']*\/)([\w.-]+\.(?:pdf|md|txt|json|yaml|py|sh))/gi, '<code>$1</code>');
+        html = parseCitations(html, data.citations, responseCounter);
                 html += renderFootnotes(data.citations, responseCounter);
             }
 
@@ -1134,9 +1131,10 @@
                 return (typeof f === 'string') ? f : (f.name || String(f));
             });
 
+            const sortedFileNames = fileNames.slice().sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
             let fileRows = '';
-            if (fileNames.length > 0) {
-                fileRows = fileNames.map(function(f) {
+            if (sortedFileNames.length > 0) {
+                fileRows = sortedFileNames.map(function(f) {
                     const safe = f.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
                         + '<span style="flex:1;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + f + '">' + f + '</span>'
@@ -1203,31 +1201,6 @@
             document.body.appendChild(overlay);
         } catch (err) {
             addMessage('assistant', 'About AIStudio — local RAG system, Apple Silicon, no cloud dependency.', true);
-        }
-    }
-
-    // ── Help button ────────────────────────────────────────────────
-    async function showHelp() {
-        // Check if help corpus exists in the selector
-        const options = Array.from(corpusSelect.options).map(o => o.value);
-        if (options.includes('help')) {
-            // Switch to help corpus
-            corpusSelect.value = 'help';
-            setCorpus('help');
-            // Post welcome message
-            addMessage('assistant',
-                `<strong>Help mode</strong> — ask me anything about using AIStudio.<br>` +
-                `<span style="color:var(--text-dim);font-size:13px;">Try: <em>How do I create a corpus?</em> &nbsp;·&nbsp; ` +
-                `<em>What is Top K?</em> &nbsp;·&nbsp; <em>How do I run a benchmark?</em></span>`,
-                true);
-        } else {
-            // Help corpus not ingested yet
-            addMessage('assistant',
-                `<strong>Help corpus not found.</strong><br>` +
-                `<span style="color:var(--text-dim);font-size:13px;">To enable Help mode, run <code>ais_update_help</code> in your terminal, ` +
-                `then open AIStudio, select the <strong>help</strong> corpus, and click <strong>Add</strong> ` +
-                `to upload the PDFs from ~/Downloads/.</span>`,
-                true);
         }
     }
 

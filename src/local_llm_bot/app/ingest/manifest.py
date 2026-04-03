@@ -58,9 +58,22 @@ def load_manifest_map(manifest_path: Path) -> dict[str, ManifestEntry]:
 
 
 def write_manifest_entry(manifest_path: Path, entry: ManifestEntry) -> None:
+    """
+    Write a manifest entry, replacing any existing entry for the same path.
+    Rewrites the manifest atomically — no duplicate entries, no append-only growth.
+    """
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    with manifest_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps({"path": entry.path, "mtime": entry.mtime, "size": entry.size}) + "\n")
+
+    # Load existing entries, overwrite the one matching this path
+    existing = load_manifest_map(manifest_path)
+    existing[entry.path] = entry
+
+    # Rewrite manifest atomically via temp file
+    tmp_path = manifest_path.with_suffix(".jsonl.tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        for e in existing.values():
+            f.write(json.dumps({"path": e.path, "mtime": e.mtime, "size": e.size}) + "\n")
+    tmp_path.replace(manifest_path)
 
 
 def should_skip(

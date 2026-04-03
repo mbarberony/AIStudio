@@ -46,8 +46,31 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
     return None
 
 
+def _load_corpus_search_guidance(corpus_name: str) -> str:
+    """
+    Load search_guidance from corpus_meta.yaml if it exists.
+    Returns empty string silently if file missing or field absent.
+    """
+    try:
+        repo_root = _get_repo_root()
+        meta_path = repo_root / "data" / "corpora" / corpus_name / "corpus_meta.yaml"
+        if meta_path.exists():
+            import yaml
+
+            with open(meta_path) as f:
+                meta = yaml.safe_load(f) or {}
+            guidance = meta.get("search_guidance", "").strip()
+            return guidance
+    except Exception:
+        pass
+    return ""
+
+
 def generate_answer_with_citations(
-    query: str, docs: list[RetrievedDoc], conversation_history: list[dict[str, str]] | None = None
+    query: str,
+    docs: list[RetrievedDoc],
+    conversation_history: list[dict[str, str]] | None = None,
+    corpus: str | None = None,
 ) -> dict[str, Any]:
     """Generate answer with citation support"""
 
@@ -101,8 +124,18 @@ def generate_answer_with_citations(
         f"- NEVER use numbers outside the range [1] to [{num_sources}] as citations.\n"
         "- Never write [Source N] — only [N].\n"
         "- Do NOT append a References or Sources section — citations are rendered separately.\n"
-        "- If the sources lack sufficient information, say so explicitly."
+        "- If the sources lack sufficient information, say so explicitly.\n"
+        "- NEVER mention file paths, directory names, or system paths in your answer. Refer to sources by citation number [N] only."
     )
+
+    # Inject corpus search guidance if available (corpus_meta.yaml → search_guidance field)
+    if corpus:
+        guidance = _load_corpus_search_guidance(corpus)
+        if guidance:
+            system += (
+                "\n\nCORPUS SEARCH GUIDANCE — follow these routing rules when selecting sources:\n"
+                + guidance
+            )
 
     # Build prompt with conversation history
     if conversation_history:
@@ -317,7 +350,10 @@ async def ask(req: AskRequest) -> AskResponse:
 
     # Generate answer with citations
     result = generate_answer_with_citations(
-        query=req.query, docs=docs, conversation_history=req.conversation_history
+        query=req.query,
+        docs=docs,
+        conversation_history=req.conversation_history,
+        corpus=req.corpus,
     )
 
     # Convert to response format

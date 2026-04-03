@@ -2,6 +2,10 @@
 
 # AIStudio
 
+**AIStudio is a private, local AI search and RAG (Retrieval-Augmented Generation) application that runs entirely on your Mac.** It lets you upload your own documents, index them, and ask questions in plain English — getting cited answers grounded in your content, with no data leaving your machine and no external API or cloud dependency.
+
+AIStudio is what you use when you want to query your own documents with AI. It is not a general-purpose chatbot — it is a document intelligence system. You bring the documents; AIStudio finds the answers.
+
 > *AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled systems behave under real operational constraints — retrieval quality, vocabulary mismatch, metadata filtering, observability, and deployment trade-offs — before those issues get hidden behind abstractions.*
 >
 > **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (v3.0) · AWS ECS (v3.0)
@@ -56,13 +60,16 @@ See [QUICKSTART.md](QUICKSTART.md) to get a running instance in under 30 minutes
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 
-# 2. Clone and install
+# 2. Clone and set up
 git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
-./ais_install
-source ~/.zshrc
+python3.13 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
 # 3. Start everything
-ais_start
+scripts/start.sh
+
+# 4. Open UI
+open front_end/rag_studio.html
 ```
 
 ---
@@ -79,8 +86,8 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - RAG query with inline citations and source references
 - Browser UI — corpus selector, model selector, parameters, filters, chat
 - FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
-- Auto-launch script — `ais_start` starts all four processes
-- Benchmark harness — `ais_bench` with CLI flags, auto-generates findings
+- Auto-launch script — `scripts/start.sh` starts all four processes
+- Benchmark harness — `benchmarks/benchmark.py` with CLI flags, auto-generates findings
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
 - Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 
