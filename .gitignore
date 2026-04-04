@@ -1,11 +1,10 @@
-# macOS download artifacts
-README (1).md
-.DS_Store
-**/.DS_Store
-
 # Python
 __pycache__/
 *.py[cod]
+src/*.egg-info/
+.coverage
+
+# Environment
 .venv/
 .env
 
@@ -13,15 +12,45 @@ __pycache__/
 .vscode/
 .idea/
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Logs
 *.log
 
-# Data — runtime (never committed)
-data/corpora/
-data/conversations/
-**/chroma/
+# AIStudio — meta (operator only, travels via BUNDLE)
+meta/
 
-# Data — demo corpus is committed intentionally
-# The !data/demo/ exception must come AFTER the data/ exclusion
-!data/demo/
-!data/demo/**
+# AIStudio — operator scripts (gitignored, travels via BUNDLE)
+scripts/deploy_files.sh
+scripts/generate_packet.sh
+scripts/bundle_session.sh
+scripts/fix_zshrc.py
+scripts/.deploy_map
+
+# AIStudio — corpus data (large files, not in repo)
+data/corpora/
+!data/corpora/demo/
+!data/corpora/demo/uploads/
+!data/corpora/demo/uploads/*
+!data/corpora/demo/index.jsonl
+!data/corpora/demo/manifest.jsonl
+
+# AIStudio — benchmark reports (generated, not in repo)
+benchmarks/reports/
+
+# AIStudio — operator docs (gitignored, travels via BUNDLE)
+DEMO_SCRIPT.md
+HOWTO_OPS.md
+
+# Legacy artifacts
+BASH_CHEATSHEET.md
+QuickReferenceGuide.docx
+QuickReferenceGuide.md
+install_ops.sh
+install_ops
+install_ops
+install_ops
+
+epaves/
