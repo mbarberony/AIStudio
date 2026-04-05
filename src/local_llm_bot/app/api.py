@@ -617,25 +617,10 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             final_files = int(m_total.group(2))
 
         # Fall back to best seen if last_line didn't yield good values
-        if final_chunks == 0:
-            final_chunks = cached.get("_best_chunks", 0)
         if final_files == 0:
             final_files = cached.get("_best_files_total", 0)
 
-        # Last resort: if chunks still 0, query Qdrant directly for ground truth.
-        # This handles the case where ingest completes before any Process line
-        # with chunks= was emitted (very fast ingest on tiny corpora).
-        if final_chunks == 0:
-            try:
-                from qdrant_client import QdrantClient as _QC
-
-                _qc = _QC(host="localhost", port=6333)
-                _col = _qc.get_collection(f"aistudio_{corpus_name}")
-                final_chunks = _col.points_count or 0
-            except Exception:
-                pass
-
-        summary = f"{final_files} files · {final_chunks:,} chunks · {elapsed_str}"
+        summary = f"{final_files} files · {elapsed_str}"
         _ingest_status[corpus_name] = {
             "status": "done",
             "chunks_written": final_chunks,
