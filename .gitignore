@@ -30,13 +30,12 @@ scripts/fix_zshrc.py
 scripts/.deploy_map
 
 # AIStudio — corpus data (large files, not in repo)
-# demo and help are SHIPPED corpora — tracked in full.
-# User-created corpora (everything else in data/corpora/) are gitignored.
-# Note: cannot ignore data/corpora/ as a directory and then un-ignore subdirs —
-# git does not descend into ignored directories. Instead, ignore contents selectively.
-data/corpora/*
-!data/corpora/demo
-!data/corpora/help
+data/corpora/
+!data/corpora/demo/
+!data/corpora/demo/uploads/
+!data/corpora/demo/uploads/*
+!data/corpora/demo/index.jsonl
+!data/corpora/demo/manifest.jsonl
 
 # AIStudio — benchmark reports (generated, not in repo)
 benchmarks/reports/
