@@ -48,12 +48,12 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
 
 def _load_corpus_search_guidance(corpus_name: str) -> str:
     """
-    Load search_guidance from corpus_meta.yaml if it exists.
+    Load search_guidance from {corpus_name}_corpus_meta.yaml if it exists.
     Returns empty string silently if file missing or field absent.
     """
     try:
         repo_root = _get_repo_root()
-        meta_path = repo_root / "data" / "corpora" / corpus_name / "corpus_meta.yaml"
+        meta_path = repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
         if meta_path.exists():
             import yaml
 
@@ -133,7 +133,7 @@ def generate_answer_with_citations(
         "- Never apologize for gaps in the sources."
     )
 
-    # Inject corpus search guidance if available (corpus_meta.yaml → search_guidance field)
+    # Inject corpus search guidance if available ({corpus}_corpus_meta.yaml → search_guidance field)
     if corpus:
         guidance = _load_corpus_search_guidance(corpus)
         if guidance:
