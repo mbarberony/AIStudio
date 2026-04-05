@@ -325,6 +325,20 @@ Qdrant is running correctly. Ignore these messages.
 
 **`python3.13` not found** — run `brew install python@3.13`
 
+**UI shows "Error loading corpora" or "Ollama not running" on startup** — the browser opened before the backend finished starting. Hard-refresh (`Cmd+Shift+R`). If it persists, check for a Qdrant WAL error in the terminal (see below).
+
+**Qdrant WAL lock — `Can't init WAL: Resource temporarily unavailable`** — a collection's write-ahead log was left locked from an unclean shutdown (force-quit, power loss, or crash). The collection name is in the panic message.
+
+Fix:
+```bash
+ais_stop
+rm -rf ~/qdrant_storage/collections/aistudio_help   # replace with collection named in error
+ais_start
+```
+Then re-ingest the affected corpus via the UI (Add button). ⚠️ Delete only the collection named in the error — not the entire `qdrant_storage/` folder. See HOWTO.md for full details.
+
+To prevent this: always stop with `ais_stop`, never force-quit the terminal while running.
+
 **`(.venv)` not in prompt** — run `source ~/Developer/AIStudio/.venv/bin/activate`
 
 **`ModuleNotFoundError`** — ensure `PYTHONPATH=src` and `AISTUDIO_VECTORSTORE=qdrant`

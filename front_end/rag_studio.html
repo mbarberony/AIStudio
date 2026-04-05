@@ -805,6 +805,29 @@
     let currentCorpus = null;
     let isLoading = false;
     let conversationHistory = [];
+
+    // ── Conversation persistence across refresh (sessionStorage) ──
+    const HISTORY_KEY = 'aistudio_conv_history';
+    const CORPUS_KEY  = 'aistudio_conv_corpus';
+
+    function _saveHistory() {
+        try {
+            sessionStorage.setItem(HISTORY_KEY, JSON.stringify(conversationHistory));
+            sessionStorage.setItem(CORPUS_KEY, currentCorpus || '');
+        } catch(_) {}
+    }
+
+    function _restoreHistory() {
+        try {
+            const savedCorpus = sessionStorage.getItem(CORPUS_KEY) || '';
+            const savedHistory = sessionStorage.getItem(HISTORY_KEY);
+            if (savedHistory && savedCorpus && savedCorpus === currentCorpus) {
+                conversationHistory = JSON.parse(savedHistory);
+                return conversationHistory;
+            }
+        } catch(_) {}
+        return [];
+    }
     let responseCounter = 0;
     const MAX_TURNS = 10;
     window.window.selectedFile = null; window.selectedFiles = [];
@@ -889,6 +912,20 @@
             chatInput.placeholder = `Ask a question about ${name}…`;
             chatInput.disabled = false;
             sendBtn.disabled = false;
+            // Restore conversation history for this corpus if available
+            const restored = _restoreHistory();
+            if (restored.length > 0) {
+                // Replay messages into the UI
+                hideEmpty();
+                restored.forEach((msg, i) => {
+                    if (i % 2 === 0) {
+                        addMessage('user', msg.content, false);
+                    } else {
+                        addMessage('assistant', msg.content, false);
+                    }
+                });
+                updateConvMeta();
+            }
             // NOTE: prewarm removed here — only fires on model change, not corpus change
         } else {
             topbarTitle.textContent = 'AIStudio — select a corpus';
@@ -923,6 +960,7 @@
 
         addMessage('user', query, false);
         conversationHistory.push({ role: 'user', content: query });
+        _saveHistory();
         trimHistory();
 
         isLoading = true;
@@ -967,6 +1005,7 @@
 
             addMessage('assistant', html, true);
             conversationHistory.push({ role: 'assistant', content: data.answer });
+            _saveHistory();
             trimHistory();
             updateConvMeta();
 
@@ -1066,6 +1105,7 @@
     function trimHistory() {
         if (conversationHistory.length > MAX_TURNS * 2)
             conversationHistory = conversationHistory.slice(-MAX_TURNS * 2);
+        _saveHistory();
     }
 
     function updateConvMeta() {
@@ -1077,6 +1117,7 @@
 
     function clearConversation() {
         conversationHistory = [];
+        try { sessionStorage.removeItem(HISTORY_KEY); sessionStorage.removeItem(CORPUS_KEY); } catch(_) {}
         updateConvMeta();
         // Clear messages and restore empty state
         messagesEl.innerHTML = '';

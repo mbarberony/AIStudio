@@ -276,5 +276,40 @@ For full benchmark documentation see [HARNESS.pdf](docs/HARNESS.pdf).
 
 ---
 
+## Troubleshooting
+
+***UI shows "Error loading corpora" or "Ollama not running" on startup***
+
+The browser opened before the backend finished starting. Hard-refresh (`Cmd+Shift+R`). If that doesn't fix it, check the terminal for a Qdrant WAL error (see below).
+
+---
+
+***Qdrant WAL lock — "Can't init WAL: Resource temporarily unavailable"***
+
+**What it is:** A corpus collection's write-ahead log was left locked from an unclean shutdown — force-quit terminal, power loss, or crash mid-write. Qdrant panics on the affected collection at startup. Other collections are unaffected.
+
+**How you'll know:** Terminal shows the WAL error on `ais_start`, naming the specific collection. UI shows "Error loading corpora." Ingestion immediately fails.
+
+**Fix:**
+```bash
+ais_stop
+# Delete only the collection named in the panic message — e.g. aistudio_help
+rm -rf ~/qdrant_storage/collections/aistudio_help
+ais_start
+```
+Then re-ingest the corpus via the UI (Add button).
+
+⚠️ Delete only the specific collection named in the error — not the entire `~/qdrant_storage/` folder. That would destroy all your corpora.
+
+**Prevention:** Always stop with `ais_stop`. Never force-quit or close the terminal while AIStudio is running.
+
+---
+
+***Ingestion summary shows wrong file or chunk count***
+
+Delete the corpus via the UI and re-ingest. The Qdrant collection may be out of sync with the uploads folder.
+
+---
+
 For architecture context, see [docs/architecture_decisions.pdf](docs/architecture_decisions.pdf).
 For getting started, see [QUICKSTART.md](QUICKSTART.md).

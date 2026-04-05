@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# AIStudio Auto-Launch Script
+# AIStudio Auto-Launch Script v1.1.0
 # Mac/Apple Silicon only (Release 1.x)
+# v1.1.0: poll /health before opening browser — fixes race condition (AIStudio_066)
 
 set -e
 
@@ -41,8 +42,22 @@ cd "$REPO_ROOT"
 source "$VENV/bin/activate"
 OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
     uvicorn local_llm_bot.app.api:app --port 8000 &
-sleep 2
-echo "✓ Backend started on http://localhost:8000"
+
+# Poll /health up to 15s before opening browser — prevents "Error loading corpora"
+# race condition when UI opens before backend is ready
+BACKEND_READY=0
+for i in $(seq 1 15); do
+    sleep 1
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        BACKEND_READY=1
+        break
+    fi
+done
+if [ "$BACKEND_READY" -eq 1 ]; then
+    echo "✓ Backend started on http://localhost:8000"
+else
+    echo "⚠ Backend slow to start — opening UI anyway"
+fi
 
 # 4. Auto-ingest demo corpus if not already in Qdrant
 DEMO_COLLECTION="aistudio_demo"

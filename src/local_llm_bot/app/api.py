@@ -516,6 +516,11 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     # real chunk/file counts, not the Discover line which has no chunks.
     async def _stream_stderr() -> str:
         last_process_line = ""
+        # Cache best seen values — used as fallback if last_line is empty or
+        # a Discover line (no chunks=) when ingest completes faster than poll interval
+        best_chunks = 0
+        best_files_processed = 0
+        best_files_total = 0
         assert proc.stderr is not None
         async for raw in proc.stderr:
             line = raw.decode(errors="replace").strip()
@@ -523,9 +528,12 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 continue
             elapsed = int(time.time() - start_time)
 
-            # Only parse lines from the Process bar (has chunks= or N/N pattern with %)
-            is_process_line = "chunks=" in line or (
-                "%" in line and re.search(r"\|\s*\d+/\d+", line)
+            # Only parse lines from the Process bar — must start with "Process"
+            # The Discover bar uses desc="Discover" and has no chunks= field.
+            # Filtering by prefix is more reliable than pattern-matching on % or N/N,
+            # which can match Discover lines and produce wrong file counts.
+            is_process_line = line.startswith("Process") and (
+                "chunks=" in line or re.search(r"\|\s*\d+/\d+", line)
             )
             if not is_process_line:
                 continue
@@ -551,6 +559,14 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 files_processed = files_processed or int(m_total.group(1))
                 files_total = int(m_total.group(2))
 
+            # Update best seen values — monotonically increasing
+            if chunks > best_chunks:
+                best_chunks = chunks
+            if files_processed > best_files_processed:
+                best_files_processed = files_processed
+            if files_total > best_files_total:
+                best_files_total = files_total
+
             # Build human message
             if chunks > 0 and files_total > 0:
                 msg = f"{files_processed}/{files_total} files · {chunks:,} chunks"
@@ -566,6 +582,9 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 "files_total": files_total,
                 "elapsed_sec": elapsed,
                 "message": msg,
+                "_best_chunks": best_chunks,
+                "_best_files_processed": best_files_processed,
+                "_best_files_total": best_files_total,
             }
         return last_process_line
 
@@ -583,7 +602,11 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     elapsed_str = f"{mins}m {secs}s" if mins else f"{secs}s"
 
     if proc.returncode == 0:
-        # Extract final counts from last tqdm line
+        # Extract final counts from last tqdm line.
+        # Fallback: if last_line is empty or a Discover line (no chunks=),
+        # use best seen values cached during streaming — handles the case where
+        # ingest completes faster than the first 2s poll interval on small corpora.
+        cached = _ingest_status.get(corpus_name, {})
         final_chunks = 0
         final_files = 0
         m_chunks = re.search(r"chunks=(\d+)", last_line)
@@ -592,6 +615,25 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         m_total = re.search(r"\|\s*(\d+)/(\d+)", last_line)
         if m_total:
             final_files = int(m_total.group(2))
+
+        # Fall back to best seen if last_line didn't yield good values
+        if final_chunks == 0:
+            final_chunks = cached.get("_best_chunks", 0)
+        if final_files == 0:
+            final_files = cached.get("_best_files_total", 0)
+
+        # Last resort: if chunks still 0, query Qdrant directly for ground truth.
+        # This handles the case where ingest completes before any Process line
+        # with chunks= was emitted (very fast ingest on tiny corpora).
+        if final_chunks == 0:
+            try:
+                from qdrant_client import QdrantClient as _QC
+
+                _qc = _QC(host="localhost", port=6333)
+                _col = _qc.get_collection(f"aistudio_{corpus_name}")
+                final_chunks = _col.points_count or 0
+            except Exception:
+                pass
 
         summary = f"{final_files} files · {final_chunks:,} chunks · {elapsed_str}"
         _ingest_status[corpus_name] = {
