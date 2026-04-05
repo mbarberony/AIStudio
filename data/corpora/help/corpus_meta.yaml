@@ -1,0 +1,17 @@
+short_description: "AIStudio documentation — architecture, setup, operations, and benchmarks"
+content_summary: "AIStudio's full documentation set: README (what AIStudio is and its architecture), QUICKSTART (installation guide), HOWTO (day-to-day user operations), architecture_decisions (why key choices were made), HARNESS (benchmark methodology), DEMO_CORPUS (demo corpus description), dependencies (package reference), QA_TESTING_LESSONS_LEARNED (QA findings), RAG Performance Findings (benchmark results), and roadmap (release plan)."
+search_guidance: |
+  This corpus contains AIStudio's own documentation. Route questions as follows:
+  - "What is AIStudio?" or general overview questions → README is the primary source.
+  - Installation, setup, prerequisites, first run → QUICKSTART.
+  - Day-to-day usage, corpus management, model management, troubleshooting → HOWTO.
+  - Why a technology was chosen (Qdrant vs ChromaDB, embedding model, etc.) → architecture_decisions.
+  - Benchmark methodology, how to run benchmarks, question files → HARNESS.
+  - Performance results, latency findings, model comparison → RAG Performance Findings.
+  - What documents are in the demo corpus → DEMO_CORPUS.
+  - Package versions and dependencies → dependencies.
+  - Known issues, QA findings, lessons from testing → QA_TESTING_LESSONS_LEARNED.
+  - What is planned, release roadmap → roadmap.
+  - This is not a corpus about Manuel Barbero's professional work — do not use it for questions about enterprise architecture or financial services strategy.
+notes: "Help corpus — AIStudio's self-documentation. Regenerated via ais_update_help_ops."
+generated: "2026-04-05"
