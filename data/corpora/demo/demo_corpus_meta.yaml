@@ -1,0 +1,43 @@
+short_description: "Manuel Barbero's professional thought leadership — 20 years of original work in financial services technology architecture"
+content_summary: "Nine documents spanning 2003–2021: IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, AI reference architecture, and data strategy. Original works produced across senior technology roles at Bridgewater, Northwestern Mutual, UBS, and Jefferies."
+search_guidance: |
+  This corpus contains original professional work by Manuel Barbero spanning 2003–2021.
+  Always prefer spelling out full terms — abbreviations like QFD, AI, DevOps retrieve better when expanded.
+
+  DOCUMENT ROUTING — match question topic to document:
+
+  Quality Function Deployment (QFD), architecture methodology, design techniques:
+  → "Architecture and QFD.pdf" (9pp) — primary QFD source
+  → "Architecture Concepts and How To Use Them To Design an Organizations.pdf" (48pp) — broader architecture methodology including QFD
+
+  Architecting an IT organization, organizational design around architecture principles:
+  → "Architecting the IT Organization.pdf" (32pp)
+  → "Architecture Concepts and How To Use Them To Design an Organizations.pdf" (48pp)
+
+  IT strategy, CTO planning, three-year technology strategy, Air Traffic Controller model, plateau planning:
+  → "FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf" (61pp) — covers plateaus, strategy frameworks, architecture concepts and techniques
+  → "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf" — modernization strategy
+
+  Digitization, digital transformation in financial services:
+  → "FS Journal, Edited by M. Barbero - Digitization.pdf" (36pp)
+
+  IT infrastructure, pandemic response, business continuity, infrastructure considerations for financial services:
+  → "FS Journal, Edited by M. Barbero - IT Infrastructure.pdf" (52pp)
+
+  Risk, compliance, security, regulatory considerations in financial services IT:
+  → "FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf" (60pp)
+
+  Cloud migration, technology modernization, legacy application modernization:
+  → "Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf" (17pp)
+
+  Data strategy, data governance, digital transformation through data:
+  → "Data Strategy - 2021-01-08a.pdf" (15pp)
+
+  AI reference architecture, enterprise AI systems:
+  → Documents from 2018–2021 are most relevant for AI topics.
+
+  This is not a corpus about AIStudio — it is a corpus of original intellectual work.
+  Do not cite it for questions about how AIStudio works.
+
+notes: "Demo corpus shipped with AIStudio. Documents are original works by the author."
+generated: "2026-04-05"
