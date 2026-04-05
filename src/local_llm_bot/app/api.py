@@ -125,7 +125,12 @@ def generate_answer_with_citations(
         "- Never write [Source N] — only [N].\n"
         "- Do NOT append a References or Sources section — citations are rendered separately.\n"
         "- If the sources lack sufficient information, say so explicitly.\n"
-        "- NEVER mention file paths, directory names, or system paths in your answer. Refer to sources by citation number [N] only."
+        "- NEVER mention file paths, directory names, or system paths in your answer. Refer to sources by citation number [N] only.\n"
+        "LANGUAGE RULES — follow exactly:\n"
+        "- Be direct. State what the sources say, not what they 'appear to say' or 'seem to suggest'.\n"
+        "- Never use hedging phrases: 'appears to be', 'can be inferred', 'it seems', 'it would appear', 'unfortunately there is no explicit'.\n"
+        "- If information is missing, say: 'The sources do not address this.' — nothing more.\n"
+        "- Never apologize for gaps in the sources."
     )
 
     # Inject corpus search guidance if available (corpus_meta.yaml → search_guidance field)
