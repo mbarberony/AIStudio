@@ -1467,12 +1467,24 @@
             `✓ ${label} saved — being ingested into corpus <em>'${currentCorpus}'</em>.<br><small class='ingest-status' style='color:var(--text-dim);display:block'></small>`,
             true);
         const statusEl = msgDiv ? msgDiv.querySelector('.ingest-status') : null;
+        // Reference to the full message text node so we can update it on completion
+        const msgText = msgDiv ? msgDiv.querySelector('.text') : null;
 
         // Phase 2: Trigger ONE ingest pass for the whole corpus
         try {
             const estimated = Math.round(totalBytes / 350);
             await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
-            if (statusEl) pollIngestStatus(currentCorpus, statusEl, estimated);
+            if (statusEl) {
+                const result = await pollIngestStatus(currentCorpus, statusEl, estimated);
+                // Update header to reflect final state
+                if (msgText) {
+                    if (result === 'done') {
+                        msgText.innerHTML = `✓ ${label} ingested into corpus <em>'${currentCorpus}'</em>.<br><small class='ingest-status' style='color:var(--text-dim);display:block'>${statusEl.textContent}</small>`;
+                    } else if (result === 'error') {
+                        msgText.innerHTML = `✗ Ingestion failed for corpus <em>'${currentCorpus}'</em>. Check server logs.<br><small class='ingest-status' style='color:var(--danger);display:block'></small>`;
+                    }
+                }
+            }
         } catch (err) {
             if (statusEl) statusEl.textContent = `Ingest trigger failed: ${err.message}`;
         }
