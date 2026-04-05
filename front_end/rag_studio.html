@@ -922,6 +922,9 @@
                         addMessage('user', msg.content, false);
                     } else {
                         addMessage('assistant', msg.content, msg.isHtml || false);
+                        // Advance responseCounter to avoid footnote ID collisions
+                        // with restored messages that already have fn-N-* anchors
+                        responseCounter++;
                     }
                 });
                 updateConvMeta();
