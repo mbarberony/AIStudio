@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 # ais_commit — Stage all changes, commit with message, and push
 # Usage: ais_commit "your commit message"
-# Version: 1.1.0
+# Version: 1.2.0
 
 if [[ -z "$1" ]]; then
     echo "Usage: ais_commit \"commit message\""
@@ -40,6 +40,6 @@ done
 
 git add -A
 git commit -m "$1"
-git push
+git push --set-upstream origin main
 
 echo "✅ Committed and pushed: $1"
