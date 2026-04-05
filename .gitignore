@@ -30,12 +30,12 @@ scripts/fix_zshrc.py
 scripts/.deploy_map
 
 # AIStudio — corpus data (large files, not in repo)
+# Exception: demo and help are SHIPPED corpora — never user-generated, always tracked in full.
 data/corpora/
 !data/corpora/demo/
-!data/corpora/demo/uploads/
-!data/corpora/demo/uploads/*
-!data/corpora/demo/index.jsonl
-!data/corpora/demo/manifest.jsonl
+!data/corpora/demo/**
+!data/corpora/help/
+!data/corpora/help/**
 
 # AIStudio — benchmark reports (generated, not in repo)
 benchmarks/reports/
