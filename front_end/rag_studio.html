@@ -918,10 +918,10 @@
                 // Replay messages into the UI
                 hideEmpty();
                 restored.forEach((msg, i) => {
-                    if (i % 2 === 0) {
+                    if (msg.role === 'user') {
                         addMessage('user', msg.content, false);
                     } else {
-                        addMessage('assistant', msg.content, false);
+                        addMessage('assistant', msg.content, msg.isHtml || false);
                     }
                 });
                 updateConvMeta();
@@ -974,7 +974,14 @@
                 top_k: parseInt(topKInput.value) || 5,
                 temperature: parseFloat(tempInput.value) || 0.3,
                 // Keywords filter — firm/year wiring TODO (PIPELINE Wave 1)
-                conversation_history: conversationHistory.length > 1 ? conversationHistory.slice(0, -1) : null
+                conversation_history: conversationHistory.length > 1
+                    ? conversationHistory.slice(0, -1).map(msg => ({
+                        role: msg.role,
+                        content: msg.isHtml
+                            ? msg.content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+                            : msg.content
+                      }))
+                    : null
             };
 
             const res = await fetch(`${API}/ask`, {
@@ -1004,7 +1011,7 @@
             }
 
             addMessage('assistant', html, true);
-            conversationHistory.push({ role: 'assistant', content: data.answer });
+            conversationHistory.push({ role: 'assistant', content: html, isHtml: true });
             _saveHistory();
             trimHistory();
             updateConvMeta();
