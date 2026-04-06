@@ -156,7 +156,7 @@ def delete_chunks(
 
 def query(
     *,
-    persist_dir: Path,  # API compatibility — not used
+    persist_dir: Path | None = None,  # API compatibility — not used by Qdrant
     collection_name: str,
     query_text: str,
     top_k: int,

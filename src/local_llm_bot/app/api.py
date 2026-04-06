@@ -434,10 +434,18 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
 
     # Get basic stats
     stats = compute_jsonl_stats(corpus=corpus_name)
-    doc_count = _get_corpus_document_count(corpus_name)
     size_bytes = _get_corpus_size(corpus_name)
 
-    # Get real chunk count from Qdrant
+    # List files in corpus — source of truth for doc count (live filesystem, not stale index)
+    uploads_dir = paths["base"] / "uploads"
+    files: list[str] = []
+    if uploads_dir.exists():
+        files = sorted(
+            f.name for f in uploads_dir.iterdir() if f.is_file() and not f.name.startswith(".")
+        )
+    doc_count = len(files)
+
+    # Get real chunk count from Qdrant (live — not from stale manifest)
     qdrant_chunk_count = 0
     try:
         from qdrant_client import QdrantClient
@@ -446,16 +454,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         col_info = qc.get_collection(f"aistudio_{corpus_name}")
         qdrant_chunk_count = col_info.points_count or 0
     except Exception:
-        qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count
-
-    # List files in corpus
-    # Return plain filenames from uploads/ only
-    uploads_dir = paths["base"] / "uploads"
-    files: list[str] = []
-    if uploads_dir.exists():
-        files = sorted(
-            f.name for f in uploads_dir.iterdir() if f.is_file() and not f.name.startswith(".")
-        )
+        qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count if Qdrant unavailable
 
     return {
         "name": corpus_name,
@@ -761,9 +760,18 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         index_file.parent.mkdir(parents=True, exist_ok=True)
         index_file.touch()
 
-        # Create chroma directory
-        chroma_dir = paths["chroma"]
-        chroma_dir.mkdir(parents=True, exist_ok=True)
+        # Create empty corpus_meta.yaml scaffold
+        corpus_meta_path = corpus_dir / f"{name}_corpus_meta.yaml"
+        corpus_meta_path.write_text(
+            f"# {name}_corpus_meta.yaml\n"
+            f"# Corpus search guidance — loaded by api.py at query time\n"
+            f"# Fill in fields to improve retrieval quality for this corpus\n"
+            f"\n"
+            f"corpus_name: {name}\n"
+            f'description: ""\n'
+            f'content_summary: ""\n'
+            f'search_guidance: ""\n'
+        )
 
         return {
             "status": "success",
@@ -773,7 +781,6 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
                 "base": str(corpus_dir),
                 "uploads": str(corpus_dir / "uploads"),
                 "index": str(index_file),
-                "chroma": str(chroma_dir),
             },
             "next_steps": f"Upload files to corpus or add documents to {corpus_dir / 'uploads'}",
         }
@@ -883,14 +890,12 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         kept = [ln for ln in Path(index_path).read_text().splitlines() if str(file_path) not in ln]
         Path(index_path).write_text("\n".join(kept) + ("\n" if kept else ""))
 
-    import time as _time
-
     trash_dir = uploads_dir / "trash"
     trash_dir.mkdir(parents=True, exist_ok=True)
     trash_path = trash_dir / filename
+    # Overwrite any existing file with the same name — it is a prior version of the same file
     if trash_path.exists():
-        stem, suffix = Path(filename).stem, Path(filename).suffix
-        trash_path = trash_dir / f"{stem}_{int(_time.time())}{suffix}"
+        trash_path.unlink()
     shutil.move(str(file_path), str(trash_path))
 
     return {

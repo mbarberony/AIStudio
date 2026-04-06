@@ -140,13 +140,10 @@ def retrieve(
     k = int(top_k) if top_k is not None else int(CONFIG.rag.top_k)
 
     if True:  # Always query — works for both Qdrant and Chroma via _store
-        paths = corpus_paths(_repo_root(), corpus)
-
         hits = _store.query(
             query_text=query,
             top_k=k,
             embed_model=CONFIG.rag.default_embed_model,
-            persist_dir=paths["chroma"],
             collection_name=f"aistudio_{corpus}",
             firm=firm,
             year=year,

@@ -10,7 +10,7 @@ AIStudio is what you use when you want to query your own documents with AI. It i
 >
 > **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (v3.0) · AWS ECS (v3.0)
 >
-> The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md).
+> The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md). For a guide to how the codebase is organized, see [docs/CODEBASE_GUIDE.md](docs/CODEBASE_GUIDE.md).
 
 ---
 
@@ -118,7 +118,7 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 | ✅ `--force` atomic ingest | MacBook Air validation | Compiled installer (.dmg) |
 | Relevance threshold | Benchmark comparison tooling | urCrew integration |
 
-See [docs/roadmap.md](docs/roadmap.md) for the full phased plan. Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
+See [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) for the full phased plan. Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
 
 ---
 

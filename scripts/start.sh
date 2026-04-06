@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# AIStudio Auto-Launch Script v1.1.0
+# AIStudio Auto-Launch Script v1.2.1
 # Mac/Apple Silicon only (Release 1.x)
 # v1.1.0: poll /health before opening browser — fixes race condition (AIStudio_066)
+# v1.2.0: kill stale process on port 8000 before launch — fixes port conflict (AIStudio_103)
+# v1.2.1: fix set -e interaction with lsof — lsof returns exit 1 when port is free
 
 set -e
 
@@ -38,6 +40,13 @@ fi
 
 # 3. Uvicorn
 echo "▶ Starting AIStudio backend..."
+# Kill any stale process on port 8000 before binding
+STALE_PID=$(lsof -ti:8000 2>/dev/null || true)
+if [ -n "$STALE_PID" ]; then
+    echo "  ⚠ Port 8000 in use — killed stale backend (pid $STALE_PID)"
+    kill "$STALE_PID" 2>/dev/null
+    sleep 1
+fi
 cd "$REPO_ROOT"
 source "$VENV/bin/activate"
 OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \

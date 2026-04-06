@@ -238,7 +238,7 @@ AIStudio ships with a curated demo corpus. To ingest it:
 cd ~/Developer/AIStudio && source .venv/bin/activate
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus demo \
-  --root data/demo/demo_data
+  --root data/corpora/demo/uploads
 ```
 
 Try these questions to start:
@@ -366,7 +366,7 @@ add `export PATH="$HOME/bin:$PATH"` to `~/.zshrc`.
 old/new chunk formats. Re-ingest with `--force` to wipe and rebuild cleanly:
 ```bash
 AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus demo --root data/demo/demo_data --force
+  --corpus demo --root data/corpora/demo/uploads --force
 ```
 
 ---

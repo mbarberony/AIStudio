@@ -12,5 +12,6 @@ def test_corpus_paths_creates_structure(tmp_path: Path) -> None:
 
     paths = corpus_paths(repo_root, "unit-test")
     assert paths["base"].exists()
-    assert paths["chroma"].exists()
+    assert "chroma" not in paths  # chroma folder removed — AIStudio uses Qdrant only
+    assert not (paths["base"] / "chroma").exists()  # chroma dir must not be created
     assert str(paths["index"]).endswith("data/corpora/unit-test/index.jsonl")

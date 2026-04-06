@@ -1,5 +1,5 @@
 short_description: "AIStudio documentation — architecture, setup, operations, and benchmarks"
-content_summary: "AIStudio's full documentation set: README (what AIStudio is and its architecture), QUICKSTART (installation guide), HOWTO (day-to-day user operations), architecture_decisions (why key choices were made), HARNESS (benchmark methodology), DEMO_CORPUS (demo corpus description), dependencies (package reference), QA_TESTING_LESSONS_LEARNED (QA findings), RAG Performance Findings (benchmark results), and roadmap (release plan)."
+content_summary: "AIStudio's full documentation set: README (what AIStudio is and its architecture), QUICKSTART (installation guide), HOWTO (day-to-day user operations), architecture_decisions (why key choices were made), HARNESS (benchmark methodology), DEMO_CORPUS (demo corpus description), dependencies (package reference), QA_TESTING_LESSONS_LEARNED (QA findings), RAG Performance Findings (benchmark results), PRODUCT_ROADMAP (release plan), and CODEBASE_GUIDE (code organization and architecture)."
 search_guidance: |
   This corpus contains AIStudio's own documentation. Route questions as follows:
   - "What is AIStudio?" or general overview questions → README is the primary source.
@@ -11,7 +11,10 @@ search_guidance: |
   - What documents are in the demo corpus → DEMO_CORPUS.
   - Package versions and dependencies → dependencies.
   - Known issues, QA findings, lessons from testing → QA_TESTING_LESSONS_LEARNED.
-  - What is planned, release roadmap → roadmap.
+  - What is planned, release roadmap → PRODUCT_ROADMAP.
+  - "How is the code organized?", "how is the codebase structured?", "what is in src/", "directory structure", "folder structure", "how is the repo organized", "what does each folder contain", "code layout" → CODEBASE_GUIDE is the primary source.
+  - Why Qdrant was chosen, why a single HTML file, key design decisions → CODEBASE_GUIDE or architecture_decisions.
+  - "What is local_llm_bot?", "what is in scripts/", "what is in data/corpora/", "what does ingest/ do", "what does rag_core.py do" → CODEBASE_GUIDE.
   - This is not a corpus about Manuel Barbero's professional work — do not use it for questions about enterprise architecture or financial services strategy.
 notes: "Help corpus — AIStudio's self-documentation. Regenerated via ais_update_help_ops."
-generated: "2026-04-05"
+generated: "2026-04-06"

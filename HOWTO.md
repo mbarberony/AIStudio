@@ -311,5 +311,13 @@ Delete the corpus via the UI and re-ingest. The Qdrant collection may be out of 
 
 ---
 
+***Do not rename corpus files or folders after ingestion***
+
+AIStudio records file and folder names at ingest time. Renaming a file or folder after ingestion breaks citation lookup — queries will still return results but the "Open ↗" link will fail to resolve.
+
+**Safe approach:** delete the corpus via the UI, recreate it, and re-ingest with the correct name.
+
+---
+
 For architecture context, see [docs/architecture_decisions.pdf](docs/architecture_decisions.pdf).
 For getting started, see [QUICKSTART.md](QUICKSTART.md).
