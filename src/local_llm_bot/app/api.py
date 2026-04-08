@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 import shutil
@@ -437,7 +438,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     size_bytes = _get_corpus_size(corpus_name)
 
     # List files in corpus — source of truth for doc count (live filesystem, not stale index)
-    uploads_dir = paths["base"] / "uploads"
+    uploads_dir = paths["uploads"]
     files: list[str] = []
     if uploads_dir.exists():
         files = sorted(
@@ -571,9 +572,18 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             if files_total > best_files_total:
                 best_files_total = files_total
 
+            # Parse skipped count for live display
+            files_skipped = 0
+            m_skipped = re.search(r"skipped=(\d+)", line)
+            if m_skipped:
+                files_skipped = int(m_skipped.group(1))
+
             # Build human message
             if chunks > 0 and files_total > 0:
-                msg = f"{files_processed}/{files_total} files · {chunks:,} chunks"
+                if files_skipped > 0:
+                    msg = f"{files_processed}/{files_total} files · {files_skipped} skipped · {chunks:,} chunks"
+                else:
+                    msg = f"{files_processed}/{files_total} files · {chunks:,} chunks"
             elif files_total > 0:
                 msg = f"{files_processed}/{files_total} files"
             else:
@@ -592,13 +602,15 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             }
         return last_process_line
 
-    # Drain stdout silently (keep pipe from blocking)
-    async def _drain_stdout() -> None:
+    # Capture stdout — __main__.py writes a JSON result object with full ingest stats
+    async def _capture_stdout() -> str:
         assert proc.stdout is not None
-        async for _ in proc.stdout:
-            pass
+        lines = []
+        async for raw in proc.stdout:
+            lines.append(raw.decode(errors="replace"))
+        return "".join(lines)
 
-    last_line, _ = await asyncio.gather(_stream_stderr(), _drain_stdout())
+    last_line, stdout_text = await asyncio.gather(_stream_stderr(), _capture_stdout())
     await proc.wait()
 
     elapsed = int(time.time() - start_time)
@@ -606,30 +618,49 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     elapsed_str = f"{mins}m {secs}s" if mins else f"{secs}s"
 
     if proc.returncode == 0:
-        # Extract final counts from last tqdm line.
-        # Fallback: if last_line is empty or a Discover line (no chunks=),
-        # use best seen values cached during streaming — handles the case where
-        # ingest completes faster than the first 2s poll interval on small corpora.
+        # Parse the JSON result from stdout — __main__.py always writes full stats there.
+        # Fall back to tqdm-derived values if JSON parse fails (e.g. subprocess printed
+        # unexpected output before the JSON).
         cached = _ingest_status.get(corpus_name, {})
         final_chunks = 0
-        final_files = 0
-        m_chunks = re.search(r"chunks=(\d+)", last_line)
-        if m_chunks:
-            final_chunks = int(m_chunks.group(1))
-        m_total = re.search(r"\|\s*(\d+)/(\d+)", last_line)
-        if m_total:
-            final_files = int(m_total.group(2))
+        final_new = 0
+        final_skipped = 0
+        final_total = 0
 
-        # Fall back to best seen if last_line didn't yield good values
-        if final_files == 0:
-            final_files = cached.get("_best_files_total", 0)
+        try:
+            result_json = json.loads(stdout_text.strip()) if stdout_text.strip() else {}
+            result = result_json.get("result", {})
+            final_new = int(result.get("files_processed", 0))
+            final_skipped = int(result.get("files_skipped_unchanged", 0))
+            final_chunks = int(result.get("chunks_written", 0))
+            final_total = final_new + final_skipped
+        except Exception:
+            # Fallback: use tqdm-parsed values from streaming
+            m_chunks = re.search(r"chunks=(\d+)", last_line)
+            if m_chunks:
+                final_chunks = int(m_chunks.group(1))
+            m_total = re.search(r"\|\s*(\d+)/(\d+)", last_line)
+            if m_total:
+                final_total = int(m_total.group(2))
+            if final_total == 0:
+                final_total = cached.get("_best_files_total", 0)
+            final_new = final_total  # unknown split — show as all new
 
-        summary = f"{final_files} files · {elapsed_str}"
+        # Build completion summary
+        if final_skipped > 0 and final_new == 0:
+            summary = f"{final_skipped} already indexed · {elapsed_str}"
+        elif final_skipped > 0:
+            summary = (
+                f"{final_new} new · {final_skipped} skipped · {final_total} total · {elapsed_str}"
+            )
+        else:
+            summary = f"{final_new} files · {elapsed_str}"
+
         _ingest_status[corpus_name] = {
             "status": "done",
             "chunks_written": final_chunks,
-            "files_processed": final_files,
-            "files_total": final_files,
+            "files_processed": final_total,
+            "files_total": final_total,
             "elapsed_sec": elapsed,
             "elapsed_str": elapsed_str,
             "summary": summary,
@@ -664,7 +695,7 @@ async def upload_to_corpus(
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
 
     # Create uploads directory in corpus
-    uploads_dir = paths["base"] / "uploads"
+    uploads_dir = paths["uploads"]
     uploads_dir.mkdir(parents=True, exist_ok=True)
 
     # Save uploaded file
@@ -705,7 +736,7 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
     _require_corpus(corpus_name)
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    uploads_dir = paths["base"] / "uploads"
+    uploads_dir = paths["uploads"]
 
     if _ingest_status.get(corpus_name, {}).get("status") == "running":
         return {"status": "already_running", "message": "Ingestion already in progress."}
@@ -752,8 +783,9 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         corpus_dir = paths["base"]
         corpus_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create subdirectories
-        (corpus_dir / "uploads").mkdir(exist_ok=True)
+        # Create uploads/ and trash/ as siblings (trash is never inside uploads/)
+        paths["uploads"].mkdir(exist_ok=True)
+        paths["trash"].mkdir(exist_ok=True)
 
         # Create empty index file
         index_file = paths["index"]
@@ -847,7 +879,7 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
     _require_corpus(corpus_name)
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
-    uploads_dir = paths["base"] / "uploads"
+    uploads_dir = paths["uploads"]
     file_path = uploads_dir / filename
 
     if not file_path.exists():
@@ -857,6 +889,10 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         file_path.resolve().relative_to(uploads_dir.resolve())
     except ValueError as e:
         raise HTTPException(status_code=403, detail="Access denied") from e
+
+    # Use resolved absolute path — must match how pipeline.py stores source_path in Qdrant.
+    # pipeline.py uses str(file_path.resolve()) as the chunk source_path key.
+    abs_file_path = str(file_path.resolve())
 
     deleted_chunks = 0
     try:
@@ -868,7 +904,7 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         scroll_result = qc.scroll(
             collection_name=collection,
             scroll_filter=Filter(
-                must=[FieldCondition(key="source_path", match=MatchValue(value=str(file_path)))]
+                must=[FieldCondition(key="source_path", match=MatchValue(value=abs_file_path))]
             ),
             limit=10000,
             with_payload=False,
@@ -880,17 +916,21 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
     except Exception as e:
         print(f"[delete_file] Qdrant warning: {e}")
 
-    manifest_path = paths["base"] / "manifest.jsonl"
+    # Housekeeping: remove from JSONL audit logs using resolved path.
+    # These are legacy artifacts — not used for skip decisions (Qdrant is the authority).
+    manifest_path = paths["manifest"]
     if manifest_path.exists():
-        kept = [ln for ln in manifest_path.read_text().splitlines() if str(file_path) not in ln]
+        kept = [ln for ln in manifest_path.read_text().splitlines() if abs_file_path not in ln]
         manifest_path.write_text("\n".join(kept) + ("\n" if kept else ""))
 
     index_path = paths.get("index")
     if index_path and Path(index_path).exists():
-        kept = [ln for ln in Path(index_path).read_text().splitlines() if str(file_path) not in ln]
+        kept = [ln for ln in Path(index_path).read_text().splitlines() if abs_file_path not in ln]
         Path(index_path).write_text("\n".join(kept) + ("\n" if kept else ""))
 
-    trash_dir = uploads_dir / "trash"
+    # Move file to corpus-level trash/ (sibling of uploads/, never inside it).
+    # This ensures pipeline.py ingest (rooted at uploads/) never sees deleted files.
+    trash_dir = paths["trash"]
     trash_dir.mkdir(parents=True, exist_ok=True)
     trash_path = trash_dir / filename
     # Overwrite any existing file with the same name — it is a prior version of the same file

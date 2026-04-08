@@ -16,15 +16,6 @@ def _repo_root() -> Path:
     return find_repo_root(Path(__file__))
 
 
-def _bool(s: str) -> bool:
-    v = s.strip().lower()
-    if v in {"1", "true", "t", "yes", "y", "on"}:
-        return True
-    if v in {"0", "false", "f", "no", "n", "off"}:
-        return False
-    raise argparse.ArgumentTypeError(f"Invalid boolean: {s!r}")
-
-
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m local_llm_bot.app.ingest")
     p.add_argument("--corpus", default="default", help="Corpus name (under data/corpora/)")
@@ -35,17 +26,13 @@ def main(argv: list[str] | None = None) -> int:
         "--reset-index", action="store_true", help="Reset JSONL artifacts for this corpus"
     )
     p.add_argument(
-        "--reset-chroma", action="store_true", help="Also delete Chroma persist dir for this corpus"
-    )
-    p.add_argument(
         "--force", action="store_true", help="Force reprocessing even if manifest shows unchanged"
     )
 
     # CLI overrides
-    p.add_argument("--use-chroma", type=_bool, default=None, help="Override CONFIG.rag.use_chroma")
     p.add_argument("--chunk-size", type=int, default=None, help="Override chunk size (chars)")
     p.add_argument("--overlap", type=int, default=None, help="Override overlap (chars)")
-    p.add_argument("--embed-model", default=None, help="Override embedding model (Chroma upserts)")
+    p.add_argument("--embed-model", default=None, help="Override embedding model")
     p.add_argument("--max-files", type=int, default=None, help="Safety cap for a run")
 
     args = p.parse_args(argv)
@@ -71,9 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         root=root,
         corpus=corpus,
         reset_index=bool(args.reset_index),
-        reset_chroma=bool(args.reset_chroma),
         force=bool(args.force),
-        use_chroma=args.use_chroma,
         chunk_size=args.chunk_size,
         overlap=args.overlap,
         embed_model=args.embed_model,
@@ -88,7 +73,6 @@ def main(argv: list[str] | None = None) -> int:
         "root": str(root),
         "duration_sec": round(dur, 3),
         "effective_config": {
-            "use_chroma": result.use_chroma,
             "chunk_size": result.chunk_size,
             "overlap": result.overlap,
             "embed_model": result.embed_model,

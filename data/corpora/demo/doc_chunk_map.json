@@ -1281,5 +1281,14 @@
     "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/CODEBASE_GUIDE.pdf::page-4::chunk-4",
     "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/CODEBASE_GUIDE.pdf::page-5::chunk-5",
     "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/CODEBASE_GUIDE.pdf::page-5::chunk-6"
+  ],
+  "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf": [
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-1::chunk-0",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-2::chunk-1",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-2::chunk-2",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-3::chunk-3",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-4::chunk-4",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-5::chunk-5",
+    "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/trash/CODEBASE_GUIDE.pdf::page-5::chunk-6"
   ]
 }

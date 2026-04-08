@@ -1150,7 +1150,7 @@
     async function deleteFileFromCorpus(filename) {
         const confirmed = await showModal({
             title: "Remove File from Corpus \'" + currentCorpus + "\'",
-            body: '<strong>' + filename + '</strong> will be moved to trash and removed from the search index. Recoverable from <code>uploads/trash/</code>.',
+            body: '<strong>' + filename + '</strong> will be moved to trash and removed from the search index. Recoverable from <code>data/corpora/' + currentCorpus + '/trash/</code>.',
             confirmLabel: 'Type YES to confirm',
             requireYes: true,
         });
@@ -1296,9 +1296,10 @@
 
             let inputHtml = '';
             if (isYes) {
-                inputHtml = `<input id="_modalInput" type="text" placeholder="Type YES to confirm"
-                    style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;
-                    font-size:14px;outline:none;box-sizing:border-box;margin-bottom:4px;letter-spacing:0.05em;">`;
+                inputHtml = `<input id="_modalInput" type="text" placeholder=""
+                    style="width:3.2em;padding:8px 4px;border:2px solid #dc2626;border-radius:6px;
+                    font-size:14px;font-weight:700;color:#dc2626;text-align:center;outline:none;
+                    box-sizing:border-box;margin-bottom:4px;letter-spacing:0.15em;display:block;margin-left:auto;margin-right:auto;">`;
             } else if (isInput) {
                 inputHtml = `<input id="_modalInput" type="text" placeholder="${cfg.inputPlaceholder}"
                     style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;

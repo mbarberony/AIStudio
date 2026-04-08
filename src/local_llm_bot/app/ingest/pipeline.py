@@ -16,24 +16,20 @@ from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS, load_document
 from local_llm_bot.app.ingest.manifest import (
     build_entry,
     load_manifest_map,
-    should_skip,
     write_manifest_entry,
 )
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
-_VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
-if _VECTORSTORE == "chroma":
-    from local_llm_bot.app.vectorstore import chroma_store as _store
-else:
-    from local_llm_bot.app.vectorstore import qdrant_store as _store
+# Qdrant is the only supported vectorstore.
+# Chroma support has been removed — see chroma eradication ticket.
+from local_llm_bot.app.vectorstore import qdrant_store as _store
 
 
 @dataclass(frozen=True)
 class IngestResult:
     corpus: str
     root: str
-    use_chroma: bool
     chunk_size: int
     overlap: int
     embed_model: str
@@ -45,8 +41,6 @@ class IngestResult:
     files_failed: int
 
     chunks_written: int
-    chroma_upserts: int
-    chroma_deletes: int
 
     duration_sec: float
     vectorstore: str = "qdrant"
@@ -57,9 +51,16 @@ def _repo_root() -> Path:
 
 
 def _iter_files(root: Path) -> Iterable[Path]:
-    # Fast recursive iteration
+    """
+    Yield all files under root, excluding the trash/ directory.
+
+    trash/ is now a sibling of uploads/ at the corpus level, so this guard
+    is belt-and-suspenders — uploads/ should never contain a trash/ subdir.
+    Kept explicitly to prevent any legacy or accidental trash/ inside uploads/
+    from being ingested.
+    """
     for p in root.rglob("*"):
-        if p.is_file():
+        if p.is_file() and "trash" not in p.parts:
             yield p
 
 
@@ -90,15 +91,82 @@ def _parse_firm_year(file_path: str) -> dict:
     return {"firm": firm, "year": year}
 
 
+def _load_qdrant_source_paths(collection_name: str) -> set[str]:
+    """
+    Fetch all source_path values currently indexed in Qdrant for a collection.
+    Returns a set of absolute path strings.
+
+    Used at the start of each ingest run to determine which files are already
+    indexed — replacing the manifest-based skip check with Qdrant as the
+    single source of truth.
+
+    Uses scroll pagination to handle large collections (e.g. 105K chunks).
+    Each page fetches up to 1000 points. Payload fetch is limited to
+    source_path only to minimise data transfer.
+    """
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import PayloadSelectorInclude
+
+    source_paths: set[str] = set()
+    try:
+        client = QdrantClient(
+            host=_os.getenv("QDRANT_HOST", "localhost"),
+            port=int(_os.getenv("QDRANT_PORT", "6333")),
+        )
+        existing = [c.name for c in client.get_collections().collections]
+        if collection_name not in existing:
+            return source_paths
+
+        offset = None
+        while True:
+            result, next_offset = client.scroll(
+                collection_name=collection_name,
+                limit=1000,
+                offset=offset,
+                with_payload=PayloadSelectorInclude(include=["source_path"]),
+                with_vectors=False,
+            )
+            for point in result:
+                sp = (point.payload or {}).get("source_path")
+                if sp:
+                    source_paths.add(str(sp))
+            if next_offset is None:
+                break
+            offset = next_offset
+    except Exception:
+        # If Qdrant is unreachable, return empty set — all files will be processed.
+        # This is the safe fallback: re-ingest is idempotent via upsert.
+        pass
+    return source_paths
+
+
+def _file_unchanged(source_path: Path, manifest_map: dict) -> bool:
+    """
+    Return True if file mtime+size match the manifest entry.
+    Secondary staleness check — used only when Qdrant confirms the file
+    is already indexed. Qdrant is the primary authority; this prevents
+    redundant re-embedding of unchanged files.
+    """
+    from local_llm_bot.app.ingest.manifest import ManifestEntry
+
+    abs_path = str(source_path.resolve())
+    prev: ManifestEntry | None = manifest_map.get(abs_path)
+    if prev is None:
+        return False
+    try:
+        st = source_path.stat()
+        return (prev.mtime == int(st.st_mtime)) and (prev.size == int(st.st_size))
+    except FileNotFoundError:
+        return False
+
+
 def ingest_corpus(
     *,
     root: Path,
     corpus: str,
     reset_index: bool = False,
-    reset_chroma: bool = False,
     force: bool = False,
     # CLI overrides (None => use CONFIG defaults)
-    use_chroma: bool | None = None,
     vectorstore: str | None = None,
     chunk_size: int | None = None,
     overlap: int | None = None,
@@ -108,12 +176,18 @@ def ingest_corpus(
     tqdm_cls: Any | None = None,
 ) -> IngestResult:
     """
-    Ingest a directory into JSONL artifacts and optionally Chroma.
+    Ingest a directory into Qdrant.
+
+    Skip logic (Qdrant is the single source of truth):
+      - Pre-load all source_path values currently in Qdrant for this corpus.
+      - Skip a file if: (a) its abs_path is in the Qdrant source set AND
+        (b) its mtime+size match the manifest (i.e. file is unchanged on disk).
+      - force=True bypasses both checks.
 
     Progress bars (if tqdm_cls is available):
       1) Discover files
       2) Process supported files (parse + chunk + manifest + JSONL rows)
-      3) Embed/upsert chunks (Chroma) in batches
+      3) Embed/upsert chunks into Qdrant in batches
     """
     t0 = time.time()
 
@@ -123,10 +197,11 @@ def ingest_corpus(
 
     # Resolve effective settings
     _vs = (vectorstore or CONFIG.rag.vectorstore or "qdrant").lower()
-    use_chroma_eff = (_vs == "chroma") if use_chroma is None else bool(use_chroma)
     chunk_size_eff = CONFIG.ingest.chunk_size if chunk_size is None else int(chunk_size)
     overlap_eff = CONFIG.ingest.overlap if overlap is None else int(overlap)
     embed_model_eff = CONFIG.rag.default_embed_model if embed_model is None else str(embed_model)
+
+    collection_name = f"aistudio_{corpus}"
 
     # Reset handling
     if reset_index:
@@ -134,24 +209,21 @@ def ingest_corpus(
             if paths[k].exists():
                 paths[k].unlink()
 
-    if reset_chroma:
-        chroma_dir = paths["chroma"]
-        if chroma_dir.exists():
-            import shutil
-
-            shutil.rmtree(chroma_dir, ignore_errors=True)
-
     # --force: atomic wipe of Qdrant collection + manifest + index
-    # Ensures no stale chunk IDs survive across format changes or re-ingests
     if force:
         for k in ("index", "manifest", "failures", "docmap"):
             if paths[k].exists():
                 paths[k].write_text("", encoding="utf-8")  # truncate, don't delete
         with contextlib.suppress(Exception):
-            _store.delete_collection(collection_name=f"aistudio_{corpus}")
+            _store.delete_collection(collection_name=collection_name)
 
+    # Pre-load Qdrant source paths — single scroll, O(n chunks), done once per run.
+    # This is the skip-decision source of truth. Empty on first ingest or after --force.
+    qdrant_source_paths = _load_qdrant_source_paths(collection_name) if not force else set()
+
+    # Manifest is kept as a secondary staleness check (mtime/size).
+    # It is NOT the primary skip authority — Qdrant is.
     manifest_map = load_manifest_map(paths["manifest"])
-    prior_docmap = _load_doc_chunk_map(paths["docmap"])
 
     files_discovered = 0
     files_supported = 0
@@ -160,12 +232,9 @@ def ingest_corpus(
     files_failed = 0
 
     chunks_written = 0
-    chroma_upserts = 0
-    chroma_deletes = 0
 
     jsonl_rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
-    new_docmap: dict[str, list[str]] = {}
 
     # -----------------------
     # Phase 1: Discover
@@ -208,7 +277,14 @@ def ingest_corpus(
             files_supported += 1
 
             try:
-                if should_skip(source_path=file_path, manifest_map=manifest_map, force=force):
+                abs_path = str(file_path.resolve())
+
+                # Skip decision: Qdrant has this file AND it's unchanged on disk.
+                if (
+                    not force
+                    and abs_path in qdrant_source_paths
+                    and _file_unchanged(file_path, manifest_map)
+                ):
                     files_skipped_unchanged += 1
                     if p_process is not None:
                         p_process.set_postfix(
@@ -220,23 +296,10 @@ def ingest_corpus(
                         p_process.update(1)
                     continue
 
-                abs_path = str(file_path.resolve())
-
-                # Delete stale chunks in Chroma if file changed
-                old_chunk_ids = prior_docmap.get(abs_path, [])
-                if use_chroma_eff and old_chunk_ids:
-                    _store.delete_chunks(
-                        persist_dir=paths["chroma"],
-                        collection_name=f"aistudio_{corpus}",
-                        ids=old_chunk_ids,
-                    )
-                    chroma_deletes += len(old_chunk_ids)
-
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
                     files_processed += 1
-                    new_docmap[abs_path] = []
                     if p_process is not None:
                         p_process.set_postfix(
                             processed=files_processed,
@@ -248,7 +311,6 @@ def ingest_corpus(
                     continue
 
                 chunks = chunk_text(doc.text, chunk_size=chunk_size_eff, overlap=overlap_eff)
-                chunk_ids: list[str] = []
 
                 import re as _re
 
@@ -259,13 +321,12 @@ def ingest_corpus(
                     page_match = _PAGE_RE.search(c)
                     if page_match:
                         last_page = int(page_match.group(1))
-                    page_num = last_page  # carry forward last seen page
+                    page_num = last_page
                     clean_text = _PAGE_RE.sub("", c).strip()
                     if page_num is not None:
                         chunk_id = f"{abs_path}::page-{page_num}::chunk-{i}"
                     else:
                         chunk_id = f"{abs_path}::chunk-{i}"
-                    chunk_ids.append(chunk_id)
                     jsonl_rows.append(
                         {
                             "chunk_id": chunk_id,
@@ -276,8 +337,7 @@ def ingest_corpus(
                         }
                     )
 
-                new_docmap[abs_path] = chunk_ids
-                chunks_written += len(chunk_ids)
+                chunks_written += len(chunks)
 
                 write_manifest_entry(paths["manifest"], build_entry(file_path))
                 files_processed += 1
@@ -309,7 +369,7 @@ def ingest_corpus(
         if p_process is not None:
             p_process.close()
 
-    # Persist JSONL artifacts
+    # Persist JSONL artifacts (legacy audit log — not used for skip decisions)
     if jsonl_rows:
         append_rows(paths["index"], jsonl_rows)
 
@@ -319,14 +379,10 @@ def ingest_corpus(
             for r in failures:
                 f.write(json.dumps(r) + "\n")
 
-    merged_docmap = dict(prior_docmap)
-    merged_docmap.update(new_docmap)
-    _save_doc_chunk_map(paths["docmap"], merged_docmap)
-
     # -----------------------
-    # Phase 3: Embed / Upsert (Approach B)
+    # Phase 3: Embed / Upsert into Qdrant
     # -----------------------
-    if jsonl_rows:  # Always embed — works for both Qdrant and Chroma
+    if jsonl_rows:
         ids = [str(r.get("chunk_id", "")) for r in jsonl_rows]
         documents = [str(r.get("text", "")) for r in jsonl_rows]
         metadatas = [
@@ -343,7 +399,6 @@ def ingest_corpus(
         if packed:
             ids2, docs2, metas2 = zip(*packed, strict=False)
 
-            # chunk-level embed progress uses batch callbacks
             embed_pbar = None
             if tqdm_cls is not None:
                 embed_pbar = tqdm_cls(total=len(ids2), desc="Embed", unit="chunk")
@@ -354,8 +409,8 @@ def ingest_corpus(
 
             try:
                 _store.upsert_chunks(
-                    persist_dir=paths["chroma"],
-                    collection_name=f"aistudio_{corpus}",
+                    persist_dir=Path("."),  # unused by Qdrant — kept for API compatibility
+                    collection_name=collection_name,
                     embed_model=embed_model_eff,
                     ids=list(ids2),
                     documents=list(docs2),
@@ -366,13 +421,10 @@ def ingest_corpus(
                 if embed_pbar is not None:
                     embed_pbar.close()
 
-            chroma_upserts = len(ids2)
-
     dur = time.time() - t0
     return IngestResult(
         corpus=corpus,
         root=str(root),
-        use_chroma=use_chroma_eff,
         vectorstore=_vs,
         chunk_size=chunk_size_eff,
         overlap=overlap_eff,
@@ -383,7 +435,5 @@ def ingest_corpus(
         files_skipped_unchanged=files_skipped_unchanged,
         files_failed=files_failed,
         chunks_written=chunks_written,
-        chroma_upserts=chroma_upserts,
-        chroma_deletes=chroma_deletes,
         duration_sec=round(dur, 3),
     )
