@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# AIStudio Auto-Launch Script v1.2.1
+# AIStudio Auto-Launch Script v1.4.0
 # Mac/Apple Silicon only (Release 1.x)
 # v1.1.0: poll /health before opening browser — fixes race condition (AIStudio_066)
 # v1.2.0: kill stale process on port 8000 before launch — fixes port conflict (AIStudio_103)
 # v1.2.1: fix set -e interaction with lsof — lsof returns exit 1 when port is free
+# v1.3.0: venv activated internally; Ollama install check; idempotent start (AIStudio_173/174)
+# v1.4.0: call stop.sh first — guarantees clean state, no manual ais_stop needed
 
 set -e
 
@@ -13,6 +15,21 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 FRONTEND="$REPO_ROOT/front_end/rag_studio.html"
 QDRANT_STORAGE="$HOME/qdrant_storage"
 VENV="$REPO_ROOT/.venv"
+
+# Activate venv internally — user does not need to run 'source .venv/bin/activate' first
+if [ -f "$VENV/bin/activate" ]; then
+    source "$VENV/bin/activate"
+else
+    echo "❌ Virtual environment not found at $VENV"
+    echo "   Run ./ais_install from the repo root first."
+    exit 1
+fi
+
+# Stop any running services first — guarantees clean state
+# This makes ais_start idempotent: safe to run even if already running
+echo "🛑 Stopping any running services..."
+"$SCRIPT_DIR/stop.sh" 2>/dev/null || true
+echo ""
 
 echo "🚀 Starting AIStudio..."
 
@@ -28,7 +45,11 @@ else
     echo "✓ Qdrant started"
 fi
 
-# 2. Ollama
+# 2. Ollama — check installed, start if not running
+if ! command -v ollama > /dev/null 2>&1; then
+    echo "❌ Ollama not found. Install from https://ollama.com before running AIStudio."
+    exit 1
+fi
 if curl -s http://localhost:11434 > /dev/null 2>&1; then
     echo "✓ Ollama already running"
 else
@@ -40,15 +61,7 @@ fi
 
 # 3. Uvicorn
 echo "▶ Starting AIStudio backend..."
-# Kill any stale process on port 8000 before binding
-STALE_PID=$(lsof -ti:8000 2>/dev/null || true)
-if [ -n "$STALE_PID" ]; then
-    echo "  ⚠ Port 8000 in use — killed stale backend (pid $STALE_PID)"
-    kill "$STALE_PID" 2>/dev/null
-    sleep 1
-fi
 cd "$REPO_ROOT"
-source "$VENV/bin/activate"
 OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
     uvicorn local_llm_bot.app.api:app --port 8000 &
 
@@ -79,7 +92,6 @@ else
     echo "  This happens once. Subsequent starts are instant."
     echo ""
     cd "$REPO_ROOT"
-    source "$VENV/bin/activate"
     AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
         python3 -m local_llm_bot.app.ingest \
         --corpus demo \

@@ -5,6 +5,8 @@
 #
 # Usage: bash ~/Developer/AIStudio/install.sh
 # After running: source ~/.zshrc
+#
+# Version: 1.1.0
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 ZSHRC="$HOME/.zshrc"
@@ -36,7 +38,7 @@ alias ais_help='$REPO/ais_help.sh'
 BLOCK
 
 # Install 'install_ops' command to /usr/local/bin
-sudo ln -sf "$REPO/install_ops.sh" /usr/local/bin/install_ops
+sudo ln -sf "$REPO/install_ops" /usr/local/bin/install_ops
 sudo chmod +x /usr/local/bin/install_ops
 
 echo ""

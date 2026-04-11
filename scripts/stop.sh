@@ -1,15 +1,18 @@
 #!/bin/bash
-# AIStudio Stop Script v1.1.0
+# AIStudio Stop Script v1.3.0
 # Run from anywhere — stops all AIStudio services
 # Mac/Apple Silicon only (Release 1.x)
 # v1.1.0: graceful Qdrant shutdown (SIGTERM + wait) — prevents WAL corruption (AIStudio_066)
+# v1.2.0: log PID when killing backend — visibility into what was running
+# v1.3.0: kill ALL PIDs on port 8000 — handles multiple backend processes
 
 echo "🛑 Stopping AIStudio..."
 
-# 1. Uvicorn / FastAPI backend
-if lsof -ti:8000 > /dev/null 2>&1; then
-    kill $(lsof -ti:8000) 2>/dev/null
-    echo "✓ Backend stopped (port 8000)"
+# 1. Uvicorn / FastAPI backend — kill all PIDs on port 8000 (may be multiple workers)
+BACKEND_PIDS=$(lsof -ti:8000 2>/dev/null || true)
+if [ -n "$BACKEND_PIDS" ]; then
+    echo "$BACKEND_PIDS" | xargs kill 2>/dev/null || true
+    echo "✓ Backend stopped (pid(s): $(echo $BACKEND_PIDS | tr '\n' ' '), port 8000)"
 else
     echo "  Backend not running"
 fi

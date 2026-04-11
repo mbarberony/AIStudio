@@ -11,6 +11,7 @@ pydantic
 
 # Progress / UX
 tqdm
+psutil  # machine introspection for ingest_test.py reports
 
 # Vector store
 qdrant-client>=1.7.0

@@ -1,3 +1,5 @@
+# Version: 1.2.7
+# Changelog: 1.1.0 — live Qdrant chunk count in ingest-status; MD5 file endpoint; offline-first (no CDN deps)
 from __future__ import annotations
 
 import asyncio
@@ -16,6 +18,7 @@ from pydantic import BaseModel
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.debug_stats import JsonlStats, compute_jsonl_stats
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
+from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS
 from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.rag_core import RetrievedDoc, retrieve
 from local_llm_bot.app.utils.corpus_paths import corpus_exists, corpus_paths, list_corpora
@@ -195,6 +198,9 @@ app = FastAPI(title="AIStudio Local LLM Bot")
 
 # In-memory ingest status keyed by corpus name
 _ingest_status: dict[str, dict] = {}
+
+# In-memory ingest process tracking — used by cancel endpoint
+_ingest_proc: dict[str, Any] = {}  # corpus_name -> asyncio.subprocess.Process
 
 # Add CORS middleware to allow frontend connections
 app.add_middleware(
@@ -497,13 +503,19 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
     ]
     env = {**os.environ, "PYTHONPATH": "src", "PYTHONUNBUFFERED": "1"}
     start_time = time.time()
+    # Preserve pre-scan data (file_sizes, total_bytes, files_total) from trigger_ingest.
+    # Only reset runtime fields — do NOT wipe the pre-scan that was just computed.
+    existing = _ingest_status.get(corpus_name, {})
     _ingest_status[corpus_name] = {
         "status": "running",
         "chunks_written": 0,
         "files_processed": 0,
-        "files_total": 0,
+        "files_total": existing.get("files_total", 0),
+        "bytes_processed": 0,
+        "total_bytes": existing.get("total_bytes", 0),
+        "file_sizes": existing.get("file_sizes", []),
         "elapsed_sec": 0,
-        "message": "Indexing…",
+        "message": existing.get("message", "Indexing…"),
     }
 
     proc = await asyncio.create_subprocess_exec(
@@ -512,6 +524,9 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+
+    # Store process handle for cancel endpoint
+    _ingest_proc[corpus_name] = proc
 
     # Stream stderr lines as they arrive — tqdm writes progress to stderr.
     # tqdm emits two bar types:
@@ -541,6 +556,9 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 "chunks=" in line or re.search(r"\|\s*\d+/\d+", line)
             )
             if not is_process_line:
+                # Print non-tqdm lines (e.g. [ingest] per-file logs) to API stdout
+                if line.startswith("[ingest]"):
+                    print(line, flush=True)
                 continue
 
             last_process_line = line
@@ -572,20 +590,39 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             if files_total > best_files_total:
                 best_files_total = files_total
 
-            # Parse skipped count for live display
-            files_skipped = 0
-            m_skipped = re.search(r"skipped=(\d+)", line)
-            if m_skipped:
-                files_skipped = int(m_skipped.group(1))
+            # Accumulate bytes_processed from pre-scan file sizes (alphabetical order)
+            cached_now = _ingest_status.get(corpus_name, {})
+            file_sizes_list = cached_now.get("file_sizes", [])
+            total_bytes_now = cached_now.get("total_bytes", 0)
+            bytes_completed = sum(file_sizes_list[:files_processed]) if file_sizes_list else 0
 
-            # Build human message
-            if chunks > 0 and files_total > 0:
-                if files_skipped > 0:
-                    msg = f"{files_processed}/{files_total} files · {files_skipped} skipped · {chunks:,} chunks"
-                else:
-                    msg = f"{files_processed}/{files_total} files · {chunks:,} chunks"
+            # D(k): observed chunks-per-byte ratio from completed files.
+            # Seeded from first file after it completes; refined as more files complete.
+            # During file k: p = chunks_written / (D(k) * total_bytes) * 100
+            # D_SEED: 20 chunks per 0.5MB = 3.81e-5 chunks/byte — used before first file completes
+            D_SEED = 20 / (2.0 * 1024 * 1024)
+            d_observed = cached_now.get("d_observed", D_SEED)
+            if files_processed > 0 and bytes_completed > 0 and chunks > 0:
+                d_observed = chunks / bytes_completed  # update with latest observed ratio
+
+            # p% completion: how far through total expected chunks are we?
+            if d_observed > 0 and total_bytes_now > 0:
+                expected_total_chunks = d_observed * total_bytes_now
+                pct = min(99, round(chunks / expected_total_chunks * 100))
+            elif total_bytes_now > 0 and bytes_completed > 0:
+                # Fallback: use byte-based ratio before D(k) is established
+                pct = min(99, round(bytes_completed / total_bytes_now * 100))
+            else:
+                pct = 0
+
+            active_file = files_processed + 1  # currently being processed
+            mb_done = bytes_completed / (1024 * 1024)
+            mb_total = total_bytes_now / (1024 * 1024)
+
+            if total_bytes_now > 0:
+                msg = f"{active_file} of {files_total} file(s) being indexed. {mb_done:.1f} / {mb_total:.1f} MB = {pct}% indexed"
             elif files_total > 0:
-                msg = f"{files_processed}/{files_total} files"
+                msg = f"{active_file} of {files_total} file(s) being indexed"
             else:
                 msg = "Indexing…"
 
@@ -594,6 +631,11 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 "chunks_written": chunks,
                 "files_processed": files_processed,
                 "files_total": files_total,
+                "bytes_processed": bytes_completed,
+                "total_bytes": total_bytes_now,
+                "file_sizes": file_sizes_list,
+                "d_observed": d_observed,
+                "pct_complete": pct,
                 "elapsed_sec": elapsed,
                 "message": msg,
                 "_best_chunks": best_chunks,
@@ -646,15 +688,15 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 final_total = cached.get("_best_files_total", 0)
             final_new = final_total  # unknown split — show as all new
 
-        # Build completion summary
+        # Build completion summary — always include new/skipped/total for machine parseability
         if final_skipped > 0 and final_new == 0:
-            summary = f"{final_skipped} already indexed · {elapsed_str}"
+            summary = f"0 new · {final_skipped} skipped · {final_total} total · {elapsed_str}"
         elif final_skipped > 0:
             summary = (
                 f"{final_new} new · {final_skipped} skipped · {final_total} total · {elapsed_str}"
             )
         else:
-            summary = f"{final_new} files · {elapsed_str}"
+            summary = f"{final_new} new · 0 skipped · {final_total} total · {elapsed_str}"
 
         _ingest_status[corpus_name] = {
             "status": "done",
@@ -667,6 +709,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             "message": summary,
         }
         print(f"[ingest] '{corpus_name}' complete — {summary}")
+        _ingest_proc.pop(corpus_name, None)
     else:
         _ingest_status[corpus_name] = {
             "status": "error",
@@ -676,6 +719,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             "elapsed_sec": elapsed,
             "message": "Ingestion failed — check server logs",
         }
+        _ingest_proc.pop(corpus_name, None)
         print(f"[ingest] '{corpus_name}' failed after {elapsed_str}:\n{last_line}")
 
 
@@ -738,8 +782,66 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
     uploads_dir = paths["uploads"]
 
+    # Clear any stale status from previous run — prevents stale chunk/file counts
+    # from leaking into the new run if pre-scan or tqdm stream hasn't fired yet.
+    # Must happen before the already_running check so we don't clear an active run.
+    if _ingest_status.get(corpus_name, {}).get("status") != "running":
+        _ingest_status.pop(corpus_name, None)
+
     if _ingest_status.get(corpus_name, {}).get("status") == "running":
         return {"status": "already_running", "message": "Ingestion already in progress."}
+
+    # Pre-scan uploads dir — collect file sizes in alphabetical order.
+    # Gives us files_total and total_bytes before subprocess starts,
+    # so the status endpoint can show meaningful ratios from second 0.
+    print(f"[ingest] pre-scan path: {uploads_dir} exists={uploads_dir.exists()}", flush=True)
+    if uploads_dir.exists():
+        files_found = list(uploads_dir.iterdir())
+        print(
+            f"[ingest] pre-scan found {len(files_found)} total files, extensions: {set(p.suffix.lower() for p in files_found if p.is_file())}",
+            flush=True,
+        )
+    pre_scan: list[tuple[str, int]] = []
+    print(f"[ingest] pre-scan: uploads_dir={uploads_dir} exists={uploads_dir.exists()}", flush=True)
+    if uploads_dir.exists() and uploads_dir.is_dir():
+        try:
+            all_files = [
+                (p.name, p.suffix.lower(), p.stat().st_size)
+                for p in uploads_dir.iterdir()
+                if p.is_file()
+            ]
+            print(
+                f"[ingest] pre-scan: found {len(all_files)} files: {[(n, e) for n, e, _ in all_files[:3]]}",
+                flush=True,
+            )
+            print(f"[ingest] pre-scan: SUPPORTED_EXTS={SUPPORTED_EXTS}", flush=True)
+            pre_scan = sorted(
+                [(name, sz) for name, ext, sz in all_files if ext in SUPPORTED_EXTS],
+                key=lambda x: x[0],
+            )
+            print(
+                f"[ingest] pre-scan: {len(pre_scan)} supported files, total_bytes={sum(sz for _, sz in pre_scan)}",
+                flush=True,
+            )
+        except Exception as _pre_err:
+            print(f"[ingest] pre-scan error for {corpus_name}: {_pre_err}", flush=True)
+    else:
+        print(f"[ingest] pre-scan: uploads_dir missing: {uploads_dir}", flush=True)
+    files_total = len(pre_scan)
+    total_bytes = sum(sz for _, sz in pre_scan)
+    file_sizes = [sz for _, sz in pre_scan]  # ordered, used to accumulate bytes_processed
+
+    _ingest_status[corpus_name] = {
+        "status": "running",
+        "chunks_written": 0,
+        "files_processed": 0,
+        "files_total": files_total,
+        "bytes_processed": 0,
+        "total_bytes": total_bytes,
+        "file_sizes": file_sizes,
+        "elapsed_sec": 0,
+        "message": f"0 of {files_total} file(s) being indexed. 0 / {total_bytes / (1024 * 1024):.1f} MB = 0% indexed",
+    }
 
     asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir))
     return {"status": "started", "message": f"Ingestion started for corpus '{corpus_name}'."}
@@ -751,11 +853,102 @@ class CreateCorpusRequest(BaseModel):
 
 @app.get("/corpus/{corpus_name}/ingest-status")
 async def get_ingest_status(corpus_name: str) -> dict:
-    """Poll ingestion progress. status: idle|running|done|error"""
-    return _ingest_status.get(
+    """Poll ingestion progress. status: idle|running|done|error.
+
+    Augments in-memory tqdm state with live Qdrant points_count so the
+    UI gets real chunk progress even between tqdm stderr line emissions.
+    """
+    cached = _ingest_status.get(
         corpus_name,
         {"status": "idle", "chunks_written": 0, "message": "No recent ingestion"},
     )
+
+    # For running ingests: query Qdrant directly for live chunk count.
+    # tqdm stderr only emits on file completion (every 60s+ for large files).
+    # Qdrant points_count updates every upsert batch (~0.6s) — far more granular.
+    if cached.get("status") == "running":
+        try:
+            from qdrant_client import QdrantClient
+
+            qc = QdrantClient(host="localhost", port=6333)
+            # Only read from the specific corpus collection — never inherit from other collections
+            collection_name = f"aistudio_{corpus_name}"
+            existing = [c.name for c in qc.get_collections().collections]
+            if collection_name in existing:
+                col_info = qc.get_collection(collection_name)
+                live_chunks = col_info.points_count or 0
+                if live_chunks > cached.get("chunks_written", 0):
+                    cached = {**cached, "chunks_written": live_chunks}
+                    fp = cached.get("files_processed", 0)
+                    ft = cached.get("files_total", 0)
+                    file_sizes_c = cached.get("file_sizes", [])
+                    total_bytes_c = cached.get("total_bytes", 0)
+                    bytes_done = sum(file_sizes_c[:fp]) if file_sizes_c else 0
+                    _D_SEED = 20 / (2.0 * 1024 * 1024)
+                    d_obs = cached.get("d_observed", _D_SEED)
+                    # Use D(k) for pct if available, else byte ratio
+                    if d_obs > 0 and total_bytes_c > 0:
+                        raw_pct = live_chunks / (d_obs * total_bytes_c) * 100
+                        pct = min(99, round(raw_pct))
+                        bytes_est = min(total_bytes_c, live_chunks / d_obs)
+                        cached["bytes_processed"] = int(bytes_est)
+                    elif total_bytes_c > 0 and bytes_done > 0:
+                        pct = min(99, round(bytes_done / total_bytes_c * 100))
+                    else:
+                        pct = 0
+                    cached["pct_complete"] = pct
+                    if total_bytes_c > 0 and ft > 0:
+                        mb_done = bytes_done / (1024 * 1024)
+                        mb_total = total_bytes_c / (1024 * 1024)
+                        active = fp + 1
+                        cached["message"] = (
+                            f"{active} of {ft} file(s) being indexed. {mb_done:.1f} / {mb_total:.1f} MB = {pct}% indexed"
+                        )
+                    elif ft > 0:
+                        cached["message"] = f"{fp + 1} of {ft} file(s) being indexed"
+            else:
+                # Collection not yet created — return 0, never inherit stale data
+                cached = {**cached, "chunks_written": 0}
+        except Exception:
+            pass  # Fall back to cached tqdm data if Qdrant unreachable
+
+    return cached
+
+
+@app.post("/corpus/{corpus_name}/ingest-cancel")
+async def cancel_ingest(corpus_name: str) -> dict[str, Any]:
+    """Cancel a running ingest for the given corpus.
+
+    Kills the ingest subprocess. Qdrant state is preserved as-is —
+    files that completed before cancel remain indexed and will be
+    skipped on the next ingest run. The in-flight file may have
+    partial chunks; a future full re-ingest will clean these up.
+    """
+    _require_corpus(corpus_name)
+    proc = _ingest_proc.get(corpus_name)
+    cached = _ingest_status.get(corpus_name, {})
+
+    if not proc or cached.get("status") != "running":
+        return {"status": "not_running", "message": "No active ingest to cancel"}
+
+    try:
+        proc.kill()
+        await proc.wait()
+    except Exception:
+        pass
+
+    files_completed = cached.get("files_processed", 0)
+    _ingest_proc.pop(corpus_name, None)
+    _ingest_status[corpus_name] = {
+        "status": "cancelled",
+        "chunks_written": cached.get("chunks_written", 0),
+        "files_processed": files_completed,
+        "files_completed": files_completed,
+        "files_total": cached.get("files_total", 0),
+        "message": f"Cancelled — {files_completed} file{'s' if files_completed != 1 else ''} completed",
+    }
+    print(f"[ingest] '{corpus_name}' cancelled — {files_completed} files completed")
+    return {"status": "cancelled", "files_completed": files_completed}
 
 
 @app.post("/corpus/create")
@@ -851,6 +1044,10 @@ async def delete_corpus(corpus_name: str, confirm: str = "") -> dict[str, Any]:
     except Exception as e:
         print(f"[delete_corpus] Qdrant cleanup warning: {e}")
 
+    # Clear in-memory ingest status — prevents stale data from leaking into next ingest
+    _ingest_status.pop(corpus_name, None)
+    _ingest_proc.pop(corpus_name, None)
+
     # Step 2: Move corpus folder to Mac Trash (recoverable)
     try:
         trash_dir = Path.home() / ".Trash"
@@ -871,6 +1068,62 @@ async def delete_corpus(corpus_name: str, confirm: str = "") -> dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete corpus: {str(e)}") from e
+
+
+@app.get("/corpus/{corpus_name}/file/{filename:path}/md5")
+async def get_file_md5(corpus_name: str, filename: str) -> dict[str, Any]:
+    """
+    Return the MD5 hash of an already-indexed file.
+
+    Scrolls Qdrant for chunks where source_path ends with the filename,
+    extracts the md5 field from the payload of the first matching chunk.
+
+    Returns:
+        {"filename": filename, "md5": "<hex>"}  if found
+        404  if the file is not indexed in this corpus
+    """
+    _require_corpus(corpus_name)
+    collection_name = f"aistudio_{corpus_name}"
+
+    try:
+        from qdrant_client import QdrantClient
+        from qdrant_client.models import PayloadSelectorInclude
+
+        client = QdrantClient(host="localhost", port=6333)
+        existing = [c.name for c in client.get_collections().collections]
+        if collection_name not in existing:
+            raise HTTPException(status_code=404, detail=f"Corpus '{corpus_name}' not indexed")
+
+        # Scroll in pages — stop as soon as we find a chunk with an md5 field
+        offset = None
+        while True:
+            results, next_offset = client.scroll(
+                collection_name=collection_name,
+                limit=100,
+                offset=offset,
+                with_payload=PayloadSelectorInclude(include=["source_path", "md5"]),
+                with_vectors=False,
+            )
+            for point in results:
+                payload = point.payload or {}
+                sp = payload.get("source_path", "")
+                # Match by filename suffix — source_path is absolute, filename is basename
+                if sp.endswith(f"/{filename}") or sp.endswith(f"\\{filename}") or sp == filename:
+                    md5 = payload.get("md5", "")
+                    if md5:
+                        return {"filename": filename, "md5": md5}
+            if next_offset is None:
+                break
+            offset = next_offset
+
+        raise HTTPException(
+            status_code=404, detail=f"File '{filename}' not found in corpus '{corpus_name}'"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MD5 lookup failed: {str(e)}") from e
 
 
 @app.delete("/corpus/{corpus_name}/file/{filename:path}")

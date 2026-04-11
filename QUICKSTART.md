@@ -13,8 +13,8 @@ accessible from your browser.
 All commands run in Terminal. Press **⌘ Space**, type **Terminal**, press Enter.
 
 Use `python3` — not `python` — on macOS. The system `python` command may point
-to Python 2 or not exist. Always activate your virtual environment before
-running any AIStudio command.
+to Python 2 or not exist. Activate your virtual environment before running
+Python commands directly — `ais_start` and other `ais_*` commands handle this automatically.
 
 ---
 
@@ -180,14 +180,16 @@ run `source ~/.zshrc` and try again.
 ## 8. Activate the Virtual Environment
 
 `./ais_install` creates and populates the Python virtual environment automatically.
-Each time you open a new terminal tab, activate it before running any AIStudio commands:
+`ais_start`, `ais_stop`, and all other `ais_*` commands activate it internally — you
+do not need to activate manually before running them.
+
+You only need to activate manually when running Python commands directly:
 
 ```bash
 source ~/Developer/AIStudio/.venv/bin/activate
 ```
 
-Your prompt will show `(.venv)` when active. `ais_start` handles this automatically —
-you only need to activate manually if running Python commands directly.
+Your prompt will show `(.venv)` when active.
 
 ---
 
@@ -200,8 +202,9 @@ frontend. Start them all with:
 ais_start
 ```
 
-`ais_start` checks whether each service is already running before starting it —
-safe to run multiple times.
+`ais_start` stops any running services first, then starts everything fresh —
+safe to run at any time, even if services are already running. No need to run
+`ais_stop` first.
 
 **To start manually instead:**
 ```bash
@@ -346,10 +349,7 @@ are set before the uvicorn command
 
 **`Failed to fetch` in UI** — the FastAPI backend is down. Run:
 ```bash
-kill $(lsof -ti:8000)
-cd ~/Developer/AIStudio && source .venv/bin/activate
-OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-  uvicorn local_llm_bot.app.api:app --reload --port 8000
+ais_start
 ```
 
 **`ollama serve` — "address already in use"** — Ollama already running. Correct state.

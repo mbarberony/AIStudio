@@ -1,8 +1,13 @@
+# Version: 1.2.0
+# Changelog: 1.2.0 — Per-file embed+upsert (constant memory, live Qdrant progress); alphabetical file order
+#            1.1.0 — MD5 stored in Qdrant payload; skip logic fixed (Qdrant-only); per-file INFO logging
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os as _os
+import sys as _sys
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -15,7 +20,6 @@ from local_llm_bot.app.ingest.index_jsonl import append_rows
 from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS, load_document
 from local_llm_bot.app.ingest.manifest import (
     build_entry,
-    load_manifest_map,
     write_manifest_entry,
 )
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
@@ -142,10 +146,9 @@ def _load_qdrant_source_paths(collection_name: str) -> set[str]:
 
 def _file_unchanged(source_path: Path, manifest_map: dict) -> bool:
     """
-    Return True if file mtime+size match the manifest entry.
-    Secondary staleness check — used only when Qdrant confirms the file
-    is already indexed. Qdrant is the primary authority; this prevents
-    redundant re-embedding of unchanged files.
+    NOTE: intentionally NOT used in skip decision — kept for reference only.
+    Qdrant is the single source of truth for skip logic (AIStudio_186).
+    manifest.jsonl is stale after corpus recreation and cannot be relied upon.
     """
     from local_llm_bot.app.ingest.manifest import ManifestEntry
 
@@ -158,6 +161,15 @@ def _file_unchanged(source_path: Path, manifest_map: dict) -> bool:
         return (prev.mtime == int(st.st_mtime)) and (prev.size == int(st.st_size))
     except FileNotFoundError:
         return False
+
+
+def _md5_of_file(path: Path) -> str:
+    """Compute MD5 hex digest of a file. Stored in Qdrant payload for duplicate detection."""
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            h.update(block)
+    return h.hexdigest()
 
 
 def ingest_corpus(
@@ -221,10 +233,6 @@ def ingest_corpus(
     # This is the skip-decision source of truth. Empty on first ingest or after --force.
     qdrant_source_paths = _load_qdrant_source_paths(collection_name) if not force else set()
 
-    # Manifest is kept as a secondary staleness check (mtime/size).
-    # It is NOT the primary skip authority — Qdrant is.
-    manifest_map = load_manifest_map(paths["manifest"])
-
     files_discovered = 0
     files_supported = 0
     files_processed = 0
@@ -232,19 +240,24 @@ def ingest_corpus(
     files_failed = 0
 
     chunks_written = 0
-
-    jsonl_rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+
+    import re as _re
+
+    _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
 
     # -----------------------
     # Phase 1: Discover
     # -----------------------
+    # Files are sorted alphabetically — consistent order matches the pre-scan
+    # in api.py trigger_ingest, which also sorts alphabetically. This ensures
+    # bytes_processed accumulates in the correct order for the progress bar.
 
     discovered: list[Path] = []
     p_discover = tqdm_cls(desc="Discover", unit="file") if tqdm_cls is not None else None
 
     try:
-        for p in _iter_files(root):
+        for p in sorted(_iter_files(root), key=lambda x: x.name):
             discovered.append(p)
             files_discovered += 1
             if max_files is not None and files_discovered >= int(max_files):
@@ -256,8 +269,13 @@ def ingest_corpus(
             p_discover.close()
 
     # -----------------------
-    # Phase 2: Process
+    # Phase 2: Process + Embed + Upsert (per file)
     # -----------------------
+    # Each file is fully processed — chunked, embedded, upserted to Qdrant —
+    # before moving to the next. Memory footprint is constant regardless of
+    # corpus size. Qdrant gets live chunk counts as each file completes,
+    # enabling accurate progress reporting.
+
     if tqdm_cls is not None:
         p_process = tqdm_cls(total=len(discovered), desc="Process", unit="file")
     else:
@@ -279,13 +297,14 @@ def ingest_corpus(
             try:
                 abs_path = str(file_path.resolve())
 
-                # Skip decision: Qdrant has this file AND it's unchanged on disk.
-                if (
-                    not force
-                    and abs_path in qdrant_source_paths
-                    and _file_unchanged(file_path, manifest_map)
-                ):
+                # Skip decision: Qdrant already has this file — no re-ingest needed.
+                # _file_unchanged() removed: manifest.jsonl stale after corpus recreation. (AIStudio_186)
+                if not force and abs_path in qdrant_source_paths:
                     files_skipped_unchanged += 1
+                    print(
+                        f"[ingest] {corpus}: skipped {file_path.name} — already indexed",
+                        file=_sys.stderr,
+                    )
                     if p_process is not None:
                         p_process.set_postfix(
                             processed=files_processed,
@@ -296,6 +315,10 @@ def ingest_corpus(
                         p_process.update(1)
                     continue
 
+                print(
+                    f"[ingest] {corpus}: processing {file_path.name} ({files_processed + files_skipped_unchanged + 1}/{len(discovered)})",
+                    file=_sys.stderr,
+                )
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
@@ -312,10 +335,11 @@ def ingest_corpus(
 
                 chunks = chunk_text(doc.text, chunk_size=chunk_size_eff, overlap=overlap_eff)
 
-                import re as _re
+                # Compute MD5 once per file — stored in every chunk payload
+                file_md5 = _md5_of_file(file_path)
 
-                _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
-
+                # Build rows for this file only
+                file_rows: list[dict[str, Any]] = []
                 last_page: int | None = None
                 for i, c in enumerate(chunks):
                     page_match = _PAGE_RE.search(c)
@@ -323,21 +347,52 @@ def ingest_corpus(
                         last_page = int(page_match.group(1))
                     page_num = last_page
                     clean_text = _PAGE_RE.sub("", c).strip()
-                    if page_num is not None:
-                        chunk_id = f"{abs_path}::page-{page_num}::chunk-{i}"
-                    else:
-                        chunk_id = f"{abs_path}::chunk-{i}"
-                    jsonl_rows.append(
+                    chunk_id = (
+                        f"{abs_path}::page-{page_num}::chunk-{i}"
+                        if page_num is not None
+                        else f"{abs_path}::chunk-{i}"
+                    )
+                    file_rows.append(
                         {
                             "chunk_id": chunk_id,
                             "doc_id": abs_path,
                             "source_path": abs_path,
                             "text": clean_text,
                             "page": page_num,
+                            "md5": file_md5,
                         }
                     )
 
+                # Embed + upsert this file's chunks immediately — no accumulation
+                if file_rows:
+                    ids = [str(r["chunk_id"]) for r in file_rows]
+                    documents = [str(r["text"]) for r in file_rows]
+                    metadatas = [
+                        {
+                            "source_path": str(r["source_path"]),
+                            "doc_id": str(r["doc_id"]),
+                            "page": r["page"],
+                            "md5": str(r["md5"]),
+                            **_parse_firm_year(str(r["source_path"])),
+                        }
+                        for r in file_rows
+                    ]
+                    _store.upsert_chunks(
+                        persist_dir=Path("."),
+                        collection_name=collection_name,
+                        embed_model=embed_model_eff,
+                        ids=ids,
+                        documents=documents,
+                        metadatas=metadatas,
+                    )
+                    # Persist JSONL audit log per file
+                    append_rows(paths["index"], file_rows)
+
                 chunks_written += len(chunks)
+                print(
+                    f"[ingest] {corpus}: ✓ {file_path.name} — {len(chunks):,} chunks",
+                    file=_sys.stderr,
+                )
 
                 write_manifest_entry(paths["manifest"], build_entry(file_path))
                 files_processed += 1
@@ -369,57 +424,11 @@ def ingest_corpus(
         if p_process is not None:
             p_process.close()
 
-    # Persist JSONL artifacts (legacy audit log — not used for skip decisions)
-    if jsonl_rows:
-        append_rows(paths["index"], jsonl_rows)
-
     if failures:
         paths["failures"].parent.mkdir(parents=True, exist_ok=True)
         with paths["failures"].open("a", encoding="utf-8") as f:
             for r in failures:
                 f.write(json.dumps(r) + "\n")
-
-    # -----------------------
-    # Phase 3: Embed / Upsert into Qdrant
-    # -----------------------
-    if jsonl_rows:
-        ids = [str(r.get("chunk_id", "")) for r in jsonl_rows]
-        documents = [str(r.get("text", "")) for r in jsonl_rows]
-        metadatas = [
-            {
-                "source_path": str(r.get("source_path", "")),
-                "doc_id": str(r.get("doc_id", "")),
-                "page": r.get("page"),
-                **_parse_firm_year(str(r.get("source_path", ""))),
-            }
-            for r in jsonl_rows
-        ]
-
-        packed = [(i, d, m) for i, d, m in zip(ids, documents, metadatas, strict=False) if i and d]
-        if packed:
-            ids2, docs2, metas2 = zip(*packed, strict=False)
-
-            embed_pbar = None
-            if tqdm_cls is not None:
-                embed_pbar = tqdm_cls(total=len(ids2), desc="Embed", unit="chunk")
-
-            def on_batch_done(n: int) -> None:
-                if embed_pbar is not None:
-                    embed_pbar.update(n)
-
-            try:
-                _store.upsert_chunks(
-                    persist_dir=Path("."),  # unused by Qdrant — kept for API compatibility
-                    collection_name=collection_name,
-                    embed_model=embed_model_eff,
-                    ids=list(ids2),
-                    documents=list(docs2),
-                    metadatas=list(metas2),
-                    on_batch_done=on_batch_done,
-                )
-            finally:
-                if embed_pbar is not None:
-                    embed_pbar.close()
 
     dur = time.time() - t0
     return IngestResult(

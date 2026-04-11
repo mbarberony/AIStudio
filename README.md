@@ -62,11 +62,10 @@ mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"'
 
 # 2. Clone and set up
 git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
-python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+./ais_install && source ~/.zshrc
 
-# 3. Start everything
-scripts/start.sh
+# 3. Start everything (stops any running services first, then restarts clean)
+ais_start
 
 # 4. Open UI
 open front_end/rag_studio.html

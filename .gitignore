@@ -54,11 +54,3 @@ install_ops
 install_ops
 
 epaves/
-scripts/restore_scripts.sh
-scripts/ais_backup.sh
-scripts/ais_commit.sh
-scripts/ais_publish.sh
-scripts/update_help_corpus.py
-epaves/
-epaves/
-PIPELINE.md
