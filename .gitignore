@@ -19,6 +19,10 @@ src/*.egg-info/
 # Logs
 *.log
 
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+
 # AIStudio — meta (operator only, travels via BUNDLE)
 meta/
 
@@ -44,16 +48,18 @@ benchmarks/reports/
 DEMO_SCRIPT.md
 HOWTO_OPS.md
 
+# AIStudio — operator install artifacts
+ais_install_ops
+install_ops
+install_ops.sh
+
 # Legacy artifacts
 BASH_CHEATSHEET.md
 QuickReferenceGuide.docx
 QuickReferenceGuide.md
-install_ops.sh
-install_ops
-install_ops
-install_ops
 
+# epaves (set aside files, recoverable)
 epaves/
-PIPELINE.md
-benchmarks/fixtures/
+
+# Pipeline (operator only, never in public repo)
 PIPELINE.md
