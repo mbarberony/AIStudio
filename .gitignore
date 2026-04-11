@@ -54,3 +54,5 @@ install_ops
 install_ops
 
 epaves/
+PIPELINE.md
+benchmarks/fixtures/
