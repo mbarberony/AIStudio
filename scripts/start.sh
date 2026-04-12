@@ -12,10 +12,11 @@
 # v1.6.1: use --force ingest for help corpus — preserves uploads/ on disk
 # v1.6.2: CLI output standard; --help/--version; always print version; fix chunk/PDF count
 # v1.6.3: call stop.sh --silent; --- section separators; --no-separator flag
+# v1.6.4: self-healing help corpus — regenerate PDFs if uploads/ empty before ingest
 
 set -e
 
-VERSION="1.6.3"
+VERSION="1.6.4"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
@@ -161,7 +162,18 @@ else
 fi
 
 if [ "$BACKEND_READY" -eq 1 ]; then
-    HELP_PDF_COUNT=$(find "$REPO_ROOT/data/corpora/help/uploads/" -name "*.pdf" 2>/dev/null | wc -l | tr -d ' ')
+    HELP_UPLOADS="$REPO_ROOT/data/corpora/help/uploads"
+    HELP_PDF_COUNT=$(find "$HELP_UPLOADS" -name "*.pdf" 2>/dev/null | wc -l | tr -d ' ')
+
+    # Self-heal: if uploads/ is empty, regenerate PDFs from manifest sources
+    if [ "$HELP_PDF_COUNT" -eq 0 ]; then
+        echo "▶ Help corpus PDFs not found — regenerating from sources..."
+        cd "$REPO_ROOT"
+        python3 scripts/update_help_corpus.py --repo-root "$REPO_ROOT" > /dev/null 2>&1
+        HELP_PDF_COUNT=$(find "$HELP_UPLOADS" -name "*.pdf" 2>/dev/null | wc -l | tr -d ' ')
+        echo "✅ Help corpus PDFs ready: $HELP_PDF_COUNT files."
+    fi
+
     HELP_COLLECTION="aistudio_help"
     HELP_CHECK=$(curl -s "http://localhost:6333/collections/$HELP_COLLECTION" 2>/dev/null)
     HELP_MSG="refreshing"
@@ -170,7 +182,7 @@ if [ "$BACKEND_READY" -eq 1 ]; then
      AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
          python3 -m local_llm_bot.app.ingest \
          --corpus help \
-         --root data/corpora/help/uploads \
+         --root "$HELP_UPLOADS" \
          --force > /dev/null 2>&1) &
     echo "✅ Help corpus $HELP_MSG in background: $HELP_PDF_COUNT files."
 fi

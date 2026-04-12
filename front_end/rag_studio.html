@@ -929,8 +929,10 @@
     }
 
     function setCorpus(name) {
+        const prev = currentCorpus;
         currentCorpus = name;
         if (name) {
+            if (prev && prev !== name) addSeparator(`Corpus: ${name}`);
             topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong>`;
             chatInput.placeholder = `Ask a question about ${name}…`;
             chatInput.disabled = false;
@@ -965,6 +967,7 @@
     async function prewarmModel() {
         const model = modelSelect.value;
         if (!model) return;
+        if (currentCorpus) addSeparator(`Model: ${model}`);
         statusText.textContent = 'Loading model…';
         try {
             const res = await fetch(`${API}/prewarm?model_id=${encodeURIComponent(model)}`, { method: 'POST' });
@@ -1090,7 +1093,20 @@
         return div;
     }
 
-    // ── Citations ──────────────────────────────────────────────────
+    // ── System separator — corpus/model change notification ────────
+    function addSeparator(label) {
+        if (!messagesEl || !messagesEl.children.length) return;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;align-items:center;gap:8px;margin:10px 0;padding:0 4px;';
+        div.innerHTML = `
+            <div style="flex:1;height:1px;background:var(--border);"></div>
+            <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;font-style:italic;">· ${label}</span>
+            <div style="flex:1;height:1px;background:var(--border);"></div>`;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+
     function parseCitations(html, citations, rc) {
         // Build a set of valid citation indices from what the API actually returned
         const validIdx = new Set(citations.map(c => String(c.index)));
