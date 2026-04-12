@@ -32,6 +32,11 @@ scripts/generate_packet.sh
 scripts/bundle_session.sh
 scripts/fix_zshrc.py
 scripts/.deploy_map
+scripts/ais_backup.sh
+scripts/ais_commit.sh
+scripts/ais_publish.sh
+scripts/restore_scripts.sh
+scripts/update_help_corpus.py
 
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/
@@ -41,7 +46,8 @@ data/corpora/
 !data/corpora/demo/index.jsonl
 !data/corpora/demo/manifest.jsonl
 
-# AIStudio — benchmark reports (generated, not in repo)
+# AIStudio — benchmark fixtures and reports (generated, not in repo)
+benchmarks/fixtures/
 benchmarks/reports/
 
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
