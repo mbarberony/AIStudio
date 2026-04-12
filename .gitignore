@@ -37,6 +37,8 @@ scripts/ais_commit.sh
 scripts/ais_publish.sh
 scripts/restore_scripts.sh
 scripts/update_help_corpus.py
+ais_update_help_ops.sh
+ais_ingest_help_ops.sh
 
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/
@@ -45,6 +47,11 @@ data/corpora/
 !data/corpora/demo/uploads/*
 !data/corpora/demo/index.jsonl
 !data/corpora/demo/manifest.jsonl
+
+# AIStudio — help corpus runtime files (generated, not in repo)
+data/corpora/help/doc_chunk_map.json
+data/corpora/help/index.jsonl
+data/corpora/help/manifest.jsonl
 
 # AIStudio — benchmark fixtures and reports (generated, not in repo)
 benchmarks/fixtures/
@@ -63,6 +70,7 @@ install_ops.sh
 BASH_CHEATSHEET.md
 QuickReferenceGuide.docx
 QuickReferenceGuide.md
+ais_sec_download.sh
 
 # epaves (set aside files, recoverable)
 epaves/
