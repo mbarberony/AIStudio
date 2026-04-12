@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -56,11 +56,11 @@ def _load_corpus_search_guidance(corpus_name: str) -> str:
     Returns empty string silently if file missing or field absent.
     """
     try:
+        import yaml
+
         repo_root = _get_repo_root()
         meta_path = repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
         if meta_path.exists():
-            import yaml
-
             with open(meta_path) as f:
                 meta = yaml.safe_load(f) or {}
             guidance = meta.get("search_guidance", "").strip()
@@ -599,8 +599,9 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             # D(k): observed chunks-per-byte ratio from completed files.
             # Seeded from first file after it completes; refined as more files complete.
             # During file k: p = chunks_written / (D(k) * total_bytes) * 100
-            # D_SEED: 20 chunks per 0.5MB = 3.81e-5 chunks/byte — used before first file completes
-            D_SEED = 20 / (2.0 * 1024 * 1024)
+            # D_SEED: 5 chunks per 0.5MB = 9.54e-6 chunks/byte — conservative seed (25% of observed)
+            # to prevent progress bar jumping backwards when actual D(k) comes in after first file.
+            D_SEED = 5 / (2.0 * 1024 * 1024)
             d_observed = cached_now.get("d_observed", D_SEED)
             if files_processed > 0 and bytes_completed > 0 and chunks > 0:
                 d_observed = chunks / bytes_completed  # update with latest observed ratio
@@ -985,18 +986,35 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         index_file.parent.mkdir(parents=True, exist_ok=True)
         index_file.touch()
 
-        # Create empty corpus_meta.yaml scaffold
+        # Create corpus_meta.yaml — seeded from help_search_guidance.yaml for help corpus
         corpus_meta_path = corpus_dir / f"{name}_corpus_meta.yaml"
-        corpus_meta_path.write_text(
-            f"# {name}_corpus_meta.yaml\n"
-            f"# Corpus search guidance — loaded by api.py at query time\n"
-            f"# Fill in fields to improve retrieval quality for this corpus\n"
-            f"\n"
-            f"corpus_name: {name}\n"
-            f'description: ""\n'
-            f'content_summary: ""\n'
-            f'search_guidance: ""\n'
-        )
+        if name == "help":
+            # Help corpus: seed from persistent guidance file in meta/corpora/
+            guidance_source = repo_root / "docs" / "help_search_guidance.yaml"
+            if guidance_source.exists():
+                import shutil as _shutil
+
+                _shutil.copy2(str(guidance_source), str(corpus_meta_path))
+            else:
+                # Fallback: write empty scaffold if guidance file missing
+                corpus_meta_path.write_text(
+                    f"# {name}_corpus_meta.yaml\n"
+                    f"# Corpus search guidance — loaded by api.py at query time\n\n"
+                    f"corpus_name: {name}\n"
+                    f'description: ""\n'
+                    f'content_summary: ""\n'
+                    f'search_guidance: ""\n'
+                )
+        else:
+            corpus_meta_path.write_text(
+                f"# {name}_corpus_meta.yaml\n"
+                f"# Corpus search guidance — loaded by api.py at query time\n"
+                f"# Fill in fields to improve retrieval quality for this corpus\n\n"
+                f"corpus_name: {name}\n"
+                f'description: ""\n'
+                f'content_summary: ""\n'
+                f'search_guidance: ""\n'
+            )
 
         return {
             "status": "success",
@@ -1011,6 +1029,80 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create corpus: {str(e)}") from e
+
+
+@app.post("/corpus/{corpus_name}/rename")
+async def rename_corpus(corpus_name: str, request: Request) -> dict[str, Any]:
+    """
+    Rename a corpus: moves directory on disk, renames corpus_meta.yaml,
+    deletes old Qdrant collection, and triggers background re-ingest.
+    Body: {"new_name": "my_new_corpus_name"}
+    """
+    body = await request.json()
+    new_name = body.get("new_name", "").strip()
+
+    if not new_name or not new_name.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(
+            status_code=400,
+            detail="Corpus name must contain only letters, numbers, hyphens, and underscores",
+        )
+
+    repo_root = _get_repo_root()
+
+    if not corpus_exists(repo_root, corpus_name):
+        raise HTTPException(status_code=404, detail=f"Corpus '{corpus_name}' not found")
+
+    if corpus_exists(repo_root, new_name):
+        raise HTTPException(status_code=409, detail=f"Corpus '{new_name}' already exists")
+
+    old_paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    old_dir = old_paths["base"]
+    new_dir = repo_root / "data" / "corpora" / new_name
+
+    try:
+        # 1. Rename directory on disk
+        old_dir.rename(new_dir)
+
+        # 2. Rename corpus_meta.yaml inside new directory
+        old_meta = new_dir / f"{corpus_name}_corpus_meta.yaml"
+        new_meta = new_dir / f"{new_name}_corpus_meta.yaml"
+        if old_meta.exists():
+            old_meta.rename(new_meta)
+            # Update corpus_name field inside meta file
+            content = new_meta.read_text()
+            content = content.replace(f"corpus_name: {corpus_name}", f"corpus_name: {new_name}")
+            new_meta.write_text(content)
+
+        # 3. Delete old Qdrant collection
+        try:
+            from qdrant_client import QdrantClient
+
+            qc = QdrantClient(host="localhost", port=6333)
+            qc.delete_collection(f"aistudio_{corpus_name}")
+        except Exception as e:
+            print(f"[rename_corpus] Qdrant cleanup warning: {e}")
+
+        # 4. Clear any in-memory ingest status for old corpus
+        _ingest_status.pop(corpus_name, None)
+
+        # 5. Trigger background re-ingest on new corpus
+        new_uploads = new_dir / "uploads"
+        if new_uploads.exists() and any(new_uploads.iterdir()):
+            import asyncio
+
+            asyncio.create_task(_run_ingest_background(new_name, str(new_uploads)))
+
+        return {
+            "status": "success",
+            "message": f"Corpus '{corpus_name}' renamed to '{new_name}'",
+            "old_name": corpus_name,
+            "new_name": new_name,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rename corpus: {str(e)}") from e
 
 
 @app.delete("/corpus/{corpus_name}")

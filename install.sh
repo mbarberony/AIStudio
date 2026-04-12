@@ -6,7 +6,7 @@
 # Usage: bash ~/Developer/AIStudio/install.sh
 # After running: source ~/.zshrc
 #
-# Version: 1.1.0
+# Version: 1.2.0
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 ZSHRC="$HOME/.zshrc"
@@ -30,9 +30,11 @@ cat >> "$ZSHRC" << BLOCK
 alias ais_install='$REPO/ais_install'
 alias ais_start='$REPO/scripts/start.sh'
 alias ais_stop='$REPO/scripts/stop.sh'
-alias ais_restart='$REPO/scripts/stop.sh && $REPO/scripts/start.sh'
+alias ais_restart='$REPO/scripts/stop.sh; $REPO/scripts/start.sh'
 alias ais_bench='$REPO/ais_bench.sh'
-alias ais_sec_download='$REPO/ais_sec_download.sh'
+alias ais_download_sec_10k='$REPO/ais_download_sec_10k.sh'
+alias ais_ingest_sec_10k='$REPO/ais_ingest_sec_10k.sh'
+alias ais_log='$REPO/ais_log.sh'
 alias ais_help='$REPO/ais_help.sh'
 # ── End AIStudio User Commands ──────────────────────────────────────────────
 BLOCK
@@ -43,13 +45,15 @@ sudo chmod +x /usr/local/bin/install_ops
 
 echo ""
 echo "✓ AIStudio user commands installed:"
-echo "    ais_install      — re-run user install (alias refresh etc.)"
-echo "    ais_start        — start all services and open the UI"
-echo "    ais_stop         — stop all services"
-echo "    ais_restart      — stop then restart all services"
-echo "    ais_bench        — run the demo corpus benchmark"
-echo "    ais_sec_download — download SEC 10-K filings from EDGAR"
-echo "    ais_help         — show this command reference"
+echo "    ais_install           — re-run user install (alias refresh etc.)"
+echo "    ais_start             — start all services and open the UI"
+echo "    ais_stop              — stop all services"
+echo "    ais_restart           — stop then restart all services"
+echo "    ais_bench             — run the demo corpus benchmark"
+echo "    ais_download_sec_10k  — download SEC 10-K filings from EDGAR"
+echo "    ais_ingest_sec_10k    — ingest SEC 10-K corpus (~30 min, backend required)"
+echo "    ais_log               — tail live AIStudio backend log"
+echo "    ais_help              — show this command reference"
 echo ""
 # Source automatically so aliases are available immediately
 source "$ZSHRC"

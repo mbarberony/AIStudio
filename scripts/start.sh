@@ -13,10 +13,12 @@
 # v1.6.2: CLI output standard; --help/--version; always print version; fix chunk/PDF count
 # v1.6.3: call stop.sh --silent; --- section separators; --no-separator flag
 # v1.6.4: self-healing help corpus — regenerate PDFs if uploads/ empty before ingest
+# v1.6.5: --show-log flag opens iTerm2 tab with live backend log; uvicorn logs to file
+# v1.6.6: fix set -e exit on PDF generation failure; warn on missing help_search_guidance
 
 set -e
 
-VERSION="1.6.4"
+VERSION="1.6.6"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
@@ -24,9 +26,13 @@ DIM=$'\e[2m'
 # ── Parse flags ───────────────────────────────────────────────────
 VERBOSE=0
 SEPARATOR=1
+SHOW_LOG=0
+LOG_FILE="$HOME/Library/Logs/AIStudio/backend.log"
+
 for arg in "$@"; do
     [[ "$arg" == "--verbose" ]] && VERBOSE=1
     [[ "$arg" == "--no-separator" ]] && SEPARATOR=0
+    [[ "$arg" == "--show-log" ]] && SHOW_LOG=1
     [[ "$arg" == "--version" ]] && { echo "ais_start v$VERSION — Start AIStudio services"; exit 0; }
     if [[ "$arg" == "--help" ]]; then
         echo "ais_start v$VERSION — Start AIStudio services"
@@ -38,11 +44,13 @@ for arg in "$@"; do
         echo ""
         echo "Options:"
         echo "  --verbose        Show full service output (Qdrant, uvicorn, backend logs)"
+        echo "  --show-log       Open new iTerm2 tab with live backend log after start"
         echo "  --no-separator   Use blank lines between sections instead of --- labels"
         echo "  --version        Show version and exit"
         echo "  --help           Show this help and exit"
         echo ""
         echo "· To stop: ais_stop"
+        echo "· Logs:    ais_log"
         exit 0
     fi
 done
@@ -115,12 +123,13 @@ fi
 
 echo "▶ Starting AIStudio backend..."
 cd "$REPO_ROOT"
+mkdir -p "$HOME/Library/Logs/AIStudio"
 if [[ "$VERBOSE" -eq 1 ]]; then
     OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-        uvicorn local_llm_bot.app.api:app --port 8000 &
+        uvicorn local_llm_bot.app.api:app --port 8000 2>&1 | tee "$LOG_FILE" &
 else
     OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-        uvicorn local_llm_bot.app.api:app --port 8000 > /dev/null 2>&1 &
+        uvicorn local_llm_bot.app.api:app --port 8000 > "$LOG_FILE" 2>&1 &
 fi
 
 BACKEND_READY=0
@@ -167,11 +176,20 @@ if [ "$BACKEND_READY" -eq 1 ]; then
 
     # Self-heal: if uploads/ is empty, regenerate PDFs from manifest sources
     if [ "$HELP_PDF_COUNT" -eq 0 ]; then
-        echo "▶ Help corpus PDFs not found — regenerating from sources..."
+        # Check for help_search_guidance.yaml — warn if missing
+        GUIDANCE_FILE="$REPO_ROOT/meta/corpora/help_search_guidance.yaml"
+        if [ ! -f "$GUIDANCE_FILE" ]; then
+            echo "⚠ Help search guidance not found: meta/corpora/help_search_guidance.yaml"
+            echo "· Run: ais_deploy help_search_guidance.yaml"
+        fi
+        echo "▶ Preparing help corpus — generating PDFs from sources..."
         cd "$REPO_ROOT"
-        python3 scripts/update_help_corpus.py --repo-root "$REPO_ROOT" > /dev/null 2>&1
-        HELP_PDF_COUNT=$(find "$HELP_UPLOADS" -name "*.pdf" 2>/dev/null | wc -l | tr -d ' ')
-        echo "✅ Help corpus PDFs ready: $HELP_PDF_COUNT files."
+        if python3 scripts/update_help_corpus.py --repo-root "$REPO_ROOT" > /dev/null 2>&1; then
+            HELP_PDF_COUNT=$(find "$HELP_UPLOADS" -name "*.pdf" 2>/dev/null | wc -l | tr -d ' ')
+            echo "✅ Help corpus PDFs ready: $HELP_PDF_COUNT files."
+        else
+            echo "⚠ Help corpus PDF generation failed — run ais_ingest_help_ops to retry."
+        fi
     fi
 
     HELP_COLLECTION="aistudio_help"
@@ -196,6 +214,21 @@ echo "· Frontend : $FRONTEND"
 echo "· Backend  : http://localhost:8000"
 echo "· Qdrant   : http://localhost:6333"
 echo "· Ollama   : http://localhost:11434"
+echo "· Logs     : ais_log"
 echo "· To stop  : ais_stop"
 echo "· To restart: ais_start"
 [[ "$VERBOSE" -eq 1 ]] && echo "· Verbose mode active — run ais_start for quiet output."
+
+# --show-log: open new iTerm2 tab tailing the backend log
+if [[ "$SHOW_LOG" -eq 1 ]]; then
+    osascript 2>/dev/null << APPLESCRIPT
+tell application "iTerm2"
+    tell current window
+        create tab with default profile
+        tell current session
+            write text "tail -f '$LOG_FILE'"
+        end tell
+    end tell
+end tell
+APPLESCRIPT
+fi

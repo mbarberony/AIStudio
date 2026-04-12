@@ -196,7 +196,7 @@ deterministic results without embedding inference.
 
 ## 10. Single HTML File Frontend
 
-**Decision:** The entire UI is `front_end/rag_studio.html` — one file, ~3,700
+**Decision:** The entire UI is `front_end/rag_studio.html` — one file, ~1,900
 lines, no build step.
 
 **Why:**
@@ -204,7 +204,9 @@ lines, no build step.
 - No npm, no webpack, no node_modules. Nothing to break on a new machine.
 - Consistent with the "runnable in under 30 minutes" QUICKSTART promise.
 
-**Tradeoff:** A single 3,700-line file is harder to navigate than a componentized
+**Current UI features:** Corpus management (create, rename, delete, stats, inspect), file upload with ingest progress, chat with inline citations, corpus/model change separators, auto-linkify of URLs and file paths in responses, clickable citation filenames, corpus selector with alphabetical sort.
+
+**Tradeoff:** A single ~1,900-line file is harder to navigate than a componentized
 React app. The tradeoff is deliberate — operational simplicity over developer
 ergonomics at this scale.
 
@@ -213,7 +215,29 @@ Beta. The `ui_architecture.md` doc describes the target left-bar layout.
 
 ---
 
-## What I Would Do Differently at Scale
+## 15. Manifest-Driven Command Installation
+
+**Decision:** `bundle_manifest.yaml` is the single source of truth for all `ais_*` command routing, deployment, and alias installation. `ais_install` reads the manifest to generate `~/.zshrc` aliases — no hardcoded paths anywhere else.
+
+**Why:**
+The previous approach used one-shot marker-based install scripts (`install.sh`, `install_ops`) that couldn't be re-run when new commands were added. Adding a new command required manually editing `~/.zshrc` — a fragile, error-prone, non-reproducible process.
+
+The manifest-driven approach means:
+- `ais_install ais_log` installs a single new command by looking up its path in the manifest
+- `ais_install --verify` checks which commands are active in `~/.zshrc`
+- A fresh clone on a new machine (`./ais_install`) installs all commands from the same manifest, guaranteeing consistency
+- The manifest `alias` and `install` fields make the command registry explicit and auditable
+
+**Implementation:** Each script entry in `bundle_manifest.yaml` carries:
+```yaml
+alias: ais_log           # command name
+install: user            # user | operator | none
+```
+`ais_install` parses these fields via a Python one-liner, resolves the script path from `deploy_to` + `path`, and writes `alias ais_log="/absolute/path"` to `~/.zshrc`. Idempotent — updates existing aliases in place.
+
+**Tradeoff:** Adding a new command now requires a manifest update before deployment. This is by design — the manifest is the deployment contract, not an afterthought.
+
+**Governed by:** `STD - AIStudio - Command Development and Management`
 
 - **Authentication:** The API has no auth. Fine for localhost; needs API key
   validation before any network exposure.
@@ -265,23 +289,16 @@ top-K candidates. Acceptable at current corpus sizes.
 
 ## 12. Atomic `--force` Ingest
 
-**Decision:** `--force` flag in the ingest pipeline performs an atomic wipe of
-Qdrant collection + JSONL index + manifest before re-ingesting.
+**Decision:** `--force` flag in the ingest pipeline forces reprocessing of all files regardless of whether they appear unchanged in the Qdrant manifest.
 
 **Why:**
-Without atomic wipe, incremental upserts leave stale chunk IDs in Qdrant when
-chunk format changes (e.g. switching from `::chunk-N` to `::page-N::chunk-M`
-format). Old and new format chunks coexist, degrading retrieval quality.
+Without `--force`, files already in Qdrant are skipped (MD5-based skip logic). When chunk format changes or a corpus needs a clean rebuild, `--force` bypasses the skip check and re-embeds everything.
 
-**Implementation:** `pipeline.py` `ingest_corpus()` — when `force=True`:
-1. Truncate `index.jsonl`, `manifest.jsonl`, `failures.jsonl`, `doc_chunk_map.json`
-2. Call `qdrant_store.delete_collection()` — wipes Qdrant collection entirely
-3. Re-ingest all files from scratch
+**Clarification on atomic wipe:** `--force` does NOT wipe the Qdrant collection itself — it only bypasses the per-file skip check. A full corpus wipe (delete collection + re-ingest from scratch) is triggered separately via `DELETE /corpus/{name}?confirm=yes` in `api.py`, or by the `ais_start` help corpus auto-ingest which uses `--force` after collection existence check.
 
-`delete_collection()` added to `qdrant_store.py` for this purpose.
+**Implementation:** `pipeline.py` `ingest_corpus()` — when `force=True`, `abs_path in qdrant_source_paths` check is bypassed. Files are re-chunked, re-embedded, and upserted regardless of prior state. Qdrant's upsert is idempotent — duplicate chunk IDs are overwritten cleanly.
 
-**Also used by:** `scripts/start.sh` auto-ingest on first run (without --force,
-via collection existence check).
+**Also used by:** `scripts/start.sh` help corpus background refresh on every start.
 
 ---
 
@@ -328,15 +345,17 @@ interactions go through this API — the frontend is a pure client with no
 direct access to the filesystem, Qdrant, or Ollama.
 
 **Current endpoints (Beta):**
-- `POST /ask` — RAG query with corpus, model, top-K, temperature, keywords,
-  conversation history
+- `POST /ask` — RAG query with corpus, model, top-K, temperature, keywords, conversation history
 - `POST /corpus/{name}/ingest` — trigger ingest of uploaded files
 - `GET /corpus/{name}/ingest-status` — streaming ingest progress (files, chunks, elapsed)
 - `GET /corpora` — list available corpora with metadata
+- `POST /corpus/create` — create new corpus directory structure
+- `POST /corpus/{name}/rename` — rename corpus directory + Qdrant collection + trigger re-ingest
 - `DELETE /corpus/{name}` — move corpus to macOS Trash (recoverable)
 - `DELETE /corpus/{name}/file/{filename}` — move file to corpus trash
-- `GET /corpus/{name}/stats` — chunk count, file count, collection size
-- `POST /upload/{name}` — upload files to corpus
+- `GET /corpus/{name}/info` — file list, chunk count, size
+- `POST /corpus/{name}/upload` — upload files to corpus
+- `POST /prewarm` — warm Ollama model into memory before first query
 - `GET /source` — serve source documents for citation Open ↗ links
 - `GET /health` — liveness check (used by start.sh health-check poll)
 - `GET /models` — list available Ollama models

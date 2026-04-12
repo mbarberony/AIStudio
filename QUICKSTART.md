@@ -155,7 +155,7 @@ git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
 ## 7. Install AIStudio Commands
 
 This installs the `ais_*` command aliases into your shell — `ais_start`, `ais_stop`,
-`ais_restart`, `ais_bench`, `ais_sec_download`, and others (used in the rest of this tutorial).
+`ais_log`, `ais_download_sec_10k`, `ais_ingest_sec_10k`, and others (used in the rest of this tutorial).
 Enter this in your terminal window:
 
 ```bash
@@ -163,17 +163,22 @@ cd ~/Developer/AIStudio
 ./ais_install
 ```
 
-`ais_install` will prompt you to run `source ~/.zshrc` at the end — do that, then verify:
+Verify all commands are active:
 
 ```bash
-ais_help
+ais_install --verify
 ```
 
-Expected: a list of available `ais_*` commands. If you see `command not found`,
-run `source ~/.zshrc` and try again.
+Expected: a list of `ais_*` commands all showing ✅. If any show ❌, run:
+
+```bash
+ais_install ais_xxx   # install that specific command
+```
 
 > **What `./ais_install` does:** Creates the Python virtual environment, installs
-> all dependencies, and adds `ais_*` aliases to `~/.zshrc`. Safe to run multiple times.
+> all dependencies, and adds `ais_*` aliases to `~/.zshrc`. Manifest-driven —
+> reads `bundle_manifest.yaml` to find each command's script path. Idempotent
+> and safe to run again. To add a single new command later: `ais_install ais_log`.
 
 ---
 
@@ -395,13 +400,10 @@ ais_bench
 # The ingest step that follows is identical to ingesting any corpus you build yourself.
 
 # Step 1: Download filings to ~/Downloads (~5 min, ~2 GB)
-ais_sec_download
+ais_download_sec_10k
 
-# Step 2: Ingest the files using the AIStudio UI
-# Open AIStudio, create a corpus named 'sec_10k', and upload the files
-# from ~/Downloads/sec_10k/ using the Upload button.
-# Allow ~34 minutes for ingestion. This is the same process as any corpus.
-# See HOWTO.md — "How do I ingest the SEC 10-K corpus?" for full instructions.
+# Step 2: Ingest the corpus (~30 min, backend must be running)
+ais_ingest_sec_10k
 
 # Step 3: Benchmark (once ingestion is complete)
 # See HOWTO.md — "How do I benchmark a different corpus?" for full options.
