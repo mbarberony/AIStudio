@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AIStudio Auto-Launch Script v1.6.2
+# AIStudio Auto-Launch Script v1.6.3
 # Mac/Apple Silicon only (Release 1.x)
 # v1.1.0: poll /health before opening browser — fixes race condition (AIStudio_066)
 # v1.2.0: kill stale process on port 8000 before launch — fixes port conflict (AIStudio_103)
@@ -11,39 +11,56 @@
 # v1.6.0: --verbose flag; suppress Qdrant/backend noise by default; file counts
 # v1.6.1: use --force ingest for help corpus — preserves uploads/ on disk
 # v1.6.2: CLI output standard; --help/--version; always print version; fix chunk/PDF count
+# v1.6.3: call stop.sh --silent; --- section separators; --no-separator flag
 
 set -e
 
-VERSION="1.6.2"
-echo "ais_start v$VERSION"
+VERSION="1.6.3"
+ITALIC=$'\e[3m'
+RESET=$'\e[0m'
+DIM=$'\e[2m'
 
 # ── Parse flags ───────────────────────────────────────────────────
 VERBOSE=0
+SEPARATOR=1
 for arg in "$@"; do
     [[ "$arg" == "--verbose" ]] && VERBOSE=1
-    [[ "$arg" == "--version" ]] && exit 0
+    [[ "$arg" == "--no-separator" ]] && SEPARATOR=0
+    [[ "$arg" == "--version" ]] && { echo "ais_start v$VERSION — Start AIStudio services"; exit 0; }
     if [[ "$arg" == "--help" ]]; then
+        echo "ais_start v$VERSION — Start AIStudio services"
         echo ""
         echo "Start all AIStudio services: Qdrant, Ollama, FastAPI backend, and frontend."
         echo "Stops any running services first — safe to run even if already running."
         echo ""
-        echo "Usage: ais_start [--verbose]"
+        echo "Usage: ais_start [options]"
         echo ""
         echo "Options:"
-        echo "  --verbose   Show full service output (Qdrant, uvicorn, backend logs)"
-        echo "  --version   Show version and exit"
-        echo "  --help      Show this help and exit"
+        echo "  --verbose        Show full service output (Qdrant, uvicorn, backend logs)"
+        echo "  --no-separator   Use blank lines between sections instead of --- labels"
+        echo "  --version        Show version and exit"
+        echo "  --help           Show this help and exit"
         echo ""
         echo "· To stop: ais_stop"
         exit 0
     fi
 done
 
+sep() {
+    if [[ "$SEPARATOR" -eq 1 ]]; then
+        echo "${DIM}--- ${ITALIC}$1${RESET}"
+    else
+        echo ""
+    fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 FRONTEND="$REPO_ROOT/front_end/rag_studio.html"
 QDRANT_STORAGE="$HOME/qdrant_storage"
 VENV="$REPO_ROOT/.venv"
+
+echo "ais_start v$VERSION — Start AIStudio services"
 
 if [ -f "$VENV/bin/activate" ]; then
     source "$VENV/bin/activate"
@@ -53,13 +70,13 @@ else
     exit 1
 fi
 
-# ── Bundle 1: Cleanup ─────────────────────────────────────────────
-echo ""
+# ── Cleanup ───────────────────────────────────────────────────────
+sep "Cleanup"
 echo "🛑 Stopping any running services..."
-"$SCRIPT_DIR/stop.sh" 2>/dev/null || true
+"$SCRIPT_DIR/stop.sh" --silent 2>/dev/null || true
 
-# ── Bundle 2: Ecosystem ───────────────────────────────────────────
-echo ""
+# ── Ecosystem ─────────────────────────────────────────────────────
+sep "Ecosystem"
 echo "▶ Starting AIStudio..."
 
 if curl -s http://localhost:6333/healthz > /dev/null 2>&1; then
@@ -119,8 +136,8 @@ else
     echo "⚠ Backend slow to start — opening UI anyway."
 fi
 
-# ── Bundle 3: Custom processing ───────────────────────────────────
-echo ""
+# ── Processing ────────────────────────────────────────────────────
+sep "Processing"
 DEMO_COLLECTION="aistudio_demo"
 DEMO_CHECK=$(curl -s "http://localhost:6333/collections/$DEMO_COLLECTION" 2>/dev/null)
 
@@ -158,8 +175,8 @@ if [ "$BACKEND_READY" -eq 1 ]; then
     echo "✅ Help corpus $HELP_MSG in background: $HELP_PDF_COUNT files."
 fi
 
-# ── Bundle 4: Reporting ───────────────────────────────────────────
-echo ""
+# ── Reporting ─────────────────────────────────────────────────────
+sep "Reporting"
 echo "▶ Opening frontend..."
 open "$FRONTEND"
 echo "✅ AIStudio is running."
