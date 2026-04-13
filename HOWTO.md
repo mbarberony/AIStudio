@@ -52,12 +52,14 @@ If a command is not found, run `source ~/.zshrc` first.
 
 | Command | What it does |
 |---|---|
-| `ais_install` | Install AIStudio — run once after cloning |
+| `ais_install [cmd]` | Install AIStudio user commands — `ais_install ais_log` adds a single command, `ais_install --verify` checks all aliases |
 | `ais_start` | Start all services and open the UI in your browser |
 | `ais_stop` | Stop all services |
 | `ais_restart` | Stop then restart all services |
 | `ais_bench` | Run a benchmark on the demo corpus |
-| `ais_sec_download` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
+| `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
+| `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
+| `ais_ingest_sec_10k` | Ingest SEC 10-K corpus into AIStudio (~30 min, backend must be running) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:
@@ -145,7 +147,7 @@ Then re-upload the files via the UI (Add button) to restore the corpus in Qdrant
 
 ***How do I ingest the SEC 10-K corpus?***
 
-The SEC 10-K corpus is a special case. AIStudio provides `ais_sec_download` because
+The SEC 10-K corpus is a special case. AIStudio provides `ais_download_sec_10k` because
 the SEC EDGAR filing system uses a specific access protocol — this automates what
 would otherwise be a complex multi-step download. But the ingest step that follows
 is **identical to ingesting any corpus you bring yourself**. The download step is
@@ -157,7 +159,7 @@ is part of what makes AIStudio a learning tool, not just a product.
 
 **Step 1 — Download the filings to ~/Downloads/sec_10k/ (~5 min, ~2 GB):**
 ```bash
-ais_sec_download
+ais_download_sec_10k
 ```
 
 **Step 2 — Ingest using the AIStudio UI:**

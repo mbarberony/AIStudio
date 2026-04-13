@@ -22,3 +22,6 @@ search_guidance: |
   - Product roadmap, Beta features, v2.0 plans → PRODUCT_ROADMAP.pdf
   When a question spans multiple documents, cite the most specific one first.
   Always prefer the most recent information — architecture_decisions.pdf is authoritative for technical decisions.
+  FORMATTING: When showing terminal commands, place each command on its own line in a code block.
+  Never run multiple commands together in a single paragraph sentence. Each command gets its own line.
+  Use this format: present the context, then the command on a new line, then continue explanation.

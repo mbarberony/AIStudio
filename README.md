@@ -62,7 +62,7 @@ mkdir -p ~/bin && mv qdrant ~/bin/qdrant && echo 'export PATH="$HOME/bin:$PATH"'
 
 # 2. Clone and set up
 git clone git@github.com:mbarberony/AIStudio.git && cd AIStudio
-./ais_install && source ~/.zshrc
+./ais_install
 
 # 3. Start everything (stops any running services first, then restarts clean)
 ais_start
@@ -83,8 +83,11 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - Vector search via Qdrant 1.17.0 with cosine similarity
 - Metadata filtering — firm and year filters at the vector layer
 - RAG query with inline citations and source references
-- Browser UI — corpus selector, model selector, parameters, filters, chat
-- FastAPI backend — `/ask`, `/health`, `/corpus/*`, `/debug/*` endpoints
+- Browser UI — corpus management (create, rename, delete, stats, inspect), file upload with progress, chat with citations
+- Corpus rename — renames directory, cascades corpus_meta.yaml, triggers background re-index
+- Stats panel — per-file KB sizes, last ingestion time and duration from corpus_meta.yaml
+- Auto-linkify — URLs and corpus filenames in responses rendered as clickable links
+- FastAPI backend — `/ask`, `/health`, `/corpus/*` (create, rename, delete, info, upload, ingest), `/source`, `/prewarm`
 - Auto-launch script — `scripts/start.sh` starts all four processes
 - Benchmark harness — `benchmarks/benchmark.py` with CLI flags, auto-generates findings
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
@@ -98,12 +101,17 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
 - Demo corpus benchmark: 11/12 questions pass, 6.3s avg latency ✅
+- Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
+- Ingestion metadata — last_ingested_at and duration persisted to corpus_meta.yaml ✅
+- Manifest-driven `ais_install` — adds any new command alias in one step ✅
+- Help corpus search guidance — per-document routing rules injected into system prompt ✅
 
 ### In progress
 
 - Relevance threshold — discard low-scoring chunks
 - XBRL noise stripping in HTML ingestion
-- Remove file from corpus UI
+- Help modal — small in-app help interface using help corpus
+- Corpus metadata editor — Edit pane replacing Stats, with description and search guidance fields
 
 ---
 

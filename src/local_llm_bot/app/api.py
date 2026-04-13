@@ -7,9 +7,12 @@ import json
 import os
 import re
 import shutil
+import time
+from datetime import datetime as _dt
 from pathlib import Path
 from typing import Any
 
+import yaml as _yaml
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -56,13 +59,11 @@ def _load_corpus_search_guidance(corpus_name: str) -> str:
     Returns empty string silently if file missing or field absent.
     """
     try:
-        import yaml
-
         repo_root = _get_repo_root()
         meta_path = repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
         if meta_path.exists():
             with open(meta_path) as f:
-                meta = yaml.safe_load(f) or {}
+                meta = _yaml.safe_load(f) or {}
             guidance = meta.get("search_guidance", "").strip()
             return guidance
     except Exception:
@@ -446,10 +447,12 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     # List files in corpus — source of truth for doc count (live filesystem, not stale index)
     uploads_dir = paths["uploads"]
     files: list[str] = []
+    file_details: list[dict] = []
     if uploads_dir.exists():
-        files = sorted(
-            f.name for f in uploads_dir.iterdir() if f.is_file() and not f.name.startswith(".")
-        )
+        for f in sorted(uploads_dir.iterdir()):
+            if f.is_file() and not f.name.startswith("."):
+                files.append(f.name)
+                file_details.append({"name": f.name, "size_bytes": f.stat().st_size})
     doc_count = len(files)
 
     # Get real chunk count from Qdrant (live — not from stale manifest)
@@ -463,6 +466,23 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     except Exception:
         qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count if Qdrant unavailable
 
+    # Load ingestion metadata from corpus_meta.yaml if available
+    last_ingested_at = None
+    ingest_duration_seconds = None
+    last_ingest_chunks = None
+    last_ingest_files = None
+    try:
+        meta_path = paths["base"] / f"{corpus_name}_corpus_meta.yaml"
+        if meta_path.exists():
+            with open(meta_path) as f:
+                meta = _yaml.safe_load(f) or {}
+            last_ingested_at = meta.get("last_ingested_at")
+            ingest_duration_seconds = meta.get("ingest_duration_seconds")
+            last_ingest_chunks = meta.get("last_ingest_chunks")
+            last_ingest_files = meta.get("last_ingest_files")
+    except Exception:
+        pass
+
     return {
         "name": corpus_name,
         "status": "available",
@@ -470,10 +490,16 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "chunk_count": qdrant_chunk_count,
         "size_bytes": size_bytes,
         "files": files,
+        "file_details": file_details,
         "file_count": len(files),
+        "last_ingested_at": last_ingested_at,
+        "ingest_duration_seconds": ingest_duration_seconds,
+        "last_ingest_chunks": last_ingest_chunks,
+        "last_ingest_files": last_ingest_files,
         "stats": stats,
         "paths": {
             "base": str(paths["base"]),
+            "uploads": str(paths["uploads"]),
             "index": str(paths["index"]),
         },
     }
@@ -487,10 +513,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
       Process: 100%|...| 143/143 [03:46<00:00, 1.59s/file, chunks=105964, failed=0, processed=143, skipped=0]
     We parse chunks=N, processed=N, and elapsed time so the UI can show live progress.
     """
-    import os
-    import re
     import sys
-    import time
 
     cmd = [
         sys.executable,
@@ -599,9 +622,11 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             # D(k): observed chunks-per-byte ratio from completed files.
             # Seeded from first file after it completes; refined as more files complete.
             # During file k: p = chunks_written / (D(k) * total_bytes) * 100
-            # D_SEED: 5 chunks per 0.5MB = 9.54e-6 chunks/byte — conservative seed (25% of observed)
-            # to prevent progress bar jumping backwards when actual D(k) comes in after first file.
-            D_SEED = 5 / (2.0 * 1024 * 1024)
+            # D_SEED: 80 chunks per 0.5MB = 1.526e-4 chunks/byte — conservative seed
+            # History: original was 20 (too optimistic → bar went backwards after file 1)
+            # Session Apr12: divided by 4 → 5 (overcorrected — bar too slow)
+            # Session Apr12 correction: ×16 → 80 (4× original, correct conservative value)
+            D_SEED = 80 / (2.0 * 1024 * 1024)
             d_observed = cached_now.get("d_observed", D_SEED)
             if files_processed > 0 and bytes_completed > 0 and chunks > 0:
                 d_observed = chunks / bytes_completed  # update with latest observed ratio
@@ -710,6 +735,27 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             "message": summary,
         }
         print(f"[ingest] '{corpus_name}' complete — {summary}")
+
+        # AIStudio_270: write ingestion metadata to corpus_meta.yaml
+        try:
+            _repo = _get_repo_root()
+            _meta_path = (
+                _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
+            )
+            if _meta_path.exists():
+                with open(_meta_path) as _f:
+                    _meta = _yaml.safe_load(_f) or {}
+            else:
+                _meta = {"corpus_name": corpus_name}
+            _meta["last_ingested_at"] = _dt.now().isoformat(timespec="seconds")
+            _meta["ingest_duration_seconds"] = elapsed
+            _meta["last_ingest_chunks"] = final_chunks
+            _meta["last_ingest_files"] = final_total
+            with open(_meta_path, "w") as _f:
+                _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
+        except Exception as _e:
+            print(f"[ingest] warning: could not write ingest metadata to corpus_meta.yaml: {_e}")
+
         _ingest_proc.pop(corpus_name, None)
     else:
         _ingest_status[corpus_name] = {
@@ -1146,9 +1192,7 @@ async def delete_corpus(corpus_name: str, confirm: str = "") -> dict[str, Any]:
         trash_dir.mkdir(exist_ok=True)
         dest = trash_dir / f"AIStudio_{corpus_name}"
         if dest.exists():
-            import time as _time
-
-            dest = trash_dir / f"AIStudio_{corpus_name}_{int(_time.time())}"
+            dest = trash_dir / f"AIStudio_{corpus_name}_{int(time.time())}"
         if corpus_dir.exists():
             shutil.move(str(corpus_dir), str(dest))
 
@@ -1282,6 +1326,30 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
     if trash_path.exists():
         trash_path.unlink()
     shutil.move(str(file_path), str(trash_path))
+
+    # Update corpus_meta.yaml — reflect that file count changed
+    try:
+        _repo = _get_repo_root()
+        _meta_path = _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
+        if _meta_path.exists():
+            with open(_meta_path) as _f:
+                _meta = _yaml.safe_load(_f) or {}
+        else:
+            _meta = {"corpus_name": corpus_name}
+        # Recount files on disk after deletion
+        _uploads = paths["uploads"]
+        _file_count = (
+            len([f for f in _uploads.iterdir() if f.is_file() and not f.name.startswith(".")])
+            if _uploads.exists()
+            else 0
+        )
+        _meta["last_file_change_at"] = _dt.now().isoformat(timespec="seconds")
+        _meta["last_file_change"] = f"deleted: {filename}"
+        _meta["file_count_after_change"] = _file_count
+        with open(_meta_path, "w") as _f:
+            _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
+    except Exception as _e:
+        print(f"[delete_file] warning: could not update corpus_meta.yaml: {_e}")
 
     return {
         "status": "success",

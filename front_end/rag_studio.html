@@ -100,7 +100,12 @@
 
         select, input[type="number"] {
             width: 100%;
-            padding: 9px 12px;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 12px;
+            box-sizing: border-box;
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -156,7 +161,12 @@
 
         .action-btn {
             flex: 1;
-            padding: 8px 6px;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 6px;
+            box-sizing: border-box;
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -199,7 +209,12 @@
 
         .clear-btn {
             width: 100%;
-            padding: 8px;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 8px;
+            box-sizing: border-box;
             background: none;
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -228,7 +243,7 @@
 
         .copyright {
             font-size: 13px;
-            text-align: left;
+            text-align: center;
             color: var(--text-dim);
             line-height: 1.6;
         }
@@ -834,6 +849,7 @@
 
     // ── State ──────────────────────────────────────────────────────
     let currentCorpus = null;
+    let currentCorpusFiles = []; // filenames in current corpus — used by linkify()
     let isLoading = false;
     let conversationHistory = [];
 
@@ -882,7 +898,15 @@
 
     // ── Init ───────────────────────────────────────────────────────
     async function init() {
-        await Promise.all([loadModels(), loadCorpora()]);
+        const _timeout = ms => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+        try {
+            await Promise.race([Promise.all([loadModels(), loadCorpora()]), _timeout(5000)]);
+        } catch(e) {
+            if (e.message === 'timeout' || e.message.includes('fetch')) {
+                corpusSelect.innerHTML = '<option value="">Backend not running — run ais_start</option>';
+                document.getElementById('modelSelect').innerHTML = '<option value="">Backend not running</option>';
+            }
+        }
     }
 
     async function loadModels() {
@@ -940,7 +964,12 @@
     function setCorpus(name) {
         const prev = currentCorpus;
         currentCorpus = name;
+        currentCorpusFiles = [];
         if (name) {
+            // Load file list for linkify() — async, best-effort
+            fetch(`${API}/corpus/${name}/info`).then(r => r.json()).then(d => {
+                currentCorpusFiles = (d.files || []).map(f => typeof f === 'string' ? f : (f.name || ''));
+            }).catch(() => {});
             if (prev && prev !== name) addSeparator(`Corpus: ${name}`);
             topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong>`;
             chatInput.placeholder = `Ask a question about ${name}…`;
@@ -1075,7 +1104,20 @@
             '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline;">$1</a>');
         // Local file paths: data/corpora/..., scripts/..., docs/..., front_end/...
         text = text.replace(/\b((?:data\/corpora|scripts|docs|front_end|src)\/[^\s<>"',;)]+\.(py|sh|html|md|yaml|yml|pdf|txt|json))/g,
-            (match) => `<a href="${API}/source?path=${encodeURIComponent(match)}" target="_blank" style="color:var(--accent);font-family:'DM Mono',monospace;font-size:0.92em;text-decoration:underline;">${match}</a>`);
+            (match) => `<a href="${API}/source?path=${encodeURIComponent(match)}" target="_blank" style="color:var(--accent);font-family:monospace;font-size:0.92em;text-decoration:underline;">${match}</a>`);
+        // Corpus filenames: match known files in current corpus
+        if (currentCorpusFiles.length > 0) {
+            currentCorpusFiles.forEach(fname => {
+                if (!fname) return;
+                // Only match if not already inside an <a> tag
+                const escaped = fname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const re = new RegExp('(?<!href=["\'"][^"\'"]*)\\b(' + escaped + ')\\b(?![^<]*>)', 'g');
+                text = text.replace(re, (match) => {
+                    const corpusPath = `data/corpora/${currentCorpus}/uploads/${fname}`;
+                    return `<a href="${API}/source?path=${encodeURIComponent(corpusPath)}" target="_blank" style="color:var(--accent);font-family:monospace;font-size:0.92em;text-decoration:underline;">${match}</a>`;
+                });
+            });
+        }
         return text;
     }
 
@@ -1090,7 +1132,7 @@
         div.innerHTML = `
             <div class="avatar ${role}">${avatarIcon}</div>
             <div class="bubble ${role}">
-                <div class="text">${isHtml ? linkify(content) : linkify(escapeHtml(content))}</div>
+                <div class="text">${isHtml ? content : linkify(escapeHtml(content))}</div>
             </div>`;
 
         messagesEl.appendChild(div);
@@ -1117,8 +1159,8 @@
     function addSystemMessage(html) {
         if (!messagesEl) return;
         const div = document.createElement('div');
-        div.style.cssText = 'padding:6px 12px;margin:2px 0;font-size:13px;color:var(--text-mid);line-height:1.5;';
-        div.innerHTML = html;
+        div.style.cssText = 'padding:6px 12px 6px 10px;margin:2px 0;font-size:13px;color:var(--text-mid);line-height:1.5;display:flex;align-items:baseline;gap:6px;';
+        div.innerHTML = '<span style="flex-shrink:0;font-size:13px;">ℹ</span><span>' + html + '</span>';
         messagesEl.appendChild(div);
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -1224,14 +1266,14 @@
             requireYes: true,
         });
         if (!confirmed) {
-            addMessage('assistant', 'File removal cancelled.', false);
+            addSystemMessage('File removal cancelled.');
             return;
         }
         try {
             const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(filename)}`, { method: 'DELETE' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-            addMessage('assistant', '<strong>' + filename + '</strong> moved to trash and removed from the search index.', true);
+            addSystemMessage('<strong>' + filename + '</strong> moved to trash and removed from the search index.');
             inspectCorpus();
         } catch (err) {
             addMessage('assistant', 'Error: ' + err.message, false);
@@ -1244,21 +1286,33 @@
             const res = await fetch(`${API}/corpus/${currentCorpus}/info`);
             const data = await res.json();
             hideEmpty();
-            const rawFiles = data.files || [];
-            const fileNames = rawFiles.map(f => (typeof f === 'string') ? f : (f.name || String(f)));
-            const sortedFileNames = fileNames.slice().sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            const fileDetails = data.file_details || (data.files || []).map(f => ({name: typeof f === 'string' ? f : (f.name || String(f)), size_bytes: 0}));
+            const sortedDetails = fileDetails.slice().sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
             const sizeLabel = data.size_bytes ? (data.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—';
-            let fileRows = sortedFileNames.length > 0
-                ? sortedFileNames.map(f =>
-                    '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-family:monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + f + '">' + f + '</div>'
-                  ).join('')
+            let fileRows = sortedDetails.length > 0
+                ? sortedDetails.map(f => {
+                    const kb = f.size_bytes ? (f.size_bytes / 1024).toFixed(0) + ' KB' : '';
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">'
+                        + '<span style="font-family:monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + f.name + '">' + f.name + '</span>'
+                        + (kb ? '<span style="font-size:11px;color:var(--text-mid);flex-shrink:0;margin-left:8px;">' + kb + '</span>' : '')
+                        + '</div>';
+                  }).join('')
                 : '<div style="color:var(--text-mid);font-size:13px;padding:8px 0;">No files in corpus.</div>';
+            let ingestLine = '';
+            if (data.last_ingested_at) {
+                const dt = new Date(data.last_ingested_at);
+                const dtStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+                    + ' ' + dt.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+                const dur = data.ingest_duration_seconds ? ' · ' + data.ingest_duration_seconds + 's' : '';
+                ingestLine = '<div style="font-size:11px;color:var(--text-mid);margin-bottom:8px;">Last ingested: ' + dtStr + dur + '</div>';
+            }
             const summary = '<strong>Corpus: ' + data.name + '</strong><br><br>'
-                + '<div style="display:flex;gap:20px;margin-bottom:10px;font-size:13px;color:var(--text-mid);">'
+                + '<div style="display:flex;gap:20px;margin-bottom:6px;font-size:13px;color:var(--text-mid);">'
                 + '<span>' + (data.document_count ?? '—') + ' docs</span>'
                 + '<span>' + (data.chunk_count ?? '—') + ' chunks</span>'
                 + '<span>' + sizeLabel + '</span>'
                 + '</div>'
+                + ingestLine
                 + '<div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px;">'
                 + fileRows + '</div>';
             addMessage('assistant', summary, true);
@@ -1285,11 +1339,12 @@
             if (sortedFileNames.length > 0) {
                 fileRows = sortedFileNames.map(function(f) {
                     const safe = f.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const openUrl = API + '/source?path=' + encodeURIComponent(data.paths.uploads + '/' + f);
                     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
                         + '<span style="flex:1;font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + f + '">' + f + '</span>'
-                        + '<button onclick="deleteFileFromCorpus(\'' + safe + '\')" title="Move to trash" '
-                        + 'style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px 6px;color:#c53030;font-size:14px;border-radius:4px;opacity:0.7;" '
-                        + 'onmouseover="this.style.opacity=\'1\';this.style.background=\'#fff5f5\'" onmouseout="this.style.opacity=\'0.7\';this.style.background=\'none\'">&#x1F5D1;</button>'
+                        + '<a href="' + openUrl + '" target="_blank" title="Open file" '
+                        + 'style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px 6px;color:var(--accent);font-size:13px;text-decoration:none;border-radius:4px;opacity:0.8;" '
+                        + 'onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.8\'">&#128269;</a>'
                         + '</div>';
                 }).join('');
             } else {
@@ -1355,7 +1410,7 @@
 
     // ── Corpus create ──────────────────────────────────────────────
     async function createCorpus() {
-        const name = await showNameModal('New corpus name:');
+        const name = await showNameModal('New corpus name:<br><span style="font-size:11px;color:var(--text-mid);">Lowercase letters, numbers, hyphens and underscores only — e.g. my_corpus</span>', 'New Corpus', 'Create');
         if (!name) return;
         try {
             const res = await fetch(`${API}/corpus/create`, {
@@ -1370,13 +1425,27 @@
             setCorpus(name);
             addSystemMessage(`✓ Corpus <strong>${name}</strong> created. Click <strong>Add</strong> to upload files.`);
         } catch (err) {
-            addMessage('assistant', `Error creating corpus: ${err.message}`, false);
+            addSystemMessage(`❌ Error creating corpus: ${err.message}`);
         }
     }
 
     async function renameCorpus() {
         if (!currentCorpus) return;
-        const newName = await showNameModal(`Rename corpus "${currentCorpus}" to:`);
+
+        // Fetch chunk count to estimate re-ingest time before showing modal
+        let reindexWarning = '';
+        try {
+            const infoRes = await fetch(`${API}/corpus/${currentCorpus}/info`);
+            const info = await infoRes.json();
+            const chunks = info.chunk_count || 0;
+            if (chunks > 0) {
+                // ~1000 chunks/min on Apple Silicon M4
+                const mins = Math.max(1, Math.round(chunks / 1000));
+                reindexWarning = `<br><span style="font-size:11px;color:var(--text-mid);">⚠ Re-indexing will run in background (~${mins} min for ${chunks.toLocaleString()} chunks).</span>`;
+            }
+        } catch (_) {}
+
+        const newName = await showNameModal(`New name for corpus "${currentCorpus}":${reindexWarning}`, 'Rename Corpus', 'Rename');
         if (!newName || newName === currentCorpus) return;
         try {
             const res = await fetch(`${API}/corpus/${currentCorpus}/rename`, {
@@ -1388,11 +1457,12 @@
             if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
             await loadCorpora();
             corpusSelect.value = newName;
+            const oldName = currentCorpus;
             setCorpus(newName);
-            addSeparator(`Corpus renamed: ${currentCorpus} → ${newName}`);
+            addSeparator(`Corpus renamed: ${oldName} → ${newName}`);
             addSystemMessage(`✓ Corpus renamed to <strong>${newName}</strong>. Re-indexing in background.`);
         } catch (err) {
-            addMessage('assistant', `Error renaming corpus: ${err.message}`, false);
+            addSystemMessage(`❌ Error renaming corpus: ${err.message}`);
         }
     }
 
@@ -1472,12 +1542,12 @@
         });
     }
 
-    function showNameModal(label) {
+    function showNameModal(label, title='New Corpus', confirmLabel='Create') {
         return showModal({
-            title: 'New Corpus',
+            title: title,
             body: label,
             inputPlaceholder: 'e.g. sec_10k',
-            confirmLabel: 'Create',
+            confirmLabel: confirmLabel,
         });
     }
 
@@ -1668,7 +1738,7 @@
         }
 
         if (toUpload.length === 0) {
-            addMessage('assistant', `All files already indexed — nothing to upload.`, false);
+            addSystemMessage('All files already indexed — nothing to upload.');
             window.selectedFiles = [];
             return;
         }
@@ -1884,7 +1954,7 @@
             requireYes: true,
         });
         if (!confirmed) {
-            addMessage('assistant', 'Corpus deletion cancelled.', false);
+            addSystemMessage('Corpus deletion cancelled.');
             return;
         }
         try {
@@ -1892,10 +1962,10 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
             fetch(`${API}/howto`).then(r=>r.json()).then(d=>{
-                const link = d.url ? `<a href="${d.url}" target="_blank">HOWTO</a>` : 'HOWTO';
-                addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see ' + link + '.', true);
+                const link = `<a href="${API}/source?path=${encodeURIComponent('HOWTO.pdf')}" target="_blank">HOWTO</a>`;
+                addSystemMessage('Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see ' + link + '.');
             }).catch(()=>{
-                addMessage('assistant', 'Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see HOWTO.', true);
+                addSystemMessage('Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore, see <a href="' + API + '/source?path=HOWTO.pdf" target="_blank">HOWTO.pdf</a>.');
             });
             await loadCorpora();
         } catch (err) {
