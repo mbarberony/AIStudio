@@ -2,21 +2,21 @@
 # Persistent search routing guidance for the help corpus.
 # Lives in docs/ — tracked in git, never deleted.
 # Copied into data/corpora/help/help_corpus_meta.yaml when help corpus is created.
-# Version: 1.0.0
+# Version: 1.1.0
 
 corpus_name: help
-description: "AIStudio user and developer documentation — installation, usage, architecture, benchmarks, roadmap"
-content_summary: "11 documents covering: README (product overview), QUICKSTART (installation guide), HOWTO (user recipes), architecture_decisions (technical rationale), CODEBASE_GUIDE (codebase introduction), DEMO_CORPUS (demo content), HARNESS (benchmark harness), QA_TESTING (lessons learned), dependencies (dependency list), PRODUCT_ROADMAP (roadmap), Benchmarks and Reports (performance findings)"
+description: "AIStudio user and developer documentation — installation, usage, architecture, roadmap"
+content_summary: "10 documents covering: README (product overview), QUICKSTART (installation guide), HOWTO (user recipes), architecture_decisions (technical rationale), CODEBASE_GUIDE (codebase introduction), DEMO_CORPUS (demo content and questions), HARNESS (benchmark harness — how to run benchmarks, question file format, reading reports), QA_TESTING (lessons learned), dependencies (dependency list), PRODUCT_ROADMAP (roadmap). Note: benchmark results and performance data live in the demo corpus as 'AIStudio - Benchmark Data.pdf', not in the help corpus."
 search_guidance: |
   Route questions to the most relevant document based on intent:
   - Installation, setup, prerequisites, first run → QUICKSTART.pdf
   - How to use AIStudio, corpus management, query settings, troubleshooting → HOWTO.pdf
-  - Product overview, what AIStudio does, performance claims, demo corpus → README.pdf
+  - Product overview, what AIStudio does, demo corpus description → README.pdf
   - Architecture choices, why Qdrant, why CrossEncoder, chunking design → architecture_decisions.pdf
   - Codebase structure, directory layout, file purposes, design patterns → CODEBASE_GUIDE.pdf
-  - Benchmark results, latency data, model comparison, warm model performance → AIStudio - Benchmarks and Reports.pdf
-  - What ships in the demo corpus, suggested questions → DEMO_CORPUS.pdf
-  - How to run benchmarks, CLI flags, reading reports → HARNESS.pdf
+  - What ships in the demo corpus, suggested demo questions → DEMO_CORPUS.pdf
+  - How to run benchmarks, CLI flags, question file format, reading reports → HARNESS.pdf
+  - Benchmark results, latency data, model comparison, warm model performance → query the demo corpus, not the help corpus
   - Known install issues, QA findings, friction points → QA_TESTING_LESSONS_LEARNED.pdf
   - Python and system dependencies, version requirements → dependencies.pdf
   - Product roadmap, Beta features, v2.0 plans → PRODUCT_ROADMAP.pdf

@@ -157,7 +157,7 @@ This is one of the few places in AIStudio where you'll run terminal commands
 directly. We expose it deliberately — understanding how large corpora are built
 is part of what makes AIStudio a learning tool, not just a product.
 
-**Step 1 — Download the filings to ~/Downloads/sec_10k/ (~5 min, ~2 GB):**
+**Step 1 — Download the filings to `data/corpora/sec_10k/uploads/` (~5 min, ~2 GB):**
 ```bash
 ais_download_sec_10k
 ```
@@ -165,15 +165,11 @@ ais_download_sec_10k
 **Step 2 — Ingest using the AIStudio UI:**
 
 Open AIStudio, create a new corpus named `sec_10k`, then upload the files
-from `~/Downloads/sec_10k/` using the **Upload** button. This is the same
+from `data/corpora/sec_10k/uploads/` using the **Upload** button. This is the same
 process as ingesting any corpus you build yourself — the download step is
 what's special.
 
 Allow ~34 minutes for ingestion to complete.
-
-> **Why ~/Downloads?** You own the downloaded files — ~2 GB of SEC filings
-> you may want to reuse, inspect, or build a different subset from.
-> They stay in `~/Downloads/sec_10k/` until you decide what to do with them.
 
 ---
 
@@ -261,7 +257,7 @@ ais_bench --corpus demo --model llama3.1:70b --top-k 10 --temperature 0.1
 ```
 
 ***How do I write my own test questions for a corpus?***
-Create `benchmarks/<corpus_name>_questions.yaml`:
+Create `benchmarks/<corpus_name>/<corpus_name>_questions.yaml`:
 ```yaml
 - topic: Getting Started
   questions:
@@ -272,7 +268,7 @@ Create `benchmarks/<corpus_name>_questions.yaml`:
 Run `ais_bench --corpus <n>` — the questions file is auto-detected by corpus name.
 
 ***Where do reports go?***
-`benchmarks/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
+`benchmarks/<corpus>/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
 
 For full benchmark documentation see [HARNESS.pdf](docs/HARNESS.pdf).
 

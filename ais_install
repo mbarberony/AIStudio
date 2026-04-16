@@ -8,14 +8,14 @@
 #   ais_install --list               # show all installable user commands
 #   ais_install --verify             # check which commands are active in .zshrc
 #
-# Version: 2.0.0
+# Version: 2.1.0
 
-VERSION="2.0.0"
+VERSION="2.1.0"
 REPO="$(cd "$(dirname "$0")" && pwd)"
 MANIFEST="$REPO/meta/bundle_manifest.yaml"
 ZSHRC="$HOME/.zshrc"
 
-echo "ais_install v$VERSION — AIStudio Command Installer"
+printf "\033[1m[ais_install v$VERSION — AIStudio Command Installer]\033[0m\n"
 
 if [[ "$1" == "--version" ]]; then exit 0; fi
 
@@ -127,6 +127,7 @@ if [[ -n "$1" ]]; then
             fi
             write_alias "$alias_name" "$script_path" "$ZSHRC"
             source "$ZSHRC"
+            echo "· Run: source ~/.zshrc  (to activate in current shell)"
             echo "· Run: $alias_name --version"
             exit 0
         fi

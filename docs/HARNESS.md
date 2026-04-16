@@ -1,28 +1,27 @@
 # Benchmark Harness
 
-AIStudio ships with a benchmark harness (`benchmarks/benchmark.py`) that runs a structured question set against any corpus and produces timestamped reports. It is designed for the demo corpus out of the box but works with any corpus and any YAML question file you provide.
+AIStudio ships with a benchmark harness (`benchmarks/bench.py`) that runs a structured question set against any corpus and produces timestamped reports. It is designed for the demo corpus out of the box but works with any corpus and any YAML question file you provide.
 
-Reports are written to `benchmarks/reports/` as paired `.md` and `.json` files, named by corpus and timestamp.
+Reports are written to `benchmarks/<corpus>/reports/` as paired `.md` and `.json` files, named by corpus and timestamp.
 
 ---
 
 ## Quick Start (Demo Corpus)
 
-Make sure the backend is running, then from the repo root:
+Make sure the backend is running (`ais_start`), then:
 
 ```bash
-source .venv/bin/activate
-python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+ais_bench
 ```
 
-This runs all 12 demo questions against the `demo` corpus and writes a timestamped report to `benchmarks/reports/`.
+This runs all 12 demo questions against the `demo` corpus and writes a timestamped report to `benchmarks/demo/reports/`.
 
 ---
 
 ## CLI Reference
 
 ```
-python benchmarks/benchmark.py [OPTIONS]
+ais_bench [OPTIONS]
 
 Options:
   --corpus NAME         Corpus to query (default: demo)
@@ -33,17 +32,19 @@ Options:
   --api URL             Backend URL (default: http://localhost:8000)
   --no-markdown         Skip writing .md report
   --full                Include full answers in report (default: first 4 paragraphs)
-  -h, --help            Show this help message
+  --help                Show this help message
+  --version             Show version
 ```
 
 Question files are auto-detected: for `--corpus demo`, the harness looks for
-`benchmarks/demo_questions.yaml` automatically. For custom corpora, pass `--questions`.
+`benchmarks/demo/demo_questions.yaml` automatically. For any other corpus, place a
+`{corpus}_questions.yaml` file in `benchmarks/{corpus}/` and it will be auto-detected.
 
 ---
 
 ## Question File Format
 
-Questions are YAML files organized by topic. Each question has an `id`, a `question` string, optional `keywords` for retrieval hints, and optional `notes`:
+Questions are YAML files organized by topic. Each question has an `id`, a `question` string, optional `keywords` for pass/fail evaluation, and optional `notes`:
 
 ```yaml
 - topic: Architecture Methodology
@@ -58,7 +59,8 @@ Questions are YAML files organized by topic. Each question has an `id`, a `quest
       keywords: [organization, architecture, principles]
 ```
 
-Place question files in `benchmarks/` named `{corpus}_questions.yaml` for auto-detection.
+Place question files at `benchmarks/{corpus}/{corpus}_questions.yaml` for auto-detection.
+See `benchmarks/demo/demo_questions.yaml` for a fully annotated example.
 
 ---
 
@@ -66,23 +68,19 @@ Place question files in `benchmarks/` named `{corpus}_questions.yaml` for auto-d
 
 ### 1. Create and ingest your corpus
 
-Create a corpus via the UI, then ingest your documents:
-
-```bash
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
-  --corpus my_corpus \
-  --root data/corpora/my_corpus/uploads
-```
+Create a corpus via the UI, upload your documents, and ingest them.
 
 ### 2. Write a question file
 
-Create `benchmarks/my_corpus_questions.yaml` following the format above.
+Create `benchmarks/{corpus}/{corpus}_questions.yaml` following the format above.
 
 ### 3. Run the benchmark
 
 ```bash
-python benchmarks/benchmark.py --corpus my_corpus --top-k 5 --temperature 0.3
+ais_bench --corpus my_corpus
 ```
+
+Reports are written to `benchmarks/my_corpus/reports/`.
 
 ---
 
@@ -91,31 +89,30 @@ python benchmarks/benchmark.py --corpus my_corpus --top-k 5 --temperature 0.3
 ### Compare models
 
 ```bash
-python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:8b
-python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
-python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3 --model mistral:7b
+ais_bench --model llama3.1:8b
+ais_bench --model llama3.1:70b
 ```
 
 ### Compare retrieval depth
 
 ```bash
-python benchmarks/benchmark.py --corpus demo --top-k 3
-python benchmarks/benchmark.py --corpus demo --top-k 5
-python benchmarks/benchmark.py --corpus demo --top-k 10
+ais_bench --top-k 3
+ais_bench --top-k 5
+ais_bench --top-k 10
 ```
 
 ### Compare temperature
 
 ```bash
-python benchmarks/benchmark.py --corpus demo --temperature 0.0
-python benchmarks/benchmark.py --corpus demo --temperature 0.3
-python benchmarks/benchmark.py --corpus demo --temperature 0.7
+ais_bench --temperature 0.0
+ais_bench --temperature 0.3
+ais_bench --temperature 0.7
 ```
 
-Each run produces a separate timestamped report in `benchmarks/reports/`:
+Each run produces a separate timestamped report in `benchmarks/demo/reports/`:
 ```
-benchmarks/reports/benchmark_demo_2026-03-19_23-50.md
-benchmarks/reports/benchmark_demo_2026-03-19_23-50.json
+benchmarks/demo/reports/benchmark_demo_2026-04-15_21-30.md
+benchmarks/demo/reports/benchmark_demo_2026-04-15_21-30.json
 ```
 
 ---
@@ -134,8 +131,6 @@ Each report contains:
 
 **Detailed results** — full answer text with inline citations, per question.
 
-**Known limitations** — retrieval quality notes, corpus-specific issues.
-
 The first query in a cold session is slow (20–50s) while the LLM loads into memory. Subsequent queries run at ~6–7s warm on Apple Silicon. The benchmark summary reflects warm latency once the first query completes.
 
 ---
@@ -145,10 +140,28 @@ The first query in a cold session is slow (20–50s) while the LLM loads into me
 To benchmark against the full 143-filing SEC corpus:
 
 ```bash
-python benchmarks/benchmark.py --corpus sec_10k --top-k 10 --temperature 0.3
+# Download and ingest first (one-time, ~35 min total)
+ais_download_sec_10k
+ais_ingest_sec_10k
+
+# Then benchmark
+ais_bench --corpus sec_10k --top-k 10
 ```
 
-The SEC corpus must be downloaded and ingested first — see QUICKSTART.md for instructions. Ingest takes ~34 minutes on M4 Max.
+Question file is auto-generated at `benchmarks/sec_10k/sec_10k_questions.yaml` on first `ais_ingest_sec_10k` run.
+
+Reports are written to `benchmarks/sec_10k/reports/`.
+
+---
+
+## Benchmark Data in Demo Corpus (Operator)
+
+Running `ais_bench_ops` (operator command) automatically:
+- Runs the benchmark
+- Copies the latest PDF report as `AIStudio - Benchmark Data.pdf` to `data/corpora/demo/uploads/`
+- Triggers a demo corpus re-ingest
+
+This means users querying the demo corpus can ask questions about benchmark results without any manual steps. Running `ais_bench_ops` is the canonical way to keep benchmark data current.
 
 ---
 
@@ -156,6 +169,6 @@ The SEC corpus must be downloaded and ingested first — see QUICKSTART.md for i
 
 - **Cross-run comparison** — diff two reports on latency, answer quality, source overlap
 - **Hardware metadata** — machine specs recorded in report header for M4 Air vs M4 Max comparisons
-- **Model quality evaluation** — human eval framework for 8b vs 70b answer quality (latency is already characterized)
+- **Model quality evaluation** — human eval framework for 8b vs 70b answer quality
 
-See `docs/roadmap.md` for the full roadmap.
+See `docs/PRODUCT_ROADMAP.md` for the full roadmap.

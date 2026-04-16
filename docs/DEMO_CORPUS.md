@@ -78,7 +78,7 @@ These questions are designed to showcase both retrieval quality and the
 depth of the corpus. They work well for demonstrating AIStudio to
 technical reviewers or potential users.
 
-The complete machine-readable question set lives in `benchmarks/demo_questions.yaml`
+The complete machine-readable question set lives in `benchmarks/demo/demo_questions.yaml`
 (12 questions across 4 topics, all validated against the corpus). Run `ais_bench`
 to execute them as a benchmark.
 
@@ -132,7 +132,7 @@ From the repo root with your virtual environment active:
 ```bash
 PYTHONPATH=src python -m local_llm_bot.app.ingest \
   --corpus demo \
-  --root data/demo
+  --root data/corpora/demo/uploads
 ```
 
 This indexes all documents in `data/demo/` into a corpus named `demo`.

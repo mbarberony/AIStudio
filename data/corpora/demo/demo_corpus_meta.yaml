@@ -1,8 +1,8 @@
-# demo_corpus_meta.yaml
-# Corpus search guidance — loaded by api.py at query time
-# Fill in fields to improve retrieval quality for this corpus
-
+content_summary: ''
 corpus_name: demo
-description: ""
-content_summary: ""
-search_guidance: ""
+description: ''
+ingest_duration_seconds: 1
+last_ingest_chunks: 19
+last_ingest_files: 11
+last_ingested_at: '2026-04-15T23:58:59'
+search_guidance: ''
