@@ -77,3 +77,4 @@ epaves/
 
 # Pipeline (operator only, never in public repo)
 PIPELINE.md
+benchmarks/demo/reports/
