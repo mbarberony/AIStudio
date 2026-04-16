@@ -117,7 +117,7 @@ See `docs/QA_TESTING_LESSONS_LEARNED.md` for the full clean install validation r
 
 | Metric | Value |
 |---|---|
-| Total documents | 17 |
+| Total documents | 11 |
 | Total pages (PDF/PPT) | ~530pp |
 | Date range | 2003 — 2021 |
 | Formats | PDF, PPTX, PPT |

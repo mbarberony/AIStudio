@@ -1,5 +1,7 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
+*Version: Beta*
+
 # AIStudio
 
 **AIStudio is a private, local AI search and RAG (Retrieval-Augmented Generation) application that runs entirely on your Mac.** It lets you upload your own documents, index them, and ask questions in plain English — getting cited answers grounded in your content, with no data leaving your machine and no external API or cloud dependency.
@@ -38,7 +40,7 @@ A browser-based interface lets you manage document collections and query them co
 
 **Two corpora ship with AIStudio, each proving something different:**
 
-**Demo corpus — 20 years of original thought leadership:** AIStudio ships with a curated set of 15 documents spanning 2003–2021 — IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, and AI reference architecture. These are original works: articles edited for practitioner journals, engagement frameworks, and strategy documents produced across senior technology roles at major financial institutions. Querying this corpus is querying the intellectual capital of a 20-year career. The corpus and the tool are the same proof point.
+**Demo corpus — 20 years of original thought leadership:** AIStudio ships with a curated set of 11 documents spanning 2003–2021 — IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, and AI reference architecture. These are original works: articles edited for practitioner journals, engagement frameworks, and strategy documents produced across senior technology roles at major financial institutions. Querying this corpus is querying the intellectual capital of a 20-year career. The corpus and the tool are the same proof point.
 
 A reviewer who asks *"What is the relationship between business strategy and technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal article — original work, not sample data. That is what makes the demo corpus distinctive.
 
@@ -89,7 +91,7 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - Auto-linkify — URLs and corpus filenames in responses rendered as clickable links
 - FastAPI backend — `/ask`, `/health`, `/corpus/*` (create, rename, delete, info, upload, ingest), `/source`, `/prewarm`
 - Auto-launch script — `scripts/start.sh` starts all four processes
-- Benchmark harness — `benchmarks/benchmark.py` with CLI flags, auto-generates findings
+- Benchmark harness — `benchmarks/bench.py` with CLI flags, auto-generates findings
 - CI/CD — GitHub Actions: lint + unit + integration tests on every push
 - Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
 
@@ -252,7 +254,7 @@ Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
 
 Testing spans the Apple Silicon performance spectrum: the M4 Max (128GB) establishes the baseline above. The same system runs correctly on an M4 Air — the other end of the Apple Silicon range — with approximately 40% higher latency under equivalent conditions. Systematic benchmark data on the Air is being collected. The goal is to characterize behavior across the full range of likely deployment hardware, not just optimal conditions.
 
-→ [Full benchmark analysis and measurement methodology](llm_analysis/HELP%20-%20AIStudio%20-%20RAG%20Performance%20Findings%20-%202026-03-22.md)
+→ [Benchmark reports and question sets](benchmarks/demo/reports/)
 
 ---
 

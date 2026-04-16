@@ -16,7 +16,7 @@ For more information, see [README.pdf](README.pdf).
 - **Benchmark harness** — YAML question files with pass/fail veracity testing and timestamped reports
 
 ## Demo Corpus
-9 documents spanning enterprise architecture, IT strategy, and financial services technology — the author's original work from 2003 to 2021. Ask it anything about architecture methodology, technology strategy, or risk and compliance frameworks.
+11 documents spanning enterprise architecture, IT strategy, and financial services technology — the author's original work from 2003 to 2021. Ask it anything about architecture methodology, technology strategy, or risk and compliance frameworks.
 
 ## Architecture and Components
 - **Architecture:** See [Architecture decisions](docs/architecture_decisions.pdf)
