@@ -1,13 +1,13 @@
 # AIStudio — Demo Corpus Benchmark Questions
-# Curated set of 12 questions validated against the demo corpus (March 2026)
-# All 12 pass with citations on llama3.1:8b warm, avg latency ~6s
+# Curated set of 14 questions validated against the demo corpus
+# All 12 original pass with citations on llama3.1:8b warm, avg latency ~5.3s
 #
-# Corpus: data/demo/demo_data — 15 documents, 1289 chunks
+# Corpus: data/corpora/demo/uploads — 9 documents, ~1070 chunks
 # 20+ years of original thought leadership in financial services technology
-# architecture, spanning 2003–2021
+# architecture, spanning 2003–2026
 #
 # Usage:
-#   python3 scripts/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+#   ais_bench
 #   (auto-detected — no --questions flag needed)
 
 - topic: Architecture Methodology
@@ -17,13 +17,13 @@
       question: What is QFD and how does it apply to technology architecture?
       keywords: [QFD, architecture]
       notes: >
-        Tests retrieval of dedicated QFD documents (Architecture and QFD.pdf,
-        BOEI - Architecture and QFD - 2003.pdf). Flagship demo question.
+        Tests retrieval of dedicated QFD document (Erder|Pureur 2003).
+        Flagship demo question.
 
     - id: it_org_architectural_principles
       question: How do you design an IT organization around architectural principles?
       keywords: [organization, architecture, principles]
-      notes: Retrieves from Architecting the IT Organization and FS Journal.
+      notes: Retrieves from Barbero 2006 Architecture Concepts and FS Journal.
 
     - id: architecture_concepts_organizations
       question: How do architecture concepts help design organizations?
@@ -39,7 +39,7 @@
       question: How should a CTO prioritize a three-year technology strategy?
       keywords: [CTO, strategy, technology]
       notes: >
-        Consistently returns 5 citations across all models. Draws from
+        Consistently returns multiple citations. Draws from
         FS Journal Strategy volume and Barbero 2020 modernization paper.
 
     - id: technology_target_state
@@ -50,7 +50,7 @@
     - id: large_scale_it_transformation
       question: How do you organize a large-scale IT transformation program?
       keywords: [transformation, program, IT]
-      notes: Draws from GTIS Strategy document and FS Journal.
+      notes: Draws from FS Journal Strategy volume.
 
     - id: business_technology_strategy
       question: What is the relationship between business strategy and technology strategy?
@@ -68,7 +68,6 @@
       notes: >
         Draws directly from Barbero 2020 Technology Modernization paper —
         original work with a principled-based approach framework.
-        Replaces enterprise AI reference architecture question (weak retrieval).
 
     - id: modernizing_legacy_applications
       question: What are the key principles for modernizing legacy applications?
@@ -98,3 +97,20 @@
       notes: >
         Good synthesis question drawing on multiple FS Journal volumes.
         Strong closer for a demo sequence.
+
+- topic: Agentic AI
+  questions:
+
+    - id: agentic_ai_financial_services
+      question: What are the key opportunities and limitations of agentic AI in financial services?
+      keywords: [agentic AI, financial services, limitations]
+      notes: >
+        Tests retrieval from Barbero 2026 Agentic AI paper. Covers
+        Verifier Law, limitations, and strategic implications.
+
+    - id: ai_knowledge_productivity
+      question: How should organizations embed AI into their knowledge productivity ecosystem?
+      keywords: [AI, knowledge, productivity, organization]
+      notes: >
+        Tests Section C content from Barbero 2026 — vision for AI
+        integration as foundational element of knowledge work reinvention.
