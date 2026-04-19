@@ -37,8 +37,13 @@ scripts/ais_commit.sh
 scripts/ais_publish.sh
 scripts/restore_scripts.sh
 scripts/update_help_corpus.py
+scripts/update_help_corpus_ops.py
 ais_update_help_ops.sh
 ais_ingest_help_ops.sh
+ais_bench_ops.sh
+ais_help_ops.sh
+ais_ingest_test_ops.sh
+ais_update_demo_ops.sh
 
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/
@@ -56,6 +61,7 @@ data/corpora/help/manifest.jsonl
 # AIStudio — benchmark fixtures and reports (generated, not in repo)
 benchmarks/fixtures/
 benchmarks/reports/
+benchmarks/demo/reports/
 
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
 DEMO_SCRIPT.md
@@ -77,3 +83,5 @@ epaves/
 
 # Pipeline (operator only, never in public repo)
 PIPELINE.md
+benchmarks/demo/reports/
+meta/job_hunting/Thought Leadership and References/
