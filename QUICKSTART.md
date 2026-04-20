@@ -100,7 +100,7 @@ ollama pull nomic-embed-text
 
 # Language model — choose based on your hardware:
 ollama pull llama3.1:8b      # ~8GB RAM required, recommended default
-ollama pull llama3.1:70b     # ~128GB RAM required, best quality
+ollama pull llama3.1:70b     # ~64GB RAM required, best quality
 ```
 
 > On Apple Silicon, warm `llama3.1:70b` and warm `llama3.1:8b` have identical
@@ -177,7 +177,7 @@ ais_install ais_xxx   # install that specific command
 
 > **What `./ais_install` does:** Creates the Python virtual environment, installs
 > all dependencies, and adds `ais_*` aliases to `~/.zshrc`. Manifest-driven —
-> reads `bundle_manifest.yaml` to find each command's script path. Idempotent
+> reads `ais_user_commands_manifest.yaml` to find each command's script path. Idempotent
 > and safe to run again. To add a single new command later: `ais_install ais_log`.
 
 ---
@@ -237,14 +237,7 @@ searchable.
 
 ### Option A — Demo Corpus (recommended for first run)
 
-AIStudio ships with a curated demo corpus. To ingest it:
-
-```bash
-cd ~/Developer/AIStudio && source .venv/bin/activate
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus demo \
-  --root data/corpora/demo/uploads
-```
+AIStudio ships with a curated demo corpus. **`ais_start` automatically ingests it on first run** — no manual step required. It will appear in the corpus selector once `ais_start` completes.
 
 Try these questions to start:
 - *"What is QFD and how does it apply to technology architecture?"*
@@ -252,14 +245,14 @@ Try these questions to start:
 - *"What are the key principles for modernizing legacy applications?"*
 
 > **About the demo corpus:** This is not sample data. It is a curated set of
-> 15 original documents spanning 2003–2021 — IT strategy frameworks, enterprise
+> 9 original documents spanning 2003–2026 — IT strategy frameworks, enterprise
 > architecture methodology, financial services technology journals, cloud
 > migration analysis, and AI reference architecture — produced across senior
 > technology roles at major financial institutions. Querying it is querying
 > 20 years of original thought leadership. The corpus and the tool are the
 > same proof point.
 >
-> Run `ais_bench` to validate all 12 benchmark questions automatically.
+> Run `ais_bench` to validate all 14 benchmark questions automatically.
 
 ### Option B — Your Own Documents
 
@@ -267,9 +260,9 @@ Try these questions to start:
 mkdir -p data/corpora/my_corpus/uploads
 cp /path/to/your/documents/* data/corpora/my_corpus/uploads/
 
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
   --corpus my_corpus \
-  --root data/corpora/my_corpus
+  --root data/corpora/my_corpus/uploads
 ```
 
 You can also upload documents directly from the UI using the **Upload** button.
@@ -284,9 +277,7 @@ open ~/Developer/AIStudio/front_end/rag_studio.html
 
 Select your corpus from the dropdown, choose a model, and ask a question.
 
-**Using Filters (optional):** The sidebar has Firm and Year filter fields.
-Leave them blank for cross-corpus queries. Type a firm name (e.g.
-`Goldman Sachs`) to restrict retrieval to that firm's documents only.
+**Using Filters (optional):** The sidebar has Firm and Year filter fields. These are only relevant for corpora where documents were ingested with firm and year metadata (e.g. the SEC 10-K corpus). Leave them blank for all other corpora.
 
 ---
 
@@ -296,8 +287,8 @@ Leave them blank for cross-corpus queries. Type a firm name (e.g.
 |-----------|---------|--------|
 | Top K | 5 | Number of chunks retrieved per query. Higher = more context, slower. Try 10 for large corpora. |
 | Temperature | 0.3 | LLM creativity. Lower = more factual and consistent. Higher = more varied. Keep at 0.3 for document Q&A. |
-| Firm | (empty) | Restricts retrieval to chunks from this firm. Must match ingested firm name exactly. |
-| Year | (empty) | Restricts retrieval to this filing year. Use the filing year (e.g. `2026` for fiscal year 2025 filings). |
+| Firm | (empty) | Restricts retrieval to chunks from this firm. Only applies to corpora with firm metadata (e.g. SEC 10-K). Must match ingested firm name exactly. |
+| Year | (empty) | Restricts retrieval to this filing year. Only applies to corpora with year metadata. Use the filing year (e.g. `2026` for fiscal year 2025 filings). |
 
 ---
 
@@ -413,8 +404,8 @@ ais_bench --corpus sec_10k --top-k 10
 ais_bench --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
 ```
 
-Prints pass/fail with latency per question, writes timestamped JSON and Markdown reports to `benchmarks/reports/`. Question files
-auto-detected from `benchmarks/{corpus}_questions.yaml`.
+Prints pass/fail with latency per question, writes timestamped JSON and Markdown reports to `benchmarks/demo/reports/`. Question files
+auto-detected from `benchmarks/{corpus}/{corpus}_questions.yaml`.
 
 ---
 

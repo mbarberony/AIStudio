@@ -18,7 +18,7 @@ AIStudio is what you use when you want to query your own documents with AI. It i
 
 ## Point of View
 
-**[Agentic AI in Financial Services: Some Reflections](docs/agentic_ai_pov.pdf)**
+**[Agentic AI in Financial Services: Some Reflections](data/corpora/demo/uploads/Barbero%20-%202026%20-%20Agentic%20AI%20in%20Financial%20Services.pdf)**
 
 This work is one aspect of the author's work in AI. It explores the transition from descriptive to generative to agentic AI, the practical constraints on autonomous systems today, and a framework for thinking about where AI adds durable value versus where human judgment remains irreplaceable. Written December 2025.
 
@@ -40,7 +40,7 @@ A browser-based interface lets you manage document collections and query them co
 
 **Two corpora ship with AIStudio, each proving something different:**
 
-**Demo corpus — 20 years of original thought leadership:** AIStudio ships with a curated set of 11 documents spanning 2003–2021 — IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, and AI reference architecture. These are original works: articles edited for practitioner journals, engagement frameworks, and strategy documents produced across senior technology roles at major financial institutions. Querying this corpus is querying the intellectual capital of a 20-year career. The corpus and the tool are the same proof point.
+**Demo corpus — 20 years of original thought leadership:** AIStudio ships with a curated set of 9 documents spanning 2003–2026 — IT strategy frameworks, enterprise architecture methodology, financial services technology journals, cloud migration analysis, and AI reference architecture. These are original works: articles edited for practitioner journals, engagement frameworks, and strategy documents produced across senior technology roles at major financial institutions. Querying this corpus is querying the intellectual capital of a 20-year career. The corpus and the tool are the same proof point.
 
 A reviewer who asks *"What is the relationship between business strategy and technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal article — original work, not sample data. That is what makes the demo corpus distinctive.
 
@@ -48,7 +48,7 @@ A reviewer who asks *"What is the relationship between business strategy and tec
 
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average). Once loaded into unified memory, model size stops being a latency variable. See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
 
-The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — exploring 143 annual filings from 25 financial services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4 MacBook Pro. Due to their size, the files for this corpus are not shipped with the app but need to be downloaded from the SEC first. More importantly, ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus.
+The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — exploring 144 annual filings from 25 financial services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4 MacBook Pro. Due to their size, the files for this corpus are not shipped with the app but need to be downloaded from the SEC first. More importantly, ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus.
 
 ---
 
@@ -102,7 +102,7 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - PDF viewer — direct access to source page from inline citation ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 11/12 questions pass, 6.3s avg latency ✅
+- Demo corpus benchmark: 14/14 questions pass, 4.4s avg latency ✅
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
 - Ingestion metadata — last_ingested_at and duration persisted to corpus_meta.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
@@ -247,7 +247,7 @@ flowchart TD
 Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
 
 - **Sub-7s latency** per query once the model is warm — including complex multi-source synthesis
-- **99.1% pass rate** across 108 Q/A pairs (9 runs × 12 questions, identical conditions)
+- **99.1% pass rate** across 126 Q/A pairs (9 runs × 14 questions, identical conditions)
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at 6.9–7.2s; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
@@ -261,7 +261,7 @@ Testing spans the Apple Silicon performance spectrum: the M4 Max (128GB) establi
 ## Benchmark
 
 ```
-Corpus:     143 SEC 10-K filings, 25 financial services firms
+Corpus:     144 SEC 10-K filings, 25 financial services firms
 Chunks:     105,964
 Ingest:     34 min, 54 chunks/sec, 0 failures
 Latency:    ~6–7s warm (8b and 70b identical on Apple Silicon)

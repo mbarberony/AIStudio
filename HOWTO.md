@@ -55,7 +55,6 @@ If a command is not found, run `source ~/.zshrc` first.
 | `ais_install [cmd]` | Install AIStudio user commands — `ais_install ais_log` adds a single command, `ais_install --verify` checks all aliases |
 | `ais_start` | Start all services and open the UI in your browser |
 | `ais_stop` | Stop all services |
-| `ais_restart` | Stop then restart all services |
 | `ais_bench` | Run a benchmark on the demo corpus |
 | `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
 | `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
@@ -261,7 +260,7 @@ ais_bench --corpus demo --model llama3.1:70b --top-k 10 --temperature 0.1
 ```
 
 ***How do I write my own test questions for a corpus?***
-Create `benchmarks/<corpus_name>_questions.yaml`:
+Create `benchmarks/<corpus_name>/<corpus_name>_questions.yaml`:
 ```yaml
 - topic: Getting Started
   questions:
@@ -272,7 +271,7 @@ Create `benchmarks/<corpus_name>_questions.yaml`:
 Run `ais_bench --corpus <n>` — the questions file is auto-detected by corpus name.
 
 ***Where do reports go?***
-`benchmarks/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
+`benchmarks/<corpus>/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
 
 For full benchmark documentation see [HARNESS.pdf](docs/HARNESS.pdf).
 
