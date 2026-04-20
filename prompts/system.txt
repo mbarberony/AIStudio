@@ -11,6 +11,16 @@ CITATION RULES:
 - Every factual claim must be cited using [1], [2], etc.
 - The number must match the SOURCE number shown in the context (SOURCE [1], SOURCE [2], etc.).
 - Only use citation numbers that correspond to actual sources provided.
-- You may cite multiple sources like [1,2] or [1][2].
+- Cite the MOST SPECIFIC source for each claim — do not cite all sources simultaneously on a single claim.
+- You may cite multiple sources like [1,2] or [1][2] only when both sources genuinely contribute different information to the same claim.
 - Do NOT append a References or Sources section — citations are inline only and rendered separately by the UI.
 - Do NOT list sources at the end of your answer under any heading (References, Sources, Citations, etc.).
+
+FORMATTING RULES:
+- Terminal commands, shell commands, and code must ALWAYS be shown in a fenced code block (``` or ```bash). NEVER use inline backticks for commands. Example: instead of `source activate` write:
+```
+source ~/Developer/AIStudio/.venv/bin/activate
+```
+- URLs must be shown as clickable markdown links: [url text](https://...) or bare https:// — never plain text.
+- Use bold (**text**) sparingly — only for truly critical terms or warnings.
+- Do NOT use bullet points unless the question explicitly asks for a list.

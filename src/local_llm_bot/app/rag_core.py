@@ -1,4 +1,5 @@
 # src/local_llm_bot/app/rag_core.py
+# Version: 1.3.0
 """
 RAG core: retrieval, answer generation, citation support, and conversation memory.
 """
@@ -252,7 +253,15 @@ def generate_answer_with_citations(
 
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
 
-    citations = []
+    # Guard against blank or citation-only answers from the model
+    answer_stripped = answer.strip()
+    if not answer_stripped or all(c in "[]0123456789, \n" for c in answer_stripped):
+        answer = (
+            "The sources contain relevant information on this topic, but a direct answer "
+            "could not be generated. Please use the Open ↗ link on the cited references "
+            "to read the source documents directly."
+        )
+    citations: list[Citation] = []
     cited_indices: set[int] = set()
     raw_indices: list[int] = []
 
@@ -297,6 +306,20 @@ def generate_answer_with_citations(
             )
 
     citations.sort(key=lambda c: c.index)
+
+    # Renumber citations consecutively starting at [1]
+    # Only cited sources appear in references — no gaps in numbering
+    # IMPORTANT: rewrite answer text FIRST using original indices, then update citation objects
+    if citations:
+        renumber_map: dict[int, int] = {c.index: i + 1 for i, c in enumerate(citations)}
+        # Step 1: rewrite answer text with original indices → new indices
+        for old_idx in sorted(renumber_map.keys(), reverse=True):
+            new_idx = renumber_map[old_idx]
+            if old_idx != new_idx:
+                answer = re.sub(rf"\[{old_idx}\]", f"[{new_idx}]", answer)
+        # Step 2: update citation objects to new indices
+        for c in citations:
+            c.index = renumber_map[c.index]
 
     return AnswerWithCitations(answer=answer, citations=citations, source_docs=docs)
 

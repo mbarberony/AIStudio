@@ -15,10 +15,12 @@
 # v1.6.4: self-healing help corpus — regenerate PDFs if uploads/ empty before ingest
 # v1.6.5: --show-log flag opens iTerm2 tab with live backend log; uvicorn logs to file
 # v1.6.6: fix set -e exit on PDF generation failure; warn on missing help_search_guidance
+# v1.6.7: skip help re-ingest if collection healthy — prevents WAL corruption on restart (AIStudio_066)
+# v1.6.8: llama3.1:8b availability check (AIStudio_102); port 8000 conflict handling (AIStudio_103)
 
 set -e
 
-VERSION="1.6.6"
+VERSION="1.6.8"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
@@ -121,9 +123,24 @@ else
     echo "✅ Ollama started."
 fi
 
+# AIStudio_102: verify required model is available
+if ! ollama list 2>/dev/null | grep -q "llama3.1:8b"; then
+    echo "❌ Required model not found: llama3.1:8b"
+    echo "· Run: ollama pull llama3.1:8b"
+    echo "· This takes ~5 minutes on first run (~4.7 GB download)."
+    exit 1
+fi
+
 echo "▶ Starting AIStudio backend..."
 cd "$REPO_ROOT"
 mkdir -p "$HOME/Library/Logs/AIStudio"
+
+# AIStudio_103: kill any stale process on port 8000 before starting
+STALE_PIDS=$(lsof -ti:8000 2>/dev/null || true)
+if [[ -n "$STALE_PIDS" ]]; then
+    echo "$STALE_PIDS" | xargs kill 2>/dev/null || true
+    sleep 1
+fi
 if [[ "$VERBOSE" -eq 1 ]]; then
     OLLAMA_KEEP_ALIVE=30m AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
         uvicorn local_llm_bot.app.api:app --port 8000 2>&1 | tee "$LOG_FILE" &
@@ -194,15 +211,31 @@ if [ "$BACKEND_READY" -eq 1 ]; then
 
     HELP_COLLECTION="aistudio_help"
     HELP_CHECK=$(curl -s "http://localhost:6333/collections/$HELP_COLLECTION" 2>/dev/null)
-    HELP_MSG="refreshing"
-    echo "$HELP_CHECK" | grep -q '"status":"ok"' || HELP_MSG="indexing"
-    (cd "$REPO_ROOT" && \
-     AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-         python3 -m local_llm_bot.app.ingest \
-         --corpus help \
-         --root "$HELP_UPLOADS" \
-         --force > /dev/null 2>&1) &
-    echo "✅ Help corpus $HELP_MSG in background: $HELP_PDF_COUNT files."
+    HELP_CHUNKS=$(echo "$HELP_CHECK" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    r = d.get('result', {})
+    print(r.get('points_count') or r.get('vectors_count') or 0)
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+
+    if [[ "$HELP_CHUNKS" -gt 0 ]]; then
+        # Collection healthy — skip re-ingest to prevent WAL corruption (AIStudio_066)
+        echo "✅ Help corpus indexed: $HELP_CHUNKS chunks."
+    else
+        # Collection missing or empty — ingest needed
+        HELP_MSG="indexing"
+        echo "$HELP_CHECK" | grep -q '"status":"ok"' && HELP_MSG="refreshing"
+        (cd "$REPO_ROOT" && \
+         AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+             python3 -m local_llm_bot.app.ingest \
+             --corpus help \
+             --root "$HELP_UPLOADS" \
+             --force > /dev/null 2>&1) &
+        echo "✅ Help corpus $HELP_MSG in background: $HELP_PDF_COUNT files."
+    fi
 fi
 
 # ── Reporting ─────────────────────────────────────────────────────

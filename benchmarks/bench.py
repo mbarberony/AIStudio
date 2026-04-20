@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Version: 1.4.0
+# Version: 1.7.0
 """
 AIStudio RAG Benchmark Script
 Usage:
@@ -44,6 +44,11 @@ from datetime import datetime
 from pathlib import Path
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
+
+def _sep(label: str) -> None:
+    """Print a dim italic section separator per STD - AIStudio - CLI Output."""
+    print(f"\033[2m\033[3m--- {label}\033[0m")
 
 
 def parse_args() -> argparse.Namespace:
@@ -389,12 +394,13 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
 
     lines += ["", "## Detailed Results", ""]
 
-    for r in results:
+    for question_num, r in enumerate(results, 1):
         q = r["question"]
         ev = r["eval"]
         res = r["result"]
         lines += [
-            f"### {q['id']}",
+            "****",
+            f"### {question_num}. {q['id']}",
             f"**Query:** {q['query']}",
             f"**Firm filter:** `{q.get('firm') or 'none'}` | **Year filter:** `{q.get('year') or 'none'}`",
             f"**Latency:** {res['elapsed_sec']}s | **Pass:** {'✅' if ev['pass'] else '❌'}",
@@ -446,12 +452,13 @@ def main() -> None:
     output_path = reports_dir / f"{base_name}.json"
     questions_path = args.questions
 
-    # --- Preflight
-    print("--- Preflight")
+    # Preflight header printed by ais_bench.sh shell wrapper
 
     questions = load_questions(questions_path, corpus=args.corpus)
     questions_label = (
-        str(questions_path) if questions_path else f"benchmarks/{args.corpus}_questions.yaml"
+        str(questions_path)
+        if questions_path
+        else f"benchmarks/{args.corpus}/{args.corpus}_questions.yaml"
     )
     print(f"✅ Questions loaded: {len(questions)} ({questions_label})")
 
@@ -461,7 +468,7 @@ def main() -> None:
     )
 
     # --- Running
-    print("\n--- Running")
+    _sep("Running")
 
     results = []
     for i, q in enumerate(questions, 1):
@@ -499,7 +506,7 @@ def main() -> None:
         1, total
     )
 
-    print("\n--- Summary")
+    _sep("Summary")
     print(f"· {passed}/{total} passed | avg latency: {round(avg_latency, 1)}s")
     for r in results:
         status = "✅" if r["eval"]["pass"] else "❌"

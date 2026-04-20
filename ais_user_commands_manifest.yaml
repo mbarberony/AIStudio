@@ -1,18 +1,45 @@
 # AIStudio User Commands Manifest
 # Auto-generated from bundle_manifest.yaml — do not edit manually.
+# Generated: 2026-04-19
 # Regenerated automatically by: ais_deploy bundle_manifest.yaml
 #
 # Contains only user-facing ais_* commands (install: user).
 # Tracked in git — ships with the public repo.
 # Read by ais_install on fresh clone (no meta/ dependency required).
 #
-# To add or remove a command: edit bundle_manifest.yaml, then run:
-#   ais_deploy bundle_manifest.yaml
-# This file will be regenerated automatically.
-#
 version: "1.0.0"
 
 commands:
+  - alias: ais_install
+    path: ais_install
+    description: "Install or update AIStudio user commands"
+    when_relevant: "Fresh install; adding a new command; QUICKSTART step 7"
+
+  - alias: ais_bench
+    path: ais_bench.sh
+    description: "Run AIStudio benchmark — defaults: demo corpus, top-k 5, temperature 0.3"
+    when_relevant: "Validating RAG quality; demo prep; comparing models or settings"
+
+  - alias: ais_download_sec_10k
+    path: ais_download_sec_10k.sh
+    description: "Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/"
+    when_relevant: "Setting up SEC 10-K corpus; QUICKSTART step 10"
+
+  - alias: ais_help
+    path: ais_help.sh
+    description: "Show user command reference"
+    when_relevant: "Forgot a command; onboarding new user"
+
+  - alias: ais_ingest_sec_10k
+    path: ais_ingest_sec_10k.sh
+    description: "Ingest SEC 10-K corpus into AIStudio — requires backend running, ~30 min"
+    when_relevant: "Setting up SEC 10-K corpus; QUICKSTART step 11"
+
+  - alias: ais_log
+    path: ais_log.sh
+    description: "Tail live AIStudio backend log — run in separate tab after ais_start"
+    when_relevant: "Debugging backend issues; remote support calls"
+
   - alias: ais_start
     path: ais_start.sh
     description: "Start all AIStudio services and open the UI"
@@ -22,33 +49,3 @@ commands:
     path: ais_stop.sh
     description: "Stop all AIStudio services"
     when_relevant: "Ending a session; before dangerous operations"
-
-  - alias: ais_log
-    path: ais_log.sh
-    description: "Tail live AIStudio backend log — run in separate tab after ais_start"
-    when_relevant: "Debugging backend issues"
-
-  - alias: ais_bench
-    path: ais_bench.sh
-    description: "Run AIStudio benchmark — defaults: demo corpus, top-k 5, temperature 0.3"
-    when_relevant: "Validating RAG quality; demo prep"
-
-  - alias: ais_download_sec_10k
-    path: ais_download_sec_10k.sh
-    description: "Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/"
-    when_relevant: "Setting up SEC 10-K corpus; QUICKSTART step 10"
-
-  - alias: ais_ingest_sec_10k
-    path: ais_ingest_sec_10k.sh
-    description: "Ingest SEC 10-K corpus into AIStudio — requires backend running, ~30 min"
-    when_relevant: "Setting up SEC 10-K corpus; QUICKSTART step 11"
-
-  - alias: ais_help
-    path: ais_help.sh
-    description: "Show user command reference"
-    when_relevant: "Forgot a command; onboarding new user"
-
-  - alias: ais_install
-    path: ais_install
-    description: "Install or update AIStudio user commands"
-    when_relevant: "Fresh install; adding a new command; QUICKSTART step 7"

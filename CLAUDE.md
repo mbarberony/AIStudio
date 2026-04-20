@@ -1,92 +1,79 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this repository.
 
-## Project Overview
+## What this project is
 
-AIStudio is a local-first RAG (Retrieval-Augmented Generation) system. Users upload documents to named corpora, ask natural-language questions, and get answers with inline citations. Runs entirely locally — no external LLM APIs.
+AIStudio is a local RAG (Retrieval-Augmented Generation) system for Apple Silicon. Users upload documents to named corpora, ask natural-language questions, and get cited answers. No cloud dependency — all inference runs locally via Ollama.
 
-**Four-process architecture:** Browser (rag_studio.html) → FastAPI (:8000) → Qdrant (:6333) + Ollama (:11434)
+**Architecture:** Browser (`front_end/rag_studio.html`) → FastAPI (:8000) → Qdrant (:6333) + Ollama (:11434)
 
-## Common Commands
+## Setup and Start
 
 ```bash
-# Setup
-make venv && source .venv/bin/activate && make install
-
-# Development
-make run                    # uvicorn on port 8000
-make check                  # lint + unit tests (mirrors CI)
-make lint                   # ruff check
-make format                 # ruff check --fix
-
-# Tests
-make test                   # all pytest tests
-make test-unit              # fast, no external services needed
-make test-integration       # requires running backend + Ollama
-make coverage               # unit tests with coverage report
-
-# Run a single test
-.venv/bin/python -m pytest tests/test_health.py -v
-.venv/bin/python -m pytest tests/test_corpus_paths.py::TestCorpusPaths::test_some_method -v -m unit
-
-# Ingestion
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python -m local_llm_bot.app.ingest \
-  --corpus demo --root data/corpora/demo/uploads
-
-# Benchmarks
-python benchmarks/benchmark.py --corpus demo --top-k 5 --temperature 0.3
+./ais_install          # first-time install — creates venv, installs deps, installs aliases
+source ~/.zshrc        # activate aliases
+bash check_env.sh      # verify environment (Python 3.10+, Homebrew, Qdrant, Ollama)
+ais_start              # start all services and open UI
+ais_stop               # stop all services
 ```
 
-## Architecture
+## Development Commands
 
-Source lives in `src/local_llm_bot/app/` with `PYTHONPATH=src`:
+```bash
+# Activate venv
+source .venv/bin/activate
 
-- **api.py** — FastAPI app, all endpoints (`/ask`, `/corpus/*`, `/health`), citation extraction logic
-- **rag_core.py** — RAG pipeline: `retrieve()`, `RetrievedDoc`, `Citation`, CrossEncoder reranker, JSONL fallback
-- **config.py** — `AppConfig`, `RagConfig`, `IngestConfig`, env var loading
-- **ollama_client.py** — `ollama_generate()`, `ollama_embed()`
-- **ingest/** — Pipeline: discover → load → chunk → embed → upsert (pipeline.py, loaders.py, chunking.py, index_jsonl.py, manifest.py)
-- **vectorstore/** — `qdrant_store.py` (primary), `chroma_store.py` (legacy fallback). Selected via `AISTUDIO_VECTORSTORE` env var
-- **utils/** — corpus_paths.py, repo_root.py
+# Run backend manually
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+  uvicorn local_llm_bot.app.api:app --reload --port 8000
 
-Frontend is a single vanilla JS file: `front_end/rag_studio.html`
+# Ingest a corpus
+AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
+  python -m local_llm_bot.app.ingest \
+  --corpus demo --root data/corpora/demo/uploads
 
-## Key Design Decisions
+# Run benchmarks
+ais_bench --corpus demo
+ais_bench --corpus demo --top-k 5 --temperature 0.3 --model llama3.1:70b
+```
 
-- **No LangChain** — RAG pipeline implemented directly for substrate knowledge
-- **Qdrant over ChromaDB** — ChromaDB crashed at 32K chunks; Qdrant stable at 105K+
-- **nomic-embed-text** (768 dims, cosine) — best CPU perf on Apple Silicon
-- **Citation logic lives in api.py**, not a separate module
-- **Process separation** maps directly to containers for cloud deployment
+## Tests and Lint
 
-## Testing
+```bash
+# Run tests
+.venv/bin/python -m pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v -m unit        # fast, no services needed
+.venv/bin/python -m pytest tests/ -v -m integration # requires running backend + Ollama
 
-- pytest markers: `@pytest.mark.unit` (fast, offline) and `@pytest.mark.integration` (needs backend)
-- `test_aistudio.py` is excluded from default pytest run (`addopts = "--ignore=tests/test_aistudio.py"` in pyproject.toml) — it has its own runner
-- Unit tests must not require Ollama, Qdrant, or any network access
+# Lint and format
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format .
+```
 
-## Linting
+## Key Source Files
 
-- **ruff** with line-length 100, target py313
-- Rules: E, F, I, B, UP, SIM (ignores E501)
-- Pre-commit hooks run ruff check + ruff format
+- `src/local_llm_bot/app/api.py` — FastAPI app, all endpoints (`/ask`, `/corpus/*`, `/health`)
+- `src/local_llm_bot/app/rag_core.py` — RAG pipeline: retrieve → rerank → generate → citations
+- `src/local_llm_bot/app/config.py` — env var loading, RagConfig, IngestConfig
+- `src/local_llm_bot/app/ingest/` — load → chunk → embed → upsert pipeline
+- `front_end/rag_studio.html` — entire frontend, single file, no build step
+
+## Corpus Data
+
+Each corpus lives in `data/corpora/{name}/` with:
+- `uploads/` — source documents
+- `index.jsonl` — chunk metadata
+- `manifest.jsonl` — ingest tracking
+- `{name}_corpus_meta.yaml` — search routing guidance loaded into system prompt at query time
+
+Deleted files move to `uploads/trash/` — recoverable.
 
 ## Key Environment Variables
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
-| `AISTUDIO_VECTORSTORE` | `qdrant` | `qdrant` or `chroma` |
+|---|---|---|
+| `AISTUDIO_VECTORSTORE` | `qdrant` | vectorstore backend |
 | `AISTUDIO_DEFAULT_MODEL` | `llama3.1:8b` | LLM model |
-| `AISTUDIO_DEFAULT_EMBED_MODEL` | `nomic-embed-text` | Embedding model |
-| `AISTUDIO_TOP_K` | `5` | Retrieval top-k |
-| `QDRANT_HOST` / `QDRANT_PORT` | `localhost` / `6333` | Qdrant connection |
-| `AISTUDIO_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama API |
-
-## Corpus Data Model
-
-Corpora live in `data/corpora/{name}/` with `manifest.jsonl` (file metadata + ingest status), `index.jsonl` (lexical fallback), and `uploads/` directory. Each corpus maps to a Qdrant collection named `aistudio_{name}`. Deleted files move to `uploads/trash/` — recoverable manually.
-
-## Benchmark Harness
-
-Questions live in `benchmarks/demo_questions.yaml` (auto-detected for `--corpus demo`). Reports are written to `benchmarks/reports/` as timestamped `.md` and `.json` pairs. See `docs/HARNESS.md` for full usage.
+| `AISTUDIO_DEFAULT_EMBED_MODEL` | `nomic-embed-text` | embedding model |
+| `AISTUDIO_TOP_K` | `5` | retrieval top-k |

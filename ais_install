@@ -8,9 +8,9 @@
 #   ais_install --list               # show all installable user commands
 #   ais_install --verify             # check which commands are active in .zshrc
 #
-# Version: 2.2.0
+# Version: 2.3.0
 
-VERSION="2.2.0"
+VERSION="2.3.0"
 SCRIPT_NAME="ais_install"
 REPO="$(cd "$(dirname "$0")" && pwd)"
 USER_MANIFEST="$REPO/ais_user_commands_manifest.yaml"
@@ -126,6 +126,19 @@ if [[ -n "$1" ]]; then
 fi
 
 # ── Full install (no args) ─────────────────────────────────────────────────────
+# AIStudio_101: run environment preflight check before installing
+CHECK_ENV="$REPO/check_env.sh"
+if [[ -f "$CHECK_ENV" ]]; then
+    bash "$CHECK_ENV"
+    CHECK_EXIT=$?
+    if [[ $CHECK_EXIT -ne 0 ]]; then
+        echo ""
+        echo "❌ Environment check failed — fix the issues above before running ais_install."
+        exit 1
+    fi
+    echo ""
+fi
+
 _sep "Environment"
 if [[ ! -d "$REPO/.venv" ]]; then
     echo "▶ Creating Python virtual environment..."

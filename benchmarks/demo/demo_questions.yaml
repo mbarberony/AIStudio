@@ -50,7 +50,10 @@
     - id: large_scale_it_transformation
       question: How do you organize a large-scale IT transformation program?
       keywords: [transformation, program, IT]
-      notes: Draws from FS Journal Strategy volume.
+      notes: >
+        Primary source is Barbero - 2020 - Technology Modernization and Cloud
+        Migration.pdf — covers large-scale transformation program organization,
+        Refactor/Rehost/Replace framework, and cloud transformation execution.
 
     - id: business_technology_strategy
       question: What is the relationship between business strategy and technology strategy?
@@ -80,9 +83,13 @@
   questions:
 
     - id: risk_compliance_financial_services
-      question: What are the key risk and compliance considerations for financial services IT?
-      keywords: [risk, compliance, financial services]
-      notes: Retrieves from FS Journal Risk/Compliance/Security volume (2005).
+      question: How do Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms?
+      keywords: [Sarbanes-Oxley, Basel, governance]
+      notes: >
+        Specific regulatory terms force retrieval from FS Journal
+        Risk/Compliance/Security volume (2005). Sarbanes-Oxley and Basel II
+        are named in the corpus metadata search guidance — this question
+        cannot be answered from general knowledge alone.
 
     - id: digitization_financial_services
       question: How has digitization changed financial services technology?

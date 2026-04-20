@@ -1,0 +1,807 @@
+{
+  "run_at": "2026-04-19T17:50:28.718300",
+  "config": {
+    "corpus": "demo",
+    "top_k": 5,
+    "temperature": 0.3,
+    "model": null,
+    "api": "http://localhost:8000"
+  },
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "avg_latency_sec": 5.27
+  },
+  "results": [
+    {
+      "question": {
+        "id": "qfd_technology_architecture",
+        "description": "What is QFD and how does it apply to technology architecture?",
+        "query": "What is QFD and how does it apply to technology architecture?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "QFD",
+          "architecture"
+        ],
+        "notes": "Tests retrieval of dedicated QFD document (Erder|Pureur 2003). Flagship demo question.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.94,
+        "data": {
+          "answer": "QFD stands for Quality Function Deployment, which is a methodology used in the development of enterprise IT architectures. [1] According to the source, QFD \"fills the previous section with a few too many buzzwords\" and instead provides a systematic definition of principles and standards that reside over the whole definition of the new architecture using techniques such as quality function deployment (QFD). [1]\n\nIn relation to technology architecture, QFD can be used to assess multiple solutions and select one for implementation. [2] The source states that when designing an IT organization or any organization, a systematic analysis is required to define the bridge between the business vision, organizational constructs, processes, and enabling technologies. This process involves defining the conceptual, logical, and physical levels of specificity in architecture.\n\nThe Conceptual level defines the overall vision and fundamental principles for future IT decisions, while the Logical level includes actionable models and engineering blueprints that differentiate approaches and provide a set of product-independent architectures. [3] The Physical level describes the technical implementation of the architecture.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 10,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-10::chunk-35",
+              "score": 0.25717330000000005
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf::page-4::chunk-4",
+              "score": 0.22255780000000003
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-1::chunk-3",
+              "score": 0.24878509999999998
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "it_org_architectural_principles",
+        "description": "How do you design an IT organization around architectural principles?",
+        "query": "How do you design an IT organization around architectural principles?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "organization",
+          "architecture",
+          "principles"
+        ],
+        "notes": "Retrieves from Barbero 2006 Architecture Concepts and FS Journal."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.64,
+        "data": {
+          "answer": "To design an IT organization around architectural principles, define the principles, standards, and implementation considerations that collectively define an architecture [1]. Principles govern decisions made and actions taken in organizational architecture, just like IT principles preside over the definition of IT conceptual architectures [1]. These principles can be used to influence the positioning of the IT organization along the factory/service-oriented continuum [1].\n\nThe proper governance model, processes, and organizational constructs are critical for leveraging the benefits of using architectural frameworks [3]. Good judgment, experience, and intuition have a role to play in architecting an organization, but no artist denies the importance of technique in supporting inspiration [1, 3].\n\nA collection of approaches can be used to address IT governance issues, including Tollgate analysis, which recommends that going from one step to another is subject to the formal presentation of results obtained so far [3]. The Define phase is probably the most important step in an organizational architecture [1].\n\nFor IT organizations to be designed and operated effectively, proper governance models, processes, and organizational constructs must be in place [2]. This requires the discipline usually associated with the architecture of complex systems [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+              "page": 30,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf::page-30::chunk-80",
+              "score": 0.22038970000000002
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-4::chunk-10",
+              "score": 0.2109339
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf::page-1::chunk-1",
+              "score": 0.22025850000000002
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2003 - Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "architecture_concepts_organizations",
+        "description": "How do architecture concepts help design organizations?",
+        "query": "How do architecture concepts help design organizations?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "architecture",
+          "organization"
+        ],
+        "notes": "Draws on the universal architecture toolset concept \u2014 one of the core intellectual contributions of the corpus.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 3.94,
+        "data": {
+          "answer": "Architecture concepts help design organizations by providing a way to structure the IT organization [1]. The authors propose simple ways to help technologists and their management ascertain whether their efforts are bearing fruit [1], and for architects, the article will help provide a way to contribute actively to the debate on how to structure the IT organization [1][2]. According to the sources, organizational design is not exclusively a matter of insightful improvisation, but can be approached using tools and techniques that architects have learned about analyzing and resolving problems in complex systems [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-4::chunk-10",
+              "score": 0.23766359999999997
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf::page-1::chunk-1",
+              "score": 0.22903169999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2003 - Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cto_three_year_strategy",
+        "description": "How should a CTO prioritize a three-year technology strategy?",
+        "query": "How should a CTO prioritize a three-year technology strategy?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CTO",
+          "strategy",
+          "technology"
+        ],
+        "notes": "Consistently returns multiple citations. Draws from FS Journal Strategy volume and Barbero 2020 modernization paper.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.22,
+        "data": {
+          "answer": "According to [1], a CTO should prioritize a three-year technology strategy by defining IT services and related infrastructure components required to provision those services, and then evaluating and shortlisting vendors before selecting a best-fit tool.\n\nAdditionally, [4] states that the high-level goal for technology should be derived from and traced back to the components of the business strategy. This implies that the CTO should align the technology strategy with the overall business objectives.\n\nIn terms of specific steps, [2] suggests that a CTO should start by defining an initial straw man vision for the future linked to goals and objectives, and then use a prioritized list of initiatives to realize the vision over time. This process involves ongoing refinement of the vision and practical plans that deliver incremental value.\n\nFinally, [3] highlights the importance of correlating technology products with QFD (Quality Function Deployment) input sets, which can refine both selections of designs, features, and technology products, as well as sequencing architecture rollout phases to ensure a smooth transition.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf",
+              "page": 20,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf::page-20::chunk-75",
+              "score": 0.3245591
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 16,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-16::chunk-58",
+              "score": 0.3298519
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Erder | Pureur - 2003 - Architecture and QFD.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Erder | Pureur - 2003 - Architecture and QFD.pdf::page-5::chunk-17",
+              "score": 0.35470396000000004
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-3::chunk-9",
+              "score": 0.334476
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Erder | Pureur - 2003 - Architecture and QFD.pdf",
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "technology_target_state",
+        "description": "What does a good technology target state look like?",
+        "query": "What does a good technology target state look like?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "target state",
+          "technology"
+        ],
+        "notes": "Strong single-source answer from FS Journal Strategy volume."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.42,
+        "data": {
+          "answer": "A good technology target state looks like a well-defined and actionable plan to reach the desired end state, broken down into realistic \"transformation plateaus\" that implement the end state step by step, while reducing technology and implementation risks. This approach is described in [2], where it's recommended to define various implementation plateaus as stepping stones to reach the desired end state.\n\nAdditionally, according to [1], the high-level goal for technology should be derived and traced back to the components of the business strategy. The overall architecture can be expressed as a series of views that help various audiences and stakeholders understand what the architecture is, as noted in [3] and [4].\n\nThe target state should consider a multi-tude of views that describe the current state, the end state, and the road map to the end state, including domains such as the user interface, application logic, data layer, and underlying computing infrastructure.\n\nIt's also mentioned in [2] that developing an actionable plan to reach the end state is challenging, but necessary.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-3::chunk-9",
+              "score": 0.33544326
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+              "page": 36,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf::page-36::chunk-96",
+              "score": 0.35371434999999996
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 25,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-25::chunk-99",
+              "score": 0.3556266
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf::page-7::chunk-24",
+              "score": 0.34950329999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+          "Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2003 - Architecting the IT Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "large_scale_it_transformation",
+        "description": "How do you organize a large-scale IT transformation program?",
+        "query": "How do you organize a large-scale IT transformation program?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "transformation",
+          "program",
+          "IT"
+        ],
+        "notes": "Primary source is Barbero - 2020 - Technology Modernization and Cloud Migration.pdf \u2014 covers large-scale transformation program organization, Refactor/Rehost/Replace framework, and cloud transformation execution.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.94,
+        "data": {
+          "answer": "To organize a large-scale IT transformation program, follow these key steps:\n\n1. Envision your first day in leading the IT transformational change focusing on organization ([2] and [4]).\n2. Adopt a high level of formality and linearity in execution for large, enterprisewide projects ([2] and [4]).\n3. Use an iterative approach with a feedback loop at each stage of the decision cycle to allow for continuous improvement and customization ([1], [2], and [3]).\n4. Set up project work streams to design and build the desired data structures and database as part of a larger infrastructure transformation ([3]).\n\nNote: The sources suggest that this approach has been effective in large projects, particularly those mandated by government agencies or published standards such as DOD-STD-2167A, MIL-STD-498.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 23,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-23::chunk-89",
+              "score": 0.33767579999999997
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2003 - Architecting the IT Organization.pdf::page-5::chunk-14",
+              "score": 0.34359837000000004
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf",
+              "page": 22,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf::page-22::chunk-88",
+              "score": 0.3419955
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf::page-7::chunk-14",
+              "score": 0.35898286
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2003 - Architecting the IT Organization.pdf",
+          "Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf",
+          "Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "business_technology_strategy",
+        "description": "What is the relationship between business strategy and technology strategy?",
+        "query": "What is the relationship between business strategy and technology strategy?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "business",
+          "strategy",
+          "technology"
+        ],
+        "notes": "Core intellectual thread running through entire corpus \u2014 business strategy drives technology strategy, not the reverse.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.21,
+        "data": {
+          "answer": "According to [1], business strategy drives technology strategy. The high-level goal for technology should be derived and traced back to the components of the business strategy (or a well-defined, transformative business initiative). This relationship is necessary because \"it's not enough for technologists to simply produce an IT strategy that is 'aligned with' or 'supports' business objectives\" [1].\n\nFurthermore, as stated in [2], creating an enterprise IT architecture is a strategic planning effort that transforms the way an organization operates. It aligns IT assets and capabilities with business goals and objectives, making it achievable and delivering incremental business value [2]. This indicates that business strategy informs technology strategy through the development of an enterprise IT architecture.\n\nAdditionally, [1] highlights that tracing technology goals to business objectives is crucial for developing a well-aligned IT strategy. One way to do this is by using House-Of-Quality (HoQ) as mentioned in section 11 of the source [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-3::chunk-9",
+              "score": 0.24396883999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-7::chunk-17",
+              "score": 0.30779195000000004
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cloud_migration_modernization",
+        "description": "What are the key considerations for cloud migration and technology modernization?",
+        "query": "What are the key considerations for cloud migration and technology modernization?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "cloud",
+          "migration",
+          "modernization"
+        ],
+        "notes": "Draws directly from Barbero 2020 Technology Modernization paper \u2014 original work with a principled-based approach framework.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.97,
+        "data": {
+          "answer": "The key considerations for cloud migration and technology modernization include:\n\n* Assessing each application by both objective data (from a code scan) and qualitative data (from surveys) to segment and prioritize applications into categories such as Refactor, Revise, Rehost, Replace, and Retire [1].\n* Identifying specific cloud migration Blockers and Boosters within the source code of an application, including good practices that make an application more cloud-ready and hurdles that will prevent cloud migration or make it harder if not remediated [1].\n* Gathering relevant data through surveys, asking the right questions to cut through analysis, and using a simple set of questions to identify potential impacts to customers, financial impact, and ease of migration [1].\n* Performing an initial analysis of the portfolio using tools that leverage these metrics to identify quick wins and best candidates [1].\n* Developing a roadmap to the cloud for large application portfolios using both objective cloud readiness measurements and qualitative business context considerations [1].\n\nAdditionally, it is suggested that Lift and Shift, which involves moving legacy applications to the cloud without significant changes, rarely cuts cost and does not provide new business capabilities. A better approach is proposed as principled-based and supports a portfolio-wide yet iterative road to success [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 10,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-10::chunk-35",
+              "score": 0.24432003000000002
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "modernizing_legacy_applications",
+        "description": "What are the key principles for modernizing legacy applications?",
+        "query": "What are the key principles for modernizing legacy applications?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "legacy",
+          "modernization",
+          "applications"
+        ],
+        "notes": "Strong retrieval from Barbero 2020 Technology Modernization paper \u2014 original work, highly specific content.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.9,
+        "data": {
+          "answer": "The key principles for modernizing legacy applications, as outlined in [1], are:\n\nPRINCIPLE I - Identify Opportunities - This principle is not explicitly mentioned in the provided text, but it is implied that identifying opportunities to refactor application functionalities is a crucial step.\n\nPRINCIPLE II - Understand and Document Legacy Code - Understanding how business rules are embedded in the code and harvesting what data model the original designer(s) used to represent the world is key. This includes documenting cross-application dependencies through automated static pattern analysis and documentation [1].\n\nPRINCIPLE III - Experiment, Learn and Loop - Modernizing legacy applications should be an iterative process, leveraging lessons learned across projects to improve outcomes [1].\n\nAdditionally, the SEI \"Horseshoe\" model diagram mentioned in [1] provides a framework for modernizing software through renovation, which consists of two fundamental phases: Analysis and Synthesis. The Analysis phase involves recovering the code's structure/architecture and checking it for conformance with known or desired best practices/principles. The Synthesis phase involves applying \"to be\" principles to modify the architecture at the conceptual level [1].\n\nNo information on these key principles can be found in [2].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf::page-6::chunk-22",
+              "score": 0.28665890000000005
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf",
+              "page": 20,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf::page-20::chunk-73",
+              "score": 0.30041622999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero - 2020 - Technology Modernization and Cloud Migration.pdf",
+          "Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "risk_compliance_financial_services",
+        "description": "How do Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms?",
+        "query": "How do Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "Sarbanes-Oxley",
+          "Basel",
+          "governance"
+        ],
+        "notes": "Specific regulatory terms force retrieval from FS Journal Risk/Compliance/Security volume (2005). Sarbanes-Oxley and Basel II are named in the corpus metadata search guidance \u2014 this question cannot be answered from general knowledge alone.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.64,
+        "data": {
+          "answer": "Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms by imposing stringent security measures [1] to protect all information assets, not just customer information. Financial institutions must ensure the privacy, confidentiality, integrity, and availability of digitized information [3]. The list of regulations and legislation is long and growing, intensifying the pressure on financial institutions to implement robust, effective security systems for their digital information.\n\nFinancial services organizations have learned that trying to develop a common enterprisewide IT strategy and architecture is indeed a challenge due to their multi-enterprise structure [2]. However, they can improve compliance by bringing efforts into a holistic compliance framework [1].\n\nIn response to regulatory mandates such as Sarbanes-Oxley Act and Basel II, financial institutions can implement security measures that protect the entire enterprise from the outside in. These layers of protection could be described as \"security of exclusion\" and \"security of inclusion\" [3].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf",
+              "page": 17,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf::page-17::chunk-58",
+              "score": 0.27614844000000005
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-3::chunk-6",
+              "score": 0.25462759999999995
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Digitization.pdf",
+              "page": 34,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Digitization.pdf::page-34::chunk-119",
+              "score": 0.27594876
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero et al. - 2005 - FS Journal - Digitization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "digitization_financial_services",
+        "description": "How has digitization changed financial services technology?",
+        "query": "How has digitization changed financial services technology?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "digitization",
+          "financial services",
+          "technology"
+        ],
+        "notes": "Retrieves from FS Journal Digitization volume. Clean single-source answer with good citation compliance.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.09,
+        "data": {
+          "answer": "Digitization has changed financial services technology by bringing together many technologies in a suite or \"digitization stack\" that captures and manifests the way an institution operates today [1]. This includes integrated vision and architectures with due focus on domains such as security and enterprise information integration, as well as necessary computing and communications infrastructures.\n\nFinancial institutions are implementing digitization to achieve end-to-end solutions that support the full value chain for better controls, standardization, consistency, and measurement of business processes [1]. Digitization is also driven by business needs, including reduced costs and increased productivity, as well as government mandates such as the Sarbanes-Oxley Act and Basel II [1].\n\nThe technologies supporting digitization include business process management, content and document management, digital imaging, and workflow and collaboration software [1]. Financial institutions are using these technologies to transform internal and external operations, freeing up financial, human, and information resources [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Digitization.pdf",
+              "page": 34,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Digitization.pdf::page-34::chunk-123",
+              "score": 0.23342425
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "Barbero et al. - 2005 - FS Journal - Digitization.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "architecture_technology_risk",
+        "description": "What is the role of architecture in managing technology risk in financial services?",
+        "query": "What is the role of architecture in managing technology risk in financial services?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "architecture",
+          "risk",
+          "financial services"
+        ],
+        "notes": "Good synthesis question drawing on multiple FS Journal volumes. Strong closer for a demo sequence.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.03,
+        "data": {
+          "answer": "The role of architecture in managing technology risk in financial services is not explicitly stated in either source. However, [1] mentions that advanced application integration architecture can be used to leverage near real-time monitoring of a firm's exposure in several risk domains.\n\n[2] discusses the importance of enterprise IT architecture in managing complexity and maintaining the integrity of the IT environment, but it does not specifically address technology risk management in financial services.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf",
+              "page": 36,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf::page-36::chunk-133",
+              "score": 0.23354673000000004
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-6::chunk-15",
+              "score": 0.23872340000000003
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "agentic_ai_financial_services",
+        "description": "What are the key opportunities and limitations of agentic AI in financial services?",
+        "query": "What are the key opportunities and limitations of agentic AI in financial services?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "agentic AI",
+          "financial services",
+          "limitations"
+        ],
+        "notes": "Tests retrieval from Barbero 2026 Agentic AI paper. Covers Verifier Law, limitations, and strategic implications.\n"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.12,
+        "data": {
+          "answer": "The key opportunities of agentic AI in financial services are its ability to combine perception, reasoning, planning, and autonomous task execution to achieve high-level goals [1]. Agentic AI aims to orchestrate complex workflows autonomously across modalities, enabling automation of entire workflows and expanding AI's cognitive capabilities from memorization and classification to generation and strategizing [1].\n\nHowever, the key limitations of agentic AI in financial services are its current reliance on rule-based workflows, linear reasoning, insufficient data quality, and change management hurdles, which restrict its ability to perform autonomous, complex decision-making fully [1]. Additionally, there is a risk that LLMs may be a dead-end as a new type of AI based on \"world models\" is emerging, which is expected to take up to a decade to fully mature and will be more suitable for physical applications like robotics and autonomous systems [1][3].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2026 - Agentic AI in Financial Services.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2026 - Agentic AI in Financial Services.pdf::page-1::chunk-0",
+              "score": 0.2646587
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-6::chunk-14",
+              "score": 0.32439379999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "Barbero - 2026 - Agentic AI in Financial Services.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "ai_knowledge_productivity",
+        "description": "How should organizations embed AI into their knowledge productivity ecosystem?",
+        "query": "How should organizations embed AI into their knowledge productivity ecosystem?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "AI",
+          "knowledge",
+          "productivity",
+          "organization"
+        ],
+        "notes": "Tests Section C content from Barbero 2026 \u2014 vision for AI integration as foundational element of knowledge work reinvention."
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.78,
+        "data": {
+          "answer": "To embed AI into their knowledge productivity ecosystem, organizations should follow the framework outlined in [1], which emphasizes human-AI collaboration and integration. Specifically, AI initiatives should be integrated or loosely coupled building blocks of a future-ready, knowledge-driven enterprise, aiming to accelerate the emergence of a new paradigm for knowledge work where AI is woven into the fabric of how the organization operates, governs, and innovates.\n\nAdditionally, [1] highlights key principles for AI adoption, including stakeholder-centered design, modularity and reuse, security and governance, integration and interoperability, and human-AI collaboration. These principles are essential to ensure that AI is embedded within secure, monitored environments with robust access control and policy management serving the entire ecosystem.\n\nThe value chain representation technique discussed in [3] can be used to map out the various processes of the IT organization and define what each component does and how it interacts with other components. This approach can help organizations identify areas where AI can be integrated to support key activities, such as infrastructure-related activities or user-facing processes.\n\nFurthermore, [2] suggests that organizations should capture exceptions and deviations from guidelines to revisit them constantly as they evolve. While this advice is not directly related to embedding AI into the knowledge productivity ecosystem, it highlights the importance of iterative refinement in organizational design, which is also relevant to the integration of AI.\n\nBy following these principles and techniques, organizations can effectively embed AI into their knowledge productivity ecosystem, driving innovation and accelerating knowledge work.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2026 - Agentic AI in Financial Services.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2026 - Agentic AI in Financial Services.pdf::page-4::chunk-9",
+              "score": 0.30596345999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+              "page": 39,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf::page-39::chunk-151",
+              "score": 0.35021174
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf",
+              "page": 24,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf::page-24::chunk-60",
+              "score": 0.32799756999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "Barbero - 2026 - Agentic AI in Financial Services.pdf",
+          "Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf",
+          "Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf"
+        ]
+      }
+    }
+  ]
+}
