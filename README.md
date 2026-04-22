@@ -86,8 +86,8 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - Metadata filtering — firm and year filters at the vector layer
 - RAG query with inline citations and source references
 - Browser UI — corpus management (create, rename, delete, stats, inspect), file upload with progress, chat with citations
-- Corpus rename — renames directory, cascades corpus_meta.yaml, triggers background re-index
-- Stats panel — per-file KB sizes, last ingestion time and duration from corpus_meta.yaml
+- Corpus rename — renames directory, cascades corpus_metadata.yaml, triggers background re-index
+- Stats panel — per-file KB sizes, last ingestion time and duration from corpus_metadata.yaml
 - Auto-linkify — URLs and corpus filenames in responses rendered as clickable links
 - FastAPI backend — `/ask`, `/health`, `/corpus/*` (create, rename, delete, info, upload, ingest), `/source`, `/prewarm`
 - Auto-launch script — `scripts/start.sh` starts all four processes
@@ -104,7 +104,7 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - YAML benchmark question files with corpus auto-detection ✅
 - Demo corpus benchmark: 14/14 questions pass, 4.4s avg latency ✅
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
-- Ingestion metadata — last_ingested_at and duration persisted to corpus_meta.yaml ✅
+- Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
 - Help corpus search guidance — per-document routing rules injected into system prompt ✅
 

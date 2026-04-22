@@ -1,4 +1,6 @@
-# Version: 1.2.7
+# Version: 1.4.0
+# Changelog: 1.4.0 — per-file stats in corpus_metadata.yaml (files:/deleted_files: schema); avg_seconds_per_file
+# Changelog: 1.3.0 — corpus_meta → corpus_metadata rename; schema_version/last_updated/short_description fields; expand CreateCorpusRequest
 # Changelog: 1.1.0 — live Qdrant chunk count in ingest-status; MD5 file endpoint; offline-first (no CDN deps)
 from __future__ import annotations
 
@@ -55,12 +57,14 @@ def extract_page_number(source_path: str, chunk_id: str = "") -> int | None:
 
 def _load_corpus_search_guidance(corpus_name: str) -> str:
     """
-    Load search_guidance from {corpus_name}_corpus_meta.yaml if it exists.
+    Load search_guidance from {corpus_name}_corpus_metadata.yaml if it exists.
     Returns empty string silently if file missing or field absent.
     """
     try:
         repo_root = _get_repo_root()
-        meta_path = repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
+        meta_path = (
+            repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_metadata.yaml"
+        )
         if meta_path.exists():
             with open(meta_path) as f:
                 meta = _yaml.safe_load(f) or {}
@@ -138,7 +142,7 @@ def generate_answer_with_citations(
         "- Never apologize for gaps in the sources."
     )
 
-    # Inject corpus search guidance if available ({corpus}_corpus_meta.yaml → search_guidance field)
+    # Inject corpus search guidance if available ({corpus}_corpus_metadata.yaml → search_guidance field)
     if corpus:
         guidance = _load_corpus_search_guidance(corpus)
         if guidance:
@@ -466,13 +470,20 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     except Exception:
         qdrant_chunk_count = stats.chunks_total  # fallback to JSONL count if Qdrant unavailable
 
-    # Load ingestion metadata from corpus_meta.yaml if available
+    # Load all metadata from corpus_metadata.yaml if available
     last_ingested_at = None
     ingest_duration_seconds = None
     last_ingest_chunks = None
     last_ingest_files = None
+    short_description = ""
+    description = ""
+    content_summary = ""
+    search_guidance = ""
+    schema_version = "1.0"
+    last_updated = None
+    files_meta: dict = {}
     try:
-        meta_path = paths["base"] / f"{corpus_name}_corpus_meta.yaml"
+        meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
         if meta_path.exists():
             with open(meta_path) as f:
                 meta = _yaml.safe_load(f) or {}
@@ -480,6 +491,13 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
             ingest_duration_seconds = meta.get("ingest_duration_seconds")
             last_ingest_chunks = meta.get("last_ingest_chunks")
             last_ingest_files = meta.get("last_ingest_files")
+            short_description = meta.get("short_description", "")
+            description = meta.get("description", "")
+            content_summary = meta.get("content_summary", "")
+            search_guidance = meta.get("search_guidance", "")
+            schema_version = meta.get("schema_version", "1.0")
+            last_updated = meta.get("last_updated")
+            files_meta = meta.get("files") or {}
     except Exception:
         pass
 
@@ -496,12 +514,62 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "ingest_duration_seconds": ingest_duration_seconds,
         "last_ingest_chunks": last_ingest_chunks,
         "last_ingest_files": last_ingest_files,
+        "short_description": short_description,
+        "description": description,
+        "content_summary": content_summary,
+        "search_guidance": search_guidance,
+        "schema_version": schema_version,
+        "last_updated": last_updated,
+        "files_meta": files_meta,
         "stats": stats,
         "paths": {
             "base": str(paths["base"]),
             "uploads": str(paths["uploads"]),
             "index": str(paths["index"]),
         },
+    }
+
+
+@app.patch("/corpus/{corpus_name}/metadata")
+async def update_corpus_metadata(corpus_name: str, request: Request) -> dict[str, Any]:
+    """
+    Update editable metadata fields for a corpus.
+    Accepts any subset of: short_description, description, content_summary, search_guidance
+    Preserves runtime fields (last_ingested_at, etc.) and updates last_updated.
+    """
+    _require_corpus(corpus_name)
+    body = await request.json()
+
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
+
+    # Load existing metadata or create scaffold
+    if meta_path.exists():
+        with open(meta_path) as f:
+            meta = _yaml.safe_load(f) or {}
+    else:
+        meta = {"schema_version": "1.0", "corpus_name": corpus_name}
+
+    # Update only fields provided in request
+    editable = ["short_description", "description", "content_summary", "search_guidance"]
+    for field in editable:
+        if field in body:
+            meta[field] = body[field]
+
+    from datetime import date as _date
+
+    meta["last_updated"] = _date.today().isoformat()
+
+    with open(meta_path, "w") as f:
+        f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
+        f.write("# Corpus metadata — loaded by api.py at query time\n\n")
+        _yaml.dump(meta, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+    return {
+        "status": "updated",
+        "corpus": corpus_name,
+        "updated_fields": [k for k in editable if k in body],
     }
 
 
@@ -736,25 +804,52 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         }
         print(f"[ingest] '{corpus_name}' complete — {summary}")
 
-        # AIStudio_270: write ingestion metadata to corpus_meta.yaml
+        # AIStudio_270: write ingestion metadata to corpus_metadata.yaml
         try:
             _repo = _get_repo_root()
             _meta_path = (
-                _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
+                _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_metadata.yaml"
             )
             if _meta_path.exists():
                 with open(_meta_path) as _f:
                     _meta = _yaml.safe_load(_f) or {}
             else:
                 _meta = {"corpus_name": corpus_name}
-            _meta["last_ingested_at"] = _dt.now().isoformat(timespec="seconds")
+            now_iso = _dt.now().isoformat(timespec="seconds")
+            _meta["last_ingested_at"] = now_iso
+            _meta["last_updated"] = _dt.now().date().isoformat()
             _meta["ingest_duration_seconds"] = elapsed
             _meta["last_ingest_chunks"] = final_chunks
             _meta["last_ingest_files"] = final_total
+            # avg_seconds_per_file — useful for estimating future ingest times
+            if final_total > 0:
+                _meta["avg_seconds_per_file"] = round(elapsed / final_total, 2)
+            # Ensure schema fields present
+            if "schema_version" not in _meta:
+                _meta["schema_version"] = "1.0"
+            if "files" not in _meta or not isinstance(_meta.get("files"), dict):
+                _meta["files"] = {}
+            if "deleted_files" not in _meta or not isinstance(_meta.get("deleted_files"), dict):
+                _meta["deleted_files"] = {}
+            # Parse per-file stats from stdout JSON
+            try:
+                _result_json = json.loads(stdout_text.strip()) if stdout_text.strip() else {}
+                _file_stats = _result_json.get("result", {}).get("file_stats") or {}
+                for _fname, _fdata in _file_stats.items():
+                    _meta["files"][_fname] = {
+                        "size_bytes": _fdata.get("size_bytes", 0),
+                        "chunks": _fdata.get("chunks", 0),
+                        "duration_sec": _fdata.get("duration_sec", 0),
+                        "ingested_at": _fdata.get("ingested_at", now_iso),
+                    }
+            except Exception as _fe:
+                print(f"[ingest] warning: could not parse file_stats: {_fe}")
             with open(_meta_path, "w") as _f:
                 _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
         except Exception as _e:
-            print(f"[ingest] warning: could not write ingest metadata to corpus_meta.yaml: {_e}")
+            print(
+                f"[ingest] warning: could not write ingest metadata to corpus_metadata.yaml: {_e}"
+            )
 
         _ingest_proc.pop(corpus_name, None)
     else:
@@ -896,6 +991,10 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
 
 class CreateCorpusRequest(BaseModel):
     name: str
+    short_description: str = ""
+    description: str = ""
+    content_summary: str = ""
+    search_guidance: str = ""
 
 
 @app.get("/corpus/{corpus_name}/ingest-status")
@@ -1032,34 +1131,27 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
         index_file.parent.mkdir(parents=True, exist_ok=True)
         index_file.touch()
 
-        # Create corpus_meta.yaml — seeded from help_search_guidance.yaml for help corpus
-        corpus_meta_path = corpus_dir / f"{name}_corpus_meta.yaml"
-        if name == "help":
-            # Help corpus: seed from persistent guidance file in meta/corpora/
-            guidance_source = repo_root / "docs" / "help_search_guidance.yaml"
-            if guidance_source.exists():
-                import shutil as _shutil
+        # Create corpus_metadata.yaml with full schema
+        corpus_meta_path = corpus_dir / f"{name}_corpus_metadata.yaml"
+        from datetime import date as _date
 
-                _shutil.copy2(str(guidance_source), str(corpus_meta_path))
-            else:
-                # Fallback: write empty scaffold if guidance file missing
-                corpus_meta_path.write_text(
-                    f"# {name}_corpus_meta.yaml\n"
-                    f"# Corpus search guidance — loaded by api.py at query time\n\n"
-                    f"corpus_name: {name}\n"
-                    f'description: ""\n'
-                    f'content_summary: ""\n'
-                    f'search_guidance: ""\n'
-                )
-        else:
-            corpus_meta_path.write_text(
-                f"# {name}_corpus_meta.yaml\n"
-                f"# Corpus search guidance — loaded by api.py at query time\n"
-                f"# Fill in fields to improve retrieval quality for this corpus\n\n"
-                f"corpus_name: {name}\n"
-                f'description: ""\n'
-                f'content_summary: ""\n'
-                f'search_guidance: ""\n'
+        _meta_content = {
+            "schema_version": "1.0",
+            "corpus_name": name,
+            "last_updated": _date.today().isoformat(),
+            "short_description": request.short_description or "",
+            "description": request.description or "",
+            "content_summary": request.content_summary or "",
+            "search_guidance": request.search_guidance or "",
+        }
+        corpus_meta_path.write_text(
+            f"# {name}_corpus_metadata.yaml\n"
+            f"# Corpus metadata — loaded by api.py at query time\n"
+            f"# Edit fields to improve retrieval quality for this corpus\n\n"
+        )
+        with open(corpus_meta_path, "a") as _mf:
+            _yaml.dump(
+                _meta_content, _mf, allow_unicode=True, default_flow_style=False, sort_keys=False
             )
 
         return {
@@ -1080,7 +1172,7 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
 @app.post("/corpus/{corpus_name}/rename")
 async def rename_corpus(corpus_name: str, request: Request) -> dict[str, Any]:
     """
-    Rename a corpus: moves directory on disk, renames corpus_meta.yaml,
+    Rename a corpus: moves directory on disk, renames corpus_metadata.yaml,
     deletes old Qdrant collection, and triggers background re-ingest.
     Body: {"new_name": "my_new_corpus_name"}
     """
@@ -1109,9 +1201,9 @@ async def rename_corpus(corpus_name: str, request: Request) -> dict[str, Any]:
         # 1. Rename directory on disk
         old_dir.rename(new_dir)
 
-        # 2. Rename corpus_meta.yaml inside new directory
-        old_meta = new_dir / f"{corpus_name}_corpus_meta.yaml"
-        new_meta = new_dir / f"{new_name}_corpus_meta.yaml"
+        # 2. Rename corpus_metadata.yaml inside new directory
+        old_meta = new_dir / f"{corpus_name}_corpus_metadata.yaml"
+        new_meta = new_dir / f"{new_name}_corpus_metadata.yaml"
         if old_meta.exists():
             old_meta.rename(new_meta)
             # Update corpus_name field inside meta file
@@ -1327,15 +1419,34 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         trash_path.unlink()
     shutil.move(str(file_path), str(trash_path))
 
-    # Update corpus_meta.yaml — reflect that file count changed
+    # Update corpus_metadata.yaml — archive deleted file stats, reflect file count change
     try:
         _repo = _get_repo_root()
-        _meta_path = _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_meta.yaml"
+        _meta_path = (
+            _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_metadata.yaml"
+        )
         if _meta_path.exists():
             with open(_meta_path) as _f:
                 _meta = _yaml.safe_load(_f) or {}
         else:
             _meta = {"corpus_name": corpus_name}
+        # Ensure files/deleted_files dicts exist
+        if "files" not in _meta or not isinstance(_meta.get("files"), dict):
+            _meta["files"] = {}
+        if "deleted_files" not in _meta or not isinstance(_meta.get("deleted_files"), dict):
+            _meta["deleted_files"] = {}
+        # Archive file stats to deleted_files before removing from files
+        _now = _dt.now().isoformat(timespec="seconds")
+        if filename in _meta["files"]:
+            _archived = dict(_meta["files"].pop(filename))
+            _archived["deleted_at"] = _now
+            _meta["deleted_files"][filename] = _archived
+        else:
+            # No per-file stats tracked yet — archive minimal record
+            _meta["deleted_files"][filename] = {
+                "deleted_at": _now,
+                "chunks_removed": deleted_chunks,
+            }
         # Recount files on disk after deletion
         _uploads = paths["uploads"]
         _file_count = (
@@ -1343,13 +1454,14 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
             if _uploads.exists()
             else 0
         )
-        _meta["last_file_change_at"] = _dt.now().isoformat(timespec="seconds")
+        _meta["last_file_change_at"] = _now
         _meta["last_file_change"] = f"deleted: {filename}"
         _meta["file_count_after_change"] = _file_count
+        _meta["last_updated"] = _dt.now().date().isoformat()
         with open(_meta_path, "w") as _f:
             _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
     except Exception as _e:
-        print(f"[delete_file] warning: could not update corpus_meta.yaml: {_e}")
+        print(f"[delete_file] warning: could not update corpus_metadata.yaml: {_e}")
 
     return {
         "status": "success",

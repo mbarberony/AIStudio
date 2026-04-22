@@ -1,5 +1,6 @@
-# Version: 1.2.0
-# Changelog: 1.2.0 — Per-file embed+upsert (constant memory, live Qdrant progress); alphabetical file order
+# Version: 1.3.0
+# Changelog: 1.3.0 — Per-file timing, chunk count, size_bytes captured in IngestResult.file_stats
+#            1.2.0 — Per-file embed+upsert (constant memory, live Qdrant progress); alphabetical file order
 #            1.1.0 — MD5 stored in Qdrant payload; skip logic fixed (Qdrant-only); per-file INFO logging
 from __future__ import annotations
 
@@ -30,6 +31,13 @@ from local_llm_bot.app.utils.repo_root import find_repo_root
 from local_llm_bot.app.vectorstore import qdrant_store as _store
 
 
+def _dt_now() -> str:
+    """Return current UTC time as ISO string."""
+    from datetime import datetime
+
+    return datetime.now(datetime.UTC).isoformat(timespec="seconds")
+
+
 @dataclass(frozen=True)
 class IngestResult:
     corpus: str
@@ -48,6 +56,8 @@ class IngestResult:
 
     duration_sec: float
     vectorstore: str = "qdrant"
+    # Per-file stats: {filename: {size_bytes, chunks, duration_sec, ingested_at}}
+    file_stats: dict = None  # type: ignore[assignment]
 
 
 def _repo_root() -> Path:
@@ -241,6 +251,7 @@ def ingest_corpus(
 
     chunks_written = 0
     failures: list[dict[str, Any]] = []
+    file_stats: dict[str, dict] = {}
 
     import re as _re
 
@@ -319,6 +330,7 @@ def ingest_corpus(
                     f"[ingest] {corpus}: processing {file_path.name} ({files_processed + files_skipped_unchanged + 1}/{len(discovered)})",
                     file=_sys.stderr,
                 )
+                t_file_start = time.time()
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
@@ -389,8 +401,15 @@ def ingest_corpus(
                     append_rows(paths["index"], file_rows)
 
                 chunks_written += len(chunks)
+                file_dur = round(time.time() - t_file_start, 3)
+                file_stats[file_path.name] = {
+                    "size_bytes": file_path.stat().st_size,
+                    "chunks": len(chunks),
+                    "duration_sec": file_dur,
+                    "ingested_at": _dt_now(),
+                }
                 print(
-                    f"[ingest] {corpus}: ✓ {file_path.name} — {len(chunks):,} chunks",
+                    f"[ingest] {corpus}: ✓ {file_path.name} — {len(chunks):,} chunks in {file_dur}s",
                     file=_sys.stderr,
                 )
 
@@ -445,4 +464,5 @@ def ingest_corpus(
         files_failed=files_failed,
         chunks_written=chunks_written,
         duration_sec=round(dur, 3),
+        file_stats=file_stats,
     )
