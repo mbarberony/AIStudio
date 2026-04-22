@@ -44,24 +44,29 @@ ais_bench_ops.sh
 ais_help_ops.sh
 ais_ingest_test_ops.sh
 ais_update_demo_ops.sh
+ais_bench_sec_10k_ops
 
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/
 !data/corpora/demo/
 !data/corpora/demo/uploads/
 !data/corpora/demo/uploads/*
-!data/corpora/demo/index.jsonl
-!data/corpora/demo/manifest.jsonl
+!data/corpora/demo/demo_corpus_metadata.yaml
 
-# AIStudio — help corpus runtime files (generated, not in repo)
+# AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
+data/corpora/sec_10k/
+
+# AIStudio — help corpus (PDFs shipped, runtime files excluded)
+!data/corpora/help/
+!data/corpora/help/uploads/
+!data/corpora/help/uploads/*
+!data/corpora/help/help_corpus_metadata.yaml
 data/corpora/help/doc_chunk_map.json
 data/corpora/help/index.jsonl
 data/corpora/help/manifest.jsonl
 
-# AIStudio — benchmark fixtures and reports (generated, not in repo)
-benchmarks/fixtures/
-benchmarks/reports/
-benchmarks/demo/reports/
+# AIStudio — sec_10k corpus benchmark (user builds their own — see QUICKSTART Step 7)
+benchmarks/sec_10k/
 
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
 DEMO_SCRIPT.md
@@ -83,5 +88,4 @@ epaves/
 
 # Pipeline (operator only, never in public repo)
 PIPELINE.md
-benchmarks/demo/reports/
 meta/job_hunting/Thought Leadership and References/
