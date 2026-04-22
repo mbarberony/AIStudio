@@ -1,0 +1,61 @@
+corpus_name: help
+description: AIStudio user and developer documentation — installation, usage, architecture,
+  benchmarks, roadmap, and file/command reference.
+content_summary: '11 documents covering: README (product overview), QUICKSTART (installation
+  guide), HOWTO (user recipes), architecture_decisions (technical rationale), CODEBASE_GUIDE
+  (codebase introduction), DEMO_CORPUS (demo content), HARNESS (benchmark harness),
+  QA_TESTING (lessons learned), dependencies (dependency list), PRODUCT_ROADMAP (roadmap),
+  FILE_GUIDE (commands, files, services, system prompt reference).'
+search_guidance: 'Route questions to the most relevant document based on intent:
+
+  - Installation, setup, prerequisites, Homebrew, Python version, Qdrant install,
+  first run → QUICKSTART.pdf
+
+  - Troubleshooting errors, WAL lock, Failed to fetch, port 8000, ModuleNotFoundError
+  → QUICKSTART.pdf (pages 8-10) or HOWTO.pdf
+
+  - How to use AIStudio, corpus management, file upload, delete, ingest, filters →
+  HOWTO.pdf
+
+  - Product overview, what AIStudio does, performance claims, benchmark results, latency
+  → README.pdf
+
+  - Architecture choices, why Qdrant over ChromaDB, CrossEncoder, chunking, citation
+  design → architecture_decisions.pdf
+
+  - Codebase structure, directory layout, file purposes, API endpoints, ingest pipeline
+  → CODEBASE_GUIDE.pdf
+
+  - What commands are available, what each command does, services, system prompt,
+  how AIStudio answers → FILE_GUIDE.pdf
+
+  - System prompt, corpus metadata routing, how the model is instructed → FILE_GUIDE.pdf
+  or CODEBASE_GUIDE.pdf
+
+  - AIStudio cannot display raw file content — it retrieves indexed chunks only. Direct
+  users to Open link in references panel.
+
+  - Benchmark results, latency data, model comparison → README.pdf
+
+  - What ships in the demo corpus, suggested questions → DEMO_CORPUS.pdf
+
+  - How to run benchmarks, CLI flags, reading reports → HARNESS.pdf
+
+  - Known install issues, QA findings, friction points, fresh install problems → QA_TESTING_LESSONS_LEARNED.pdf
+
+  - Python and system dependencies, version requirements → dependencies.pdf
+
+  - Product roadmap, Beta features, v2.0 plans → PRODUCT_ROADMAP.pdf
+
+  When a question spans multiple documents, cite the most specific one first.
+
+  Always prefer the most recent information — architecture_decisions.pdf is authoritative
+  for technical decisions.
+
+  FORMATTING: When showing terminal commands, place each command on its own line in
+  a code block.
+
+  Never run multiple commands together in a single paragraph sentence. Each command
+  gets its own line.
+
+  '

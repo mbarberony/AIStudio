@@ -1,0 +1,62 @@
+corpus_name: demo
+description: A curated corpus of original thought leadership documents spanning 2003–2026,
+  produced by Manuel Barbero and collaborators across senior technology roles at major
+  financial institutions. Covers enterprise architecture, IT strategy, organizational
+  design, technology modernization, financial services risk and compliance, and agentic
+  AI. Querying this corpus is querying 20+ years of original practitioner knowledge.
+content_summary: '9 documents covering: enterprise architecture methodology and toolset
+  (Barbero 2006), QFD and architecture toolset (Erder|Pureur 2003), FS Journal volumes
+  edited by Barbero et al. — Strategy and Architecture (2006), IT Infrastructure (2005),
+  Digitization (2005), Risk/Compliance/Security (2005), technology modernization and
+  cloud migration (Barbero 2020), data strategy (Barbero|Hunt 2021), and agentic AI
+  in financial services (Barbero 2026).'
+search_guidance: 'Route questions to the most relevant document based on intent:
+
+  - QFD, Quality Function Deployment, House of Quality, HoQ — route EXCLUSIVELY to:
+  Erder | Pureur - 2003 - Architecture and QFD.pdf. This is the dedicated QFD document.
+  Always check it first for any QFD-related query.
+
+  - Enterprise architecture principles, architecture methodology, architecture toolset,
+  architecture concepts → Barbero - 2006 - Architecture Concepts and How To Use Them
+  To Design an Organization.pdf
+
+  - CTO strategy, three-year technology strategy, IT transformation programs, target
+  state → Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts
+  and Techniques.pdf
+
+  - Large-scale IT transformation programs, cloud transformation, technology modernization
+  programs, transformation program organization, application rationalization at scale,
+  legacy modernization programs → Barbero - 2020 - Technology Modernization and Cloud
+  Migration.pdf. This is the primary source for how to organize and execute large-scale
+  technology transformation.
+
+  - IT infrastructure strategy, CMDB, infrastructure architecture → Barbero et al.
+  - 2005 - FS Journal - IT Infrastructure.pdf
+
+  - Digitization in financial services, digital transformation, end-to-end solutions
+  → Barbero et al. - 2005 - FS Journal - Digitization.pdf
+
+  - Risk, compliance, security in financial services, Sarbanes-Oxley, Basel II → Barbero
+  et al. - 2005 - FS Journal - Risk Compliance and Security.pdf
+
+  - Cloud migration, legacy modernization, application rationalization, Refactor/Rehost/Replace
+  → Barbero - 2020 - Technology Modernization and Cloud Migration.pdf
+
+  - Data strategy, data governance, data architecture → Barbero | Hunt - 2021 - Data
+  Strategy.pdf
+
+  - Agentic AI, generative AI, AI strategy, AI in financial services, LLMs, knowledge
+  productivity → Barbero - 2026 - Agentic AI in Financial Services.pdf
+
+  When a question spans multiple documents, cite the most specific one first.
+
+  This corpus represents original practitioner work — answers should reflect that
+  depth and specificity.
+
+  Business strategy drives technology strategy, not the reverse — this is a core thread
+  across the corpus.
+
+  Answer directly and confidently from what the sources contain. Do not hedge or qualify
+  unnecessarily.
+
+  '
