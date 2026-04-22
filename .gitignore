@@ -47,14 +47,14 @@ ais_update_demo_ops.sh
 ais_bench_sec_10k_ops
 
 # AIStudio — corpus data (large files, not in repo)
-data/corpora/
+data/corpora/*
 !data/corpora/demo/
 !data/corpora/demo/uploads/
 !data/corpora/demo/uploads/*
 !data/corpora/demo/demo_corpus_metadata.yaml
 
 # AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
-data/corpora/sec_10k/
+data/corpora/sec_10k/*
 
 # AIStudio — help corpus (PDFs shipped, runtime files excluded)
 !data/corpora/help/
