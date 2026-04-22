@@ -52,6 +52,10 @@ data/corpora/*
 !data/corpora/demo/uploads/
 !data/corpora/demo/uploads/*
 !data/corpora/demo/demo_corpus_metadata.yaml
+data/corpora/demo/uploads/trash/
+data/corpora/demo/index.jsonl
+data/corpora/demo/manifest.jsonl
+data/corpora/demo/doc_chunk_map.json
 
 # AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
 data/corpora/sec_10k/*
@@ -61,6 +65,8 @@ data/corpora/sec_10k/*
 !data/corpora/help/uploads/
 !data/corpora/help/uploads/*
 !data/corpora/help/help_corpus_metadata.yaml
+data/corpora/help/uploads/trash/
+data/corpora/help/trash/
 data/corpora/help/doc_chunk_map.json
 data/corpora/help/index.jsonl
 data/corpora/help/manifest.jsonl
