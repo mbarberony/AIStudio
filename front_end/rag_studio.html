@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 1.8.0 -->
+<!-- Version: 1.8.1 -->
 <!-- Changelog: 1.3.0 — fix multiple progress bars: unique per-ingest IDs for bar/cancel/status elements; cancel button orange; copyBar also uid-scoped -->
 <script>
 /* SparkMD5 3.0.2 — inlined for offline-first compliance (T2.30) */
@@ -1684,12 +1684,12 @@
             helpUploadsPath = d.paths?.uploads || '';
         } catch(_) {}
 
-        const suggested = _pickRandom(_helpQuestions, 3);
+        const suggested = _pickRandom(_helpQuestions, 5);
 
         // Build file links — strip extension, capitalize first letter of each word
         const fileLinks = helpFiles.map(f => {
             const stem = f.replace(/\.pdf$/i, '');
-            const display = stem.charAt(0).toUpperCase() + stem.slice(1);
+            const display = stem.toUpperCase();
             const url = `${API}/source?path=${encodeURIComponent(helpUploadsPath + '/' + f)}`;
             return `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;white-space:nowrap;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(display)}</a>`;
         }).join(', ');
@@ -1709,13 +1709,13 @@
                         <button id="_helpClose" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-dim);padding:0 4px;line-height:1;">×</button>
                     </div>
                     <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">
-                        Ask any question about AIStudio — answers are extracted from:
+                        Ask any question about AIStudio — answers are extracted from AIStudio's own 'help' corpus:
                         <span style="font-size:12px;">${fileLinks || '<em>help corpus not loaded</em>'}</span>
                     </div>
                     <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Try asking:</div>
                     <div style="display:flex;flex-direction:column;gap:4px;" id="_helpSuggestions">
                         ${suggested.map(q =>
-                            `<button onclick="document.getElementById('_helpInput').value='${q.replace(/'/g,"\\'")}';document.getElementById('_helpInput').focus();"
+                            `<button onclick="document.getElementById('_helpInput').value='${q.replace(/'/g,"\\'")}';this.closest('[style*=fixed]')._sendHelp();"
                                 style="text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;transition:all 0.15s;"
                                 onmouseover="this.style.background='var(--accent-light)';this.style.borderColor='var(--accent-dim)';this.style.color='var(--accent)'"
                                 onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text-mid)'">${escapeHtml(q)}</button>`
@@ -1725,7 +1725,7 @@
 
                 <!-- Messages -->
                 <div id="_helpMessages" style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;min-height:160px;max-height:360px;">
-                    ${_helpHistory.length === 0 ? '<div style="color:var(--text-dim);font-size:13px;text-align:center;margin-top:20px;">Ask a question to get started.</div>' : ''}
+
                 </div>
 
                 <!-- Input -->
@@ -1800,6 +1800,7 @@
         };
 
         overlay.querySelector('#_helpSend').onclick = sendHelp;
+        overlay._sendHelp = sendHelp;  // exposed for suggestion button onclicks
         input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }};
         overlay.querySelector('#_helpClose').onclick = () => document.body.removeChild(overlay);
         overlay.addEventListener('click', e => { if (e.target === overlay) document.body.removeChild(overlay); });
