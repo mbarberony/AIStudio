@@ -1,146 +1,119 @@
 # AIStudio — Help Corpus Benchmark Questions
-# 20 questions validated against the help corpus documents
-# Sources: HOWTO, QUICKSTART, README, CODEBASE_GUIDE, architecture_decisions,
-#          HARNESS, DEMO_CORPUS, dependencies, PRODUCT_ROADMAP, QA_TESTING_LESSONS_LEARNED
-#
-# Corpus: data/corpora/help/uploads — 10 documents
-# Usage:
-#   ais_bench --corpus help
-#   (auto-detected — no --questions flag needed)
+# Version: 1.0.0
+# Auto-created 2026-04-22
+# Corpus: help — AIStudio documentation PDFs
 
 - topic: Installation and Setup
   questions:
+    - id: install_prerequisites
+      question: What are the prerequisites for installing AIStudio?
+      keywords: [prerequisites, install, Homebrew, Python, Qdrant]
+      notes: Should return QUICKSTART.pdf
 
-    - id: qdrant_install_method
-      question: How is the Qdrant binary installed in AIStudio — what curl command is used and where is the binary moved to?
-      keywords: [curl, aarch64, ~/bin]
-      notes: >
-        QUICKSTART Step 5 — specific curl command downloading aarch64 binary,
-        moved to ~/bin/. Distinctive terms that only appear in the Qdrant
-        install chunk and cannot be answered from general knowledge.
+    - id: install_qdrant
+      question: How do I install Qdrant on a Mac?
+      keywords: [Qdrant, install, binary, homebrew]
+      notes: Should return QUICKSTART.pdf
 
-    - id: venv_activation
-      question: What command activates the AIStudio Python virtual environment and what prompt change confirms it?
-      keywords: [venv, activate, .venv]
-      notes: >
-        QUICKSTART Step 8 — specific to AIStudio's venv path and prompt indicator.
+    - id: install_fresh
+      question: How do I get AIStudio running for the first time?
+      keywords: [first run, clone, ais_install, ais_start]
+      notes: Should return QUICKSTART.pdf
 
-    - id: pango_requirement
-      question: What system library does WeasyPrint require and how is it installed on macOS for AIStudio?
-      keywords: [pango, WeasyPrint, brew]
-      notes: >
-        QUICKSTART Step 1 — pango is required by WeasyPrint for PDF generation.
-        WeasyPrint keyword forces the right chunk.
+    - id: troubleshoot_port
+      question: The backend is not reachable at port 8000 — what do I do?
+      keywords: [port 8000, backend, not reachable, Failed to fetch]
+      notes: Should return QUICKSTART.pdf or HOWTO.pdf
 
-    - id: qdrant_wal_error
-      question: What causes the Qdrant WAL lock error and how do you fix it?
-      keywords: [WAL, lock, collection]
-      notes: >
-        HOWTO troubleshooting section — specific error pattern with specific fix.
-
-- topic: Architecture
-  questions:
-
-    - id: why_qdrant_over_chroma
-      question: Why did AIStudio switch from ChromaDB to Qdrant as the vector store?
-      keywords: [Qdrant, ChromaDB, stability]
-      notes: >
-        architecture_decisions.md — explicit ADR with stated rationale.
-
-    - id: crossencoder_purpose
-      question: What is the CrossEncoder model used for in AIStudio and why was it added?
-      keywords: [CrossEncoder, reranking, ms-marco]
-      notes: >
-        architecture_decisions.md — reranking ADR. Specific model name required.
-
-    - id: single_html_frontend
-      question: Why does AIStudio use a single HTML file for the entire frontend?
-      keywords: [single, frontend, no build]
-      notes: >
-        architecture_decisions.pdf — offline-first, no build step, opens directly
-        in browser. Keywords match the ADR rationale text.
-
-    - id: corpus_metadata_yaml
-      question: What is the purpose of the corpus metadata YAML file and when is it loaded?
-      keywords: [corpus, metadata, system prompt]
-      notes: >
-        CODEBASE_GUIDE — corpus_meta.yaml loaded into system prompt at query time.
-
-- topic: Operations
-  questions:
-
-    - id: ais_start_services
-      question: What services run when AIStudio is started, what ports do they use, and what does each one do?
-      keywords: [localhost, 8000, 6333]
-      notes: >
-        FILE_GUIDE.pdf services table — FastAPI:8000, Qdrant:6333, Ollama:11434.
-        Port numbers are distinctive and only appear in the services table.
-
-    - id: corpus_ingest_command
-      question: What is the full command to ingest the demo corpus from the terminal?
-      keywords: [ingest, demo, PYTHONPATH]
-      notes: >
-        QUICKSTART Step 10 — specific command with environment variables.
-
-    - id: ais_bench_default
-      question: When running ais_bench with no arguments, what corpus does it target and what are the default top-k and temperature values?
-      keywords: [demo, top-k, 0.3]
-      notes: >
-        HARNESS.pdf — defaults: corpus=demo, top-k=5, temperature=0.3.
-        Numeric values are distinctive and force the right chunk.
-
-    - id: latency_benchmark_finding
-      question: What did AIStudio benchmarks reveal about the latency difference between llama3.1:8b and llama3.1:70b on Apple Silicon?
-      keywords: [latency, 70b, 8b, unified memory]
-      notes: >
-        README benchmark finding — statistically indistinguishable warm latency.
-        Strong proof point, specific to AIStudio testing.
+    - id: troubleshoot_wal
+      question: What is a WAL lock error and how do I fix it?
+      keywords: [WAL, lock, error, Qdrant]
+      notes: Should return QUICKSTART.pdf
 
 - topic: Corpus Management
   questions:
+    - id: create_corpus
+      question: How do I create a new corpus?
+      keywords: [create, corpus, New button]
+      notes: Should return HOWTO.pdf
 
-    - id: file_deletion_behavior
-      question: What happens to a file when it is deleted from a corpus in AIStudio?
-      keywords: [trash, Qdrant, chunks]
-      notes: >
-        HOWTO — file moved to trash/, Qdrant chunks removed surgically.
+    - id: delete_file
+      question: How do I delete a file from a corpus?
+      keywords: [delete, file, trash, corpus]
+      notes: Should return HOWTO.pdf
 
-    - id: corpus_creation_ui
-      question: How do you create a new corpus in the AIStudio UI?
-      keywords: [corpus, Add, UI]
-      notes: >
-        HOWTO — UI-specific workflow for corpus creation.
+    - id: recover_corpus
+      question: How do I recover a corpus I accidentally deleted?
+      keywords: [recover, deleted, corpus, Trash]
+      notes: Should return HOWTO.pdf
 
-    - id: demo_corpus_description
-      question: What does the AIStudio demo corpus contain and what time period does it cover?
-      keywords: [demo, documents, financial services]
-      notes: >
-        DEMO_CORPUS.md and README — curated 9-document corpus, 2003-2026.
+    - id: rename_corpus
+      question: How do I rename a corpus?
+      keywords: [rename, corpus]
+      notes: Should return HOWTO.pdf
 
-- topic: Troubleshooting
+    - id: search_guidance
+      question: What is search guidance and how does it improve answers?
+      keywords: [search guidance, routing, metadata, corpus]
+      notes: Should return HOWTO.pdf or FILE_GUIDE.pdf
+
+- topic: Architecture and Technical
   questions:
+    - id: why_qdrant
+      question: Why does AIStudio use Qdrant instead of ChromaDB?
+      keywords: [Qdrant, ChromaDB, vector store, stability]
+      notes: Should return architecture_decisions.pdf
 
-    - id: failed_to_fetch_fix
-      question: What does the QUICKSTART troubleshooting section say to do when you see "Failed to fetch in UI" and the FastAPI backend is down?
-      keywords: [kill, lsof, uvicorn]
-      notes: >
-        QUICKSTART page 9 — chunk contains exact phrase "Failed to fetch in UI"
-        followed by kill $(lsof -ti:8000) command. Keywords match the fix
-        commands in that specific chunk.
+    - id: how_citations
+      question: How does the citation system work?
+      keywords: [citations, inline, references, footnotes]
+      notes: Should return architecture_decisions.pdf or CODEBASE_GUIDE.pdf
 
-    - id: python_version_requirement
-      question: Why does AIStudio require Python 3.10 or later and what fails on 3.9?
-      keywords: [Python, 3.10, type syntax]
-      notes: >
-        QUICKSTART prerequisites — float | None syntax incompatibility.
+    - id: crossencoder
+      question: What is the CrossEncoder reranker and what does it do?
+      keywords: [CrossEncoder, reranker, ms-marco, vocabulary mismatch]
+      notes: Should return architecture_decisions.pdf
 
-- topic: Roadmap
+    - id: chunking
+      question: How does AIStudio chunk documents for indexing?
+      keywords: [chunking, chunk size, overlap, page-aware]
+      notes: Should return architecture_decisions.pdf or CODEBASE_GUIDE.pdf
+
+    - id: codebase_structure
+      question: How is the AIStudio codebase organized?
+      keywords: [codebase, structure, directories, api.py, pipeline]
+      notes: Should return CODEBASE_GUIDE.pdf
+
+- topic: Performance and Benchmarks
   questions:
+    - id: latency
+      question: How fast is AIStudio at answering queries?
+      keywords: [latency, speed, seconds, benchmark]
+      notes: Should return README.pdf
 
-    - id: v2_feature
-      question: What is the Source Dive feature planned for AIStudio v2.0 and what will it enable?
-      keywords: [Source Dive, citation, page]
-      notes: >
-        PRODUCT_ROADMAP.pdf — Source Dive is the headline v2.0 feature:
-        click citation → open PDF at exact page with passage highlighted.
-        Distinctive name that only appears in the roadmap.
+    - id: model_size_latency
+      question: Does using a larger model make queries slower?
+      keywords: [model size, latency, 8b, 70b, Apple Silicon]
+      notes: Should return README.pdf
+
+    - id: run_benchmark
+      question: How do I run a benchmark on my corpus?
+      keywords: [benchmark, ais_bench, questions YAML, report]
+      notes: Should return HARNESS.pdf
+
+- topic: Commands and Operations
+  questions:
+    - id: all_commands
+      question: What commands does AIStudio provide?
+      keywords: [commands, ais_start, ais_stop, ais_bench, ais_help]
+      notes: Should return FILE_GUIDE.pdf
+
+    - id: ais_start
+      question: What does ais_start do?
+      keywords: [ais_start, start, services, Qdrant, Ollama]
+      notes: Should return FILE_GUIDE.pdf or HOWTO.pdf
+
+    - id: sec_10k
+      question: How do I set up the SEC 10-K corpus?
+      keywords: [SEC, 10-K, EDGAR, download, ingest]
+      notes: Should return QUICKSTART.pdf or README.pdf

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 1.7.1 -->
+<!-- Version: 1.8.0 -->
 <!-- Changelog: 1.3.0 — fix multiple progress bars: unique per-ingest IDs for bar/cancel/status elements; cancel button orange; copyBar also uid-scoped -->
 <script>
 /* SparkMD5 3.0.2 — inlined for offline-first compliance (T2.30) */
@@ -767,7 +767,7 @@
         <div class="topbar">
             <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
             <div style="display:flex;align-items:center;gap:8px;">
-                <button id="helpBtn" onclick="showHelp()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;opacity:0.5;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'" title="Help (coming soon)">Help</button>
+                <button id="helpBtn" onclick="showHelp()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'" title="Help">Help</button>
                 <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
                 <div class="status-pill">
                     <div class="status-dot"></div>
@@ -948,6 +948,7 @@
                 return;
             }
             corpusSelect.innerHTML = corpora
+                .filter(c => c.name !== 'help')
                 .slice().sort((a, b) => a.name.localeCompare(b.name))
                 .map(c => `<option value="${c.name}">${c.name}</option>`)
                 .join('');
@@ -1316,7 +1317,7 @@
                     <div style="margin-bottom:14px;">
                         <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Short Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional, max 120 chars)</span></label>
                         <input id="_editSd" type="text" maxlength="120"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;">
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Displayed in the header next to the corpus name.</div>
                     </div>
 
@@ -1324,14 +1325,14 @@
                         <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">What this corpus contains and why it was created.</div>
                         <textarea id="_editDesc" rows="4"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                     </div>
 
                     <div style="margin-bottom:20px;">
                         <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Search Guidance <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example.</div>
                         <textarea id="_editGuidance" rows="10"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                     </div>
 
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -1561,7 +1562,7 @@
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Corpus Name</label>
                         <input id="_ccName" type="text" maxlength="40"
                             placeholder="${DEMO_PLACEHOLDERS.name}"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;">
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Lowercase letters, numbers, hyphens and underscores only — e.g. my_corpus</div>
                         <div id="_ccNameError" style="font-size:11px;color:var(--danger,#dc2626);margin-top:3px;display:none;"></div>
                     </div>
@@ -1571,7 +1572,7 @@
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Short Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <input id="_ccShortDesc" type="text" maxlength="120"
                             placeholder="${DEMO_PLACEHOLDERS.short_description}"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;">
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Displayed in the header next to the corpus name. Max 80 characters.</div>
                     </div>
 
@@ -1580,7 +1581,7 @@
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <textarea id="_ccDesc" rows="4"
                             placeholder="${DEMO_PLACEHOLDERS.description}"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">What this corpus contains and why it was created.</div>
                     </div>
 
@@ -1589,7 +1590,7 @@
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Search Guidance <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <textarea id="_ccGuidance" rows="5"
                             placeholder="${DEMO_PLACEHOLDERS.search_guidance}"
-                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;"></textarea>
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example. You can add or edit this later.</div>
                     </div>
 
@@ -1644,10 +1645,175 @@
         });
     }
 
-    // ── Help (placeholder — inactive) ─────────────────────────────
-    function showHelp() {
-        // Help corpus integration coming in next release
-        addSystemMessage('ℹ Help is coming soon. For now, switch to the <strong>help</strong> corpus and ask your question there.');
+    // ── Help modal ─────────────────────────────────────────────────
+    // In-memory conversation history for help — resets on page refresh
+    let _helpHistory = [];
+
+    // Curated suggested questions (subset of benchmarks/help/help_questions.yaml)
+    const _helpQuestions = [
+        "What are the prerequisites for installing AIStudio?",
+        "How do I create a new corpus?",
+        "How do I recover a corpus I accidentally deleted?",
+        "Why does AIStudio use Qdrant instead of ChromaDB?",
+        "How does the CrossEncoder reranker work?",
+        "How do I run a benchmark on my corpus?",
+        "What commands does AIStudio provide?",
+        "How does AIStudio chunk documents for indexing?",
+        "How fast is AIStudio at answering queries?",
+        "What is search guidance and how does it improve answers?",
+        "How do I rename a corpus?",
+        "How is the AIStudio codebase organized?",
+        "How do I install Qdrant on a Mac?",
+        "Does using a larger model make queries slower?",
+        "How do I set up the SEC 10-K corpus?",
+    ];
+
+    function _pickRandom(arr, n) {
+        const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, n);
+    }
+
+    async function showHelp() {
+        // Fetch help corpus file list
+        let helpFiles = [];
+        let helpUploadsPath = '';
+        try {
+            const r = await fetch(`${API}/corpus/help/info`);
+            const d = await r.json();
+            helpFiles = (d.files || []).sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            helpUploadsPath = d.paths?.uploads || '';
+        } catch(_) {}
+
+        const suggested = _pickRandom(_helpQuestions, 3);
+
+        // Build file links — strip extension, capitalize first letter of each word
+        const fileLinks = helpFiles.map(f => {
+            const stem = f.replace(/\.pdf$/i, '');
+            const display = stem.charAt(0).toUpperCase() + stem.slice(1);
+            const url = `${API}/source?path=${encodeURIComponent(helpUploadsPath + '/' + f)}`;
+            return `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;white-space:nowrap;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(display)}</a>`;
+        }).join(', ');
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+        overlay.innerHTML = `
+            <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:16px;
+                width:600px;max-height:88vh;display:flex;flex-direction:column;
+                box-shadow:0 8px 32px rgba(0,0,0,0.18);overflow:hidden;">
+
+                <!-- Header -->
+                <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                        <div style="font-size:15px;font-weight:700;color:var(--text);">AIStudio Help</div>
+                        <button id="_helpClose" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-dim);padding:0 4px;line-height:1;">×</button>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">
+                        Ask any question about AIStudio — answers are extracted from:
+                        <span style="font-size:12px;">${fileLinks || '<em>help corpus not loaded</em>'}</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Try asking:</div>
+                    <div style="display:flex;flex-direction:column;gap:4px;" id="_helpSuggestions">
+                        ${suggested.map(q =>
+                            `<button onclick="document.getElementById('_helpInput').value='${q.replace(/'/g,"\\'")}';document.getElementById('_helpInput').focus();"
+                                style="text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;transition:all 0.15s;"
+                                onmouseover="this.style.background='var(--accent-light)';this.style.borderColor='var(--accent-dim)';this.style.color='var(--accent)'"
+                                onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text-mid)'">${escapeHtml(q)}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="_helpMessages" style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;min-height:160px;max-height:360px;">
+                    ${_helpHistory.length === 0 ? '<div style="color:var(--text-dim);font-size:13px;text-align:center;margin-top:20px;">Ask a question to get started.</div>' : ''}
+                </div>
+
+                <!-- Input -->
+                <div style="padding:12px 24px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
+                    <textarea id="_helpInput" rows="2" placeholder="Ask a question about AIStudio…"
+                        style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;line-height:1.5;box-sizing:border-box;background:#fff;"></textarea>
+                    <button id="_helpSend"
+                        style="flex-shrink:0;height:42px;padding:0 16px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Ask</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        // Replay existing history
+        const msgEl = overlay.querySelector('#_helpMessages');
+        if (_helpHistory.length > 0) {
+            msgEl.innerHTML = '';
+            _helpHistory.forEach(m => _helpAddMsg(msgEl, m.role, m.content, m.isHtml));
+        }
+
+        const input = overlay.querySelector('#_helpInput');
+        input.focus();
+
+        // Send handler
+        const sendHelp = async () => {
+            const q = input.value.trim();
+            if (!q) return;
+            input.value = '';
+            if (msgEl.querySelector('[style*="Ask a question"]')) msgEl.innerHTML = '';
+            _helpAddMsg(msgEl, 'user', q, false);
+            _helpHistory.push({role:'user', content:q, isHtml:false});
+
+            const loadingId = '_helpLoading_' + Date.now();
+            msgEl.innerHTML += `<div id="${loadingId}" style="display:flex;gap:8px;align-items:center;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite;"></div>
+                <span style="font-size:12px;color:var(--text-dim);">Thinking…</span></div>`;
+            msgEl.scrollTop = msgEl.scrollHeight;
+
+            try {
+                const body = {
+                    query: q,
+                    corpus: 'help',
+                    top_k: 5,
+                    temperature: 0.3,
+                    conversation_history: _helpHistory.length > 1
+                        ? _helpHistory.slice(0,-1).map(m => ({role:m.role, content:m.isHtml ? m.content.replace(/<[^>]+>/g,'') : m.content}))
+                        : null
+                };
+                const res = await fetch(`${API}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                document.getElementById(loadingId)?.remove();
+
+                let html = escapeHtml(data.answer).split(/\n\n+/).map(p => p.trim()).filter(p=>p).map(p=>`<p style="margin:0 0 6px;">${p.replace(/\n/g,'<br>')}</p>`).join('');
+                if (data.citations?.length) {
+                    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);">';
+                    data.citations.forEach(c => {
+                        const fname = c.source.split('/').pop();
+                        const pageStr = c.page ? ` p.${c.page}` : '';
+                        const url = `${API}/source?path=${encodeURIComponent(c.source)}${c.page ? '#page='+c.page : ''}`;
+                        html += `<div>[${c.index}] <a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;">${escapeHtml(fname)}</a>${pageStr}</div>`;
+                    });
+                    html += '</div>';
+                }
+                _helpAddMsg(msgEl, 'assistant', html, true);
+                _helpHistory.push({role:'assistant', content:html, isHtml:true});
+            } catch(err) {
+                document.getElementById(loadingId)?.remove();
+                _helpAddMsg(msgEl, 'assistant', `<em style="color:var(--danger)">Error: ${err.message}</em>`, true);
+            }
+            msgEl.scrollTop = msgEl.scrollHeight;
+        };
+
+        overlay.querySelector('#_helpSend').onclick = sendHelp;
+        input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }};
+        overlay.querySelector('#_helpClose').onclick = () => document.body.removeChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) document.body.removeChild(overlay); });
+    }
+
+    function _helpAddMsg(container, role, content, isHtml) {
+        const isUser = role === 'user';
+        const div = document.createElement('div');
+        div.style.cssText = isUser
+            ? 'align-self:flex-end;background:var(--accent);color:white;padding:8px 12px;border-radius:12px 12px 2px 12px;font-size:13px;max-width:85%;line-height:1.5;'
+            : 'align-self:flex-start;background:var(--bg);border:1px solid var(--border);padding:10px 14px;border-radius:2px 12px 12px 12px;font-size:13px;max-width:92%;line-height:1.6;';
+        if (isHtml) div.innerHTML = content;
+        else div.textContent = content;
+        container.appendChild(div);
     }
 
     async function renameCorpus() {
