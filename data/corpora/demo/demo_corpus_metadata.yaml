@@ -1,3 +1,6 @@
+# demo_corpus_metadata.yaml
+# Corpus metadata — loaded by api.py at query time
+
 corpus_name: demo
 description: A curated corpus of original thought leadership documents spanning 2003–2026,
   produced by Manuel Barbero and collaborators across senior technology roles at major
@@ -57,6 +60,7 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   across the corpus.
 
   Answer directly and confidently from what the sources contain. Do not hedge or qualify
-  unnecessarily.
-
-  '
+  unnecessarily.'
+short_description: A curated corpus of original thought leadership documents spanning
+  2003–2026, by Manuel Barbero and collaborators.
+last_updated: '2026-04-22'
