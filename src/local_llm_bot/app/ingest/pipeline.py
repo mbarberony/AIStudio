@@ -1,5 +1,10 @@
-# Version: 1.3.0
-# Changelog: 1.3.0 — Per-file timing, chunk count, size_bytes captured in IngestResult.file_stats
+# Version: 1.3.5
+# Changelog: 1.3.5 — fixed tqdm ncols=100 to keep stats adjacent to bar
+#            1.3.4 — suppress [ingest] log lines when tqdm bar active
+#            1.3.3 — remove tqdm postfix clutter; bar shows progress only
+#            1.3.2 — tqdm.write() for clean progress bars; remove noisy Discover bar
+#            1.3.1 — fix datetime.UTC → timezone.utc (AttributeError on Python 3.13)
+#            1.3.0 — Per-file timing, chunk count, size_bytes captured in IngestResult.file_stats
 #            1.2.0 — Per-file embed+upsert (constant memory, live Qdrant progress); alphabetical file order
 #            1.1.0 — MD5 stored in Qdrant payload; skip logic fixed (Qdrant-only); per-file INFO logging
 from __future__ import annotations
@@ -33,9 +38,9 @@ from local_llm_bot.app.vectorstore import qdrant_store as _store
 
 def _dt_now() -> str:
     """Return current UTC time as ISO string."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    return datetime.now(datetime.UTC).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")  # noqa: UP017
 
 
 @dataclass(frozen=True)
@@ -182,6 +187,14 @@ def _md5_of_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _tqdm_write(pbar: Any | None, msg: str) -> None:
+    """Write a message without disrupting the tqdm progress bar."""
+    if pbar is not None:
+        pbar.write(msg, file=_sys.stderr)
+    else:
+        print(msg, file=_sys.stderr)
+
+
 def ingest_corpus(
     *,
     root: Path,
@@ -265,7 +278,7 @@ def ingest_corpus(
     # bytes_processed accumulates in the correct order for the progress bar.
 
     discovered: list[Path] = []
-    p_discover = tqdm_cls(desc="Discover", unit="file") if tqdm_cls is not None else None
+    p_discover = None  # Discover is instant — no progress bar needed
 
     try:
         for p in sorted(_iter_files(root), key=lambda x: x.name):
@@ -288,15 +301,12 @@ def ingest_corpus(
     # enabling accurate progress reporting.
 
     if tqdm_cls is not None:
-        p_process = tqdm_cls(total=len(discovered), desc="Process", unit="file")
+        p_process = tqdm_cls(total=len(discovered), desc="Process", unit=" file", ncols=100)
     else:
         p_process = None
 
     try:
         for file_path in discovered:
-            if p_process is not None:
-                p_process.set_postfix_str(file_path.name[:60])
-
             ext = file_path.suffix.lower()
             if ext not in SUPPORTED_EXTS or file_path.name.startswith("~$"):
                 if p_process is not None:
@@ -312,36 +322,16 @@ def ingest_corpus(
                 # _file_unchanged() removed: manifest.jsonl stale after corpus recreation. (AIStudio_186)
                 if not force and abs_path in qdrant_source_paths:
                     files_skipped_unchanged += 1
-                    print(
-                        f"[ingest] {corpus}: skipped {file_path.name} — already indexed",
-                        file=_sys.stderr,
-                    )
                     if p_process is not None:
-                        p_process.set_postfix(
-                            processed=files_processed,
-                            skipped=files_skipped_unchanged,
-                            failed=files_failed,
-                            chunks=chunks_written,
-                        )
                         p_process.update(1)
                     continue
 
-                print(
-                    f"[ingest] {corpus}: processing {file_path.name} ({files_processed + files_skipped_unchanged + 1}/{len(discovered)})",
-                    file=_sys.stderr,
-                )
                 t_file_start = time.time()
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
                     files_processed += 1
                     if p_process is not None:
-                        p_process.set_postfix(
-                            processed=files_processed,
-                            skipped=files_skipped_unchanged,
-                            failed=files_failed,
-                            chunks=chunks_written,
-                        )
                         p_process.update(1)
                     continue
 
@@ -408,21 +398,16 @@ def ingest_corpus(
                     "duration_sec": file_dur,
                     "ingested_at": _dt_now(),
                 }
-                print(
-                    f"[ingest] {corpus}: ✓ {file_path.name} — {len(chunks):,} chunks in {file_dur}s",
-                    file=_sys.stderr,
-                )
+                if p_process is None:
+                    _tqdm_write(
+                        p_process,
+                        f"[ingest] {corpus}: ✓ {file_path.name} — {len(chunks):,} chunks in {file_dur}s",
+                    )
 
                 write_manifest_entry(paths["manifest"], build_entry(file_path))
                 files_processed += 1
 
                 if p_process is not None:
-                    p_process.set_postfix(
-                        processed=files_processed,
-                        skipped=files_skipped_unchanged,
-                        failed=files_failed,
-                        chunks=chunks_written,
-                    )
                     p_process.update(1)
 
             except Exception as e:
@@ -431,12 +416,6 @@ def ingest_corpus(
                     {"source_path": str(file_path), "reason": type(e).__name__, "detail": str(e)}
                 )
                 if p_process is not None:
-                    p_process.set_postfix(
-                        processed=files_processed,
-                        skipped=files_skipped_unchanged,
-                        failed=files_failed,
-                        chunks=chunks_written,
-                    )
                     p_process.update(1)
 
     finally:

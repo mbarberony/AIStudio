@@ -1,9 +1,11 @@
 # demo_corpus_metadata.yaml
 # Corpus metadata — loaded by api.py at query time
+# User-editable: short_description, description, search_guidance, sources[].description, sources[].keywords
 
-schema_version: '1.0'
+schema_version: '2.0'
 corpus_name: demo
-last_updated: '2026-04-23'
+corpus_type: seeded
+last_updated: '2026-04-24'
 short_description: 20 years of original thought leadership — architecture, strategy,
   AI
 description: A curated corpus of original thought leadership documents spanning 2003–2026,
@@ -61,3 +63,99 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   unnecessarily.
 
   '
+sources:
+- filename: Barbero - 2006 - Architecture Concepts and How To Use Them To Design an
+    Organization.pdf
+  title: Architecture Concepts and How To Use Them To Design an Organization
+  description: Enterprise architecture methodology and toolset — universal architecture
+    concepts for organizational design
+  keywords:
+  - architecture
+  - organization
+  - methodology
+  - toolset
+  - design principles
+  - Barbero 2006
+- filename: Erder | Pureur - 2003 - Architecture and QFD.pdf
+  title: Architecture and QFD
+  description: QFD applied to technology architecture — House of Quality, functional
+    deployment, architecture toolset
+  keywords:
+  - QFD
+  - Quality Function Deployment
+  - House of Quality
+  - HoQ
+  - architecture toolset
+- filename: Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts
+    and Techniques.pdf
+  title: FS Journal — Strategy and Architecture Concepts and Techniques
+  description: CTO strategy, three-year technology strategy, IT transformation programs,
+    target state
+  keywords:
+  - CTO
+  - strategy
+  - three-year
+  - technology strategy
+  - IT transformation
+  - target state
+- filename: Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf
+  title: FS Journal — IT Infrastructure
+  description: IT infrastructure strategy, CMDB, infrastructure architecture in financial
+    services
+  keywords:
+  - IT infrastructure
+  - CMDB
+  - infrastructure architecture
+  - financial services
+- filename: Barbero et al. - 2005 - FS Journal - Digitization.pdf
+  title: FS Journal — Digitization
+  description: Digitization in financial services, digital transformation, end-to-end
+    solutions
+  keywords:
+  - digitization
+  - digital transformation
+  - financial services
+  - end-to-end
+- filename: Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf
+  title: FS Journal — Risk Compliance and Security
+  description: Risk, compliance and security in financial services — Sarbanes-Oxley,
+    Basel II, IT governance
+  keywords:
+  - risk
+  - compliance
+  - security
+  - Sarbanes-Oxley
+  - Basel II
+  - IT governance
+  - financial services
+- filename: Barbero - 2020 - Technology Modernization and Cloud Migration.pdf
+  title: Technology Modernization and Cloud Migration
+  description: Cloud migration, legacy modernization, application rationalization
+    — Refactor/Rehost/Replace framework
+  keywords:
+  - cloud migration
+  - modernization
+  - legacy
+  - Refactor
+  - Rehost
+  - Replace
+  - rationalization
+- filename: Barbero | Hunt - 2021 - Data Strategy.pdf
+  title: Data Strategy
+  description: Data strategy, data governance, data architecture in financial services
+  keywords:
+  - data strategy
+  - data governance
+  - data architecture
+  - financial services
+- filename: Barbero - 2026 - Agentic AI in Financial Services.pdf
+  title: Agentic AI in Financial Services
+  description: Agentic AI, generative AI, AI strategy, LLMs, knowledge productivity
+    in financial services
+  keywords:
+  - agentic AI
+  - generative AI
+  - AI strategy
+  - LLMs
+  - knowledge productivity
+  - financial services

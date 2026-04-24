@@ -1,9 +1,11 @@
 # help_corpus_metadata.yaml
 # Corpus metadata — loaded by api.py at query time
+# User-editable: short_description, description, search_guidance, sources[].description, sources[].keywords
 
-schema_version: '1.0'
+schema_version: '2.0'
 corpus_name: help
-last_updated: '2026-04-23'
+corpus_type: generated
+last_updated: '2026-04-24'
 short_description: AIStudio documentation — commands, setup, architecture
 description: AIStudio user and developer documentation — installation, usage, architecture,
   benchmarks, roadmap, and file/command reference.
@@ -65,3 +67,164 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   gets its own line.
 
   '
+sources:
+- filename: README.pdf
+  source_path: README.md
+  subject: readme
+  title: AIStudio — README
+  description: Product overview, architecture, performance findings, what AIStudio
+    does, demo corpus, license
+  keywords:
+  - overview
+  - architecture
+  - performance
+  - latency
+  - benchmark
+  - demo
+  - readme
+- filename: HOWTO.pdf
+  source_path: HOWTO.md
+  subject: howto
+  title: AIStudio User Guide
+  description: User operational recipes — corpus management, LLM installation, query
+    settings, troubleshooting, upgrading
+  keywords:
+  - howto
+  - corpus
+  - delete
+  - rename
+  - upload
+  - ingest
+  - troubleshoot
+  - search guidance
+  - filters
+- filename: QUICKSTART.pdf
+  source_path: QUICKSTART.md
+  subject: quickstart
+  title: AIStudio Quickstart
+  description: Step-by-step installation — prerequisites, Homebrew, Python, Qdrant,
+    first run, WAL lock, port 8000
+  keywords:
+  - quickstart
+  - install
+  - prerequisites
+  - Homebrew
+  - Python
+  - Qdrant
+  - first run
+  - WAL
+  - port 8000
+- filename: architecture_decisions.pdf
+  source_path: docs/architecture_decisions.md
+  subject: architecture
+  title: AIStudio Architecture Decisions
+  description: Technical architecture rationale — Qdrant vs ChromaDB, CrossEncoder,
+    chunking, citation design
+  keywords:
+  - architecture
+  - Qdrant
+  - ChromaDB
+  - CrossEncoder
+  - chunking
+  - citations
+  - embedding
+  - reranker
+- filename: DEMO_CORPUS.pdf
+  source_path: docs/DEMO_CORPUS.md
+  subject: demo_corpus
+  title: AIStudio Demo Corpus
+  description: What ships with AIStudio — demo documents, suggested questions, corpus
+    statistics
+  keywords:
+  - demo
+  - corpus
+  - documents
+  - suggested questions
+  - Barbero
+  - architecture
+  - financial services
+- filename: HARNESS.pdf
+  source_path: docs/HARNESS.md
+  subject: harness
+  title: AIStudio Benchmark Harness
+  description: How to run benchmarks — ais_bench CLI flags, question file format,
+    reading reports
+  keywords:
+  - benchmark
+  - harness
+  - ais_bench
+  - questions YAML
+  - reports
+  - bench.py
+- filename: dependencies.pdf
+  source_path: docs/dependencies.md
+  subject: dependencies
+  title: AIStudio Dependencies
+  description: Python and system dependencies — FastAPI, Qdrant, Ollama, pdfplumber,
+    sentence-transformers
+  keywords:
+  - dependencies
+  - Python
+  - FastAPI
+  - Qdrant
+  - Ollama
+  - pdfplumber
+  - requirements
+- filename: QA_TESTING_LESSONS_LEARNED.pdf
+  source_path: docs/QA_TESTING_LESSONS_LEARNED.md
+  subject: qa_testing
+  title: AIStudio QA Testing — Lessons Learned
+  description: Clean install issues, showstoppers, known friction points, validated
+    demo questions, open TODOs
+  keywords:
+  - QA
+  - testing
+  - install
+  - friction
+  - bugs
+  - showstoppers
+  - port 8000
+  - fresh install
+- filename: PRODUCT_ROADMAP.pdf
+  source_path: docs/PRODUCT_ROADMAP.md
+  subject: product_roadmap
+  title: AIStudio Product Roadmap
+  description: What works at Beta, what is coming in v2.0 and v3.0, known limitations
+  keywords:
+  - roadmap
+  - Beta
+  - v2.0
+  - v3.0
+  - features
+  - limitations
+  - planned
+- filename: CODEBASE_GUIDE.pdf
+  source_path: docs/CODEBASE_GUIDE.md
+  subject: codebase_guide
+  title: AIStudio Codebase Guide
+  description: Codebase introduction — architecture overview, directory structure,
+    key design decisions
+  keywords:
+  - codebase
+  - src
+  - ingest
+  - rag_core
+  - api.py
+  - front_end
+  - directory
+  - structure
+- filename: FILE_GUIDE.pdf
+  source_path: meta/reference/INFO - AIStudio - File Guide - 2026-04-19.md
+  subject: file_guide
+  title: AIStudio File Guide
+  description: Commands reference, frontend overview, services, documentation map,
+    system prompt explanation
+  keywords:
+  - commands
+  - ais_start
+  - ais_stop
+  - ais_bench
+  - ais_help
+  - services
+  - FILE_GUIDE
+  - system prompt
