@@ -1,12 +1,12 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.3.5
+# Version: 1.3.7
 
 
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.5"
+VERSION="1.3.7"
 
 SCRIPT_NAME="ais_bench"
 HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
@@ -43,6 +43,13 @@ for (( i=1; i<=${#args}; i++ )); do
         break
     fi
 done
+
+# ── Preflight ─────────────────────────────────────────────────────────────────
+_sep "Preflight"
+
+# 1. Corpus must exist and have documents
+CORPUS_DIR="$REPO/data/corpora/$CORPUS"
+UPLOADS_DIR="$CORPUS_DIR/uploads"
 
 if [[ ! -d "$UPLOADS_DIR" ]]; then
     echo "❌ Corpus '$CORPUS' has no uploads/ directory — not yet ingested."
