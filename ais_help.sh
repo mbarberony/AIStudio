@@ -1,7 +1,45 @@
 #!/usr/bin/env zsh
 # ais_help — AIStudio user command reference
-# Version: 1.1.0
 
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="2.0.1"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_NAME="ais_help"
+HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
+
+_show_help() {
+    if [[ -f "$HELP_FILE" ]]; then
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+    else
+        echo "$SCRIPT_NAME v$VERSION"
+        echo "Usage: ais_help [<command>]"
+    fi
+}
+
+if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
+if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
+
+# ais_help <command> — show help for a specific command
+if [[ -n "$1" ]]; then
+    cmd="$1"
+    if [[ -f "$HELP_FILE" ]]; then
+        result=$(awk "/^## ${cmd}$/,/^---$/" "$HELP_FILE" | grep -v "^---$")
+        if [[ -n "$result" ]]; then
+            echo "$result"
+        else
+            echo "❌ No help found for '$cmd'."
+            echo "· Run ais_help to see all available commands."
+        fi
+    else
+        echo "❌ Help file not found: $HELP_FILE"
+    fi
+    exit 0
+fi
+
+# Default: show full reference
+printf '\033[1m[ais_help v%s — AIStudio command reference]\033[0m\n' "$VERSION"
 echo ""
 echo "+==============================================================+"
 echo "|              AIStudio — Command Reference                    |"
@@ -26,7 +64,8 @@ echo "  ais_bench             Run benchmark on demo corpus (default settings)"
 echo ""
 echo "── Help ─────────────────────────────────────────────────────"
 echo "  ais_help              Show this reference"
+echo "  ais_help <command>    Show detailed help for a specific command"
 echo ""
-echo "Setup: cd ~/Developer/AIStudio && ./ais_install"
-echo "Docs:  see QUICKSTART.md for full getting-started guide"
+echo "· Setup: cd ~/Developer/AIStudio && ./ais_install"
+echo "· Docs:  see QUICKSTART.md for full getting-started guide"
 echo ""

@@ -7,10 +7,16 @@
 # v1.3.0: kill ALL PIDs on port 8000 — handles multiple backend processes
 # v1.4.0: CLI output standard; --silent flag; --help/--version
 
-VERSION="1.4.0"
+
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="1.4.2"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
+
+printf '\033[1m[stop.sh v%s — Stop AIStudio services (internal)]\033[0m\n' "$VERSION"
 
 # ── Parse flags ───────────────────────────────────────────────────
 SILENT=0
@@ -38,7 +44,7 @@ for arg in "$@"; do
     fi
 done
 
-sep() {
+_sep() {
     [[ "$SILENT" -eq 1 ]] && return
     if [[ "$SEPARATOR" -eq 1 ]]; then
         echo "${DIM}--- ${ITALIC}$1${RESET}"
@@ -47,23 +53,23 @@ sep() {
     fi
 }
 
-out() { [[ "$SILENT" -eq 0 ]] && echo "$@"; }
-err() { echo "$@"; }  # errors always print
+_out() { [[ "$SILENT" -eq 0 ]] && echo "$@"; }
+_err() { echo "$@"; }  # errors always print
 
 [[ "$SILENT" -eq 0 ]] && echo "ais_stop v$VERSION — Stop AIStudio services"
 
 # ── Cleanup ───────────────────────────────────────────────────────
-sep "Cleanup"
-out "🛑 Stopping AIStudio..."
+_sep "Cleanup"
+_out "🛑 Stopping AIStudio..."
 
 # 1. Uvicorn / FastAPI backend
 BACKEND_PIDS=$(lsof -ti:8000 2>/dev/null || true)
 if [ -n "$BACKEND_PIDS" ]; then
     echo "$BACKEND_PIDS" | xargs kill 2>/dev/null || true
     sleep 1
-    out "✅ Backend stopped (pid(s): $(echo $BACKEND_PIDS | tr '\n' ' '), port 8000)."
+    _out "✅ Backend stopped (pid(s): $(echo $BACKEND_PIDS | tr '\n' ' '), port 8000)."
 else
-    out "· Backend not running."
+    _out "· Backend not running."
 fi
 
 # 2. Qdrant — graceful shutdown (SIGTERM + wait, then SIGKILL fallback)
@@ -79,15 +85,15 @@ if lsof -ti:6333 > /dev/null 2>&1; then
     if kill -0 "$QDRANT_PID" 2>/dev/null; then
         kill -KILL "$QDRANT_PID" 2>/dev/null
     fi
-    out "✅ Qdrant stopped (port 6333)."
+    _out "✅ Qdrant stopped (port 6333)."
 else
-    out "· Qdrant not running."
+    _out "· Qdrant not running."
 fi
 
 # 3. Ollama — leave running
-out "· Ollama left running (system service)."
+_out "· Ollama left running (system service)."
 
 # ── Reporting ─────────────────────────────────────────────────────
-sep "Reporting"
-out "✅ AIStudio stopped."
-out "· To restart: ais_start"
+_sep "Reporting"
+_out "✅ AIStudio stopped."
+_out "· To restart: ais_start"

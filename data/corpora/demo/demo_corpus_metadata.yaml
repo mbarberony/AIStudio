@@ -1,7 +1,11 @@
 # demo_corpus_metadata.yaml
 # Corpus metadata — loaded by api.py at query time
 
+schema_version: '1.0'
 corpus_name: demo
+last_updated: '2026-04-23'
+short_description: 20 years of original thought leadership — architecture, strategy,
+  AI
 description: A curated corpus of original thought leadership documents spanning 2003–2026,
   produced by Manuel Barbero and collaborators across senior technology roles at major
   financial institutions. Covers enterprise architecture, IT strategy, organizational
@@ -26,12 +30,6 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   - CTO strategy, three-year technology strategy, IT transformation programs, target
   state → Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts
   and Techniques.pdf
-
-  - Large-scale IT transformation programs, cloud transformation, technology modernization
-  programs, transformation program organization, application rationalization at scale,
-  legacy modernization programs → Barbero - 2020 - Technology Modernization and Cloud
-  Migration.pdf. This is the primary source for how to organize and execute large-scale
-  technology transformation.
 
   - IT infrastructure strategy, CMDB, infrastructure architecture → Barbero et al.
   - 2005 - FS Journal - IT Infrastructure.pdf
@@ -60,7 +58,6 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   across the corpus.
 
   Answer directly and confidently from what the sources contain. Do not hedge or qualify
-  unnecessarily.'
-short_description: A curated corpus of original thought leadership documents spanning
-  2003–2026, by Manuel Barbero and collaborators.
-last_updated: '2026-04-22'
+  unnecessarily.
+
+  '

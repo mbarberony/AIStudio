@@ -20,10 +20,16 @@
 
 set -e
 
-VERSION="1.6.8"
+
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="1.6.11"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
+
+printf '\033[1m[start.sh v%s — Start AIStudio services (internal)]\033[0m\n' "$VERSION"
 
 # ── Parse flags ───────────────────────────────────────────────────
 VERBOSE=0
@@ -57,7 +63,7 @@ for arg in "$@"; do
     fi
 done
 
-sep() {
+_sep() {
     if [[ "$SEPARATOR" -eq 1 ]]; then
         echo "${DIM}--- ${ITALIC}$1${RESET}"
     else
@@ -65,13 +71,11 @@ sep() {
     fi
 }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 FRONTEND="$REPO_ROOT/front_end/rag_studio.html"
 QDRANT_STORAGE="$HOME/qdrant_storage"
 VENV="$REPO_ROOT/.venv"
-
-echo "ais_start v$VERSION — Start AIStudio services"
 
 if [ -f "$VENV/bin/activate" ]; then
     source "$VENV/bin/activate"
@@ -82,12 +86,12 @@ else
 fi
 
 # ── Cleanup ───────────────────────────────────────────────────────
-sep "Cleanup"
+_sep "Cleanup"
 echo "🛑 Stopping any running services..."
 "$SCRIPT_DIR/stop.sh" --silent 2>/dev/null || true
 
 # ── Ecosystem ─────────────────────────────────────────────────────
-sep "Ecosystem"
+_sep "Ecosystem"
 echo "▶ Starting AIStudio..."
 
 if curl -s http://localhost:6333/healthz > /dev/null 2>&1; then
@@ -164,7 +168,7 @@ else
 fi
 
 # ── Processing ────────────────────────────────────────────────────
-sep "Processing"
+_sep "Processing"
 DEMO_COLLECTION="aistudio_demo"
 DEMO_CHECK=$(curl -s "http://localhost:6333/collections/$DEMO_COLLECTION" 2>/dev/null)
 
@@ -239,7 +243,7 @@ except:
 fi
 
 # ── Reporting ─────────────────────────────────────────────────────
-sep "Reporting"
+_sep "Reporting"
 echo "▶ Opening frontend..."
 open "$FRONTEND"
 echo "✅ AIStudio is running."

@@ -8,11 +8,34 @@
 #   ais_install --list               # show all installable user commands
 #   ais_install --verify             # check which commands are active in .zshrc
 #
-# Version: 2.3.0
+# Version: 2.4.2
 
-VERSION="2.3.0"
+
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="2.4.2"
+
 SCRIPT_NAME="ais_install"
-REPO="$(cd "$(dirname "$0")" && pwd)"
+HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
+
+_show_help() {
+    if [[ -f "$HELP_FILE" ]]; then
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+    else
+        echo "$SCRIPT_NAME v$VERSION"
+        echo ""
+        echo "Usage: $SCRIPT_NAME [--help] [--version]"
+        echo ""
+        echo "Run from: ~/Developer/AIStudio"
+    fi
+}
+
+if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
+if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
+
+SCRIPT_NAME="ais_install"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_MANIFEST="$REPO/ais_user_commands_manifest.yaml"
 ZSHRC="$HOME/.zshrc"
 
@@ -23,35 +46,8 @@ _sep()  { echo "$(_dim "--- $1")"; }
 
 printf '\033[1m[ais_install v%s — AIStudio Command Installer]\033[0m\n' "$VERSION"
 
-if [[ "$1" == "--version" ]]; then exit 0; fi
-
-if [[ "$1" == "--help" ]]; then
-    echo ""
-    echo "ais_install v$VERSION — AIStudio Command Installer"
-    echo ""
-    echo "Usage: ais_install [command|--list|--verify|--help|--version]"
-    echo ""
-    echo "Options:"
-    echo "  (no args)    Full install — create venv, install deps, install all user commands"
-    echo "  <command>    Install or update a single command (e.g. ais_install ais_log)"
-    echo "  --list       Show all installable user commands"
-    echo "  --verify     Check which commands are active in ~/.zshrc"
-    echo "  --version    Show version and exit"
-    echo "  --help       Show this help and exit"
-    echo ""
-    echo "· Commands defined in: ais_user_commands_manifest.yaml"
-    echo "· Aliases written to:  $ZSHRC"
-    exit 0
-fi
-
-if [[ ! -f "$USER_MANIFEST" ]]; then
-    echo "❌ User command manifest not found: $USER_MANIFEST."
-    echo "· Run from repo root: cd ~/Developer/AIStudio && ./ais_install"
-    exit 1
-fi
-
 # ── Parse user manifest — returns alias|script_path|description ───────────────
-parse_manifest() {
+_parse_manifest() {
     python3 - "$USER_MANIFEST" "$REPO" << 'PYEOF'
 import sys, yaml
 manifest_path, repo = sys.argv[1], sys.argv[2]
@@ -69,10 +65,20 @@ PYEOF
 }
 
 # ── Write or update a single alias in ~/.zshrc ────────────────────────────────
-write_alias() {
+_write_alias() {
     local alias_name="$1"
     local script_path="$2"
     if grep -q "^alias ${alias_name}=" "$ZSHRC" 2>/dev/null; then
+        local existing
+        existing=$(grep "^alias ${alias_name}=" "$ZSHRC" | sed "s|^alias ${alias_name}=\"||;s|\".*||")
+        local existing_repo
+        existing_repo=$(dirname "$(dirname "$existing")" 2>/dev/null)
+        if [[ -n "$existing_repo" && "$existing_repo" != "$REPO" && "$existing_repo" != "$(dirname "$REPO")" ]]; then
+            echo "  ⚠ $alias_name already points to a different install:"
+            echo "    Current: $existing_repo"
+            echo "    New:     $REPO"
+            echo "    Updating to new path — run \`source ~/.zshrc\` after install."
+        fi
         sed -i '' "s|^alias ${alias_name}=.*|alias ${alias_name}=\"${script_path}\"|" "$ZSHRC"
         echo "✅ Updated:   $alias_name"
     else
@@ -84,7 +90,7 @@ write_alias() {
 # ── --list ────────────────────────────────────────────────────────────────────
 if [[ "$1" == "--list" ]]; then
     _sep "User Commands"
-    parse_manifest | while IFS='|' read -r alias_name script_path desc; do
+    _parse_manifest | while IFS='|' read -r alias_name script_path desc; do
         printf "· %-28s %s\n" "$alias_name" "$desc"
     done
     exit 0
@@ -93,7 +99,7 @@ fi
 # ── --verify ──────────────────────────────────────────────────────────────────
 if [[ "$1" == "--verify" ]]; then
     _sep "Verify"
-    parse_manifest | while IFS='|' read -r alias_name script_path desc; do
+    _parse_manifest | while IFS='|' read -r alias_name script_path desc; do
         if grep -q "^alias ${alias_name}=" "$ZSHRC" 2>/dev/null; then
             echo "✅ $alias_name"
         else
@@ -106,7 +112,7 @@ fi
 # ── Single command install ─────────────────────────────────────────────────────
 if [[ -n "$1" ]]; then
     TARGET="$1"
-    parse_manifest | while IFS='|' read -r alias_name script_path desc; do
+    _parse_manifest | while IFS='|' read -r alias_name script_path desc; do
         if [[ "$alias_name" != "$TARGET" ]]; then continue; fi
         if [[ ! -f "$script_path" ]]; then
             echo "❌ Script not found: $script_path."
@@ -114,7 +120,7 @@ if [[ -n "$1" ]]; then
             exit 1
         fi
         _sep "Alias"
-        write_alias "$alias_name" "$script_path"
+        _write_alias "$alias_name" "$script_path"
         _sep "Next"
         echo "· Run: source ~/.zshrc"
         echo "· Then verify: $alias_name --version"
@@ -154,8 +160,8 @@ echo "✅ Dependencies installed."
 
 _sep "Install"
 echo "▶ Installing user commands..."
-parse_manifest | while IFS='|' read -r alias_name script_path desc; do
-    write_alias "$alias_name" "$script_path"
+_parse_manifest | while IFS='|' read -r alias_name script_path desc; do
+    _write_alias "$alias_name" "$script_path"
 done
 
 source "$ZSHRC"

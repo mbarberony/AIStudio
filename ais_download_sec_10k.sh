@@ -1,32 +1,36 @@
 #!/usr/bin/env zsh
 # ais_download_sec_10k.sh — Download SEC 10-K corpus from EDGAR
-# Version: 1.1.0
+# Version: 1.1.2
 # Downloads ~143 filings from 25 financial services firms (~500MB)
 # Output goes to data/corpora/sec_10k/uploads/ by default
 
-VERSION="1.1.0"
-REPO="$(cd "$(dirname "$0")" && pwd)"
+
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="1.1.2"
+
+SCRIPT_NAME="ais_download_sec_10k"
+HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
+
+_show_help() {
+    if [[ -f "$HELP_FILE" ]]; then
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+    else
+        echo "$SCRIPT_NAME v$VERSION"
+        echo ""
+        echo "Usage: $SCRIPT_NAME [--help] [--version]"
+        echo ""
+        echo "Run from: ~/Developer/AIStudio"
+    fi
+}
+
+if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
+if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 printf "\033[1m[ais_download_sec_10k v$VERSION — Download SEC 10-K filings from EDGAR]\033[0m\n"
-
-if [[ "$1" == "--version" ]]; then
-    exit 0
-fi
-
-if [[ "$1" == "--help" ]]; then
-    echo ""
-    echo "Usage: ais_download_sec_10k [--out DIR] [--firms N] [--years N]"
-    echo ""
-    echo "Downloads ~143 SEC 10-K filings from 25 financial services firms (~500MB)."
-    echo ""
-    echo "Defaults:"
-    echo "  · Output: data/corpora/sec_10k/uploads/"
-    echo "  · ~143 filings, 25 firms, most recent 3 years"
-    echo ""
-    echo "After download, ingest with: ais_ingest_sec_10k"
-    echo "  · Requires AIStudio backend running — ~30 min on M4 MacBook Pro"
-    exit 0
-fi
 
 # Create corpus upload directory if needed
 UPLOADS="$REPO/data/corpora/sec_10k/uploads"

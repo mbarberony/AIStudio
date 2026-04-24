@@ -1,0 +1,9 @@
+{"source_path": "data/corpora/demo/uploads/Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero - 2020 - Technology Modernization and Cloud Migration.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero - 2026 - Agentic AI in Financial Services.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Digitization.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Barbero | Hunt - 2021 - Data Strategy.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}
+{"source_path": "data/corpora/demo/uploads/Erder | Pureur - 2003 - Architecture and QFD.pdf", "reason": "AttributeError", "detail": "type object 'datetime.datetime' has no attribute 'UTC'"}

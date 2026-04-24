@@ -1,5 +1,5 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.3.0
+# Version: 1.3.1
 """
 RAG core: retrieval, answer generation, citation support, and conversation memory.
 """
@@ -244,8 +244,20 @@ def generate_answer_with_citations(
     )
 
     if conversation_history:
+
+        def _clean_history_content(text: str) -> str:
+            """Strip citation markers [N] and HTML tags from history so LLM doesn't continue numbering."""
+            text = re.sub(r"<[^>]+>", " ", text)  # strip HTML tags
+            text = re.sub(r"\[\d+(?:,\s*\d+)*\]", "", text)  # strip [1], [1,2] etc.
+            text = re.sub(r"\[Source\s+\d+\]", "", text, flags=re.IGNORECASE)  # strip [Source N]
+            text = re.sub(r"\s{2,}", " ", text).strip()  # collapse whitespace
+            return text
+
         history_text = "\n".join(
-            [f"{msg['role'].upper()}: {msg['content']}" for msg in conversation_history[-6:]]
+            [
+                f"{msg['role'].upper()}: {_clean_history_content(msg['content'])}"
+                for msg in conversation_history[-6:]
+            ]
         )
         prompt = f"Conversation History:\n{history_text}\n\nCurrent Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
     else:

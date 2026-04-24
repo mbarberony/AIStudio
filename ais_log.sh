@@ -1,36 +1,33 @@
 #!/bin/bash
 # ais_log — Tail the AIStudio backend log
-# Version: 1.0.0
+# Version: 1.0.1
 # Mac/Apple Silicon only (Release 1.x)
 
-VERSION="1.0.0"
+
+# ── Source guard: this script must be executed, not sourced ──────────────────
+[[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
+
+VERSION="1.0.1"
+
+SCRIPT_NAME="ais_log"
+HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
+
+_show_help() {
+    if [[ -f "$HELP_FILE" ]]; then
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+    else
+        echo "$SCRIPT_NAME v$VERSION"
+        echo ""
+        echo "Usage: $SCRIPT_NAME [--help] [--version]"
+        echo ""
+        echo "Run from: ~/Developer/AIStudio"
+    fi
+}
+
+if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
+if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
+
 LOG_FILE="$HOME/Library/Logs/AIStudio/backend.log"
-
-if [[ "$1" == "--version" ]]; then echo "ais_log v$VERSION — Tail AIStudio backend log"; exit 0; fi
-if [[ "$1" == "--help" ]]; then
-    echo "ais_log v$VERSION — Tail AIStudio backend log"
-    echo ""
-    echo "Show live backend log output from the AIStudio FastAPI server."
-    echo "Useful for debugging — run in a separate terminal tab after ais_start."
-    echo ""
-    echo "Usage: ais_log"
-    echo ""
-    echo "Options:"
-    echo "  --version   Show version and exit"
-    echo "  --help      Show this help and exit"
-    echo ""
-    echo "· Log file: $LOG_FILE"
-    echo "· Press Ctrl+C to exit"
-    exit 0
-fi
-
-echo "ais_log v$VERSION — Tail AIStudio backend log"
-
-if [[ ! -f "$LOG_FILE" ]]; then
-    echo "⚠ Log file not found: $LOG_FILE"
-    echo "· Run ais_start first to create the log."
-    exit 1
-fi
 
 echo "· Tailing: $LOG_FILE"
 echo "· Press Ctrl+C to exit."

@@ -1,0 +1,1069 @@
+{
+  "run_at": "2026-04-23T18:19:17.239060",
+  "config": {
+    "corpus": "help",
+    "top_k": 5,
+    "temperature": 0.3,
+    "model": null,
+    "api": "http://localhost:8000"
+  },
+  "summary": {
+    "total": 21,
+    "passed": 18,
+    "avg_latency_sec": 4.79
+  },
+  "results": [
+    {
+      "question": {
+        "id": "install_prerequisites",
+        "description": "What are the prerequisites for installing AIStudio?",
+        "query": "What are the prerequisites for installing AIStudio?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "prerequisites",
+          "install",
+          "Homebrew",
+          "Python",
+          "Qdrant"
+        ],
+        "notes": "Should return QUICKSTART.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.32,
+        "data": {
+          "answer": "The sources do not explicitly list the prerequisites for installing AIStudio. However, [3] QUICKSTART.pdf describes a guided installation process using the One-Click Installer in v2.0, which suggests that familiarity with terminal commands is required.\n\nA more detailed description of the setup process can be found in [1] dependencies.pdf and [3] QUICKSTART.pdf. According to [3], the `ais_install` command creates and populates the Python virtual environment automatically, but the user needs to have terminal familiarity for this step.\n\nTo clarify, we need a source that explicitly lists the prerequisites for installing AIStudio.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/dependencies.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/dependencies.pdf::page-1::chunk-0",
+              "score": 0.36505129999999997
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-5::chunk-4",
+              "score": 0.41059219999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "dependencies.pdf",
+          "QUICKSTART.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "install_qdrant",
+        "description": "How do I install Qdrant on a Mac?",
+        "query": "How do I install Qdrant on a Mac?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "Qdrant",
+          "install",
+          "binary",
+          "homebrew"
+        ],
+        "notes": "Should return QUICKSTART.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.09,
+        "data": {
+          "answer": "To install Qdrant on a Mac, follow the instructions in [1] QUICKSTART.pdf:\n\n1. Activate the Virtual Environment:\n```bash\nsource ~/Developer/AIStudio/.venv/bin/activate\n```\n2. Start All Services:\n```bash\nais_start\n```\nAlternatively, you can start the services manually:\n```bash\n# Terminal 1 \u2014 Qdrant\ncd ~/qdrant_storage && \nQDRANT__STORAGE__STORAGE_PATH=~/qdrant_storage qdrant &\n\n# Terminal 2 \u2014 Backend\ncd ~/Developer/AIStudio && \nsource .venv/bin/activate\nOLLAMA_KEEP_ALIVE=30m AISTUDIO_STORAGE_PATH=~/Developer/AIStudio/.ais_data ais_start\n```",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-5::chunk-4",
+              "score": 0.4225297
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "QUICKSTART.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "install_fresh",
+        "description": "How do I get AIStudio running for the first time?",
+        "query": "How do I get AIStudio running for the first time?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "first run",
+          "clone",
+          "ais_install",
+          "ais_start"
+        ],
+        "notes": "Should return QUICKSTART.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.44,
+        "data": {
+          "answer": "To get AIStudio running for the first time, follow these steps:\n\n1. Run `ais_install` to install dependencies and add aliases to your `.zshrc` file.\n2. Activate the Virtual Environment by running `source ~/Developer/AIStudio/.venv/bin/activate`.\n3. Start all services by running `ais_start`. This will check whether each service is already running before starting it.\n\nAlternatively, you can start the services manually:\n- Terminal 1: Run `cd ~/qdrant_storage && QDRANT__STORAGE__STORAGE_PATH=~/qdrant_storage qdrant &`\n- Terminal 2: Activate the Virtual Environment by running `source ~/Developer/AIStudio/.venv/bin/activate` and then run `OLLAMA_KEEP_ALIVE=30m AISTUDIO_HOST=localhost ais_start`\n\nThese steps are outlined in [1] and verified by [3].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-5::chunk-4",
+              "score": 0.4550691
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf::page-2::chunk-2",
+              "score": 0.43545055
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "QUICKSTART.pdf",
+          "CODEBASE_GUIDE.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "troubleshoot_port",
+        "description": "The backend is not reachable at port 8000 \u2014 what do I do?",
+        "query": "The backend is not reachable at port 8000 \u2014 what do I do?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "port 8000",
+          "backend",
+          "not reachable",
+          "Failed to fetch"
+        ],
+        "notes": "Should return QUICKSTART.pdf or HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.87,
+        "data": {
+          "answer": "The problem is described in [1] and [2]. According to [2], the root cause category is [BUG] and the error message is [Errno 48] address already in use. \n\nTo resolve this issue, refer to [1]: Verify that the backend is up by running the command `curl http://localhost:8000/health`. If it's not working, try restarting the uvicorn server with a different port or checking if another process is occupying port 8000.\n\nIf you want to automate this, as mentioned in [2], an improvement will be made in start.sh (v2.0) by adding a --quiet flag to prevent running Qdrant and ingest in parallel, which causes the logs to mix. \n\nIn the meantime, you can manually check if another process is occupying port 8000 by checking your system's process list or by using a tool like lsof.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-6::chunk-5",
+              "score": 0.42311555
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf::page-5::chunk-6",
+              "score": 0.33388245000000005
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "QUICKSTART.pdf",
+          "QA_TESTING_LESSONS_LEARNED.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "troubleshoot_wal",
+        "description": "What is a WAL lock error and how do I fix it?",
+        "query": "What is a WAL lock error and how do I fix it?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "WAL",
+          "lock",
+          "error",
+          "Qdrant"
+        ],
+        "notes": "Should return QUICKSTART.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.17,
+        "data": {
+          "answer": "A WAL lock error is caused by an unclean shutdown, which can occur due to a force-quit, power loss, or crash [1]. The collection name affected by the error will be mentioned in the panic message. To fix this issue:\n\n1. Run `ais_stop`\n2. Delete the corrupted collection: `rm -rf ~/qdrant_storage/collections/aistudio_help` (replace with the collection named in the error)\n3. Run `ais_start`\n4. Re-ingest the affected corpus via the UI (Add button) [1].\n\nNote that this issue can be prevented by always stopping AIStudio with `ais_stop`, rather than force-quitting the terminal while it is running [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 9,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-9::chunk-9",
+              "score": 0.41808100000000004
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "QUICKSTART.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "create_corpus",
+        "description": "How do I create a new corpus?",
+        "query": "How do I create a new corpus?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "create",
+          "corpus",
+          "New button"
+        ],
+        "notes": "Should return HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 3.99,
+        "data": {
+          "answer": "To create a new corpus, use the UI in AIStudio:\n\n1. Open AIStudio, create a new corpus using the \"New\" button.\n2. Upload your files using the \"Add\" button.\n\nIf you want to ingest a new corpus from the command line, run:\ningest --corpus <name> --root data/corpora/<name>/uploads --force\n\n[1]",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-4::chunk-3",
+              "score": 0.26789949999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "delete_file",
+        "description": "How do I delete a file from a corpus?",
+        "query": "How do I delete a file from a corpus?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "delete",
+          "file",
+          "trash",
+          "corpus"
+        ],
+        "notes": "Should return HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.02,
+        "data": {
+          "answer": "To delete a file from a corpus, you can move it to the trash folder using:\n\n```bash\nmv ~/Developer/AIStudio/data/corpora/<name>/uploads/<filename> \\\n~/Developer/AIStudio/data/corpora/<name>/uploads/trash/\n```\n\nAccording to [1], deleted files are not permanently deleted and instead move to the trash folder.\n\nIf you want to recover a file that has been accidentally deleted from a corpus, follow these steps:\n\n```bash\n# See what's in trash\nls ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/\n# Move it back\nmv ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/<filename> \\\n~/Developer/AIStudio/data/corpora/<name>/uploads/\n# Re-ingest to restore it\nAISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \\\n--corpus <name> --root data/corpora/<name>/uploads --force\n```\n\n[1]",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 8,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-8::chunk-11",
+              "score": 0.2348426
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "recover_corpus",
+        "description": "How do I recover a corpus I accidentally deleted?",
+        "query": "How do I recover a corpus I accidentally deleted?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "recover",
+          "deleted",
+          "corpus",
+          "Trash"
+        ],
+        "notes": "Should return HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.0,
+        "data": {
+          "answer": "To recover a corpus you accidentally deleted, follow these steps:\n\n1. First, find the folder in Trash \u2014 it may have a timestamp suffix:\n```\nls ~/.Trash/ | grep AIStudio_<name>\n```\n2. Move it back to its original location and re-ingest:\n```\nmv ~/.Trash/AIStudio_<name> ~/Developer/AIStudio/data/corpora/<name>\n# Or if it has a timestamp suffix:\nmv ~/.Trash/AIStudio_<name>_<timestamp> ~/Developer/AIStudio/data/corpora/<name>\n```\n3. Then re-ingest the corpus using the `--force` flag:\n```\nAISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \\\n--corpus <name> --root data/corpora/<name>/uploads --force\n```\nAlternatively, you can also re-upload the files via the UI (Add button) to restore the corpus in Qdrant.\n\n[1]",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-4::chunk-3",
+              "score": 0.20979464000000003
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "rename_corpus",
+        "description": "How do I rename a corpus?",
+        "query": "How do I rename a corpus?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "rename",
+          "corpus"
+        ],
+        "notes": "Should return HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 2.79,
+        "data": {
+          "answer": "To rename a corpus, use the Rename button in the corpus header in the UI [1]. AIStudio will then automatically rename the directory, cascade the corpus_meta.yaml, and trigger a background re-index. Do not rename corpus folders manually on disk \u2014 use the UI only.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 8,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-8::chunk-11",
+              "score": 0.13502824000000002
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "search_guidance",
+        "description": "What is search guidance and how does it improve answers?",
+        "query": "What is search guidance and how does it improve answers?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "search guidance",
+          "routing",
+          "metadata",
+          "corpus"
+        ],
+        "notes": "Should return HOWTO.pdf or FILE_GUIDE.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.83,
+        "data": {
+          "answer": "Search guidance is a feature in AIStudio that improves retrieval precision by allowing users to provide routing guidance, or hints about which documents answer which kinds of questions [2]. This metadata is injected into the system prompt at query time.\n\nThe sources do not address what specific improvements search guidance brings to answers. However, they mention that it improves retrieval precision [2].\n\nIn version v2.0, corpus metadata creation will be made easier with UI fields in the New Corpus modal, which supports search guidance [1]. \n\nA one-click installer is also being developed for AIStudio's setup process, making installation faster and easier without requiring terminal familiarity [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/PRODUCT_ROADMAP.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/PRODUCT_ROADMAP.pdf::page-3::chunk-3",
+              "score": 0.42344517000000004
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-1::chunk-0",
+              "score": 0.3792293
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "PRODUCT_ROADMAP.pdf",
+          "README.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "why_qdrant",
+        "description": "Why does AIStudio use Qdrant instead of ChromaDB?",
+        "query": "Why does AIStudio use Qdrant instead of ChromaDB?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "Qdrant",
+          "ChromaDB",
+          "vector store",
+          "stability"
+        ],
+        "notes": "Should return architecture_decisions.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.74,
+        "data": {
+          "answer": "[2] does not address why AIStudio uses Qdrant instead of ChromaDB.\n\nThe sources do not address this question directly, but we can look at [1]. According to [1], the ingest layer uses Qdrant for storing documents. It mentions that \"the ingest pipeline lives in src/local_llm_bot/app/ingest/\", suggesting that there might be more information about why Qdrant is used instead of ChromaDB in the architecture decisions.\n\n[3] provides a version history but does not address this question.\n\n[4] discusses lessons learned from testing, including an issue with multi-line commands in PDFs, but it does not provide any information on why AIStudio uses Qdrant instead of ChromaDB.\n\nHowever, [1] mentions that \"For architecture context, see docs/architecture_decisions.pdf.\" This suggests that we should look for the answer in [architecture decisions.pdf], which is not provided as one of the sources. Therefore, The sources do not address this question directly.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf::page-2::chunk-2",
+              "score": 0.41712269999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-1::chunk-0",
+              "score": 0.4756439
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf::page-4::chunk-4",
+              "score": 0.48682046
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf::page-2::chunk-2",
+              "score": 0.48926896
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "CODEBASE_GUIDE.pdf",
+          "HOWTO.pdf",
+          "FILE_GUIDE.pdf",
+          "QA_TESTING_LESSONS_LEARNED.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "how_citations",
+        "description": "How does the citation system work?",
+        "query": "How does the citation system work?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "citations",
+          "inline",
+          "references",
+          "footnotes"
+        ],
+        "notes": "Should return architecture_decisions.pdf or CODEBASE_GUIDE.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.69,
+        "data": {
+          "answer": "The citation system works as follows:\n\nWhen a user clicks on a citation, the PDF opens at the exact page with the cited passage highlighted [2]. This is currently a known limitation in the Beta release, but it will be fixed in v2.0 through the Source Dive feature, which will allow users to click on a citation and open the PDF directly at that page [2].\n\nTo enable this feature, the backend already stores chunk-level page positions in Qdrant [2]. However, the remaining work is to implement the frontend PDF viewer (PDF.js) [2].",
+          "citations": [
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/PRODUCT_ROADMAP.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/PRODUCT_ROADMAP.pdf::page-2::chunk-2",
+              "score": 0.4105674
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "PRODUCT_ROADMAP.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "crossencoder",
+        "description": "What is the CrossEncoder reranker and what does it do?",
+        "query": "What is the CrossEncoder reranker and what does it do?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CrossEncoder",
+          "reranker",
+          "ms-marco",
+          "vocabulary mismatch"
+        ],
+        "notes": "Should return architecture_decisions.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 4.01,
+        "data": {
+          "answer": "The CrossEncoder reranker is a two-stage retrieval architecture that uses the ms-marco-MiniLM-L-6-v2 model as a reranking pass after vector search, before prompt assembly [2]. This model reads query + chunk concatenated as a single input, with full attention across both, and scores relevance directly rather than approximating via cosine distance [2].\n\nThe CrossEncoder reranker is used to improve answer quality significantly with minimal latency overhead by reordering the top-K retrieved chunks against the query [1]. It addresses vocabulary mismatch issues that can arise from bi-encoder compression, where semantically equivalent queries or chunks may have different vector representations due to differences in vocabulary [2].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf::page-6::chunk-8",
+              "score": 0.3692137
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/architecture_decisions.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/architecture_decisions.pdf::page-6::chunk-11",
+              "score": 0.37558329999999995
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "CODEBASE_GUIDE.pdf",
+          "architecture_decisions.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "chunking",
+        "description": "How does AIStudio chunk documents for indexing?",
+        "query": "How does AIStudio chunk documents for indexing?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "chunking",
+          "chunk size",
+          "overlap",
+          "page-aware"
+        ],
+        "notes": "Should return architecture_decisions.pdf or CODEBASE_GUIDE.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.8,
+        "data": {
+          "answer": "[1] states that \"Documents live in data/corpora/<corpus-name>/uploads/ . When you delete a file from the UI, it moves to data/corpora/<corpus-name>/trash/ \u2014 it's never permanently destroyed.\" This implies that documents are stored on disk before being indexed.\n\n[2] mentions that \"Filtering happens at the system (vector) layer \u2014 not post-hoc on results.\" However, this is related to filtering rather than chunking for indexing.\n\nThe crucial source is [3], which does not directly address chunking. Moving to [4]:\n\n[4] mentions that AIStudio uses markers at each page boundary during extraction, and these markers flow through the chunking pipeline into Qdrant payload (page field) and chunk_id format (filename::page-N::chunk-M). However, this is related to citation and PDF viewer functionality rather than document chunking for indexing.\n\nConsidering the provided sources, there is no explicit information about how AIStudio chunks documents for indexing. The sources primarily focus on other aspects of AIStudio's functionality.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf::page-2::chunk-1",
+              "score": 0.3721462
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-2::chunk-2",
+              "score": 0.3685788
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-7::chunk-7",
+              "score": 0.36794000000000004
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/dependencies.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/dependencies.pdf::page-4::chunk-4",
+              "score": 0.3208609
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "FILE_GUIDE.pdf",
+          "README.pdf",
+          "QUICKSTART.pdf",
+          "dependencies.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "codebase_structure",
+        "description": "How is the AIStudio codebase organized?",
+        "query": "How is the AIStudio codebase organized?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "codebase",
+          "structure",
+          "directories",
+          "api.py",
+          "pipeline"
+        ],
+        "notes": "Should return CODEBASE_GUIDE.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 6.22,
+        "data": {
+          "answer": "The AIStudio codebase is organized in the following structure:\n\n* `src/` directory contains all application code.\n* `tests/` directory contains the test suite at the repo root.\n* `front_end/` directory contains a single HTML file (`rag_studio.html`) that serves as the entire frontend. [1]\n* The three-layer architecture consists of:\n\t+ Ingest layer: handles document loading, chunking, embedding, and storage in Qdrant (located in `src/local_llm_bot/app/ingest/`). [1]\n\t+ Query layer: a FastAPI backend receives questions, retrieves chunks from Qdrant, reranks them with CrossEncoder, assembles prompts, and sends them to the Ollama-hosted LLM. The query pipeline lives in `src/local_llm_bot/app/rag_core.py` and is orchestrated by `api.py`. [1]\n\t+ UI layer: a single HTML file provides the user interface for corpus management, file upload, chat, settings, and citations rendering. It communicates with the FastAPI backend over localhost. [1]\n* The three services that must be running are Qdrant (vector store), Ollama (LLM host), and the FastAPI backend (uvicorn). The `ais_start` command starts all three. [1]",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf::page-1::chunk-0",
+              "score": 0.29740489999999997
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "CODEBASE_GUIDE.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "latency",
+        "description": "How fast is AIStudio at answering queries?",
+        "query": "How fast is AIStudio at answering queries?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "latency",
+          "speed",
+          "seconds",
+          "benchmark"
+        ],
+        "notes": "Should return README.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 3.68,
+        "data": {
+          "answer": "AIStudio's query latency is approximately 6-7 seconds on average, after the model has loaded into memory.\n\n[2]\nama3.1:70b and warm llama3.1:8b are statistically identical in \nquery latency on Apple Silicon (~6\u20137s average).\n\nNote that there may be a slower first query in a cold session (20-50 seconds) due to LLM loading into memory, but subsequent queries run at the 6-7 second rate.\n\n[2]",
+          "citations": [
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-3::chunk-4",
+              "score": 0.39698327
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "README.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "model_size_latency",
+        "description": "Does using a larger model make queries slower?",
+        "query": "Does using a larger model make queries slower?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "model size",
+          "latency",
+          "8b",
+          "70b",
+          "Apple Silicon"
+        ],
+        "notes": "Should return README.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 3.3,
+        "data": {
+          "answer": "Using a larger model may not necessarily make queries slower. [3] states that warm llama3.1:70b and warm llama3.1:8b have identical query latency (~6\u20137s) on Apple Silicon, suggesting that the size of the model is not a significant factor in determining latency once it is loaded into unified memory.",
+          "citations": [
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-3::chunk-4",
+              "score": 0.35297789999999996
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "README.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "run_benchmark",
+        "description": "How do I run a benchmark on my corpus?",
+        "query": "How do I run a benchmark on my corpus?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "benchmark",
+          "ais_bench",
+          "questions YAML",
+          "report"
+        ],
+        "notes": "Should return HARNESS.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 7.63,
+        "data": {
+          "answer": "To run a benchmark on your corpus, you can use the `ais_bench` command.\n\nAccording to [2], \"The benchmark harness serves two purposes: - Performance \u2014 measures query latency per question - Veracity \u2014 validates answer quality against a questions file\"\n\nYou can run all 12 demo questions against the demo corpus and write a timestamped report to benchmarks/demo/reports/ by running:\n```\nais_bench\n```\nAccording to [2], \"This runs all 12 demo questions against the demo corpus and writes a timestamped report to benchmarks/demo/reports/.\"\n\nIf you want to benchmark a different corpus, you can use the `--corpus` option followed by the name of your corpus. For example:\n```\nais_bench --corpus <your_corpus_name>\n```\nAccording to [2], \"Reports are written to benchmarks/<corpus>/reports/ as paired .md and .json files, named by corpus and timestamp.\"\n\nFor full benchmark documentation, see [2] HARNESS.pdf.\n\nTo run a benchmark on the demo corpus specifically, you can use:\n```bash\nais_bench --corpus demo\n```\nTo write your own test questions for a corpus, create `benchmarks/<corpus_name>_questions.yaml` file with the following format:\n```yml\n- topic: Getting Started\n  questions:\n  - id: start_aistudio\n    question: How do I start AIStudio?\n    notes: Should reference ais_start command\n```\nAccording to [1], \"Run `ais_bench --corpus <n> \u2014 the questions file is auto-detected by corpus name.\"",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 6,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-6::chunk-8",
+              "score": 0.24817710000000004
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HARNESS.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HARNESS.pdf::page-1::chunk-0",
+              "score": 0.23839319999999997
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "HOWTO.pdf",
+          "HARNESS.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "all_commands",
+        "description": "What commands does AIStudio provide?",
+        "query": "What commands does AIStudio provide?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "commands",
+          "ais_start",
+          "ais_stop",
+          "ais_bench",
+          "ais_help"
+        ],
+        "notes": "Should return FILE_GUIDE.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.59,
+        "data": {
+          "answer": "According to [2], after running `./ais_install` from the repository root, these commands are available from any terminal:\n\n* `ais_start`: Start all AIStudio services and opens the UI in your browser.\n* `ais_stop`: Stop all AIStudio services cleanly.\n* `ais_restart`: Stop then restart all AIStudio services.\n* `ais_bench`: Run a benchmark on the demo corpus.\n* `ais_log`: Tail live AIStudio backend log \u2014 run in a separate tab after `ais_start`.\n* `ais_download_sec_10k`: Download SEC 10-K filings from EDGAR to `~/Downloads/sec_10k/` (~2 GB).\n* `ais_ingest_sec_10k`: Ingest SEC 10-K corpus into AIStudio (~30 min, backend must be running).\n\nAdditionally, every command supports the `--help` flag, which can be used to print a help message. For example:\n\n```\nais_start --help\n```\n\nThis will display help information for the `ais_start` command.\n\n[2] also mentions that after installing AIStudio, you may need to run `source ~/.zshrc` to load the AIStudio aliases before using these commands.",
+          "citations": [
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-1::chunk-0",
+              "score": 0.33479583
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "ais_start",
+        "description": "What does ais_start do?",
+        "query": "What does ais_start do?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "ais_start",
+          "start",
+          "services",
+          "Qdrant",
+          "Ollama"
+        ],
+        "notes": "Should return FILE_GUIDE.pdf or HOWTO.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 3.04,
+        "data": {
+          "answer": "[1] ais_start starts all AIStudio services and opens the UI in your browser.\n\nAlternatively, [3] also states that ais_start \"Starts all AIStudio services and ... opens the UI\" (emphasis mine).",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 5,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-5::chunk-4",
+              "score": 0.2873871
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/FILE_GUIDE.pdf::page-1::chunk-0",
+              "score": 0.31422657
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 2,
+        "cited_sources": [
+          "QUICKSTART.pdf",
+          "FILE_GUIDE.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "sec_10k",
+        "description": "How do I set up the SEC 10-K corpus?",
+        "query": "How do I set up the SEC 10-K corpus?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "SEC",
+          "10-K",
+          "EDGAR",
+          "download",
+          "ingest"
+        ],
+        "notes": "Should return QUICKSTART.pdf or README.pdf"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.45,
+        "data": {
+          "answer": "To set up the SEC 10-K corpus, follow these steps:\n\nStep 1 \u2014 Download the filings to ~/Downloads/sec_10k/ (~5 min, ~2 GB):\nais_download_sec_10k [1]\n\nStep 2 \u2014 Ingest using the AIStudio UI:\nOpen AIStudio, create a new corpus named sec_10k, then upload the files from ~/Downloads/sec_10k/ using the Upload button. This is the same process as ingesting any corpus you build yourself \u2014 the download step is what's special [1].\n\nAllow ~34 minutes for ingestion to complete.\n\nTo ingest the SEC 10-K corpus programmatically, use the command:\ningest --corpus sec_10k --root data/corpora/sec_10k/uploads --force [1]\n\nNote: The sources do not address what happens if you want to re-ingest a modified corpus.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-4::chunk-5",
+              "score": 0.28474474000000005
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    }
+  ]
+}
