@@ -1,4 +1,10 @@
+# help_corpus_metadata.yaml
+# Corpus metadata — loaded by api.py at query time
+
+schema_version: '1.0'
 corpus_name: help
+last_updated: '2026-04-23'
+short_description: AIStudio documentation — commands, setup, architecture
 description: AIStudio user and developer documentation — installation, usage, architecture,
   benchmarks, roadmap, and file/command reference.
 content_summary: '11 documents covering: README (product overview), QUICKSTART (installation
