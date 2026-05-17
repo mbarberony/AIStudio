@@ -1,0 +1,47 @@
+# Core web & API
+fastapi
+uvicorn[standard]
+ollama
+python-multipart
+
+# Utilities
+httpx
+python-dotenv
+pydantic
+
+# Progress / UX
+tqdm
+psutil  # machine introspection for ingest_test.py reports
+
+# Vector store
+qdrant-client>=1.17,<2.0
+
+# Embeddings & reranker
+sentence-transformers  # CrossEncoder reranker (ms-marco-MiniLM) + embedding benchmarking
+
+# Document parsing
+pypdf
+pdfplumber
+openpyxl
+python-docx
+python-pptx
+beautifulsoup4
+
+# PDF generation (operator tooling — ais_update_help, PDF companions for docs)
+# Requires system dependency: brew install pango
+weasyprint
+markdown
+
+# Development
+pre-commit
+pytest
+pytest-cov
+ruff
+setuptools
+wheel
+
+# Legacy (kept for fallback path — not active)
+# chromadb          # replaced by Qdrant (crashed at 32K chunks; Qdrant stable at 106K)
+# langchain         # deliberately excluded — see docs/dependencies.md
+pyyaml
+requests

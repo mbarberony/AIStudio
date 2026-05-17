@@ -1,0 +1,437 @@
+{
+  "run_at": "2026-04-19T16:41:09.182193",
+  "config": {
+    "corpus": "help",
+    "top_k": 5,
+    "temperature": 0.3,
+    "model": null,
+    "api": "http://localhost:8000"
+  },
+  "summary": {
+    "total": 8,
+    "passed": 2,
+    "avg_latency_sec": 9.65
+  },
+  "results": [
+    {
+      "question": {
+        "id": "goldman_ai_risk",
+        "description": "Goldman Sachs AI risk \u2014 firm filter",
+        "query": "What does Goldman Sachs say about the risks of artificial intelligence?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "artificial intelligence",
+          "AI",
+          "risk",
+          "Goldman"
+        ],
+        "notes": "Should return Goldman-specific AI risk disclosure"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 14.86,
+        "data": {
+          "answer": "There is no information provided by the sources about Goldman Sachs' views on the risks of artificial intelligence. The relevant sources are [1] and [2], but they do not mention Goldman Sachs or its opinions on AI risks.\n\nHowever, [3] provides a document titled \"Agentic AI in Financial Services: Some Reflections\" which explores the transition from descriptive to generative to agentic AI, and discusses the practical constraints on autonomous systems today. This text is related to the context of financial services and AI, but it does not explicitly mention Goldman Sachs or its views on AI risks.\n\nTherefore, I can only conclude that there is no information provided by the sources about Goldman Sachs' views on the risks of artificial intelligence.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-1::chunk-0",
+              "score": 4.0
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-7::chunk-6",
+              "score": 4.0
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-2::chunk-1",
+              "score": 4.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "HOWTO.pdf",
+          "QUICKSTART.pdf",
+          "README.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "jpmorgan_cybersecurity",
+        "description": "JPMorgan cybersecurity risk \u2014 firm filter",
+        "query": "How does JPMorgan Chase describe their cybersecurity risk management?",
+        "corpus": null,
+        "firm": "JPMorgan Chase",
+        "year": null,
+        "expected_keywords": [
+          "cybersecurity",
+          "JPMorgan",
+          "risk"
+        ],
+        "notes": "Should return JPMorgan cybersecurity section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.1,
+        "data": {
+          "answer": "The sources do not address how JPMorgan Chase describes their cybersecurity risk management.",
+          "citations": null,
+          "has_citations": false
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": false,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 0,
+        "cited_sources": []
+      }
+    },
+    {
+      "question": {
+        "id": "morgan_stanley_model_risk",
+        "description": "Morgan Stanley model risk \u2014 firm filter",
+        "query": "What is Morgan Stanley's approach to model risk?",
+        "corpus": null,
+        "firm": "Morgan Stanley",
+        "year": null,
+        "expected_keywords": [
+          "model risk",
+          "Morgan Stanley"
+        ],
+        "notes": "Should return model risk governance section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 12.15,
+        "data": {
+          "answer": "The source [2] README.pdf and [3] HARNESS.pdf provide information about AIStudio's capabilities, but neither of them mentions Morgan Stanley's approach to model risk. The DEMO_CORPUS.pdf document also doesn't address this topic.\n\nHowever, the source [1] DEMO_CORPUS.pdf mentions a \"Financial Services\" section (Page 2 of 4), which includes a question about key risk and compliance considerations for financial services IT. But it does not provide information on Morgan Stanley's approach to model risk specifically.\n\nThe RiskCompliance and Security - 2005.pdf source [3] is the most relevant one, as it deals with security and risk management in finance. However, upon reviewing its content, I did not find any specific mention of Morgan Stanley or their approach to model risk.\n\nUnfortunately, there is no information available about Morgan Stanley's approach to model risk from the provided sources.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/DEMO_CORPUS.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/DEMO_CORPUS.pdf::page-3::chunk-3",
+              "score": 3.0
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-3::chunk-4",
+              "score": 3.0
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HARNESS.pdf",
+              "page": 4,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HARNESS.pdf::page-4::chunk-4",
+              "score": 2.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "cited_sources": [
+          "DEMO_CORPUS.pdf",
+          "README.pdf",
+          "HARNESS.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "goldman_ai_committee",
+        "description": "Goldman AI governance committee \u2014 firm filter",
+        "query": "Does Goldman Sachs have an AI governance committee and what does it do?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "Artificial Intelligence",
+          "committee",
+          "governance"
+        ],
+        "notes": "Should mention Firmwide Artificial Intelligence Risk and Controls Committee"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 8.39,
+        "data": {
+          "answer": "There is no mention of an \"AI governance committee\" or any similar structure in the provided sources.\n\nHowever, [4] mentions a general topic related to AI and compliance: \"Financial Services - What are the key risk and compliance considerations for financial services IT?\" But it does not address the existence of a specific governance committee.",
+          "citations": [
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-1::chunk-0",
+              "score": 3.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "Artificial Intelligence"
+        ],
+        "citation_count": 1,
+        "cited_sources": [
+          "HOWTO.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cross_corpus_ai_governance",
+        "description": "Cross-corpus AI governance \u2014 no filter",
+        "query": "Which financial firms have dedicated AI governance committees?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "expected_keywords": [
+          "AI",
+          "committee",
+          "governance"
+        ],
+        "notes": "No firm filter \u2014 tests cross-corpus retrieval quality"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 7.88,
+        "data": {
+          "answer": "This question is not addressed in the provided sources. The sources do not address which financial firms have dedicated AI governance committees.\n\nHowever, [2] mentions that AIStudio ships with a curated set of 11 documents spanning 20 years of work in financial services technology, including strategy and architecture documents from a major wealth management firm (WMA) produced in 2010.",
+          "citations": [
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 2,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-2::chunk-2",
+              "score": 0.4882233
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "cited_sources": [
+          "README.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "bofa_climate_risk",
+        "description": "Bank of America climate risk \u2014 firm filter",
+        "query": "How does Bank of America describe climate risk in their annual report?",
+        "corpus": null,
+        "firm": "Bank of America",
+        "year": null,
+        "expected_keywords": [
+          "climate",
+          "risk",
+          "Bank of America"
+        ],
+        "notes": "Should return climate risk section"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 11.83,
+        "data": {
+          "answer": "The source document that describes Bank of America's annual report is not among the provided sources. The topic \"Financial Services\" is mentioned in [2] as a corpus, but it does not describe climate risk in Bank of America's annual report.\n\nHowever, I can suggest searching for information on \"SEC 10-K corpus\" in [1] or [2], since they mention corporate filings from financial services firms. \n\nAfter re-reading the provided documents again: \n[3] and [4] do not contain any relevant information about Bank of America's annual report.\n\n[1] does not describe Bank of America's climate risk, but it mentions \"SEC 10-K corpus\" which has a description in [2].\n\nTherefore I will refer to [2].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/DEMO_CORPUS.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/DEMO_CORPUS.pdf::page-3::chunk-3",
+              "score": 4.0
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-3::chunk-4",
+              "score": 4.0
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/HOWTO.pdf::page-7::chunk-9",
+              "score": 3.0
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/CODEBASE_GUIDE.pdf::page-1::chunk-0",
+              "score": 2.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": true,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 4,
+        "cited_sources": [
+          "DEMO_CORPUS.pdf",
+          "README.pdf",
+          "HOWTO.pdf",
+          "CODEBASE_GUIDE.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "goldman_2026_revenue",
+        "description": "Goldman 2025 revenue \u2014 firm + year filter",
+        "query": "What were Goldman Sachs total revenues in 2025?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": "2026",
+        "expected_keywords": [
+          "revenue",
+          "billion",
+          "2025"
+        ],
+        "notes": "Tests year filter combined with firm filter"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 5.43,
+        "data": {
+          "answer": "There is no information available about Goldman Sachs' total revenues in 2025 in any of the provided sources [1] through [4]. The sources do not address this question.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-7::chunk-7",
+              "score": 4.0
+            },
+            {
+              "index": 4,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf",
+              "page": 1,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QA_TESTING_LESSONS_LEARNED.pdf::page-1::chunk-0",
+              "score": 2.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": true,
+        "missing_keywords": [
+          "billion"
+        ],
+        "citation_count": 2,
+        "cited_sources": [
+          "QUICKSTART.pdf",
+          "QA_TESTING_LESSONS_LEARNED.pdf"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "latency_test",
+        "description": "Simple factual \u2014 latency baseline",
+        "query": "What is Goldman Sachs?",
+        "corpus": null,
+        "firm": "Goldman Sachs",
+        "year": null,
+        "expected_keywords": [
+          "Goldman Sachs",
+          "bank",
+          "financial"
+        ],
+        "notes": "Simple query for latency baseline measurement"
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 11.55,
+        "data": {
+          "answer": "Goldman Sachs is mentioned as one of the firms whose documents are included in the SEC 10-K corpus, which is a large corpus used to demonstrate how AIStudio can operate at scale. [3] Specifically, it states that this corpus explores 143 annual filings from 25 financial services firms, including Goldman Sachs, JPMorgan Chase, Morgan Stanley, and others. Additionally, when filtering or querying the corpus, one can type \"Goldman Sachs\" in the Firm filter field to restrict retrieval to documents only from that firm. [1]",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf",
+              "page": 7,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/QUICKSTART.pdf::page-7::chunk-7",
+              "score": 3.0
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf",
+              "page": 3,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/help/uploads/README.pdf::page-3::chunk-4",
+              "score": 2.0
+            }
+          ],
+          "has_citations": true
+        }
+      },
+      "eval": {
+        "pass": false,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "bank"
+        ],
+        "citation_count": 2,
+        "cited_sources": [
+          "QUICKSTART.pdf",
+          "README.pdf"
+        ]
+      }
+    }
+  ]
+}

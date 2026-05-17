@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Version: 1.9.2 -->
+<!-- Changelog: 1.9.2 — fix pollIngestStatus: use pct_complete + rich status text matching upload bar (AIStudio_543)
+<!-- Changelog: 1.9.1 — red close button on help modal; Help button group margin-right
+<!-- Changelog: 1.9.0 — first-run corpus auto-index: detect empty demo/help on init, trigger ingest, show live progress banner via pollIngestStatus; AIStudio_434 help modal alignment + close button -->
+<script>
+/* SparkMD5 3.0.2 — inlined for offline-first compliance (T2.30) */
+(function(factory){if(typeof exports==="object"){module.exports=factory()}else if(typeof define==="function"&&define.amd){define(factory)}else{var glob;try{glob=window}catch(e){glob=self}glob.SparkMD5=factory()}})(function(undefined){"use strict";var add32=function(a,b){return a+b&4294967295},hex_chr=["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];function cmn(q,a,b,x,s,t){a=add32(add32(a,q),add32(x,t));return add32(a<<s|a>>>32-s,b)}function md5cycle(x,k){var a=x[0],b=x[1],c=x[2],d=x[3];a+=(b&c|~b&d)+k[0]-680876936|0;a=(a<<7|a>>>25)+b|0;d+=(a&b|~a&c)+k[1]-389564586|0;d=(d<<12|d>>>20)+a|0;c+=(d&a|~d&b)+k[2]+606105819|0;c=(c<<17|c>>>15)+d|0;b+=(c&d|~c&a)+k[3]-1044525330|0;b=(b<<22|b>>>10)+c|0;a+=(b&c|~b&d)+k[4]-176418897|0;a=(a<<7|a>>>25)+b|0;d+=(a&b|~a&c)+k[5]+1200080426|0;d=(d<<12|d>>>20)+a|0;c+=(d&a|~d&b)+k[6]-1473231341|0;c=(c<<17|c>>>15)+d|0;b+=(c&d|~c&a)+k[7]-45705983|0;b=(b<<22|b>>>10)+c|0;a+=(b&c|~b&d)+k[8]+1770035416|0;a=(a<<7|a>>>25)+b|0;d+=(a&b|~a&c)+k[9]-1958414417|0;d=(d<<12|d>>>20)+a|0;c+=(d&a|~d&b)+k[10]-42063|0;c=(c<<17|c>>>15)+d|0;b+=(c&d|~c&a)+k[11]-1990404162|0;b=(b<<22|b>>>10)+c|0;a+=(b&c|~b&d)+k[12]+1804603682|0;a=(a<<7|a>>>25)+b|0;d+=(a&b|~a&c)+k[13]-40341101|0;d=(d<<12|d>>>20)+a|0;c+=(d&a|~d&b)+k[14]-1502002290|0;c=(c<<17|c>>>15)+d|0;b+=(c&d|~c&a)+k[15]+1236535329|0;b=(b<<22|b>>>10)+c|0;a+=(b&d|c&~d)+k[1]-165796510|0;a=(a<<5|a>>>27)+b|0;d+=(a&c|b&~c)+k[6]-1069501632|0;d=(d<<9|d>>>23)+a|0;c+=(d&b|a&~b)+k[11]+643717713|0;c=(c<<14|c>>>18)+d|0;b+=(c&a|d&~a)+k[0]-373897302|0;b=(b<<20|b>>>12)+c|0;a+=(b&d|c&~d)+k[5]-701558691|0;a=(a<<5|a>>>27)+b|0;d+=(a&c|b&~c)+k[10]+38016083|0;d=(d<<9|d>>>23)+a|0;c+=(d&b|a&~b)+k[15]-660478335|0;c=(c<<14|c>>>18)+d|0;b+=(c&a|d&~a)+k[4]-405537848|0;b=(b<<20|b>>>12)+c|0;a+=(b&d|c&~d)+k[9]+568446438|0;a=(a<<5|a>>>27)+b|0;d+=(a&c|b&~c)+k[14]-1019803690|0;d=(d<<9|d>>>23)+a|0;c+=(d&b|a&~b)+k[3]-187363961|0;c=(c<<14|c>>>18)+d|0;b+=(c&a|d&~a)+k[8]+1163531501|0;b=(b<<20|b>>>12)+c|0;a+=(b&d|c&~d)+k[13]-1444681467|0;a=(a<<5|a>>>27)+b|0;d+=(a&c|b&~c)+k[2]-51403784|0;d=(d<<9|d>>>23)+a|0;c+=(d&b|a&~b)+k[7]+1735328473|0;c=(c<<14|c>>>18)+d|0;b+=(c&a|d&~a)+k[12]-1926607734|0;b=(b<<20|b>>>12)+c|0;a+=(b^c^d)+k[5]-378558|0;a=(a<<4|a>>>28)+b|0;d+=(a^b^c)+k[8]-2022574463|0;d=(d<<11|d>>>21)+a|0;c+=(d^a^b)+k[11]+1839030562|0;c=(c<<16|c>>>16)+d|0;b+=(c^d^a)+k[14]-35309556|0;b=(b<<23|b>>>9)+c|0;a+=(b^c^d)+k[1]-1530992060|0;a=(a<<4|a>>>28)+b|0;d+=(a^b^c)+k[4]+1272893353|0;d=(d<<11|d>>>21)+a|0;c+=(d^a^b)+k[7]-155497632|0;c=(c<<16|c>>>16)+d|0;b+=(c^d^a)+k[10]-1094730640|0;b=(b<<23|b>>>9)+c|0;a+=(b^c^d)+k[13]+681279174|0;a=(a<<4|a>>>28)+b|0;d+=(a^b^c)+k[0]-358537222|0;d=(d<<11|d>>>21)+a|0;c+=(d^a^b)+k[3]-722521979|0;c=(c<<16|c>>>16)+d|0;b+=(c^d^a)+k[6]+76029189|0;b=(b<<23|b>>>9)+c|0;a+=(b^c^d)+k[9]-640364487|0;a=(a<<4|a>>>28)+b|0;d+=(a^b^c)+k[12]-421815835|0;d=(d<<11|d>>>21)+a|0;c+=(d^a^b)+k[15]+530742520|0;c=(c<<16|c>>>16)+d|0;b+=(c^d^a)+k[2]-995338651|0;b=(b<<23|b>>>9)+c|0;a+=(c^(b|~d))+k[0]-198630844|0;a=(a<<6|a>>>26)+b|0;d+=(b^(a|~c))+k[7]+1126891415|0;d=(d<<10|d>>>22)+a|0;c+=(a^(d|~b))+k[14]-1416354905|0;c=(c<<15|c>>>17)+d|0;b+=(d^(c|~a))+k[5]-57434055|0;b=(b<<21|b>>>11)+c|0;a+=(c^(b|~d))+k[12]+1700485571|0;a=(a<<6|a>>>26)+b|0;d+=(b^(a|~c))+k[3]-1894986606|0;d=(d<<10|d>>>22)+a|0;c+=(a^(d|~b))+k[10]-1051523|0;c=(c<<15|c>>>17)+d|0;b+=(d^(c|~a))+k[1]-2054922799|0;b=(b<<21|b>>>11)+c|0;a+=(c^(b|~d))+k[8]+1873313359|0;a=(a<<6|a>>>26)+b|0;d+=(b^(a|~c))+k[15]-30611744|0;d=(d<<10|d>>>22)+a|0;c+=(a^(d|~b))+k[6]-1560198380|0;c=(c<<15|c>>>17)+d|0;b+=(d^(c|~a))+k[13]+1309151649|0;b=(b<<21|b>>>11)+c|0;a+=(c^(b|~d))+k[4]-145523070|0;a=(a<<6|a>>>26)+b|0;d+=(b^(a|~c))+k[11]-1120210379|0;d=(d<<10|d>>>22)+a|0;c+=(a^(d|~b))+k[2]+718787259|0;c=(c<<15|c>>>17)+d|0;b+=(d^(c|~a))+k[9]-343485551|0;b=(b<<21|b>>>11)+c|0;x[0]=a+x[0]|0;x[1]=b+x[1]|0;x[2]=c+x[2]|0;x[3]=d+x[3]|0}function md5blk(s){var md5blks=[],i;for(i=0;i<64;i+=4){md5blks[i>>2]=s.charCodeAt(i)+(s.charCodeAt(i+1)<<8)+(s.charCodeAt(i+2)<<16)+(s.charCodeAt(i+3)<<24)}return md5blks}function md5blk_array(a){var md5blks=[],i;for(i=0;i<64;i+=4){md5blks[i>>2]=a[i]+(a[i+1]<<8)+(a[i+2]<<16)+(a[i+3]<<24)}return md5blks}function md51(s){var n=s.length,state=[1732584193,-271733879,-1732584194,271733878],i,length,tail,tmp,lo,hi;for(i=64;i<=n;i+=64){md5cycle(state,md5blk(s.substring(i-64,i)))}s=s.substring(i-64);length=s.length;tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];for(i=0;i<length;i+=1){tail[i>>2]|=s.charCodeAt(i)<<(i%4<<3)}tail[i>>2]|=128<<(i%4<<3);if(i>55){md5cycle(state,tail);for(i=0;i<16;i+=1){tail[i]=0}}tmp=n*8;tmp=tmp.toString(16).match(/(.*?)(.{0,8})$/);lo=parseInt(tmp[2],16);hi=parseInt(tmp[1],16)||0;tail[14]=lo;tail[15]=hi;md5cycle(state,tail);return state}function md51_array(a){var n=a.length,state=[1732584193,-271733879,-1732584194,271733878],i,length,tail,tmp,lo,hi;for(i=64;i<=n;i+=64){md5cycle(state,md5blk_array(a.subarray(i-64,i)))}a=i-64<n?a.subarray(i-64):new Uint8Array(0);length=a.length;tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];for(i=0;i<length;i+=1){tail[i>>2]|=a[i]<<(i%4<<3)}tail[i>>2]|=128<<(i%4<<3);if(i>55){md5cycle(state,tail);for(i=0;i<16;i+=1){tail[i]=0}}tmp=n*8;tmp=tmp.toString(16).match(/(.*?)(.{0,8})$/);lo=parseInt(tmp[2],16);hi=parseInt(tmp[1],16)||0;tail[14]=lo;tail[15]=hi;md5cycle(state,tail);return state}function rhex(n){var s="",j;for(j=0;j<4;j+=1){s+=hex_chr[n>>j*8+4&15]+hex_chr[n>>j*8&15]}return s}function hex(x){var i;for(i=0;i<x.length;i+=1){x[i]=rhex(x[i])}return x.join("")}if(hex(md51("hello"))!=="5d41402abc4b2a76b9719d911017c592"){add32=function(x,y){var lsw=(x&65535)+(y&65535),msw=(x>>16)+(y>>16)+(lsw>>16);return msw<<16|lsw&65535}}if(typeof ArrayBuffer!=="undefined"&&!ArrayBuffer.prototype.slice){(function(){function clamp(val,length){val=val|0||0;if(val<0){return Math.max(val+length,0)}return Math.min(val,length)}ArrayBuffer.prototype.slice=function(from,to){var length=this.byteLength,begin=clamp(from,length),end=length,num,target,targetArray,sourceArray;if(to!==undefined){end=clamp(to,length)}if(begin>end){return new ArrayBuffer(0)}num=end-begin;target=new ArrayBuffer(num);targetArray=new Uint8Array(target);sourceArray=new Uint8Array(this,begin,num);targetArray.set(sourceArray);return target}})()}function toUtf8(str){if(/[\u0080-\uFFFF]/.test(str)){str=unescape(encodeURIComponent(str))}return str}function utf8Str2ArrayBuffer(str,returnUInt8Array){var length=str.length,buff=new ArrayBuffer(length),arr=new Uint8Array(buff),i;for(i=0;i<length;i+=1){arr[i]=str.charCodeAt(i)}return returnUInt8Array?arr:buff}function arrayBuffer2Utf8Str(buff){return String.fromCharCode.apply(null,new Uint8Array(buff))}function concatenateArrayBuffers(first,second,returnUInt8Array){var result=new Uint8Array(first.byteLength+second.byteLength);result.set(new Uint8Array(first));result.set(new Uint8Array(second),first.byteLength);return returnUInt8Array?result:result.buffer}function hexToBinaryString(hex){var bytes=[],length=hex.length,x;for(x=0;x<length-1;x+=2){bytes.push(parseInt(hex.substr(x,2),16))}return String.fromCharCode.apply(String,bytes)}function SparkMD5(){this.reset()}SparkMD5.prototype.append=function(str){this.appendBinary(toUtf8(str));return this};SparkMD5.prototype.appendBinary=function(contents){this._buff+=contents;this._length+=contents.length;var length=this._buff.length,i;for(i=64;i<=length;i+=64){md5cycle(this._hash,md5blk(this._buff.substring(i-64,i)))}this._buff=this._buff.substring(i-64);return this};SparkMD5.prototype.end=function(raw){var buff=this._buff,length=buff.length,i,tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],ret;for(i=0;i<length;i+=1){tail[i>>2]|=buff.charCodeAt(i)<<(i%4<<3)}this._finish(tail,length);ret=hex(this._hash);if(raw){ret=hexToBinaryString(ret)}this.reset();return ret};SparkMD5.prototype.reset=function(){this._buff="";this._length=0;this._hash=[1732584193,-271733879,-1732584194,271733878];return this};SparkMD5.prototype.getState=function(){return{buff:this._buff,length:this._length,hash:this._hash.slice()}};SparkMD5.prototype.setState=function(state){this._buff=state.buff;this._length=state.length;this._hash=state.hash;return this};SparkMD5.prototype.destroy=function(){delete this._hash;delete this._buff;delete this._length};SparkMD5.prototype._finish=function(tail,length){var i=length,tmp,lo,hi;tail[i>>2]|=128<<(i%4<<3);if(i>55){md5cycle(this._hash,tail);for(i=0;i<16;i+=1){tail[i]=0}}tmp=this._length*8;tmp=tmp.toString(16).match(/(.*?)(.{0,8})$/);lo=parseInt(tmp[2],16);hi=parseInt(tmp[1],16)||0;tail[14]=lo;tail[15]=hi;md5cycle(this._hash,tail)};SparkMD5.hash=function(str,raw){return SparkMD5.hashBinary(toUtf8(str),raw)};SparkMD5.hashBinary=function(content,raw){var hash=md51(content),ret=hex(hash);return raw?hexToBinaryString(ret):ret};SparkMD5.ArrayBuffer=function(){this.reset()};SparkMD5.ArrayBuffer.prototype.append=function(arr){var buff=concatenateArrayBuffers(this._buff.buffer,arr,true),length=buff.length,i;this._length+=arr.byteLength;for(i=64;i<=length;i+=64){md5cycle(this._hash,md5blk_array(buff.subarray(i-64,i)))}this._buff=i-64<length?new Uint8Array(buff.buffer.slice(i-64)):new Uint8Array(0);return this};SparkMD5.ArrayBuffer.prototype.end=function(raw){var buff=this._buff,length=buff.length,tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],i,ret;for(i=0;i<length;i+=1){tail[i>>2]|=buff[i]<<(i%4<<3)}this._finish(tail,length);ret=hex(this._hash);if(raw){ret=hexToBinaryString(ret)}this.reset();return ret};SparkMD5.ArrayBuffer.prototype.reset=function(){this._buff=new Uint8Array(0);this._length=0;this._hash=[1732584193,-271733879,-1732584194,271733878];return this};SparkMD5.ArrayBuffer.prototype.getState=function(){var state=SparkMD5.prototype.getState.call(this);state.buff=arrayBuffer2Utf8Str(state.buff);return state};SparkMD5.ArrayBuffer.prototype.setState=function(state){state.buff=utf8Str2ArrayBuffer(state.buff,true);return SparkMD5.prototype.setState.call(this,state)};SparkMD5.ArrayBuffer.prototype.destroy=SparkMD5.prototype.destroy;SparkMD5.ArrayBuffer.prototype._finish=SparkMD5.prototype._finish;SparkMD5.ArrayBuffer.hash=function(arr,raw){var hash=md51_array(new Uint8Array(arr)),ret=hex(hash);return raw?hexToBinaryString(ret):ret};return SparkMD5});
+
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIStudio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:           #f5f4f0;
+            --bg-panel:     #ffffff;
+            --bg-hover:     #f0efe9;
+            --border:       #e2e0d8;
+            --border-dark:  #ccc9be;
+            --text:         #111110;
+            --text-mid:     #4a4845;
+            --text-dim:     #7a7875;
+            --accent:       #2563eb;
+            --accent-light: #eff4ff;
+            --accent-dim:   #93b4f8;
+            --success:      #16a34a;
+            --warning:      #d97706;
+            --danger:       #dc2626;
+            --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow:       0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+            --radius:       8px;
+            --radius-lg:    12px;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 272px 1fr;
+            height: 100vh;
+        }
+
+        /* ── Sidebar ───────────────────────────────────────────── */
+        .sidebar {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-top {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .wordmark {
+            font-family: 'DM Mono', monospace;
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: -0.3px;
+            color: var(--text);
+        }
+
+        .wordmark span {
+            color: var(--accent);
+        }
+
+        .sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .section {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 12px;
+            box-sizing: border-box;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6860' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        input[type="number"] {
+            background-image: none;
+            padding-right: 12px;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+        }
+
+        .param-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .param-row:last-child { margin-bottom: 0; }
+
+        .param-label {
+            font-size: 13px;
+            color: var(--text-mid);
+        }
+
+        .param-row input[type="number"] {
+            text-align: center;
+            width: 80px;
+        }
+
+        /* Corpus action buttons */
+        .corpus-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 6px;
+            box-sizing: border-box;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-mid);
+            font-size: 12px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .action-btn svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* Conversation section */
+        .conv-meta {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .conv-meta span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .clear-btn {
+            width: 100%;
+            height: 32px;
+            min-height: 32px;
+            max-height: 32px;
+            line-height: 30px;
+            padding: 0 8px;
+            box-sizing: border-box;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-mid);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .clear-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: #fff5f5;
+        }
+
+        /* Sidebar footer */
+        .sidebar-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .copyright {
+            font-size: 13px;
+            text-align: center;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .copyright a {
+            color: var(--text-dim);
+            text-decoration: none;
+        }
+
+        .copyright a:hover { color: var(--accent); }
+
+        /* ── Main area ─────────────────────────────────────────── */
+        .main {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--bg);
+        }
+
+        .topbar {
+            padding: 14px 28px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-left {
+            font-size: 13px;
+            color: var(--text-mid);
+            font-weight: 500;
+        }
+
+        .topbar-left strong {
+            color: var(--text);
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-dim);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+
+        .empty-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--text-dim);
+        }
+
+        .empty-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-mid);
+        }
+
+        .empty-hint {
+            font-size: 13px;
+            max-width: 340px;
+            line-height: 1.5;
+        }
+
+        .latency-note {
+            font-size: 12px;
+            color: var(--warning);
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius);
+            padding: 8px 14px;
+            margin-top: 4px;
+            max-width: 360px;
+        }
+
+        /* Message bubbles */
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeUp 0.25s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .avatar.user {
+            background: var(--accent);
+            color: white;
+        }
+
+        .avatar.assistant {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text-mid);
+        }
+
+        .bubble {
+            flex: 1;
+            max-width: 760px;
+        }
+
+        .bubble.user .text {
+            background: var(--accent);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 4px 12px 12px 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .bubble.assistant .text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text);
+            padding: 4px 0;
+        }
+
+        /* Loading dots */
+        .loading-dots {
+            display: flex;
+            gap: 5px;
+            padding: 8px 0;
+        }
+
+        .loading-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--border-dark);
+            animation: dot-pulse 1.4s ease-in-out infinite;
+        }
+
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dot-pulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+            40% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Citations */
+        .citation-ref {
+            color: var(--accent);
+            font-size: 0.72em;
+            vertical-align: super;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 1px;
+            transition: color 0.15s;
+        }
+
+        .citation-ref:hover { color: #1d4ed8; text-decoration: underline; }
+
+        .footnotes {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footnotes-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .footnote {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-mid);
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.4;
+        }
+
+        .footnote:last-child { border-bottom: none; }
+
+        .footnote-num {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 11px;
+            flex-shrink: 0;
+            min-width: 20px;
+        }
+
+        .footnote-name {
+            color: var(--text);
+            font-weight: 500;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            flex: 1;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        a.footnote-name:hover { color: var(--accent); text-decoration: underline; }
+
+        .footnote-page {
+            color: var(--text-mid);
+            font-size: 11px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .footnote-open {
+            color: var(--accent);
+            font-size: 11px;
+            text-decoration: none;
+            flex-shrink: 0;
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        .footnote-open:hover { opacity: 1; text-decoration: underline; }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 28px 20px;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            max-width: 860px;
+        }
+
+        .input-wrap {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            line-height: 1.5;
+            min-height: 48px;
+            max-height: 200px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+        }
+
+        textarea::placeholder { color: var(--text-dim); }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .send-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: var(--shadow); }
+        .send-btn:active { transform: translateY(0); }
+        .send-btn:disabled { background: var(--border-dark); cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .send-btn svg { width: 18px; height: 18px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.open { display: flex; }
+
+        .modal-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            width: 440px;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 18px;
+        }
+
+        .file-zone {
+            border: 2px dashed var(--border-dark);
+            border-radius: var(--radius);
+            padding: 36px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 16px;
+            color: var(--text-mid);
+            font-size: 13px;
+        }
+
+        .file-zone:hover, .file-zone.over {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .file-zone-icon { font-size: 36px; margin-bottom: 10px; }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .btn { padding: 9px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text-mid); }
+        .btn-ghost:hover { background: var(--bg-hover); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:disabled { background: var(--border-dark); cursor: not-allowed; }
+
+        #uploadStatus { font-size: 12px; color: var(--text-mid); margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="wordmark">AI<span>Studio</span></div>
+        </div>
+
+        <div class="sidebar-body">
+
+            <!-- Model -->
+            <div class="section">
+                <div class="section-label">Model</div>
+                <select id="modelSelect"><option value="">Loading…</option></select>
+            </div>
+
+            <!-- Corpus -->
+            <div class="section">
+                <div class="section-label">Corpus</div>
+                <div style="display:flex;justify-content:space-between;gap:4px;margin-bottom:4px;">
+                    <button class="action-btn" id="newCorpusBtn" title="Create new corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                        New
+                    </button>
+                    <button class="action-btn" id="deleteCorpusBtn" title="Delete this corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                        Delete
+                    </button>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px;">
+                    <button class="action-btn" id="renameCorpusBtn" title="Rename this corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Rename
+                    </button>
+                    <button class="action-btn" id="inspectBtn" title="Edit corpus metadata" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                </div>
+                <div style="position:relative;z-index:100;overflow:visible;">
+                <select id="corpusSelect" style="position:relative;z-index:100;background:#fffbeb;text-align:center;font-weight:500;"><option value="">Loading…</option></select>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;justify-content:flex-end;">
+                    <span style="font-size:11px;font-weight:600;color:var(--text-mid);white-space:nowrap;">Files</span>
+                    <button class="action-btn" id="addFileBtn" title="Upload file to corpus" style="flex:1;">
+                        Add
+                    </button>
+                    <button class="action-btn" id="inspectFileBtn" title="Inspect files in corpus" style="flex:1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Inspect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Parameters -->
+            <div class="section">
+                <div class="section-label">Query Settings</div>
+                <div class="param-row">
+                    <span class="param-label">Top K</span>
+                    <input type="number" id="topK" min="1" max="20" value="5">
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Temperature</span>
+                    <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3">
+                </div>
+            </div>
+
+            <!-- Keywords -->
+            <div class="section">
+                <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
+                <div class="param-row">
+                    <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
+                </div>
+            </div>
+
+            <!-- Conversation -->
+            <div class="section">
+                <div class="section-label">Conversation</div>
+                <div class="conv-meta" id="convMeta" style="display:none;"></div>
+                <button class="clear-btn" id="clearBtn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    Clear conversation
+                </button>
+            </div>
+
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="copyright">
+                © M. Barbero 2025–2026<br>
+                <a href="https://github.com/mbarberony/AIStudio" target="_blank">github.com/mbarberony</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-right:8px;">
+                <button id="helpBtn" onclick="showHelp()" style="background:#16a34a;border:1px solid #15803d;border-radius:20px;padding:4px 12px;font-size:12px;color:#fff;cursor:pointer;font-family:inherit;font-weight:500;" onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'" title="Help">Help</button>
+                <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
+                <div class="status-pill">
+                    <div class="status-dot"></div>
+                    <span id="statusText">Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                </div>
+                <div class="empty-title">Ask anything about your corpus</div>
+                <div class="empty-hint">Select a corpus from the sidebar, then type your question below. Answers include inline citations linked to source documents.</div>
+                <div class="latency-note">
+                    ⏱ First query may take 20–50 s while the model loads into memory. Subsequent queries are faster.
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-row">
+                <div class="input-wrap">
+                    <textarea id="chatInput" rows="1" placeholder="Ask a question about your corpus…"></textarea>
+                </div>
+                <button class="send-btn" id="sendBtn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal" id="uploadModal">
+    <div class="modal-box">
+        <div class="modal-title" id="uploadModalTitle" style="text-align:center;">Adding Files to Corpus</div>
+        <div class="file-zone" id="dropZone">
+            <div class="file-zone-icon">📄</div>
+            <div>Drop your file here or click to browse</div>
+            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT · HTML</div>
+            <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.txt,.md,.docx,.pptx,.xlsx,.htm,.html" onchange="selectFiles(this.files)">
+        </div>
+        <div id="uploadStatus"></div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="cancelUpload">Cancel</button>
+            <button class="btn btn-primary" id="confirmUpload" disabled onclick="uploadFile()">Upload</button>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate File Alert Modal -->
+<div class="modal" id="dupModal">
+    <div class="modal-box" style="max-width:460px;">
+        <div class="modal-title" style="text-align:center;">File Already Indexed</div>
+        <div id="dupModalBody" style="font-size:13px;margin:12px 0;line-height:1.5;"></div>
+        <div style="margin:10px 0 16px;display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="dupApplyAll" style="cursor:pointer;">
+            <label for="dupApplyAll" style="font-size:12px;cursor:pointer;">Apply this choice to all remaining duplicates</label>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" id="dupSkipBtn">Skip</button>
+            <button class="btn btn-primary" id="dupReingestBtn">Re-ingest</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8000';
+
+    // ── State ──────────────────────────────────────────────────────
+    let currentCorpus = null;
+    let currentCorpusFiles = []; // filenames in current corpus — used by linkify()
+    let isLoading = false;
+    let conversationHistory = [];
+
+    // ── Conversation persistence across refresh (sessionStorage) ──
+    const HISTORY_KEY = 'aistudio_conv_history';
+    const CORPUS_KEY  = 'aistudio_conv_corpus';
+
+    function _saveHistory() {
+        try {
+            sessionStorage.setItem(HISTORY_KEY, JSON.stringify(conversationHistory));
+            sessionStorage.setItem(CORPUS_KEY, currentCorpus || '');
+        } catch(_) {}
+    }
+
+    function _restoreHistory() {
+        try {
+            const savedCorpus = sessionStorage.getItem(CORPUS_KEY) || '';
+            const savedHistory = sessionStorage.getItem(HISTORY_KEY);
+            if (savedHistory && savedCorpus && savedCorpus === currentCorpus) {
+                conversationHistory = JSON.parse(savedHistory);
+                return conversationHistory;
+            }
+        } catch(_) {}
+        return [];
+    }
+    let responseCounter = 0;
+    const MAX_TURNS = 10;
+    window.window.selectedFile = null; window.selectedFiles = [];
+
+    // ── DOM refs ───────────────────────────────────────────────────
+    const messagesEl  = document.getElementById('messages');
+    const emptyState  = document.getElementById('emptyState');
+    const chatInput   = document.getElementById('chatInput');
+    const sendBtn     = document.getElementById('sendBtn');
+    const corpusSelect = document.getElementById('corpusSelect');
+    const modelSelect  = document.getElementById('modelSelect');
+    const topKInput    = document.getElementById('topK');
+    const tempInput    = document.getElementById('temperature');
+    const filterKeywords = document.getElementById('filterKeywords');
+    const convMeta     = document.getElementById('convMeta');
+    const topbarTitle  = document.getElementById('topbarTitle');
+    const statusText   = document.getElementById('statusText');
+    const uploadModal  = document.getElementById('uploadModal');
+    const dropZone     = document.getElementById('dropZone');
+    const fileInput    = document.getElementById('fileInput');
+
+    // ── Init ───────────────────────────────────────────────────────
+    async function init() {
+        const _timeout = ms => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+        try {
+            await Promise.race([Promise.all([loadModels(), loadCorpora()]), _timeout(5000)]);
+        } catch(e) {
+            if (e.message === 'timeout' || e.message.includes('fetch')) {
+                corpusSelect.innerHTML = '<option value="">Backend not running — run ais_start</option>';
+                document.getElementById('modelSelect').innerHTML = '<option value="">Backend not running</option>';
+            }
+        }
+        // First-run detection: trigger ingest for demo/help if empty
+        await _checkFirstRunIngest();
+    }
+
+    // ── First-run corpus auto-index ────────────────────────────────
+    // Fires on init if demo or help corpus has 0 chunks — triggers ingest
+    // and shows live progress in the chat panel. UI is fully usable while indexing.
+    async function _checkFirstRunIngest() {
+        const FIRST_RUN_CORPORA = ['demo', 'help'];
+        const toIndex = [];
+
+        for (const corpus of FIRST_RUN_CORPORA) {
+            try {
+                const r = await fetch(`${API}/corpus/${corpus}/info`);
+                if (!r.ok) continue;
+                const data = await r.json();
+                if ((data.chunk_count ?? 0) === 0 && (data.document_count ?? 0) > 0) {
+                    toIndex.push(corpus);
+                }
+            } catch (_) { /* corpus doesn't exist yet — skip */ }
+        }
+
+        if (toIndex.length === 0) return;
+
+        // Show first-run banner
+        const corpusList = toIndex.map(c => `<strong>${c}</strong>`).join(' and ');
+        const bannerId = 'firstrun_banner_' + Date.now();
+        addSystemMessage(
+            `⏱ Building ${corpusList} ${toIndex.length > 1 ? 'corpora' : 'corpus'} for the first time — this takes ~60 seconds. ` +
+            `You can start exploring once indexing completes.<br>` +
+            `<div id="${bannerId}" style="margin-top:6px;"></div>`
+        );
+
+        const bannerEl = document.getElementById(bannerId);
+
+        // Trigger and track ingest for each corpus sequentially
+        for (const corpus of toIndex) {
+            try {
+                await fetch(`${API}/corpus/${corpus}/ingest`, { method: 'POST' });
+                if (bannerEl) {
+                    const corpusEl = document.createElement('div');
+                    corpusEl.style.cssText = 'margin-bottom:6px;font-size:12px;';
+                    corpusEl.innerHTML = `<span style="color:var(--text-mid);">${corpus}:</span> `;
+                    bannerEl.appendChild(corpusEl);
+                    await pollIngestStatus(corpus, corpusEl, 110);
+                }
+            } catch (_) { /* ingest trigger failed — user can ingest manually */ }
+        }
+
+        // Reload corpus list now that indexing is done
+        await loadCorpora();
+        if (bannerEl) {
+            const doneEl = document.createElement('div');
+            doneEl.style.cssText = 'margin-top:4px;font-size:12px;color:var(--success,#16a34a);font-weight:500;';
+            doneEl.textContent = '✅ Corpora ready — select one to start querying.';
+            bannerEl.appendChild(doneEl);
+        }
+    }
+
+    async function loadModels() {
+        try {
+            const res = await fetch(`${API}/models`);
+            const models = await res.json();
+
+            // Filter out embedding-only models — they can't generate answers
+            const EMBED_KEYWORDS = ['embed', 'bge', 'e5-', 'minilm', 'gte-'];
+            const chatModels = models.filter(m => {
+                const label = (m.id + ' ' + m.name).toLowerCase();
+                return !EMBED_KEYWORDS.some(kw => label.includes(kw));
+            });
+
+            // Sort by parameter count ascending (8b before 70b)
+            chatModels.sort((a, b) => {
+                const size = m => { const match = m.id.match(/(\d+)b/i); return match ? parseInt(match[1]) : 999; };
+                return size(a) - size(b);
+            });
+
+            if (!chatModels.length) {
+                modelSelect.innerHTML = '<option>No models — check Ollama</option>';
+                return;
+            }
+            modelSelect.innerHTML = chatModels
+                .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
+                .join('');
+            const first = chatModels.find(m => m.available);
+            if (first) modelSelect.value = first.id;
+        } catch {
+            modelSelect.innerHTML = '<option>Ollama not running</option>';
+        }
+    }
+
+    async function loadCorpora() {
+        try {
+            const res = await fetch(`${API}/corpora`);
+            const corpora = await res.json();
+            if (!corpora.length) {
+                corpusSelect.innerHTML = '<option value="">No corpora — create one</option>';
+                setCorpus(null);
+                return;
+            }
+            corpusSelect.innerHTML = corpora
+                .filter(c => c.name !== 'help')
+                .slice().sort((a, b) => a.name.localeCompare(b.name))
+                .map(c => `<option value="${c.name}">${c.name}</option>`)
+                .join('');
+            setCorpus(corpora[0].name);
+        } catch {
+            corpusSelect.innerHTML = '<option value="">Error loading corpora</option>';
+            setCorpus(null);
+        }
+    }
+
+    function setCorpus(name) {
+        const prev = currentCorpus;
+        currentCorpus = name;
+        currentCorpusFiles = [];
+        if (name) {
+            // Load file list for linkify() — async, best-effort
+            fetch(`${API}/corpus/${name}/info`).then(r => r.json()).then(d => {
+                currentCorpusFiles = (d.files || []).map(f => typeof f === 'string' ? f : (f.name || ''));
+            }).catch(() => {});
+            if (prev && prev !== name) addSeparator(`Changed to ${name}`);
+            // Fetch short_description from corpus metadata and display in header
+        topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong>`;
+        fetch(`${API}/corpus/${name}/info`).then(r => r.json()).then(info => {
+            const sd = (info.short_description || '').trim();
+            if (sd) {
+                topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong> &nbsp;·&nbsp; <span style="font-weight:400;color:var(--text-mid);font-size:13px;">${escapeHtml(sd)}</span>`;
+            }
+        }).catch(() => {});
+            chatInput.placeholder = `Ask a question about ${name}…`;
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            // Restore conversation history for this corpus if available
+            const restored = _restoreHistory();
+            if (restored.length > 0) {
+                // Replay messages into the UI
+                hideEmpty();
+                restored.forEach((msg, i) => {
+                    if (msg.role === 'user') {
+                        addMessage('user', msg.content, false);
+                    } else {
+                        addMessage('assistant', msg.content, msg.isHtml || false);
+                        // Advance responseCounter to avoid footnote ID collisions
+                        // with restored messages that already have fn-N-* anchors
+                        responseCounter++;
+                    }
+                });
+                updateConvMeta();
+            }
+            // NOTE: prewarm removed here — only fires on model change, not corpus change
+        } else {
+            topbarTitle.textContent = 'AIStudio — select a corpus';
+            chatInput.placeholder = '⚠ Select or create a corpus first';
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+        }
+    }
+
+    // ── Prewarm ──────────────────────────────────────────────
+    async function prewarmModel() {
+        const model = modelSelect.value;
+        if (!model) return;
+        if (currentCorpus) addSeparator(`Changed to ${model}`);
+        statusText.textContent = 'Loading model…';
+        try {
+            const res = await fetch(`${API}/prewarm?model_id=${encodeURIComponent(model)}`, { method: 'POST' });
+            const data = await res.json();
+            statusText.textContent = data.status === 'already_warm' ? 'Connected' : 'Model ready';
+        } catch {
+            statusText.textContent = 'Connected';
+        }
+    }
+
+    // ── Send message ───────────────────────────────────────────────
+    async function sendMessage() {
+        const query = chatInput.value.trim();
+        if (!query || isLoading || !currentCorpus) return;
+
+        hideEmpty();
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        addMessage('user', query, false);
+        conversationHistory.push({ role: 'user', content: query });
+        _saveHistory();
+        trimHistory();
+
+        isLoading = true;
+        sendBtn.disabled = true;
+        const loadingEl = addLoading();
+
+        try {
+            const body = {
+                query,
+                corpus: currentCorpus,
+                top_k: parseInt(topKInput.value) || 5,
+                temperature: parseFloat(tempInput.value) || 0.3,
+                // Keywords input wiring TODO — see PIPELINE AIStudio_NNN (M1 keyword steering)
+                conversation_history: conversationHistory.length > 1
+                    ? conversationHistory.slice(0, -1).map(msg => ({
+                        role: msg.role,
+                        content: msg.isHtml
+                            ? msg.content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+                            : msg.content
+                      }))
+                    : null
+            };
+
+            const res = await fetch(`${API}/ask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            loadingEl.remove();
+
+            // Convert newlines to paragraph breaks for readable formatting
+            let html = escapeHtml(data.answer)
+                .split(/\n\n+/)
+                .map(p => p.trim())
+                .filter(p => p)
+                .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                .join('');
+            if (data.citations && data.citations.length) {
+                responseCounter++;
+                // Clean up any raw file paths the LLM included in its response
+        html = html.replace(/(?:\/[^\s<"']*\/)([\w.-]+\.(?:pdf|md|txt|json|yaml|py|sh))/gi, '<code>$1</code>');
+        html = parseCitations(html, data.citations, responseCounter);
+                html += renderFootnotes(data.citations, responseCounter);
+            }
+
+            addMessage('assistant', html, true);
+            conversationHistory.push({ role: 'assistant', content: html, isHtml: true });
+            _saveHistory();
+            trimHistory();
+            updateConvMeta();
+
+        } catch (err) {
+            loadingEl.remove();
+            addMessage('assistant', `<em style="color:var(--danger)">Error: ${err.message}</em>`, true);
+        } finally {
+            isLoading = false;
+            sendBtn.disabled = !currentCorpus;
+        }
+    }
+
+    // ── Messages ───────────────────────────────────────────────────
+    function hideEmpty() {
+        if (emptyState && emptyState.parentNode) emptyState.remove();
+    }
+
+    // ── Auto-linkify ───────────────────────────────────────────────
+    function linkify(text) {
+        // URLs: http:// or https://
+        text = text.replace(/(https?:\/\/[^\s<>"']+)/g,
+            '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline;">$1</a>');
+        // Local file paths: data/corpora/..., scripts/..., docs/..., front_end/...
+        text = text.replace(/\b((?:data\/corpora|scripts|docs|front_end|src)\/[^\s<>"',;)]+\.(py|sh|html|md|yaml|yml|pdf|txt|json))/g,
+            (match) => `<a href="${API}/source?path=${encodeURIComponent(match)}" target="_blank" style="color:var(--accent);font-family:monospace;font-size:0.92em;text-decoration:underline;">${match}</a>`);
+        // Corpus filenames: match known files in current corpus
+        if (currentCorpusFiles.length > 0) {
+            currentCorpusFiles.forEach(fname => {
+                if (!fname) return;
+                // Only match if not already inside an <a> tag
+                const escaped = fname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const re = new RegExp('(?<!href=["\'"][^"\'"]*)\\b(' + escaped + ')\\b(?![^<]*>)', 'g');
+                text = text.replace(re, (match) => {
+                    const corpusPath = `data/corpora/${currentCorpus}/uploads/${fname}`;
+                    return `<a href="${API}/source?path=${encodeURIComponent(corpusPath)}" target="_blank" style="color:var(--accent);font-family:monospace;font-size:0.92em;text-decoration:underline;">${match}</a>`;
+                });
+            });
+        }
+        return text;
+    }
+
+    function addMessage(role, content, isHtml) {
+        const div = document.createElement('div');
+        div.className = `message`;
+
+        const avatarIcon = role === 'user'
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+
+        div.innerHTML = `
+            <div class="avatar ${role}">${avatarIcon}</div>
+            <div class="bubble ${role}">
+                <div class="text">${isHtml ? content : linkify(escapeHtml(content))}</div>
+            </div>`;
+
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+    }
+
+    function addLoading() {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `
+            <div class="avatar assistant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <div class="bubble assistant">
+                <div class="loading-dots"><span></span><span></span><span></span></div>
+            </div>`;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+    }
+
+    // ── System message — no avatar, inline notification ─────────────
+    function addSystemMessage(html) {
+        if (!messagesEl) return;
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:6px 12px 6px 10px;margin:2px 0;font-size:13px;color:var(--text-mid);line-height:1.5;display:flex;align-items:baseline;gap:6px;';
+        div.innerHTML = '<span style="flex-shrink:0;font-size:13px;">ℹ</span><span>' + html + '</span>';
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ── System separator — corpus/model change notification ────────
+    // Separator is a message-level element — width matches bubble, left-aligned with bubble content.
+    // Avatar=30px + gap=12px = 42px left offset. Bubble max-width=760px → right boundary=802px.
+    function addSeparator(label) {
+        if (!messagesEl || !messagesEl.children.length) return;
+        const lastSpace = label.lastIndexOf(' ');
+        const styledLabel = lastSpace >= 0
+            ? `<span style="color:var(--text-dim);">${label.slice(0, lastSpace + 1)}</span><span style="color:var(--accent);font-weight:500;font-style:normal;">${label.slice(lastSpace + 1)}</span>`
+            : `<span style="color:var(--text-dim);">${label}</span>`;
+        const div = document.createElement('div');
+        div.style.cssText = 'padding-left:42px;max-width:802px;box-sizing:border-box;display:flex;align-items:center;gap:8px;margin:10px 0;';
+        div.innerHTML = `
+            <div style="flex:1;height:1px;background:var(--border);min-width:16px;"></div>
+            <span style="font-size:12.5px;white-space:nowrap;font-style:italic;flex-shrink:0;">${styledLabel}</span>
+            <div style="flex:1;height:1px;background:var(--border);min-width:16px;"></div>`;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+
+    function parseCitations(html, citations, rc) {
+        // Build a set of valid citation indices from what the API actually returned
+        const validIdx = new Set(citations.map(c => String(c.index)));
+
+        // [Source N] and [source N] — only linkify if index is valid
+        html = html.replace(/\[(?:Source\s+|source\s+)(\d+)\]/gi,
+            (match, n) => validIdx.has(n)
+                ? `<a href="#fn-${rc}-${n}" class="citation-ref">[${n}]</a>`
+                : match);
+
+        // [1], [1,2], [1, 2] — only linkify valid indices
+        html = html.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (match, nums) => {
+            const parts = nums.split(',').map(n => n.trim());
+            const linked = parts.map(n =>
+                validIdx.has(n)
+                    ? `<a href="#fn-${rc}-${n}" class="citation-ref">[${n}]</a>`
+                    : `[${n}]`
+            );
+            // If all parts were invalid, return original match unchanged
+            return linked.join('');
+        });
+        return html;
+    }
+
+    function renderFootnotes(citations, rc) {
+        if (!citations || !citations.length) return '';
+        const items = citations.map(c => {
+            const name = c.source.split('/').pop();
+            const pageLabel = c.page ? `<span class="footnote-page">p. ${c.page}</span>` : '';
+            const openUrl = c.page
+                ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}#page=${c.page}`
+                : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
+            const openLink = `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
+            return `<div class="footnote" id="fn-${rc}-${c.index}">
+                <span class="footnote-num">[${c.index}]</span>
+                <a href="${openUrl}" target="_blank" class="footnote-name" title="Open ${name}">${name}</a>
+                ${pageLabel}
+                ${openLink}
+            </div>`;
+        }).join('');
+        return `<div class="footnotes"><div class="footnotes-label">References</div>${items}</div>`;
+    }
+
+    // ── Conversation memory ────────────────────────────────────────
+    function trimHistory() {
+        if (conversationHistory.length > MAX_TURNS * 2)
+            conversationHistory = conversationHistory.slice(-MAX_TURNS * 2);
+        _saveHistory();
+    }
+
+    function updateConvMeta() {
+        const turns = Math.floor(conversationHistory.length / 2);
+        convMeta.innerHTML = turns > 0
+            ? `<span>${turns} turn${turns > 1 ? 's' : ''}</span> in memory`
+            : 'No context in memory';
+    }
+
+    function clearConversation() {
+        conversationHistory = [];
+        try { sessionStorage.removeItem(HISTORY_KEY); sessionStorage.removeItem(CORPUS_KEY); } catch(_) {}
+        updateConvMeta();
+        // Clear messages and restore empty state
+        messagesEl.innerHTML = '';
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.id = 'emptyState';
+        empty.innerHTML = `
+            <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+            </div>
+            <div class="empty-title">Conversation cleared</div>
+            <div class="empty-hint">Ask a new question to start a fresh conversation.</div>
+            <div class="latency-note">⏱ First query may take 20–50 s while the model loads.</div>`;
+        messagesEl.appendChild(empty);
+    }
+
+    // ── Corpus inspect ─────────────────────────────────────────────
+    async function deleteFileFromCorpus(filename) {
+        const confirmed = await showModal({
+            title: "Remove File from Corpus \'" + currentCorpus + "\'",
+            body: '<strong>' + filename + '</strong> will be moved to trash and removed from the search index. Recoverable from <code>data/corpora/' + currentCorpus + '/trash/</code>.',
+            confirmLabel: 'Type YES to confirm',
+            requireYes: true,
+        });
+        if (!confirmed) {
+            addSystemMessage('File removal cancelled.');
+            return;
+        }
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+            addSystemMessage('<strong>' + filename + '</strong> moved to trash and removed from the search index.');
+            inspectCorpus();
+        } catch (err) {
+            addMessage('assistant', 'Error: ' + err.message, false);
+        }
+    }
+
+    async function showStats() { showEdit(); }  // legacy alias
+
+    async function showEdit() {
+        if (!currentCorpus) return;
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/info`);
+            const data = await res.json();
+
+            // Compute aggregate stats
+            const totalFiles = data.file_count ?? '—';
+            const totalChunks = data.chunk_count ?? '—';
+            const totalSize = data.size_bytes ? (data.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—';
+            const ingestDur = data.ingest_duration_seconds ? data.ingest_duration_seconds + 's' : '—';
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+            overlay.innerHTML = `
+                <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
+                    border-radius:16px;padding:28px 32px;width:540px;max-height:88vh;overflow-y:auto;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text,#111);">Edit Corpus: ${escapeHtml(data.name)}</div>
+                    <div style="display:flex;gap:16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);">
+                        <span>· <strong>${totalFiles}</strong> files</span>
+                        <span>· <strong>${totalChunks}</strong> chunks</span>
+                        <span>· <strong>${totalSize}</strong></span>
+                        <span>· last ingest: <strong>${ingestDur}</strong></span>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Short Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional, max 120 chars)</span></label>
+                        <input id="_editSd" type="text" maxlength="120"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Displayed in the header next to the corpus name.</div>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
+                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">What this corpus contains and why it was created.</div>
+                        <textarea id="_editDesc" rows="4"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Search Guidance <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
+                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example.</div>
+                        <textarea id="_editGuidance" rows="10"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button id="_editCancel" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border,#d0d5dd);background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-mid,#555);">Cancel</button>
+                        <button id="_editSave" style="padding:9px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(overlay);
+
+            // Set values programmatically — avoids escaping issues with innerHTML
+            overlay.querySelector('#_editSd').value = data.short_description || '';
+            overlay.querySelector('#_editDesc').value = data.description || '';
+            overlay.querySelector('#_editGuidance').value = data.search_guidance || '';
+            overlay.querySelector('#_editSd').focus();
+
+            const finish = (save) => {
+                if (save) {
+                    const sd = overlay.querySelector('#_editSd').value.trim();
+                    const desc = overlay.querySelector('#_editDesc').value.trim();
+                    const guidance = overlay.querySelector('#_editGuidance').value.trim();
+                    fetch(`${API}/corpus/${data.name}/metadata`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ short_description: sd, description: desc, search_guidance: guidance })
+                    }).then(r => {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        // Update header
+                        if (data.name === currentCorpus) {
+                            if (sd) {
+                                topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${data.name}</strong> &nbsp;·&nbsp; <span style="font-weight:400;color:var(--text-mid);font-size:13px;">${escapeHtml(sd)}</span>`;
+                            } else {
+                                topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${data.name}</strong>`;
+                            }
+                        }
+                        addSystemMessage(`✓ Corpus <strong>${data.name}</strong> metadata saved.`);
+                    }).catch(err => addSystemMessage(`❌ Error saving: ${err.message}`));
+                }
+                document.body.removeChild(overlay);
+            };
+
+            overlay.querySelector('#_editSave').onclick = () => finish(true);
+            overlay.querySelector('#_editCancel').onclick = () => finish(false);
+            overlay.addEventListener('click', e => { if (e.target === overlay) finish(false); });
+
+        } catch (err) {
+            addMessage('assistant', 'Error: ' + err.message, false);
+        }
+    }
+
+    async function saveCorpusEdit() {} // no-op — handled inline in showEdit modal
+
+    async function inspectCorpus() {
+        if (!currentCorpus) return;
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/info`);
+            const data = await res.json();
+            hideEmpty();
+
+            const fileDetails = data.file_details || (data.files || []).map(f => ({
+                name: typeof f === 'string' ? f : (f.name || String(f)), size_bytes: 0
+            }));
+            const fileMeta = data.files_meta || {};  // per-file stats from corpus_metadata.yaml
+            const sortedDetails = fileDetails.slice().sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+            let fileRows = '';
+            if (sortedDetails.length > 0) {
+                fileRows = sortedDetails.map(function(f) {
+                    const fname = typeof f === 'string' ? f : f.name;
+                    const safeName = fname.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const openUrl = API + '/source?path=' + encodeURIComponent(data.paths.uploads + '/' + fname);
+                    const downloadUrl = API + '/source?path=' + encodeURIComponent(data.paths.uploads + '/' + fname);
+
+                    // Per-file stats from corpus_metadata.yaml
+                    const fm = fileMeta[fname] || {};
+                    const kb = f.size_bytes ? (f.size_bytes / 1024).toFixed(0) + ' KB' : (fm.size_bytes ? (fm.size_bytes/1024).toFixed(0) + ' KB' : 'N/A');
+                    const chunks = fm.chunks != null ? fm.chunks + ' chunks' : 'N/A';
+                    const ingestedAt = fm.ingested_at ? (() => {
+                        const d = new Date(fm.ingested_at);
+                        return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+                    })() : 'N/A';
+                    const metaLine = `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${kb} · ${chunks} · ${ingestedAt}</div>`;
+
+                    return '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
+                        + '<div style="flex:1;min-width:0;">'
+                        + '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + fname + '">' + fname + '</div>'
+                        + metaLine
+                        + '</div>'
+                        // View icon
+                        + '<a href="' + openUrl + '" target="_blank" title="View file" '
+                        + 'style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--accent);font-size:13px;text-decoration:none;border-radius:4px;opacity:0.7;" '
+                        + 'onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.7\'">'
+                        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>'
+                        // Download icon
+                        + '<a href="' + downloadUrl + '" download="' + fname + '" title="Download file" '
+                        + 'style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--text-mid);font-size:13px;text-decoration:none;border-radius:4px;opacity:0.7;" '
+                        + 'onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.7\'">'
+                        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>'
+                        // Trash icon
+                        + '<button onclick="confirmDeleteFile(\'' + safeName + '\')" title="Delete file" '
+                        + 'style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:3px 5px;color:var(--danger);font-size:13px;border-radius:4px;opacity:0.6;" '
+                        + 'onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.6\'">'
+                        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>'
+                        + '</div>';
+                }).join('');
+            } else {
+                fileRows = '<div style="color:var(--text-mid);font-size:13px;padding:8px 0;">No files in corpus.</div>';
+            }
+
+            const sizeLabel = data.size_bytes ? (data.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—';
+            const summary = '<strong>Files: ' + escapeHtml(data.name) + '</strong>'
+                + ' <span style="font-size:12px;color:var(--text-dim);font-weight:400;">(' + (data.file_count ?? '—') + ' files · ' + (data.chunk_count ?? '—') + ' chunks · ' + sizeLabel + ')</span>'
+                + '<div style="max-height:calc(100vh - 280px);overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin-top:8px;">'
+                + fileRows + '</div>';
+
+            addMessage('assistant', summary, true);
+        } catch (err) {
+            addMessage('assistant', 'Error: ' + err.message, false);
+        }
+    }
+
+    async function confirmDeleteFile(filename) {
+        const confirmed = await showModal({
+            title: 'Delete File',
+            body: `Delete <strong>${escapeHtml(filename)}</strong> from corpus <strong>${escapeHtml(currentCorpus)}</strong>?<br><br>This removes the file and its chunks from the index. The file is moved to trash and can be recovered.`,
+            confirmLabel: 'Delete',
+            requireYes: true,
+        });
+        if (!confirmed) return;
+        await deleteFileFromCorpus(filename);
+        inspectCorpus();
+    }
+
+    async function showAbout() {
+        try {
+            const res = await fetch(`${API}/about`);
+            const data = await res.json();
+            // Process markdown — block elements before line collapsing
+            let c = data.content
+                .replace(/^# (.+)$/gm, '')
+                .replace(/^### (.+)$/gm, '<h4 style="margin:12px 0 4px;font-size:13px;color:var(--text-mid);">$1</h4>')
+                .replace(/^## (.+)$/gm, '<h3 style="margin:16px 0 6px;font-size:15px;">$1</h3>')
+                .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent);">$1</a>')
+                .replace(/^- (.+)$/gm, '<li style="margin:3px 0;">$1</li>')
+                .replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul style="margin:6px 0 6px 16px;padding:0;">$&</ul>')
+                .replace(/\n\n/g, '<br>')
+                .replace(/\n/g, ' ');
+            // Render footer line centered after hr
+            c = c.replace(/(<hr[^>]*>)(.+)$/, '$1<div style="text-align:center;font-size:12px;color:var(--text-mid);margin-top:10px;line-height:1.8;">$2</div>');
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-panel);border-radius:16px;padding:24px 28px;width:680px;min-width:400px;min-height:400px;height:75vh;max-height:85vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.22);position:relative;resize:both;display:flex;flex-direction:column;">
+                    <div style="font-size:20px;font-weight:700;margin-bottom:16px;letter-spacing:-0.5px;font-family:inherit;">
+                        <span style="color:var(--text);">AI</span><span style="color:var(--accent);">Studio</span>
+                    </div>
+                    <div style="font-size:14px;line-height:1.6;color:var(--text);">${c}</div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+                        <button onclick="this.closest('[style*=fixed]').remove()"
+                            style="padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;">
+                            Close
+                        </button>
+                    </div>
+                </div>`;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        } catch (err) {
+            addMessage('assistant', 'About AIStudio — local RAG system, Apple Silicon, no cloud dependency.', true);
+        }
+    }
+
+    // ── Corpus create ──────────────────────────────────────────────
+    async function createCorpus() {
+        const result = await showCreateCorpusModal();
+        if (!result) return;
+        try {
+            const res = await fetch(`${API}/corpus/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(result)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                // Handle 409 — corpus already exists
+                if (res.status === 409) {
+                    addSystemMessage(`❌ A corpus named <strong>${result.name}</strong> already exists. Use the <strong>Rename</strong> button to rename an existing corpus.`);
+                    return;
+                }
+                throw new Error(data.detail || `HTTP ${res.status}`);
+            }
+            await loadCorpora();
+            corpusSelect.value = result.name;
+            setCorpus(result.name);
+            addSystemMessage(`✓ Corpus <strong>${result.name}</strong> created. Click <strong>Add</strong> to upload files.`);
+        } catch (err) {
+            addSystemMessage(`❌ Error creating corpus: ${err.message}`);
+        }
+    }
+
+    // ── Create Corpus Modal ────────────────────────────────────────
+    // Demo corpus values used as placeholders
+    const DEMO_PLACEHOLDERS = {
+        name: 'e.g. my_corpus',
+        short_description: '20 years of original thought leadership — architecture, strategy, AI',
+        description: 'A curated corpus of original thought leadership documents spanning 2003–2026, produced by Manuel Barbero and collaborators across senior technology roles at major financial institutions.',
+        content_summary: '9 documents covering enterprise architecture, IT strategy, financial services, cloud migration, data strategy, and agentic AI.',
+        search_guidance: 'Route questions to the most relevant document based on intent:\n- Architecture principles → Barbero 2006 document\n- CTO strategy → FS Journal Strategy volume\n- Cloud migration → Barbero 2020 document'
+    };
+
+    function showCreateCorpusModal() {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+            overlay.innerHTML = `
+                <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
+                    border-radius:16px;padding:28px 32px;width:520px;max-height:85vh;overflow-y:auto;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:20px;
+                        color:var(--text,#111);">New Corpus</div>
+
+                    <!-- Name -->
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Corpus Name</label>
+                        <input id="_ccName" type="text" maxlength="40"
+                            placeholder="${DEMO_PLACEHOLDERS.name}"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Lowercase letters, numbers, hyphens and underscores only — e.g. my_corpus</div>
+                        <div id="_ccNameError" style="font-size:11px;color:var(--danger,#dc2626);margin-top:3px;display:none;"></div>
+                    </div>
+
+                    <!-- Short description -->
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Short Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
+                        <input id="_ccShortDesc" type="text" maxlength="120"
+                            placeholder="${DEMO_PLACEHOLDERS.short_description}"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Displayed in the header next to the corpus name. Max 80 characters.</div>
+                    </div>
+
+                    <!-- Full description -->
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
+                        <textarea id="_ccDesc" rows="4"
+                            placeholder="${DEMO_PLACEHOLDERS.description}"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">What this corpus contains and why it was created.</div>
+                    </div>
+
+                    <!-- Search guidance -->
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Search Guidance <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
+                        <textarea id="_ccGuidance" rows="5"
+                            placeholder="${DEMO_PLACEHOLDERS.search_guidance}"
+                            style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example. You can add or edit this later.</div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button id="_ccCancel" style="padding:9px 18px;border-radius:8px;
+                            border:1.5px solid var(--border,#d0d5dd);background:transparent;
+                            cursor:pointer;font-size:13px;font-weight:500;
+                            color:var(--text-mid,#555);">Cancel</button>
+                        <button id="_ccOk" style="padding:9px 18px;border-radius:8px;border:none;
+                            background:#2563eb;color:white;cursor:pointer;
+                            font-size:13px;font-weight:600;">Create</button>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(overlay);
+            const nameInput = overlay.querySelector('#_ccName');
+            nameInput.focus();
+
+            const finish = (val) => { document.body.removeChild(overlay); resolve(val); };
+
+            overlay.querySelector('#_ccOk').onclick = () => {
+                const name = nameInput.value.trim().toLowerCase();
+                const errEl = overlay.querySelector('#_ccNameError');
+                if (!name) {
+                    errEl.textContent = 'Corpus name is required.';
+                    errEl.style.display = 'block';
+                    nameInput.focus();
+                    return;
+                }
+                if (!name.replace(/_/g,'').replace(/-/g,'').match(/^[a-z0-9]+$/)) {
+                    errEl.textContent = 'Name must contain only lowercase letters, numbers, hyphens, and underscores.';
+                    errEl.style.display = 'block';
+                    nameInput.focus();
+                    return;
+                }
+                errEl.style.display = 'none';
+                finish({
+                    name,
+                    short_description: overlay.querySelector('#_ccShortDesc').value.trim(),
+                    description: overlay.querySelector('#_ccDesc').value.trim(),
+                    content_summary: '',
+                    search_guidance: overlay.querySelector('#_ccGuidance').value.trim(),
+                });
+            };
+
+            overlay.querySelector('#_ccCancel').onclick = () => finish(null);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+            nameInput.onkeydown = (e) => {
+                if (e.key === 'Enter') overlay.querySelector('#_ccOk').click();
+                if (e.key === 'Escape') finish(null);
+            };
+        });
+    }
+
+    // ── Help modal ─────────────────────────────────────────────────
+    // In-memory conversation history for help — resets on page refresh
+    let _helpHistory = [];
+
+    // Curated suggested questions (subset of benchmarks/help/help_questions.yaml)
+    const _helpQuestions = [
+        "How do I recover a corpus I accidentally deleted?",
+        "Why does AIStudio use Qdrant instead of ChromaDB?",
+        "How does the CrossEncoder reranker work?",
+        "How do I run a benchmark on my corpus?",
+        "What commands does AIStudio provide?",
+        "How does AIStudio chunk documents for indexing?",
+        "What is search guidance and how does it improve answers?",
+        "How do I rename a corpus?",
+        "How is the AIStudio codebase organized?",
+        "Does using a larger model make queries slower?",
+        "How do I set up the SEC 10-K corpus?",
+        "How do I add documents to an existing corpus?",
+        "What file types can I ingest into AIStudio?",
+        "How do I run a lifecycle test on a corpus?",
+        "What is the difference between ais_bench and ais_test_ops?",
+    ];
+
+    function _pickRandom(arr, n) {
+        const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, n);
+    }
+
+    async function showHelp() {
+        // Fetch help corpus file list
+        let helpFiles = [];
+        let helpUploadsPath = '';
+        try {
+            const r = await fetch(`${API}/corpus/help/info`);
+            const d = await r.json();
+            helpFiles = (d.files || []).sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            helpUploadsPath = d.paths?.uploads || '';
+        } catch(_) {}
+
+        const suggested = _pickRandom(_helpQuestions, 5);
+
+        // Build file links — strip extension, capitalize first letter of each word
+        const fileLinks = helpFiles.map(f => {
+            const stem = f.replace(/\.pdf$/i, '');
+            const display = stem.toUpperCase();
+            const url = `${API}/source?path=${encodeURIComponent(helpUploadsPath + '/' + f)}`;
+            return `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;white-space:nowrap;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(display)}</a>`;
+        }).join(', ');
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+        overlay.innerHTML = `
+            <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:16px;
+                width:600px;max-height:88vh;display:flex;flex-direction:column;
+                box-shadow:0 8px 32px rgba(0,0,0,0.18);overflow:hidden;">
+
+                <!-- Header -->
+                <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                        <div style="font-size:15px;font-weight:700;color:var(--text);">AIStudio Help</div>
+                        <button id="_helpClose" style="background:none;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:16px;color:#ef4444;padding:2px 8px;line-height:1;font-family:inherit;" onmouseover="this.style.background='#fef2f2';this.style.color='#dc2626'" onmouseout="this.style.background='none';this.style.color='#ef4444'">×</button>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:10px;">
+                        Ask any question about AIStudio — answers are extracted from AIStudio's own 'help' corpus:
+                        <span style="font-size:12px;">${fileLinks || '<em>help corpus not loaded</em>'}</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Try asking:</div>
+                    <div style="display:flex;flex-direction:column;gap:4px;" id="_helpSuggestions">
+                        ${suggested.map(q =>
+                            `<button onclick="document.getElementById('_helpInput').value='${q.replace(/'/g,"\\'")}';this.closest('[style*=fixed]')._sendHelp();"
+                                style="text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;transition:all 0.15s;"
+                                onmouseover="this.style.background='var(--accent-light)';this.style.borderColor='var(--accent-dim)';this.style.color='var(--accent)'"
+                                onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text-mid)'">${escapeHtml(q)}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="_helpMessages" style="flex:1;overflow-y:auto;padding:12px 24px;display:flex;flex-direction:column;gap:12px;min-height:160px;">
+
+                </div>
+
+                <!-- Input -->
+                <div style="padding:12px 24px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:flex-end;">
+                    <textarea id="_helpInput" rows="2" placeholder="Ask a question about AIStudio…"
+                        style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;line-height:1.5;box-sizing:border-box;background:#fff;"></textarea>
+                    <button id="_helpSend"
+                        style="flex-shrink:0;height:42px;padding:0 16px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Ask</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        // Replay existing history
+        const msgEl = overlay.querySelector('#_helpMessages');
+        if (_helpHistory.length > 0) {
+            msgEl.innerHTML = '';
+            _helpHistory.forEach(m => _helpAddMsg(msgEl, m.role, m.content, m.isHtml));
+        }
+
+        const input = overlay.querySelector('#_helpInput');
+        input.focus();
+
+        // Send handler
+        const sendHelp = async () => {
+            const q = input.value.trim();
+            if (!q) return;
+            input.value = '';
+            if (msgEl.querySelector('[style*="Ask a question"]')) msgEl.innerHTML = '';
+            _helpAddMsg(msgEl, 'user', q, false);
+            _helpHistory.push({role:'user', content:q, isHtml:false});
+
+            const loadingId = '_helpLoading_' + Date.now();
+            msgEl.innerHTML += `<div id="${loadingId}" style="display:flex;gap:8px;align-items:center;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite;"></div>
+                <span style="font-size:12px;color:var(--text-dim);">Thinking…</span></div>`;
+            msgEl.scrollTop = msgEl.scrollHeight;
+
+            try {
+                const body = {
+                    query: q,
+                    corpus: 'help',
+                    top_k: 5,
+                    temperature: 0.3,
+                    conversation_history: _helpHistory.length > 1
+                        ? _helpHistory.slice(0,-1).map(m => ({role:m.role, content:m.isHtml ? m.content.replace(/<[^>]+>/g,'') : m.content}))
+                        : null
+                };
+                const res = await fetch(`${API}/ask`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                document.getElementById(loadingId)?.remove();
+
+                let html = escapeHtml(data.answer)
+                    .replace(/\[Citation\s*\[?\d+\]?\]/gi, '')  // strip [Citation [N]] and [Citation N]
+                    .replace(/\[CITE\s*\d+\]/gi, '')             // strip [CITE N] variants
+                    .split(/\n\n+/).map(p => p.trim()).filter(p=>p).map(p=>`<p style="margin:0 0 6px;">${p.replace(/\n/g,'<br>')}</p>`).join('');
+                if (data.citations?.length) {
+                    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);">';
+                    data.citations.forEach(c => {
+                        const fname = c.source.split('/').pop();
+                        const pageStr = c.page ? ` p.${c.page}` : '';
+                        const url = `${API}/source?path=${encodeURIComponent(c.source)}${c.page ? '#page='+c.page : ''}`;
+                        html += `<div>[${c.index}] <a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;">${escapeHtml(fname)}</a>${pageStr}</div>`;
+                    });
+                    html += '</div>';
+                }
+                _helpAddMsg(msgEl, 'assistant', html, true);
+                _helpHistory.push({role:'assistant', content:html, isHtml:true});
+            } catch(err) {
+                document.getElementById(loadingId)?.remove();
+                _helpAddMsg(msgEl, 'assistant', `<em style="color:var(--danger)">Error: ${err.message}</em>`, true);
+            }
+            msgEl.scrollTop = msgEl.scrollHeight;
+        };
+
+        overlay.querySelector('#_helpSend').onclick = sendHelp;
+        overlay._sendHelp = sendHelp;  // exposed for suggestion button onclicks
+        input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHelp(); }};
+        overlay.querySelector('#_helpClose').onclick = () => document.body.removeChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) document.body.removeChild(overlay); });
+    }
+
+    function _helpAddMsg(container, role, content, isHtml) {
+        const isUser = role === 'user';
+        const div = document.createElement('div');
+        div.style.cssText = isUser
+            ? 'align-self:flex-end;background:var(--accent);color:white;padding:8px 12px;border-radius:12px 12px 2px 12px;font-size:13px;max-width:85%;line-height:1.5;'
+            : 'align-self:flex-start;background:var(--bg);border:1px solid var(--border);padding:10px 14px;border-radius:2px 12px 12px 12px;font-size:13px;max-width:92%;line-height:1.6;';
+        if (isHtml) div.innerHTML = content;
+        else div.textContent = content;
+        container.appendChild(div);
+    }
+
+    async function renameCorpus() {
+        if (!currentCorpus) return;
+
+        // Fetch chunk count to estimate re-ingest time before showing modal
+        let reindexWarning = '';
+        try {
+            const infoRes = await fetch(`${API}/corpus/${currentCorpus}/info`);
+            const info = await infoRes.json();
+            const chunks = info.chunk_count || 0;
+            if (chunks > 0) {
+                // ~1000 chunks/min on Apple Silicon M4
+                const mins = Math.max(1, Math.round(chunks / 1000));
+                reindexWarning = `<br><span style="font-size:11px;color:var(--text-mid);">⚠ Re-indexing will run in background (~${mins} min for ${chunks.toLocaleString()} chunks).</span>`;
+            }
+        } catch (_) {}
+
+        const newName = await showNameModal(`New name for corpus "${currentCorpus}":${reindexWarning}`, 'Rename Corpus', 'Rename');
+        if (!newName || newName === currentCorpus) return;
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/rename`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_name: newName })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+            await loadCorpora();
+            corpusSelect.value = newName;
+            const oldName = currentCorpus;
+            setCorpus(newName);
+            addSeparator(`Renamed to ${newName}`);
+            addSystemMessage(`✓ Corpus renamed to <strong>${newName}</strong>. Re-indexing in background.`);
+        } catch (err) {
+            addSystemMessage(`❌ Error renaming corpus: ${err.message}`);
+        }
+    }
+
+    // ── Modal helpers ──────────────────────────────────────────────
+    // showModal(config) — single shared modal factory used by all four modal types.
+    // config: { title, body, confirmLabel, cancelLabel, requireYes, inputPlaceholder }
+    // Returns Promise<string|boolean|null>:
+    //   requireYes=true  → resolves true if user typed YES, null if cancelled
+    //   inputPlaceholder → resolves trimmed input string, null if cancelled
+    //   otherwise        → resolves true on confirm, null on cancel
+    function showModal(cfg) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+            const isYes    = !!cfg.requireYes;
+            const isInput  = !!cfg.inputPlaceholder && !isYes;
+            const isDanger = isYes;
+
+            let innerBody = cfg.body ? `<div style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.5;">${cfg.body}</div>` : '';
+
+            let inputHtml = '';
+            if (isYes) {
+                inputHtml = `<input id="_modalInput" type="text" placeholder=""
+                    style="width:3.2em;padding:8px 4px;border:2px solid #dc2626;border-radius:6px;
+                    font-size:14px;font-weight:700;color:#dc2626;text-align:center;outline:none;
+                    box-sizing:border-box;margin-bottom:4px;letter-spacing:0.15em;display:block;margin-left:auto;margin-right:auto;">`;
+            } else if (isInput) {
+                inputHtml = `<input id="_modalInput" type="text" placeholder="${cfg.inputPlaceholder}"
+                    style="width:100%;padding:10px 14px;border:1.5px solid #d0d5dd;border-radius:8px;
+                    font-size:15px;outline:none;box-sizing:border-box;">`;
+            }
+
+            const confirmColor = isDanger ? '#dc2626' : '#2563eb';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
+                    border-radius:16px;padding:28px 32px;width:420px;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:18px;
+                        color:var(--text,#111);">${cfg.title}</div>
+                    ${innerBody}
+                    ${inputHtml}
+                    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+                        <button id="_modalCancel" style="padding:9px 18px;border-radius:8px;
+                            border:1.5px solid var(--border,#d0d5dd);background:transparent;
+                            cursor:pointer;font-size:13px;font-weight:500;
+                            color:var(--text-mid,#555);">${cfg.cancelLabel || 'Cancel'}</button>
+                        <button id="_modalOk" style="padding:9px 18px;border-radius:8px;border:none;
+                            background:${confirmColor};color:white;cursor:pointer;
+                            font-size:13px;font-weight:600;">${cfg.confirmLabel || 'OK'}</button>
+                    </div>
+                </div>`;
+
+            document.body.appendChild(overlay);
+            const input = overlay.querySelector('#_modalInput');
+            if (input) input.focus();
+
+            const finish = (val) => { document.body.removeChild(overlay); resolve(val); };
+
+            overlay.querySelector('#_modalOk').onclick = () => {
+                if (isYes) {
+                    const v = input ? input.value.trim().toUpperCase() : '';
+                    if (v !== 'YES') { input.style.borderColor = '#dc2626'; input.focus(); return; }
+                    finish(true);
+                } else if (isInput) {
+                    finish(input ? (input.value.trim() || null) : null);
+                } else {
+                    finish(true);
+                }
+            };
+            overlay.querySelector('#_modalCancel').onclick = () => finish(null);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+            if (input) input.onkeydown = (e) => {
+                if (e.key === 'Enter') overlay.querySelector('#_modalOk').click();
+                if (e.key === 'Escape') finish(null);
+            };
+        });
+    }
+
+    function showNameModal(label, title='New Corpus', confirmLabel='Create') {
+        return showModal({
+            title: title,
+            body: label,
+            inputPlaceholder: 'e.g. sec_10k',
+            confirmLabel: confirmLabel,
+        });
+    }
+
+    // ── File upload ────────────────────────────────────────────────
+    function openUpload() { uploadModal.classList.add('open'); const t = document.getElementById('uploadModalTitle'); if(t) t.textContent = "Adding Files to Corpus '" + currentCorpus + "'"; const el = document.getElementById('uploadCorpusName'); if(el) el.textContent = currentCorpus; }
+    function closeUpload() {
+        uploadModal.classList.remove('open');
+        window.selectedFile = null; window.selectedFiles = [];
+        document.getElementById('uploadStatus').textContent = '';
+        document.getElementById('confirmUpload').disabled = true;
+        fileInput.value = '';
+    }
+
+    function selectFile(file) { selectFiles([file]); }
+    function selectFiles(files) {
+        window.selectedFiles = Array.from(files).sort((a, b) => a.name.localeCompare(b.name));
+        if (!window.selectedFiles.length) return;
+
+        const totalBytes = window.selectedFiles.reduce((s, f) => s + f.size, 0);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+        const n = window.selectedFiles.length;
+
+        // Build numbered list, truncate at 20
+        const MAX_SHOW = 20;
+        const shown = window.selectedFiles.slice(0, MAX_SHOW);
+        let listHtml = '<ol style="margin:8px 0 0 18px;padding:0;font-size:12px;line-height:1.8;">';
+        shown.forEach(f => {
+            listHtml += `<li>${escapeHtml(f.name)}</li>`;
+        });
+        if (n > MAX_SHOW) {
+            listHtml += `<li style="list-style:none;margin-left:-18px;color:var(--text-dim)">… and ${n - MAX_SHOW} other file${n - MAX_SHOW > 1 ? 's' : ''}</li>`;
+        }
+        listHtml += '</ol>';
+
+        // Update modal title to include count
+        const t = document.getElementById('uploadModalTitle');
+        if (t) t.textContent = `Adding ${n} File${n > 1 ? 's' : ''} to Corpus '${currentCorpus}'`;
+
+        document.getElementById('uploadStatus').innerHTML =
+            `<div style="font-size:12px;color:var(--text-dim);margin-top:6px;">${n} file${n > 1 ? 's' : ''} · ${totalMB} MB total</div>` + listHtml;
+
+        document.getElementById('confirmUpload').disabled = false;
+    }
+
+
+    async function pollIngestStatus(corpus, statusEl, estimated) {
+        // Uses same rich polling logic as upload ingest bar (AIStudio_543)
+        const maxPolls = 300;
+        let polls = 0;
+        const uid = 'pb_' + Date.now();
+        statusEl.innerHTML = `<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="${uid}_bar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div><span id="${uid}_txt" style="font-size:11px;color:var(--text-dim);display:block;margin-top:3px">Indexing…</span>`;
+        const bar = statusEl.querySelector(`#${uid}_bar`);
+        const txt = statusEl.querySelector(`#${uid}_txt`);
+        return new Promise(resolve => {
+            const interval = setInterval(async () => {
+                polls++;
+                try {
+                    const r = await fetch(`${API}/corpus/${corpus}/ingest-status`);
+                    const d = await r.json();
+                    if (d.status === 'running') {
+                        // Use server pct_complete if available (same as upload bar)
+                        const pct = Math.min(99, d.pct_complete || (d.files_total > 0
+                            ? Math.round(d.files_processed / d.files_total * 95)
+                            : Math.min(75, polls * 2)));
+                        if (bar) bar.style.width = pct + '%';
+                        // Rich status text matching upload bar
+                        const ft = d.files_total || 0;
+                        const fp = d.files_processed || 0;
+                        const active = Math.min(fp + 1, ft || 1);
+                        const chunks = d.chunks_written || 0;
+                        const totalBytes = d.total_bytes || 0;
+                        const mbTotal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : null;
+                        const fileSizesSrv = d.file_sizes || [];
+                        const curFileSz = fp < fileSizesSrv.length ? fileSizesSrv[fp] : 0;
+                        const curFileMb = curFileSz > 0 ? (curFileSz / (1024 * 1024)).toFixed(1) : null;
+                        let statusText;
+                        if (ft > 0 && mbTotal && curFileMb) {
+                            statusText = `${active} of ${ft} file(s) being indexed · ${curFileMb} / ${mbTotal} MB · ${pct}% indexed`;
+                        } else if (ft > 0) {
+                            statusText = `${active} of ${ft} file(s) being indexed · ${chunks.toLocaleString()} chunks`;
+                        } else {
+                            statusText = d.message || `Indexing… ${chunks > 0 ? chunks.toLocaleString() + ' chunks' : ''}`;
+                        }
+                        if (txt) txt.textContent = statusText;
+                    } else if (d.status === 'done') {
+                        if (bar) bar.style.width = '100%';
+                        const finalChunks = d.chunks_written || 0;
+                        const ft = d.files_total || 0;
+                        const totalBytes = d.total_bytes || 0;
+                        const mbFinal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : null;
+                        const doneText = mbFinal
+                            ? `${ft} file(s) indexed · ${mbFinal} MB · ${finalChunks.toLocaleString()} chunks`
+                            : `${ft} file(s) indexed · ${finalChunks.toLocaleString()} chunks`;
+                        if (txt) txt.textContent = '✓ ' + doneText;
+                        clearInterval(interval);
+                        resolve('done');
+                    } else if (d.status === 'error') {
+                        if (txt) txt.textContent = '✗ Ingestion failed — check server logs';
+                        clearInterval(interval);
+                        resolve('error');
+                    }
+                } catch (_) {}
+                if (polls >= maxPolls) {
+                    if (txt) txt.textContent = 'Still indexing — check Stats when complete';
+                    clearInterval(interval);
+                    resolve('timeout');
+                }
+            }, 2000);
+        });
+    }
+
+    // ── MD5 helpers ────────────────────────────────────────────────
+    // Compute MD5 of a File object in the browser using SubtleCrypto (SHA-256 proxy)
+    // Note: SubtleCrypto doesn't expose MD5 — we use SHA-256 for the client-side hash
+    // and compare against server MD5. When hashes differ we assume content changed.
+    // For skip detection: server stores MD5 (pipeline.py). Client computes SHA-256.
+    // Because these are different algorithms, we ONLY use the server MD5 endpoint to
+    // check existence — if the endpoint returns 200, the file is indexed. We then
+    // compute SHA-256 locally and compare with SHA-256 of the server file content.
+    // Simpler approach: use server-side MD5 endpoint + ask server to hash the upload.
+    // Implemented: browser computes MD5 via manual implementation (no SubtleCrypto for MD5).
+
+    async function computeMD5(file) {
+        // Read file as ArrayBuffer and compute MD5 using a simple JS implementation
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        // Use SparkMD5 if available, else fall back to a fetch-based server hash
+        if (window.SparkMD5) {
+            const spark = new window.SparkMD5.ArrayBuffer();
+            spark.append(buffer);
+            return spark.end();
+        }
+        // Fallback: return null — server will handle deduplication via Qdrant
+        return null;
+    }
+
+    // Show duplicate alert modal — returns Promise<'skip'|'reingest'>
+    // If applyAll is checked, subsequent calls resolve immediately with the same choice.
+    let _dupBulkDecision = null; // null = ask each time, 'skip' or 'reingest' = bulk
+    function resetDupState() { _dupBulkDecision = null; }
+
+    function showDupModal(filename, applyAll) {
+        if (_dupBulkDecision) return Promise.resolve(_dupBulkDecision);
+        return new Promise(resolve => {
+            const body = document.getElementById('dupModalBody');
+            body.innerHTML = `<strong>${escapeHtml(filename)}</strong> is already indexed in corpus <em>'${currentCorpus}'</em> with identical content.<br><br>Skip it, or re-ingest to replace?`;
+            document.getElementById('dupApplyAll').checked = false;
+            document.getElementById('dupModal').classList.add('open');
+
+            const skipBtn = document.getElementById('dupSkipBtn');
+            const reingestBtn = document.getElementById('dupReingestBtn');
+
+            function decide(choice) {
+                document.getElementById('dupModal').classList.remove('open');
+                if (document.getElementById('dupApplyAll').checked) {
+                    _dupBulkDecision = choice;
+                }
+                skipBtn.removeEventListener('click', onSkip);
+                reingestBtn.removeEventListener('click', onReingest);
+                resolve(choice);
+            }
+            function onSkip() { decide('skip'); }
+            function onReingest() { decide('reingest'); }
+            skipBtn.addEventListener('click', onSkip);
+            reingestBtn.addEventListener('click', onReingest);
+        });
+    }
+
+    async function uploadFile() {
+        const files = (window.selectedFiles && window.selectedFiles.length)
+            ? window.selectedFiles
+            : (fileInput.files && fileInput.files.length ? Array.from(fileInput.files) : null);
+        if (!files || !files.length || !currentCorpus) return;
+        document.getElementById('confirmUpload').disabled = true;
+        closeUpload();
+        hideEmpty();
+        resetDupState();
+
+        // ── Phase 2: Duplicate check ───────────────────────────────
+        // For each file, check if it's already indexed. If so, check MD5.
+        // If identical → ask user skip/reingest. If different → always reingest.
+        const toUpload = []; // files cleared for upload
+        for (const file of files) {
+            let serverMd5 = null;
+            try {
+                const r = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(file.name)}/md5`);
+                if (r.ok) {
+                    const data = await r.json();
+                    serverMd5 = data.md5 || null;
+                }
+            } catch (_) { /* network error — treat as not indexed */ }
+
+            if (serverMd5) {
+                // File is indexed — compute local MD5 and compare
+                const localMd5 = await computeMD5(file);
+                if (localMd5 && localMd5 === serverMd5) {
+                    // Identical content — ask user
+                    const decision = await showDupModal(file.name, _dupBulkDecision !== null);
+                    if (decision === 'skip') continue; // skip this file
+                    // reingest — fall through to upload
+                }
+                // Different content (or couldn't compute local MD5) — always reingest
+            }
+            toUpload.push(file);
+        }
+
+        if (toUpload.length === 0) {
+            addSystemMessage('All files already indexed — nothing to upload.');
+            window.selectedFiles = [];
+            return;
+        }
+
+        // ── Phase 3: Copy files into corpus ───────────────────────
+        const totalBytes = toUpload.reduce((s, f) => s + f.size, 0);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        const copyUid = 'cp_' + Date.now();
+        const copyMsgDiv = addMessage('assistant',
+            `<span class='copy-status'>Copying ${toUpload.length} file${toUpload.length > 1 ? 's' : ''} into corpus <em>'${currentCorpus}'</em>…</span><br>` +
+            `<small class='copy-progress' style='color:var(--text-dim);display:block'>0 of ${toUpload.length} files · 0.0 of ${totalMB} MB</small>` +
+            `<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="${copyUid}_bar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.3s ease"></div></div>`,
+            true);
+        const copyProgressEl = copyMsgDiv ? copyMsgDiv.querySelector('.copy-progress') : null;
+        const copyBar = document.getElementById(`${copyUid}_bar`);
+
+        const saved = [];
+        let bytesCopied = 0;
+        for (const file of toUpload) {
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch(`${API}/corpus/${currentCorpus}/upload`, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+                saved.push(file.name);
+                bytesCopied += file.size;
+                const pct = Math.round(bytesCopied / totalBytes * 100);
+                const mbDone = (bytesCopied / (1024 * 1024)).toFixed(1);
+                if (copyProgressEl) copyProgressEl.textContent = `${saved.length} of ${toUpload.length} files · ${mbDone} of ${totalMB} MB`;
+                if (copyBar) copyBar.style.width = pct + '%';
+            } catch (err) {
+                addMessage('assistant', `✗ Error saving ${file.name}: ${err.message}`, false);
+            }
+        }
+
+        if (saved.length === 0) { window.selectedFiles = []; return; }
+
+        // Update copy message to show completion
+        const copyStatusEl = copyMsgDiv ? copyMsgDiv.querySelector('.copy-status') : null;
+        if (copyStatusEl) copyStatusEl.innerHTML = `✓ ${saved.length} file${saved.length > 1 ? 's' : ''} copied into corpus <em>'${currentCorpus}'</em>`;
+        if (copyBar) copyBar.style.width = '100%';
+
+        // ── Phase 4: Indexing with file-size-weighted progress ────
+        // Progress is weighted by file size — each file contributes its proportional
+        // share of the bar. Advances as Qdrant chunk count grows, using file size
+        // as a proxy for expected chunks (BYTES_PER_CHUNK ≈ 350 bytes avg).
+        // This prevents the bar from jumping to 100% on first Qdrant poll.
+        const ingestUid = 'ing_' + Date.now();
+
+        // Build per-file size weights from the upload batch
+        // toUpload is available in scope from Phase 3 (copy phase)
+        const fileSizes = toUpload.map(f => f.size);  // bytes per file in upload order
+        const totalBytes_ingest = fileSizes.reduce((s, b) => s + b, 0);
+        const BYTES_PER_CHUNK = 350; // avg bytes per chunk — used to estimate expected chunks
+        const expectedTotalChunks = Math.round(totalBytes_ingest / BYTES_PER_CHUNK);
+        // Cumulative weight thresholds: file N completes when bar reaches weights[N]
+        const fileWeights = fileSizes.map(sz => sz / totalBytes_ingest);
+        const fileCumulative = fileWeights.reduce((acc, w) => {
+            acc.push((acc.length ? acc[acc.length - 1] : 0) + w);
+            return acc;
+        }, []);
+
+        const ingestMsgDiv = addMessage('assistant',
+            `<span class='ingest-header'>Indexing <em>'${currentCorpus}'</em>…</span>` +
+            `<button id="${ingestUid}_cancel" onclick="cancelIngest('${currentCorpus}','${ingestUid}')" style="margin-left:10px;font-size:11px;padding:2px 8px;border:1px solid var(--warning,#f59e0b);border-radius:4px;background:transparent;color:var(--warning,#f59e0b);cursor:pointer;">⊘ Cancel</button><br>` +
+            `<small class='ingest-status' style='color:var(--text-dim);display:block'>Starting…</small>` +
+            `<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="${ingestUid}_bar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div>`,
+            true);
+        const ingestStatusEl = ingestMsgDiv ? ingestMsgDiv.querySelector('.ingest-status') : null;
+        const ingestBar = document.getElementById(`${ingestUid}_bar`);
+        const ingestHeaderEl = ingestMsgDiv ? ingestMsgDiv.querySelector('.ingest-header') : null;
+
+        try {
+            await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
+
+            const totalMBNum = totalBytes_ingest / (1024 * 1024);
+            const maxPolls = 300;
+            let polls = 0;
+            let lastChunks = 0;
+
+            await new Promise(resolve => {
+                const interval = setInterval(async () => {
+                    polls++;
+                    try {
+                        const r = await fetch(`${API}/corpus/${currentCorpus}/ingest-status`);
+                        const d = await r.json();
+
+                        if (d.status === 'running') {
+                            // Use server-computed pct_complete (D(k) based) and file sizes
+                            const ft = d.files_total || fileSizes.length || 1;
+                            const fp = d.files_processed || 0;
+                            const active = Math.min(fp + 1, ft);
+                            const totalByt = d.total_bytes || totalBytes_ingest || 0;
+                            const mbTotal = totalByt > 0 ? (totalByt / (1024 * 1024)).toFixed(1) : '?';
+                            // Current file size from pre-scan list (alphabetical order)
+                            const fileSizesSrv = d.file_sizes || [];
+                            const curFileSz = fp < fileSizesSrv.length ? fileSizesSrv[fp] : 0;
+                            const curFileMb = curFileSz > 0 ? (curFileSz / (1024 * 1024)).toFixed(1) : null;
+                            // D(k) based % completion from server, capped at 99
+                            const pct = Math.min(99, d.pct_complete || 0);
+                            const chunks = d.chunks_written || 0;
+
+                            if (ingestBar) ingestBar.style.width = pct + '%';
+                            let statusText;
+                            if (curFileMb && totalByt > 0) {
+                                statusText = `File ${active} of ${ft} being indexed · ${curFileMb}MB out of ${mbTotal}MB Total · ${chunks.toLocaleString()} chunks · ~ ${pct}% completed`;
+                            } else if (totalByt > 0) {
+                                statusText = `File ${active} of ${ft} being indexed · ${mbTotal}MB Total · ${chunks.toLocaleString()} chunks · ~ ${pct}% completed`;
+                            } else {
+                                statusText = `File ${active} of ${ft} being indexed · ${chunks.toLocaleString()} chunks`;
+                            }
+                            if (ingestStatusEl) ingestStatusEl.textContent = statusText;
+
+                        } else if (d.status === 'done') {
+                            if (ingestBar) ingestBar.style.width = '100%';
+                            const finalChunks = d.chunks_written || 0;
+                            const totalBytFinal = d.total_bytes || totalBytes_ingest || 0;
+                            const mbTotalFinal = totalBytFinal > 0 ? (totalBytFinal / (1024 * 1024)).toFixed(1) : null;
+                            const ftFinal = d.files_total || fileSizes.length || saved.length;
+                            let doneText = mbTotalFinal
+                                ? `File ${ftFinal} of ${ftFinal} indexed · ${mbTotalFinal}MB · ${finalChunks.toLocaleString()} chunks`
+                                : `${ftFinal} file${ftFinal !== 1 ? 's' : ''} indexed · ${finalChunks.toLocaleString()} chunks`;
+                            if (ingestStatusEl) ingestStatusEl.textContent = '✓ ' + doneText;
+                            if (ingestHeaderEl) ingestHeaderEl.innerHTML =
+                                `✓ ${saved.length} file${saved.length > 1 ? 's' : ''} indexed into corpus <em>'${currentCorpus}'</em>`;
+                            const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
+                            if (cancelBtn) cancelBtn.remove();
+                            clearInterval(interval);
+                            resolve('done');
+                        } else if (d.status === 'error') {
+                            if (ingestStatusEl) ingestStatusEl.textContent = '✗ Ingestion failed — check server logs';
+                            if (ingestHeaderEl) ingestHeaderEl.innerHTML =
+                                `✗ Ingestion failed for corpus <em>'${currentCorpus}'</em>`;
+                            const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
+                            if (cancelBtn) cancelBtn.remove();
+                            clearInterval(interval);
+                            resolve('error');
+                        } else if (d.status === 'cancelled') {
+                            const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
+                            if (cancelBtn) cancelBtn.remove();
+                            if (ingestBar) ingestBar.style.width = '0%';
+                            const filesCompleted = d.files_completed || 0;
+                            if (ingestStatusEl) ingestStatusEl.textContent =
+                                `⊘ Cancelled — ${filesCompleted} file${filesCompleted !== 1 ? 's' : ''} completed before cancel`;
+                            if (ingestHeaderEl) ingestHeaderEl.innerHTML =
+                                `⊘ Ingestion cancelled for corpus <em>'${currentCorpus}'</em>`;
+                            clearInterval(interval);
+                            resolve('cancelled');
+                        }
+                    } catch (_) {}
+                    if (polls >= maxPolls) {
+                        if (ingestStatusEl) ingestStatusEl.textContent = 'Still indexing — check Stats when complete';
+                        const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
+                        if (cancelBtn) cancelBtn.remove();
+                        clearInterval(interval);
+                        resolve('timeout');
+                    }
+                }, 2000);
+            });
+        } catch (err) {
+            if (ingestStatusEl) ingestStatusEl.textContent = `Ingest trigger failed: ${err.message}`;
+        }
+
+        window.selectedFiles = [];
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────
+    async function cancelIngest(corpusName, uid) {
+        const btn = document.getElementById(uid + '_cancel');
+        if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+        try {
+            await fetch(`${API}/corpus/${corpusName}/ingest-cancel`, { method: 'POST' });
+        } catch (_) {}
+    }
+
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // ── Event listeners ────────────────────────────────────────────
+    sendBtn.addEventListener('click', sendMessage);
+
+    chatInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    });
+
+    corpusSelect.addEventListener('change', e => setCorpus(e.target.value));
+    modelSelect.addEventListener('change', () => prewarmModel());
+
+    document.getElementById('addFileBtn').addEventListener('click', openUpload);
+    document.getElementById('inspectBtn').addEventListener('click', showEdit);
+    document.getElementById('inspectFileBtn').addEventListener('click', inspectCorpus);
+    document.getElementById('deleteCorpusBtn').addEventListener('click', async function() {
+        if (!currentCorpus) return;
+        const confirmed = await showModal({
+            title: "Delete Corpus \'" + currentCorpus + "\'",
+            body: 'All files and index data will be moved to Trash. This corpus will no longer be available for queries. To restore, see HOWTO.',
+            confirmLabel: 'Delete',
+            requireYes: true,
+        });
+        if (!confirmed) {
+            addSystemMessage('Corpus deletion cancelled.');
+            return;
+        }
+        try {
+            const res = await fetch(API + '/corpus/' + currentCorpus + '?confirm=yes', { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'HTTP ' + res.status);
+            fetch(`${API}/howto`).then(r=>r.json()).then(d=>{
+                const link = `<a href="${API}/source?path=${encodeURIComponent('HOWTO.pdf')}" target="_blank">HOWTO</a>`;
+                addSystemMessage('Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore manually, see ' + link + '.');
+            }).catch(()=>{
+                addSystemMessage('Corpus <strong>' + currentCorpus + '</strong> moved to Trash. To restore, see <a href="' + API + '/source?path=HOWTO.pdf" target="_blank">HOWTO.pdf</a>.');
+            });
+            await loadCorpora();
+        } catch (err) {
+            addMessage('assistant', 'Error: ' + err.message, false);
+        }
+    });
+    // About button wired inline via onclick in header
+    document.getElementById('newCorpusBtn').addEventListener('click', createCorpus);
+    document.getElementById('renameCorpusBtn').addEventListener('click', renameCorpus);
+    document.getElementById('clearBtn').addEventListener('click', clearConversation);
+
+    document.getElementById('cancelUpload').addEventListener('click', closeUpload);
+    document.getElementById('confirmUpload').addEventListener('click', uploadFile);
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => { if (e.target.files.length) selectFiles(e.target.files);; });
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('over');
+        if (e.dataTransfer.files.length) selectFiles(e.dataTransfer.files);
+    });
+
+    init();
+</script>
+</body>
+</html>

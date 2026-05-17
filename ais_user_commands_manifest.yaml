@@ -1,0 +1,32 @@
+version: 1.0.0
+regenerated_from: meta/bundle_manifest.yaml
+regenerated_at: '2026-05-14T20:08:04'
+commands:
+- alias: ais_bench
+  path: ais_bench.sh
+  description: "Run AIStudio benchmark \u2014 defaults: demo corpus, top-k 5, temperature\
+    \ 0.3"
+- alias: ais_download_sec_10k
+  path: ais_download_sec_10k.sh
+  description: Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/
+- alias: ais_help
+  path: ais_help.sh
+  description: "AIStudio command help \u2014 list all ais_* commands with one-line\
+    \ descriptions"
+- alias: ais_start
+  path: ais_start.sh
+  description: "Start all AIStudio services \u2014 Qdrant, Ollama, FastAPI, opens\
+    \ UI; first-run auto-indexes demo and help corpora"
+- alias: ais_stop
+  path: ais_stop.sh
+  description: "Stop all AIStudio services \u2014 Qdrant and FastAPI backend"
+- alias: ais_log
+  path: ais_log.sh
+  description: Tail the AIStudio backend log
+- alias: ais_ingest_sec_10k
+  path: ais_ingest_sec_10k.sh
+  description: "Ingest SEC 10-K corpus \u2014 143 filings from 25 major financial\
+    \ services firms (~30 min)"
+- alias: ais_create_shortcut
+  path: ais_create_shortcut
+  description: Create AIStudio desktop shortcut and app icon on macOS

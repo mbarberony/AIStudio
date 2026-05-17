@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+src/*.egg-info/
+.coverage
+
+# Environment
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+
+# AIStudio — meta (operator only, travels via BUNDLE)
+meta/
+
+# AIStudio — operator scripts (gitignored, travels via BUNDLE)
+scripts/deploy_files.sh
+scripts/generate_packet.sh
+scripts/bundle_session.sh
+scripts/fix_zshrc.py
+scripts/.deploy_map
+scripts/ais_backup.sh
+scripts/ais_commit.sh
+scripts/ais_publish.sh
+scripts/restore_scripts.sh
+scripts/update_help_corpus.py
+scripts/update_help_corpus_ops.py
+ais_update_help_ops.sh
+ais_ingest_help_ops.sh
+ais_bench_ops.sh
+ais_help_ops.sh
+ais_ingest_test_ops.sh
+ais_update_demo_ops.sh
+ais_bench_sec_10k_ops
+
+# AIStudio — corpus data (large files, not in repo)
+data/corpora/*
+!data/corpora/demo/
+!data/corpora/demo/uploads/
+!data/corpora/demo/uploads/*
+!data/corpora/demo/demo_corpus_metadata.yaml
+data/corpora/demo/uploads/trash/
+data/corpora/demo/index.jsonl
+data/corpora/demo/manifest.jsonl
+data/corpora/demo/doc_chunk_map.json
+
+# AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
+data/corpora/sec_10k/*
+
+# AIStudio — help corpus (PDFs shipped, runtime files excluded)
+!data/corpora/help/
+!data/corpora/help/uploads/
+!data/corpora/help/uploads/*
+!data/corpora/help/help_corpus_metadata.yaml
+data/corpora/help/uploads/trash/
+data/corpora/help/trash/
+data/corpora/help/doc_chunk_map.json
+data/corpora/help/index.jsonl
+data/corpora/help/manifest.jsonl
+
+# AIStudio — sec_10k corpus benchmark (user builds their own — see QUICKSTART Step 7)
+benchmarks/sec_10k/
+
+# AIStudio — operator docs (gitignored, travels via BUNDLE)
+DEMO_SCRIPT.md
+HOWTO_OPS.md
+
+# AIStudio — operator install artifacts
+ais_install_ops
+install_ops
+install_ops.sh
+ais_build_ops_kit_ops.sh
+ais_clean_install_ops.sh
+ais_clean_install.sh
+
+# Legacy artifacts
+BASH_CHEATSHEET.md
+QuickReferenceGuide.docx
+QuickReferenceGuide.md
+ais_sec_download.sh
+
+# epaves (set aside files, recoverable)
+epaves/
+
+# Pipeline (operator only, never in public repo)
+PIPELINE.md
+meta/job_hunting/Thought Leadership and References/
+ais_command_help_ops.txt
+
+ais_update_corpus_ops.sh
+scripts/urc/

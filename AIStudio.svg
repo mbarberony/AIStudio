@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: rounded square, off-white matching AIStudio UI bg -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#F5F4F0"/>
+
+  <!-- Lock icon — matches the assistant avatar in the UI -->
+  <rect x="176" y="230" width="160" height="130" rx="18" ry="18" fill="none" stroke="#1a1a1a" stroke-width="22"/>
+  <path d="M196 230 v-38 a60 60 0 0 1 120 0 v38" fill="none" stroke="#1a1a1a" stroke-width="22" stroke-linecap="round"/>
+  <!-- Keyhole dot -->
+  <circle cx="256" cy="284" r="16" fill="#1a1a1a"/>
+  <!-- Keyhole slot -->
+  <rect x="248" y="284" width="16" height="34" rx="8" fill="#1a1a1a"/>
+
+  <!-- "AI" text — bold dark -->
+  <text x="256" y="430" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+        font-size="72" font-weight="700" fill="#1a1a1a"
+        text-anchor="middle" letter-spacing="-1">AI</text>
+
+  <!-- "Studio" text — accent blue, matching var(--accent) #3B6FE8 approx -->
+  <text x="256" y="490" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
+        font-size="52" font-weight="500" fill="#3B6FE8"
+        text-anchor="middle" letter-spacing="1">Studio</text>
+</svg>
