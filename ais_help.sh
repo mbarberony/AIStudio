@@ -4,14 +4,14 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.0.2"
+VERSION="2.0.3"
 SCRIPT_DIR="${0:A:h}"
 SCRIPT_NAME="ais_help"
 HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
-        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
         echo "$SCRIPT_NAME v$VERSION"
         echo "Usage: ais_help [<command>]"
@@ -58,6 +58,7 @@ echo ""
 echo "── Corpus & Data ────────────────────────────────────────────"
 echo "  ais_download_sec_10k  Download SEC 10-K corpus from EDGAR (~2GB)"
 echo "  ais_ingest_sec_10k    Ingest SEC 10-K corpus (~30 min, backend required)"
+echo "  ais_download_esef     Download ESEF iXBRL corpus from filings.xbrl.org (~10 European banks)"
 echo ""
 echo "── Benchmarking ─────────────────────────────────────────────"
 echo "  ais_bench             Run benchmark on demo corpus (default settings)"

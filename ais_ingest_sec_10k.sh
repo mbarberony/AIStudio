@@ -2,6 +2,9 @@
 # ais_ingest_sec_10k.sh — Ingest the SEC 10-K corpus into AIStudio
 # Version: 1.3.1
 # Changelog:
+#   1.3.2 — AIStudio_673: Populate --- Setup section with effective config defaults.
+#           Ingest summary now shown as human-readable table (via __main__.py).
+#           Raw JSON output moved to --verbose flag in __main__.py.
 #   1.3.1 — Wrap ingest with caffeinate -i to prevent macOS sleep during long runs.
 #           Updated "leave terminal open" message to clarify "minimized but not closed."
 #           Hardware-aware time estimate: Pro vs Air.
@@ -17,7 +20,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.1"
+VERSION="1.3.2"
 
 SCRIPT_NAME="ais_ingest_sec_10k"
 REPO="${0:A:h}"
@@ -25,7 +28,7 @@ HELP_FILE="$REPO/ais_command_help.txt"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
-        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
         echo "$SCRIPT_NAME v$VERSION"
         echo ""
@@ -72,6 +75,11 @@ echo "✅ Backend healthy."
 # --- Setup
 echo ""
 echo "--- Setup"
+echo "· Corpus     : sec_10k (25 firms × 5 filings target)"
+echo "· Chunk size : 1200 chars · Overlap: 200 chars"
+echo "· Embed model: nomic-embed-text"
+echo "· Normalizer : Document-Head Extraction + Temporal Context Injection (pipeline.py v1.7.0)"
+echo "· Source     : $UPLOADS"
 
 # Create benchmarks/sec_10k/ on first run
 if [[ ! -d "$BENCH_DIR" ]]; then
@@ -193,7 +201,6 @@ echo "--- Ingesting"
 echo "▶ Ingesting $FILE_COUNT filings — ~35 min on M4 Pro 128 GB / ~90 min on M4 Air 16 GB."
 echo "· This terminal can be minimized but not closed."
 echo "· Sleep prevention: caffeinate -i is wrapping the run to keep the Mac awake."
-echo ""
 
 cd "$REPO"
 source .venv/bin/activate

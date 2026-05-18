@@ -45,3 +45,4 @@ wheel
 # langchain         # deliberately excluded — see docs/dependencies.md
 pyyaml
 requests
+certifi  # SSL certificate bundle — required for urllib HTTPS on macOS (ais_download_* commands)

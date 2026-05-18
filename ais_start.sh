@@ -32,7 +32,7 @@ _sep() {
 # ── Help ──────────────────────────────────────────────────────────────────────
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
-        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+        awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
         echo "$SCRIPT_NAME v$VERSION — Start all AIStudio services"
         echo ""

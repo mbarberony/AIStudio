@@ -1,4 +1,32 @@
-# Version: 1.6.8
+# Version: 1.7.7
+# Changelog: 1.7.7 — Fix I001: blank line between stdlib and third-party imports. Fix import block ordering per isort convention.
+# Changelog: 1.7.6 — Move re and bs4 imports to top-level (fixes persistent I001/E402 lint). No late imports needed — bs4 is always available in the venv.
+# Changelog: 1.7.5 — Fix I001 noqa on first line of late import blocks (block-level suppression).
+# Changelog: 1.7.4 — Fix I001 import order in late imports: bs4 before re (alphabetical).
+# Changelog: 1.7.3 — Lint fixes: SIM102 combine nested if statements (4 instances);
+#             I001 noqa annotations for intentional late imports of re + BeautifulSoup
+#             inside try blocks (E402/I001 — late import is correct pattern here,
+#             avoids loading BeautifulSoup for non-HTML files).
+# Changelog: 1.7.2 — Bug fix: company_prefixes NameError — initialized outside
+#            Strategy 1b block so mismatch detection can reference it even when
+#            entity found via Strategy 1a. Was silently swallowed by except clause
+#            causing all files to return (None, None, None, None, False).
+# Changelog: 1.7.1 — Bug fixes: (1) _tqdm_write argument order reversed (pbar, msg)
+#            (2) ZeroDivisionError on _chunks_per_sec when first file too fast.
+# Changelog: 1.7.0 — AIStudio_682: Merge _extract_document_head() and
+#            _extract_fiscal_year() into single _extract_document_metadata()
+#            returning (entity, year, format, strategy, mismatch). Single
+#            BeautifulSoup parse per file — eliminates duplicate DOM parse.
+#            AIStudio_675: emit per-file [normalizer] message via _tqdm_write
+#            showing format detected, entity+year extracted, strategy used,
+#            and mismatch warning when company namespace prefix doesn't match
+#            filename stem.
+# Changelog: 1.6.9 — AIStudio_673: Replace tqdm EMA rate/remaining with exact
+#            calculation from true elapsed time and file count. True avg =
+#            elapsed / files_done; true remaining = (total - done) × true_avg.
+#            Also Option A bar_format: "[elapsed: HH:MM · remaining: ~HH:MM · avg: Xs/file]".
+#            EMA was misleading — fluctuated 15→12s/file as file sizes varied while
+#            true average was stable at ~18s/file.
 # Changelog: 1.6.8 — AIStudio_674: Temporal Context Injection. New function
 #            _extract_fiscal_year() extracts dei:DocumentFiscalYearFocus from inline
 #            XBRL files — the SEC-mandated 4-digit fiscal year tag, always present in
@@ -60,12 +88,15 @@ import contextlib
 import hashlib
 import json
 import os as _os
+import re
 import sys as _sys
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from bs4 import BeautifulSoup
 
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.ingest.chunking import chunk_text
@@ -269,8 +300,6 @@ def _extract_document_head(
 
     if file_path is not None and file_path.suffix.lower() in (".htm", ".html"):
         try:
-            import re as _re2
-            from bs4 import BeautifulSoup
 
             # SEC-standard extensions that appear across all filers — not company-specific.
             _XBRL_STD = {
@@ -303,10 +332,10 @@ def _extract_document_head(
             #   - Strip trailing footnote superscripts
             # BNY Mellon pattern: Exhibit 13.1 → FINANCIAL SECTION → entity name
             # → entity name appears at 3rd/4th visible element, after single-word headers
-            _SKIP_PATTERNS = _re2.compile(
+            _SKIP_PATTERNS = re.compile(  # noqa: F823
                 r"^(Exhibit\s+\d|Table\s+of|Annual\s+Report|Financial\s+(Review|Section|"
                 r"Summary|Highlights|Statements?)|Overview|General|Contents|Index)$",
-                _re2.IGNORECASE,
+                re.IGNORECASE,
             )
             _ENTITY_SUFFIXES = (
                 "corporation", "company", "incorporated", "inc", "corp",
@@ -317,20 +346,18 @@ def _extract_document_head(
             for tag in soup.find_all(["p", "span", "div", "td"]):
                 txt = tag.get_text(strip=True)
                 # Strip trailing footnote superscripts (digits, *, †, ‡, §)
-                txt = _re2.sub(r"[\d\*†‡§]+$", "", txt).strip()
+                txt = re.sub(r"[\d\*†‡§]+$", "", txt).strip()
                 if not txt or len(txt) < 8 or len(txt) > 100:
                     continue
                 if _SKIP_PATTERNS.match(txt):
                     continue
                 words = txt.split()
                 # ALL-CAPS multi-word: require 2+ words, all uppercase letters/spaces/&
-                if txt == txt.upper() and txt.replace("&", "").replace(" ", "").isalpha():
-                    if len(words) >= 2:
+                if txt == txt.upper() and txt.replace("&", "").replace(" ", "").isalpha() and len(words) >= 2:
                         return txt
                 # Title-Case ending with known entity suffix
                 last_word = words[-1].lower().rstrip(".,")
-                if last_word in _ENTITY_SUFFIXES and len(words) >= 2:
-                    if words[0][0].isupper():
+                if last_word in _ENTITY_SUFFIXES and len(words) >= 2 and words[0][0].isupper():
                         return txt
 
         except Exception:
@@ -359,38 +386,131 @@ def _extract_document_head(
     return None
 
 
-def _extract_fiscal_year(file_path: Path | None) -> str | None:
+def _extract_document_metadata(
+    file_path: Path | None,
+) -> tuple[str | None, str | None, str | None, str | None, bool]:
     """
-    AIStudio_674 — Temporal Context Injection.
+    AIStudio_682 — Merged Document-Head + Temporal Context extraction.
 
-    Extract the fiscal year from an inline XBRL HTML file using the SEC-mandated
-    dei:DocumentFiscalYearFocus tag. This tag is required for all 10-K, 10-Q, and
-    20-F filings and contains the 4-digit fiscal year (e.g. "2025").
+    Replaces separate _extract_document_head() + _extract_fiscal_year() calls
+    with a single BeautifulSoup parse. Eliminates duplicate DOM parse per file.
 
-    Used alongside _extract_document_head() to build a complete chunk prefix:
-    "[Document: JPMorgan Chase & Co. FY2025]"
+    Returns (entity, year, format_name, strategy, mismatch) where:
+      entity      — extracted entity name or None
+      year        — 4-digit fiscal year string or None
+      format_name — "SEC_XBRL" | "ESEF" | "UK_GAAP" | "plain_html" | None
+      strategy    — "1a" | "1b" | "2" | None
+      mismatch    — True if company namespace prefix doesn't match filename stem
 
-    Returns the 4-digit year string or None. None is a no-op — the caller falls
-    back to entity-only prefix "[Document: <entity>]" when year is unavailable.
-    Only applies to .htm/.html files; non-HTML files return None immediately.
+    None entity is a no-op — caller uses entity-only or no prefix.
+    Only applies to .htm/.html files; non-HTML returns (None, None, None, None, False).
     """
     if _os.getenv("AISTUDIO_DOC_HEAD_NORMALIZER", "true").lower() == "false":
-        return None
+        return None, None, None, None, False
 
     if file_path is None or file_path.suffix.lower() not in (".htm", ".html"):
-        return None
+        return None, None, None, None, False
+
+
+    _XBRL_STD = {
+        "dei", "us-gaap", "us-roles", "us-types", "xbrli", "xbrldi",
+        "xlink", "iso4217", "num", "nonnum", "ref", "ix", "ixt",
+        "link", "xl", "xsi", "xml", "srt", "ecd", "cyd",
+    }
+    _XML_ENTITY_REGISTRY = [
+        ("SEC_XBRL", "dei:",       "dei:EntityRegistrantName",                                    "1a"),
+        ("ESEF",     "ifrs-full:", "ifrs-full:NameOfReportingEntityOrOtherMeansOfIdentification", "1a"),
+        ("UK_GAAP",  "uk-bus:",    "uk-bus:NameOfUltimateParentOfGroup",                          "1a"),
+        ("UK_GAAP",  "uk-gaap:",   "uk-gaap:EntityCurrentLegalOrRegisteredName",                  "1a"),
+    ]
+    _SKIP_PATTERNS = re.compile(
+        r"^(Exhibit\s+\d|Table\s+of|Annual\s+Report|Financial\s+(Review|Section|"
+        r"Summary|Highlights|Statements?)|Overview|General|Contents|Index)$",
+        re.IGNORECASE,
+    )
+    _ENTITY_SUFFIXES = (
+        "corporation", "company", "incorporated", "inc", "corp",
+        "ltd", "llc", "lp", "l.p.", "n.a.", "group", "holdings",
+        "bancorp", "bancshares", "trust", "partners", "capital",
+        "financial", "services", "fund",
+    )
 
     try:
-        from bs4 import BeautifulSoup
         soup = BeautifulSoup(file_path.read_bytes(), "html.parser")
-        tag = soup.find(attrs={"name": "dei:DocumentFiscalYearFocus"})
-        if tag:
-            year = tag.get_text(strip=True)
-            if year and year.isdigit() and len(year) == 4:
-                return year
+
+        # Strategy 1a — authoritative entity tag from XML namespace registry
+        entity = None
+        year = None
+        fmt = None
+        strategy = None
+
+        for format_name, _ns_prefix, entity_tag, strat in _XML_ENTITY_REGISTRY:
+            tag = soup.find(attrs={"name": entity_tag})
+            if tag:
+                val = tag.get_text(strip=True)
+                if val:
+                    entity = val
+                    fmt = format_name
+                    strategy = strat
+                    break
+
+        # Extract fiscal year (single parse — same soup object)
+        year_tag = soup.find(attrs={"name": "dei:DocumentFiscalYearFocus"})
+        if year_tag:
+            yr = year_tag.get_text(strip=True)
+            if yr and yr.isdigit() and len(yr) == 4:
+                year = yr
+
+        # Strategy 1b — visible text scan (fallback for older XBRL without entity tag)
+        company_prefixes = set()  # initialized here so mismatch block can always reference it
+        if entity is None:
+            for tag in soup.find_all(attrs={"name": True}):
+                ns = tag.get("name", "").split(":")[0]
+                if ns and ns not in _XBRL_STD:
+                    company_prefixes.add(ns)
+
+            if company_prefixes:
+                fmt = "SEC_XBRL"
+                strategy = "1b"
+                for tag in soup.find_all(["p", "span", "div", "td"]):
+                    txt = tag.get_text(strip=True)
+                    txt = re.sub(r"[\d\*†‡§]+$", "", txt).strip()
+                    if not txt or len(txt) < 8 or len(txt) > 100:
+                        continue
+                    if _SKIP_PATTERNS.match(txt):
+                        continue
+                    words = txt.split()
+                    if txt == txt.upper() and txt.replace("&", "").replace(" ", "").isalpha() and len(words) >= 2:
+                            entity = txt
+                            break
+                    last_word = words[-1].lower().rstrip(".,")
+                    if last_word in _ENTITY_SUFFIXES and len(words) >= 2 and words[0][0].isupper():
+                            entity = txt
+                            break
+
+        # Mismatch detection — company namespace prefix vs filename stem
+        mismatch = False
+        if entity and file_path and company_prefixes:
+            stem_lower = file_path.stem.lower()
+            for prefix in company_prefixes:
+                if prefix not in _XBRL_STD:
+                    # If prefix doesn't appear anywhere in filename → mismatch
+                    if prefix.lower() not in stem_lower:
+                        # Additional check: entity name words vs filename
+                        entity_words = set(re.sub(r"[^a-z]", " ", entity.lower()).split())
+                        stem_words = set(re.sub(r"[^a-z]", " ", stem_lower).split())
+                        overlap = entity_words & stem_words - {"the", "of", "and", "inc", "corp", "group"}
+                        if not overlap:
+                            mismatch = True
+                    break
+
+        if entity is None:
+            fmt = "plain_html" if fmt is None else fmt
+
+        return entity, year, fmt, strategy, mismatch
+
     except Exception:
-        pass
-    return None
+        return None, None, None, None, False
 
 
 
@@ -499,8 +619,19 @@ def ingest_corpus(
     # corpus size. Qdrant gets live chunk counts as each file completes,
     # enabling accurate progress reporting.
 
+    # Pre-compute total bytes for byte-based progress estimation (same algo as UI).
+    # Byte-based is more accurate than file-count-based because file sizes vary
+    # significantly — larger files take proportionally more time to embed.
+    _total_bytes = sum(f.stat().st_size for f in discovered if f.is_file())
+
     if tqdm_cls is not None:
-        p_process = tqdm_cls(total=len(discovered), desc="Process", unit=" file", ncols=100)
+        p_process = tqdm_cls(
+            total=len(discovered),
+            desc="Process",
+            unit=" file",
+            ncols=120,
+            bar_format="{l_bar}{bar}| {n}/{total} [{postfix}]",
+        )
     else:
         p_process = None
 
@@ -510,6 +641,40 @@ def ingest_corpus(
             if ext not in SUPPORTED_EXTS or file_path.name.startswith("~$"):
                 if p_process is not None:
                     p_process.update(1)
+                    # Chunk-based progress estimation — same algorithm as the UI
+                    # (AIStudio_613 / api.py). Time scales with chunks not bytes
+                    # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
+                    # "time scales linearly with chunks, not file size").
+                    # d_observed = chunks/byte ratio, self-corrects each file.
+                    # D_SEED = 200/MB starting estimate (same as api.py reconciled seed).
+                    # remaining = remaining_chunks_est / chunks_per_sec
+                    _D_SEED = 200.0 / (1024 * 1024)  # 200 chunks/MB starting estimate
+                    _elapsed = time.time() - t0
+                    _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
+                    _d_obs = (
+                        chunks_written / _bytes_done
+                        if _bytes_done > 0
+                        else _D_SEED
+                    )
+                    # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
+                    _d_obs = max(1e-5, min(1e-2, _d_obs))
+                    _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
+                    _est_total_chunks = _d_obs * _total_bytes
+                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
+                    _remaining = (
+                        _est_remaining_chunks / _chunks_per_sec
+                        if _chunks_per_sec > 0
+                        else 0.0
+                    )
+                    def _fmt_sec(s: float) -> str:
+                        m, sec = divmod(int(s), 60)
+                        return f"{m:02d}:{sec:02d}"
+                    p_process.set_postfix_str(
+                        f"elapsed: {_fmt_sec(_elapsed)} · "
+                        f"remaining: ~{_fmt_sec(_remaining)} · "
+                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
+                        refresh=True,
+                    )
                 continue
 
             files_supported += 1
@@ -542,8 +707,23 @@ def ingest_corpus(
                 # "[Document: <entity> FY<year>]" — making chunks distinguishable by
                 # both identity and time in vector space. When only entity is found,
                 # prefix is "[Document: <entity>]". Neither found = no-op.
-                doc_entity = _extract_document_head(doc.text, file_path=file_path)
-                doc_year = _extract_fiscal_year(file_path)
+                # AIStudio_682 — single parse via merged _extract_document_metadata()
+                doc_entity, doc_year, doc_fmt, doc_strategy, doc_mismatch = (
+                    _extract_document_metadata(file_path)
+                )
+
+                # AIStudio_675 — per-file normalizer message
+                if file_path is not None and file_path.suffix.lower() in (".htm", ".html"):
+                    if doc_entity:
+                        _prefix = f"[Document: {doc_entity} FY{doc_year}]" if doc_year else f"[Document: {doc_entity}]"
+                        _strat_label = f" (Strategy {doc_strategy})" if doc_strategy and doc_strategy != "1a" else ""
+                        _fmt_label = doc_fmt or "unknown"
+                        _msg = f"[normalizer] {_fmt_label}{_strat_label} → {_prefix}"
+                        if doc_mismatch:
+                            _msg += f" \u26a0 entity mismatch: filename={file_path.stem[:30]}"
+                    else:
+                        _msg = "[normalizer] No structured header detected → unaugmented"
+                    _tqdm_write(p_process, _msg)
 
                 # Compute MD5 once per file — stored in every chunk payload
                 file_md5 = _md5_of_file(file_path)
@@ -634,6 +814,40 @@ def ingest_corpus(
 
                 if p_process is not None:
                     p_process.update(1)
+                    # Chunk-based progress estimation — same algorithm as the UI
+                    # (AIStudio_613 / api.py). Time scales with chunks not bytes
+                    # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
+                    # "time scales linearly with chunks, not file size").
+                    # d_observed = chunks/byte ratio, self-corrects each file.
+                    # D_SEED = 200/MB starting estimate (same as api.py reconciled seed).
+                    # remaining = remaining_chunks_est / chunks_per_sec
+                    _D_SEED = 200.0 / (1024 * 1024)  # 200 chunks/MB starting estimate
+                    _elapsed = time.time() - t0
+                    _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
+                    _d_obs = (
+                        chunks_written / _bytes_done
+                        if _bytes_done > 0
+                        else _D_SEED
+                    )
+                    # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
+                    _d_obs = max(1e-5, min(1e-2, _d_obs))
+                    _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
+                    _est_total_chunks = _d_obs * _total_bytes
+                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
+                    _remaining = (
+                        _est_remaining_chunks / _chunks_per_sec
+                        if _chunks_per_sec > 0
+                        else 0.0
+                    )
+                    def _fmt_sec(s: float) -> str:
+                        m, sec = divmod(int(s), 60)
+                        return f"{m:02d}:{sec:02d}"
+                    p_process.set_postfix_str(
+                        f"elapsed: {_fmt_sec(_elapsed)} · "
+                        f"remaining: ~{_fmt_sec(_remaining)} · "
+                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
+                        refresh=True,
+                    )
 
             except Exception as e:
                 files_failed += 1
@@ -642,6 +856,40 @@ def ingest_corpus(
                 )
                 if p_process is not None:
                     p_process.update(1)
+                    # Chunk-based progress estimation — same algorithm as the UI
+                    # (AIStudio_613 / api.py). Time scales with chunks not bytes
+                    # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
+                    # "time scales linearly with chunks, not file size").
+                    # d_observed = chunks/byte ratio, self-corrects each file.
+                    # D_SEED = 200/MB starting estimate (same as api.py reconciled seed).
+                    # remaining = remaining_chunks_est / chunks_per_sec
+                    _D_SEED = 200.0 / (1024 * 1024)  # 200 chunks/MB starting estimate
+                    _elapsed = time.time() - t0
+                    _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
+                    _d_obs = (
+                        chunks_written / _bytes_done
+                        if _bytes_done > 0
+                        else _D_SEED
+                    )
+                    # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
+                    _d_obs = max(1e-5, min(1e-2, _d_obs))
+                    _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
+                    _est_total_chunks = _d_obs * _total_bytes
+                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
+                    _remaining = (
+                        _est_remaining_chunks / _chunks_per_sec
+                        if _chunks_per_sec > 0
+                        else 0.0
+                    )
+                    def _fmt_sec(s: float) -> str:
+                        m, sec = divmod(int(s), 60)
+                        return f"{m:02d}:{sec:02d}"
+                    p_process.set_postfix_str(
+                        f"elapsed: {_fmt_sec(_elapsed)} · "
+                        f"remaining: ~{_fmt_sec(_remaining)} · "
+                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
+                        refresh=True,
+                    )
 
     finally:
         if p_process is not None:

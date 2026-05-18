@@ -121,6 +121,29 @@ Question subset filtering (sec_10k):
 
 ---
 
+## ais_download_esef
+ais_download_esef v1.0.0 — Download ESEF iXBRL annual reports from filings.xbrl.org
+
+Downloads XHTML annual reports for 10 major European financial institutions
+from the XBRL International public filing repository (filings.xbrl.org).
+Covers: ING Group, BNP Paribas, Deutsche Bank, Santander, Société Générale,
+UniCredit, ABN AMRO, KBC Group, Crédit Agricole, Nordea.
+
+Usage: ais_download_esef [options]
+
+Options:
+  --help            Show this help
+  --version         Show script version
+  --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)
+  --period-start    Earliest filing period end date (default: 2022-01-01)
+  --period-end      Latest filing period end date (default: 2025-12-31)
+
+· Downloads ~10 ESEF XHTML filings (~50-200MB total)
+· Source: filings.xbrl.org (XBRL International, 24,800+ filings)
+· Files named: <Entity>_ESEF_<year>.xhtml
+· Next step: create corpus 'esef_banks' in AIStudio UI, then ingest
+
+---
 ## ais_download_sec_10k
 
 Usage: ais_download_sec_10k [--help] [--version] [--limit <n>] [--out <dir>]
@@ -143,25 +166,17 @@ Options:
 
 Usage: ais_ingest_sec_10k [--help] [--version] [--force]
 
-Ingest SEC 10-K filings into AIStudio from data/corpora/sec_10k/uploads/.
-Creates the sec_10k corpus metadata and benchmark questions on first run.
-This is the real-scale test corpus — 100+ filings, ~35 min on M4 Pro / ~90 min on M4 Air.
-
-Normalizer: pipeline.py v1.6.8 applies Document-Head + Temporal Context Injection at
-ingest time. Each chunk is prefixed with "[Document: <entity> FY<year>]" extracted from
-dei:EntityRegistrantName and dei:DocumentFiscalYearFocus in the inline XBRL header.
-This resolves entity anaphora (firms using "the Firm" throughout) and enables precise
-temporal trend queries at K=5. Non-XBRL files fall back to entity-only or no prefix.
+Ingest SEC 10-K filings into AIStudio from ~/Downloads/sec_10k_corpus/.
+Creates the sec_10k corpus if it does not exist.
+This is the real-scale test corpus — 100+ filings, ~30 min first run.
 
 Options:
   --help      Show this help
   --version   Show script version
-  --force     Re-ingest all files regardless of hash (not passed by default)
+  --force     Re-ingest all files regardless of hash
 
-· Source: ~/Developer/AIStudio/ais_ingest_sec_10k.sh
 · Run after: ais_download_sec_10k
 · Requires: ais_start must be running
-· Benchmark: ais_bench --corpus sec_10k
 
 ---
 

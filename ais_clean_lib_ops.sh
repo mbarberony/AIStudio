@@ -45,7 +45,7 @@ HELP_FILE="$SCRIPT_DIR/ais_command_help_ops.txt"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
-        awk "/^## ${SCRIPT_NAME}$/,/^---$/" "$HELP_FILE" | grep -v "^---$"
+        awk "/^## ${SCRIPT_NAME}$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
         echo "${SCRIPT_NAME} v${VERSION} — ${DESCRIPTION}"
         echo "Usage: ${SCRIPT_NAME} [--dry-run] [--remove-models] [--verbose] [--silent] [--help] [--version]"

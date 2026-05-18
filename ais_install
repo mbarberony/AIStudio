@@ -9,6 +9,7 @@
 #   ais_install --verify             # check which commands are active in .zshrc
 #
 # Version: 2.4.5
+# Changelog: 2.4.6 — Fix manifest parser regex \s+ → \s* to match zero-indented YAML list items (AIStudio_688). First-time install of new commands failed with "not found" because the parser required leading whitespace before "- alias:" but ais_user_commands_manifest.yaml uses no indentation.
 # Changelog: 2.4.5 — pip cache purge before install to suppress deserialization warnings (AIStudio_540)
 # Changelog: 2.4.4 — stdlib-only manifest parser, no pyyaml required (AIStudio_514)
 # Changelog: 2.4.3 — Fix BASH_SOURCE[0] → ${0:A:h} (zsh-native path resolution); fix SCRIPT_DIR undefined before HELP_FILE; remove duplicate REPO/SCRIPT_NAME definitions (AIStudio_499)
@@ -17,7 +18,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.4.5"
+VERSION="2.4.6"
 
 SCRIPT_NAME="ais_install"
 SCRIPT_DIR="${0:A:h}"
@@ -61,13 +62,13 @@ commands, current = [], {}
 with open(manifest_path) as f:
     for line in f:
         line = line.rstrip()
-        if re.match(r"\s+- alias:", line):
+        if re.match(r"\s*- alias:", line):
             if current:
                 commands.append(current)
             current = {"alias": re.sub(r".*alias:\s*", "", line).strip()}
-        elif re.match(r"\s+path:", line) and current:
+        elif re.match(r"\s*path:", line) and current:
             current["path"] = re.sub(r".*path:\s*", "", line).strip()
-        elif re.match(r"\s+description:", line) and current:
+        elif re.match(r"\s*description:", line) and current:
             desc = re.sub(r".*description:\s*", "", line).strip().strip("\"'")
             current["description"] = desc
 if current:
