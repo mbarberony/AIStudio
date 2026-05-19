@@ -180,6 +180,27 @@ Options:
 
 ---
 
+## ais_ingest_esef
+
+Usage: ais_ingest_esef [--corpus <name>] [--force] [--verbose] [--help] [--version]
+
+Ingest ESEF iXBRL annual reports into AIStudio.
+Requires corpus metadata file to exist before running.
+Reference implementation for user corpus ingest — see AIStudio Tutorial §3.
+
+Options:
+  --corpus <name>   Corpus name (default: esef_banks)
+  --force           Re-ingest even if corpus already indexed in Qdrant
+  --verbose         Print full JSON result payload after summary
+  --help            Show this help
+  --version         Show script version
+
+· Run after: ais_download_esef
+· Requires: ais_start · corpus metadata file (create via UI or REST POST /corpus/create)
+· To benchmark: ais_bench --corpus esef_banks
+
+---
+
 ## ais_create_shortcut
 
 Usage: ais_create_shortcut [--help] [--version] [--nodesktop] [--remove]

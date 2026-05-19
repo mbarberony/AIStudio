@@ -59,6 +59,7 @@ echo "── Corpus & Data ─────────────────�
 echo "  ais_download_sec_10k  Download SEC 10-K corpus from EDGAR (~2GB)"
 echo "  ais_ingest_sec_10k    Ingest SEC 10-K corpus (~30 min, backend required)"
 echo "  ais_download_esef     Download ESEF iXBRL corpus from filings.xbrl.org (~10 European banks)"
+echo "  ais_ingest_esef       Ingest ESEF iXBRL corpus (~20 min, backend required)"
 echo ""
 echo "── Benchmarking ─────────────────────────────────────────────"
 echo "  ais_bench             Run benchmark on demo corpus (default settings)"

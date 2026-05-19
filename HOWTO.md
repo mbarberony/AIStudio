@@ -59,6 +59,8 @@ If a command is not found, run `source ~/.zshrc` first.
 | `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
 | `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
 | `ais_ingest_sec_10k` | Ingest SEC 10-K corpus into AIStudio (~30 min, backend must be running) |
+| `ais_download_esef` | Download ESEF iXBRL corpus from filings.xbrl.org (~10 European banks) |
+| `ais_ingest_esef` | Ingest ESEF iXBRL corpus into AIStudio (~20 min, backend must be running) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:

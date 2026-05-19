@@ -1,6 +1,6 @@
 version: 1.0.0
 regenerated_from: meta/bundle_manifest.yaml
-regenerated_at: '2026-05-18T18:06:33'
+regenerated_at: '2026-05-18T23:10:37'
 commands:
 - alias: ais_bench
   path: ais_bench.sh
@@ -31,6 +31,11 @@ commands:
   path: ais_ingest_sec_10k.sh
   description: "Ingest SEC 10-K corpus \u2014 143 filings from 25 major financial\
     \ services firms (~30 min)"
+- alias: ais_ingest_esef
+  path: ais_ingest_esef.sh
+  description: "Ingest ESEF iXBRL corpus \u2014 thin wrapper over ingest engine. Gates\
+    \ on corpus metadata file. Supports --corpus, --force, --verbose. Reference implementation\
+    \ for user corpus ingest."
 - alias: ais_create_shortcut
   path: ais_create_shortcut
   description: Create AIStudio desktop shortcut and app icon on macOS
