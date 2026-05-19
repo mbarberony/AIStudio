@@ -1,9 +1,10 @@
-# Version: 1.7.2
+# Version: 1.4.6
 # Changelog: 1.7.2 — AIStudio_635 + AIStudio_636 (bundled). (635) Inject today's date into system prompt — appends "TODAY'S DATE: YYYY-MM-DD (Weekday)." after the SOURCE COUNT block. Fixes the failure mode where queries like "what happened in the last 5 days" anchor temporally to the most-recent retrieved chunk's date rather than to actual today. Becomes structurally important as M2.D query-understanding progresses (recency filters, "this week" queries all implicitly depend on "now"). (636) Bump conversation_history slice [-6:] → [-20:] = last 10 exchanges (was 3). Aligns implementation with the documented mental model. Negligible memory cost for 7B model (~6KB additional context per query). Comment updated to reflect new depth. NOTE: rag_core.py has a duplicate generate_answer_with_citations() with its own [-6:] slice on line ~252; verified dead code (api.py defines its own at line 118, used by /ask at line 434, rag_core imports only RetrievedDoc + retrieve). Filed AIStudio_637 to remove the duplicate.
 # Changelog: 1.7.1 — AIStudio_124 (partial resolution): system prompt now loaded from prompts/system.txt instead of hardcoded inline. New _load_system_prompt() helper with module-level memoization. Inline prompt block at line ~131 replaced with base = _load_system_prompt() + dynamic source-count lines. Corpus search_guidance injection (per-query, post-base) unchanged. Anti-mechanism citation rules + synthesis directives + length-calibration rules added to system.txt simultaneously (addresses retrieval-quality findings AIStudio_628/629/630 at prompt layer).
 # Changelog: 1.7.0 — AIStudio_613: ingest progress bar fix. (a) Parse [ingest] file_complete: N/M chunks=C bytes=B lines from pipeline.py v1.5.0+ in async stderr iterator → primary source of files_processed/chunks_written/bytes_processed/d_observed updates (previous tqdm-postfix path only fires at run end). (b) Self-correct d_observed in Qdrant polling path: write live_chunks/bytes_done back to cached state with [1e-5, 1e-2] chunks/byte clamp (rejects pathological intermediate ratios). (c) Reconcile both D_SEED sites (line ~729 and ~1078) to 200 chunks/MB midpoint — between PDF (~40) and markdown (~1000) regimes. Value matters less now that self-correction works.
 # Changelog: 1.6.1 — AIStudio_599: remove /debug/stats endpoint and stats:JsonlStats from /corpus/<n>/info response. UI never consumed stats field (verified by grep); chunk_count comes from Qdrant directly. debug_stats.py orphaned (zero callers); deletion pending AIStudio_159.
 # Changelog: 1.6.0 — AskRequest.hybrid_alpha field exposed; passed to retrieve() with per-query-override-then-config-default pattern (M2.A hybrid retrieval)
+# Changelog: 1.4.6 — AIStudio_707: fix pre-scan files_found count to exclude trash/ subdirectory (was counting directory as a file).
 # Changelog: 1.4.5 — AIStudio_517: fix allowed_extensions to match SUPPORTED_EXTS in loaders.py (added .pptx/.xlsx/.htm/.html)
 # Changelog: 1.4.4 — AIStudio_517: reject unsupported file extensions in upload endpoint (.pdf/.txt/.md/.docx only)
 # Changelog: 1.4.3 — less defensive system prompt; direct confident answer rules (AIStudio_483); strip trailing References block
@@ -992,7 +993,7 @@ async def upload_to_corpus(
     # Must stay in sync with SUPPORTED_EXTS in src/local_llm_bot/app/ingest/loaders.py.
     # Prevents unsupported files (e.g. .yaml, .json) from landing in uploads/
     # and appearing in the file list with N/A chunks (AIStudio_517).
-    allowed_extensions = {".pdf", ".txt", ".md", ".docx", ".pptx", ".xlsx", ".htm", ".html"}
+    allowed_extensions = SUPPORTED_EXTS
     file_ext = Path(file.filename).suffix.lower() if file.filename else ""
     if file_ext not in allowed_extensions:
         raise HTTPException(
@@ -1061,9 +1062,9 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
     # so the status endpoint can show meaningful ratios from second 0.
     print(f"[ingest] pre-scan path: {uploads_dir} exists={uploads_dir.exists()}", flush=True)
     if uploads_dir.exists():
-        files_found = list(uploads_dir.iterdir())
+        files_found = [p for p in uploads_dir.iterdir() if p.is_file()]
         print(
-            f"[ingest] pre-scan found {len(files_found)} total files, extensions: {set(p.suffix.lower() for p in files_found if p.is_file())}",
+            f"[ingest] pre-scan found {len(files_found)} total files, extensions: {set(p.suffix.lower() for p in files_found)}",
             flush=True,
         )
     pre_scan: list[tuple[str, int]] = []

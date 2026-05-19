@@ -816,8 +816,8 @@
         <div class="file-zone" id="dropZone">
             <div class="file-zone-icon">📄</div>
             <div>Drop your file here or click to browse</div>
-            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT · HTML</div>
-            <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.txt,.md,.docx,.pptx,.xlsx,.htm,.html" onchange="selectFiles(this.files)">
+            <div style="font-size:11px;margin-top:6px;opacity:0.7">PDF · DOCX · PPTX · XLSX · MD · TXT · HTML · XHTML</div>
+            <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.txt,.md,.docx,.pptx,.xlsx,.htm,.html,.xhtml" onchange="selectFiles(this.files)">
         </div>
         <div id="uploadStatus"></div>
         <div class="modal-actions">
@@ -2100,6 +2100,13 @@
                         if (txt) txt.textContent = '✓ ' + doneText;
                         clearInterval(interval);
                         resolve('done');
+                    } else if (d.status === 'cancelled') {
+                        const fc = d.files_completed || 0;
+                        const cc = d.chunks_written || finalChunks || 0;
+                        if (txt) txt.textContent = `⊘ Indexing stopped by user · ${fc} file${fc !== 1 ? 's' : ''} indexed · ${cc.toLocaleString()} chunks written · run Ingest again to complete`;
+                        if (statusEl) statusEl.innerHTML = `⊘ Ingestion stopped by user for corpus <em>'${currentCorpus}'</em><br><small>${fc} file${fc !== 1 ? 's' : ''} indexed · ${cc.toLocaleString()} chunks · corpus is partially indexed</small>`;
+                        clearInterval(interval);
+                        resolve('cancelled');
                     } else if (d.status === 'error') {
                         if (txt) txt.textContent = '✗ Ingestion failed — check server logs';
                         clearInterval(interval);

@@ -9,7 +9,7 @@ from pathlib import Path
 # from ..config import DEFAULT_XLSX_MAX_CELLS
 from local_llm_bot.app.config import CONFIG
 
-SUPPORTED_EXTS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx", ".htm", ".html"}
+SUPPORTED_EXTS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx", ".htm", ".html", ".xhtml"}
 
 # Silence noisy PDF parsing logs/warnings (common with imperfect PDFs)
 logging.getLogger("pypdf").setLevel(logging.ERROR)
@@ -44,7 +44,7 @@ def extract_text(path: Path) -> ExtractResult:
         return _extract_xlsx(path, max_cells=CONFIG.ingest.xlsx_max_cells)
     if ext == ".pdf":
         return _extract_pdf(path)
-    if ext in {".htm", ".html"}:
+    if ext in {".htm", ".html", ".xhtml"}:
         return _extract_html(path)
     return ExtractResult(ok=False, text="", reason="unsupported_ext")
 

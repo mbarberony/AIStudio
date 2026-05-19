@@ -1,4 +1,5 @@
-# Version: 1.7.7
+# Version: 1.7.9
+# Changelog: 1.7.9 — AIStudio_700: rename top-level `import re` → `import re as _re`; remove all late re imports; replace re./_re2. with _re. throughout. Fixes ruff F823 false positive permanently.
 # Changelog: 1.7.7 — Fix I001: blank line between stdlib and third-party imports. Fix import block ordering per isort convention.
 # Changelog: 1.7.6 — Move re and bs4 imports to top-level (fixes persistent I001/E402 lint). No late imports needed — bs4 is always available in the venv.
 # Changelog: 1.7.5 — Fix I001 noqa on first line of late import blocks (block-level suppression).
@@ -88,7 +89,7 @@ import contextlib
 import hashlib
 import json
 import os as _os
-import re
+import re as _re
 import sys as _sys
 import time
 from collections.abc import Iterable
@@ -332,10 +333,10 @@ def _extract_document_head(
             #   - Strip trailing footnote superscripts
             # BNY Mellon pattern: Exhibit 13.1 → FINANCIAL SECTION → entity name
             # → entity name appears at 3rd/4th visible element, after single-word headers
-            _SKIP_PATTERNS = re.compile(  # noqa: F823
+            _SKIP_PATTERNS = _re.compile(
                 r"^(Exhibit\s+\d|Table\s+of|Annual\s+Report|Financial\s+(Review|Section|"
                 r"Summary|Highlights|Statements?)|Overview|General|Contents|Index)$",
-                re.IGNORECASE,
+                _re.IGNORECASE,
             )
             _ENTITY_SUFFIXES = (
                 "corporation", "company", "incorporated", "inc", "corp",
@@ -346,7 +347,7 @@ def _extract_document_head(
             for tag in soup.find_all(["p", "span", "div", "td"]):
                 txt = tag.get_text(strip=True)
                 # Strip trailing footnote superscripts (digits, *, †, ‡, §)
-                txt = re.sub(r"[\d\*†‡§]+$", "", txt).strip()
+                txt = _re.sub(r"[\d\*†‡§]+$", "", txt).strip()
                 if not txt or len(txt) < 8 or len(txt) > 100:
                     continue
                 if _SKIP_PATTERNS.match(txt):
@@ -366,8 +367,6 @@ def _extract_document_head(
     # ------------------------------------------------------------------
     # Strategy 2 — Title-Case phrase scan of plain text head
     # ------------------------------------------------------------------
-    import re
-
     _STOPWORDS = {
         "January", "February", "March", "April", "May", "June", "July",
         "August", "September", "October", "November", "December",
@@ -378,7 +377,7 @@ def _extract_document_head(
         "Part", "Item", "Note", "Section", "Table", "Contents", "Index",
     }
 
-    candidates = re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", text[:max_chars])
+    candidates = _re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", text[:max_chars])
     filtered = [c for c in candidates if not all(w in _STOPWORDS for w in c.split())]
     if filtered:
         return max(filtered, key=len)
@@ -423,10 +422,10 @@ def _extract_document_metadata(
         ("UK_GAAP",  "uk-bus:",    "uk-bus:NameOfUltimateParentOfGroup",                          "1a"),
         ("UK_GAAP",  "uk-gaap:",   "uk-gaap:EntityCurrentLegalOrRegisteredName",                  "1a"),
     ]
-    _SKIP_PATTERNS = re.compile(
+    _SKIP_PATTERNS = _re.compile(
         r"^(Exhibit\s+\d|Table\s+of|Annual\s+Report|Financial\s+(Review|Section|"
         r"Summary|Highlights|Statements?)|Overview|General|Contents|Index)$",
-        re.IGNORECASE,
+        _re.IGNORECASE,
     )
     _ENTITY_SUFFIXES = (
         "corporation", "company", "incorporated", "inc", "corp",
@@ -474,7 +473,7 @@ def _extract_document_metadata(
                 strategy = "1b"
                 for tag in soup.find_all(["p", "span", "div", "td"]):
                     txt = tag.get_text(strip=True)
-                    txt = re.sub(r"[\d\*†‡§]+$", "", txt).strip()
+                    txt = _re.sub(r"[\d\*†‡§]+$", "", txt).strip()
                     if not txt or len(txt) < 8 or len(txt) > 100:
                         continue
                     if _SKIP_PATTERNS.match(txt):
@@ -497,8 +496,8 @@ def _extract_document_metadata(
                     # If prefix doesn't appear anywhere in filename → mismatch
                     if prefix.lower() not in stem_lower:
                         # Additional check: entity name words vs filename
-                        entity_words = set(re.sub(r"[^a-z]", " ", entity.lower()).split())
-                        stem_words = set(re.sub(r"[^a-z]", " ", stem_lower).split())
+                        entity_words = set(_re.sub(r"[^a-z]", " ", entity.lower()).split())
+                        stem_words = set(_re.sub(r"[^a-z]", " ", stem_lower).split())
                         overlap = entity_words & stem_words - {"the", "of", "and", "inc", "corp", "group"}
                         if not overlap:
                             mismatch = True
@@ -585,7 +584,6 @@ def ingest_corpus(
     failures: list[dict[str, Any]] = []
     file_stats: dict[str, dict] = {}
 
-    import re as _re
 
     _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
 
