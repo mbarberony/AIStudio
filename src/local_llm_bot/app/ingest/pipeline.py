@@ -1,4 +1,18 @@
-# Version: 1.7.9
+# Version: 1.8.1
+# Changelog: 1.8.1 — Year filename fallback: parse _YYYY from filename stem when
+#            XML year tag absent (ESEF DateOfEndOfReportingPeriod2013 + DEI FiscalYear).
+#            ESEF year tag value is YYYY-MM-DD — extract first 4 chars.
+#            AIStudio_707: use files_supported (not len(discovered)) as N-of-T total
+#            in completion lines — eliminates phantom +1 from unsupported files in dir.
+#            Normalizer fields (entity, year, source, mismatch) stored in file_stats
+#            for __main__.py summary entity list + source breakdown.
+#            tqdm bar_format fixed: {bar:20} explicit width renders fill characters.
+# Changelog: 1.8.0 — AIStudio_675 + AIStudio_680 + AIStudio_697.
+#            (675) STD §8 completion line per file: N of T · filename · size · chunks · format · prefix · source · ⚠ warnings.
+#            (680) Emit structured [ingest] normalizer: stderr line per file for api.py parsing → UI SSE stream.
+#            (697) Fix normalizer guard: add .xhtml to suffix check so ESEF files reach normalizer.
+#            Normalizer summary added to IngestResult (normalizer_hits, normalizer_misses, normalizer_mismatches).
+#            tqdm activity line (set_description) updated per-file with current filename + format detected.
 # Changelog: 1.7.9 — AIStudio_700: rename top-level `import re` → `import re as _re`; remove all late re imports; replace re./_re2. with _re. throughout. Fixes ruff F823 false positive permanently.
 # Changelog: 1.7.7 — Fix I001: blank line between stdlib and third-party imports. Fix import block ordering per isort convention.
 # Changelog: 1.7.6 — Move re and bs4 imports to top-level (fixes persistent I001/E402 lint). No late imports needed — bs4 is always available in the venv.
@@ -142,6 +156,10 @@ class IngestResult:
     vectorstore: str = "qdrant"
     # Per-file stats: {filename: {size_bytes, chunks, duration_sec, ingested_at}}
     file_stats: dict = None  # type: ignore[assignment]
+    # Normalizer summary — counts across all files processed this run
+    normalizer_hits: int = 0       # files where entity+year was extracted
+    normalizer_misses: int = 0     # HTML/XHTML files where normalizer found nothing
+    normalizer_mismatches: int = 0 # files where entity didn't match filename stem
 
 
 def _repo_root() -> Path:
@@ -407,7 +425,7 @@ def _extract_document_metadata(
     if _os.getenv("AISTUDIO_DOC_HEAD_NORMALIZER", "true").lower() == "false":
         return None, None, None, None, False
 
-    if file_path is None or file_path.suffix.lower() not in (".htm", ".html"):
+    if file_path is None or file_path.suffix.lower() not in (".htm", ".html", ".xhtml"):
         return None, None, None, None, False
 
 
@@ -459,6 +477,24 @@ def _extract_document_metadata(
             yr = year_tag.get_text(strip=True)
             if yr and yr.isdigit() and len(yr) == 4:
                 year = yr
+
+        # ESEF year tag — value is YYYY-MM-DD, extract first 4 chars
+        if year is None and fmt == "ESEF":
+            esef_year_tag = soup.find(attrs={"name": "ifrs-full:DateOfEndOfReportingPeriod2013"})
+            if esef_year_tag:
+                yr_raw = esef_year_tag.get_text(strip=True)
+                if yr_raw and len(yr_raw) >= 4 and yr_raw[:4].isdigit():
+                    year = yr_raw[:4]
+
+        # Filename year fallback — parse _YYYY from stem when XML tag absent
+        # e.g. ING_Group_ESEF_2025.xhtml → 2025, JPMorgan_Chase_10K_2022.htm → 2022
+        if year is None and file_path is not None:
+            _yr_match = _re.search(r"[_\-](\d{4})(?:[_\-.]|$)", file_path.stem)
+            if _yr_match:
+                _yr_cand = _yr_match.group(1)
+                # Sanity check: plausible filing year range
+                if 2000 <= int(_yr_cand) <= 2050:
+                    year = _yr_cand
 
         # Strategy 1b — visible text scan (fallback for older XBRL without entity tag)
         company_prefixes = set()  # initialized here so mismatch block can always reference it
@@ -583,6 +619,10 @@ def ingest_corpus(
     chunks_written = 0
     failures: list[dict[str, Any]] = []
     file_stats: dict[str, dict] = {}
+    # Normalizer counters — accumulated across all HTML/XHTML files
+    _normalizer_hits = 0
+    _normalizer_misses = 0
+    _normalizer_mismatches = 0
 
 
     _PAGE_RE = _re.compile(r"^\[PAGE_(\d+)\]\s*", _re.MULTILINE)
@@ -625,10 +665,10 @@ def ingest_corpus(
     if tqdm_cls is not None:
         p_process = tqdm_cls(
             total=len(discovered),
-            desc="Process",
+            desc="[ingesting]",
             unit=" file",
             ncols=120,
-            bar_format="{l_bar}{bar}| {n}/{total} [{postfix}]",
+            bar_format="{desc}: {percentage:3.0f}%|{bar:20}| {n}/{total} [{postfix}]",
         )
     else:
         p_process = None
@@ -689,6 +729,15 @@ def ingest_corpus(
                     continue
 
                 t_file_start = time.time()
+                # AIStudio_675 / STD §8 — update tqdm activity line with current file
+                _file_size_mb = file_path.stat().st_size / (1024 * 1024)
+                if p_process is not None:
+                    _n_width = len(str(len(discovered)))
+                    _n_str = str(files_processed + 1).rjust(_n_width)
+                    p_process.set_description(
+                        f"[ingesting] · {_n_str} of {len(discovered)} · {file_path.name[:40]} · size: {file_path.stat().st_size:,}",
+                        refresh=True,
+                    )
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
@@ -709,19 +758,6 @@ def ingest_corpus(
                 doc_entity, doc_year, doc_fmt, doc_strategy, doc_mismatch = (
                     _extract_document_metadata(file_path)
                 )
-
-                # AIStudio_675 — per-file normalizer message
-                if file_path is not None and file_path.suffix.lower() in (".htm", ".html"):
-                    if doc_entity:
-                        _prefix = f"[Document: {doc_entity} FY{doc_year}]" if doc_year else f"[Document: {doc_entity}]"
-                        _strat_label = f" (Strategy {doc_strategy})" if doc_strategy and doc_strategy != "1a" else ""
-                        _fmt_label = doc_fmt or "unknown"
-                        _msg = f"[normalizer] {_fmt_label}{_strat_label} → {_prefix}"
-                        if doc_mismatch:
-                            _msg += f" \u26a0 entity mismatch: filename={file_path.stem[:30]}"
-                    else:
-                        _msg = "[normalizer] No structured header detected → unaugmented"
-                    _tqdm_write(p_process, _msg)
 
                 # Compute MD5 once per file — stored in every chunk payload
                 file_md5 = _md5_of_file(file_path)
@@ -794,6 +830,91 @@ def ingest_corpus(
                     "duration_sec": file_dur,
                     "ingested_at": _dt_now(),
                 }
+
+                # AIStudio_675 + AIStudio_680 + AIStudio_697 — normalizer instrumentation.
+                # Fires AFTER upsert so chunk count is final.
+                # Guard extended to .xhtml (AIStudio_697 fix — ESEF files were silently skipped).
+                # Two outputs:
+                #   (1) STD §8 completion line via _tqdm_write — operator terminal
+                #   (2) Structured [ingest] normalizer: stderr line — parsed by api.py → UI
+                _is_markup = file_path.suffix.lower() in (".htm", ".html", ".xhtml")
+                _file_chunks = len(chunks)
+                _file_size = file_path.stat().st_size
+
+                if _is_markup:
+                    # AIStudio_707: use files_supported as total, not len(discovered)
+                    # len(discovered) includes unsupported files (e.g. .DS_Store, .yaml)
+                    # which inflates the count. files_supported is the correct denominator.
+                    _n_width = len(str(files_supported))
+                    _n_str = str(files_processed + 1).rjust(_n_width)
+                    _t_str = str(files_supported)
+
+                    if doc_entity:
+                        _normalizer_hits += 1
+                        if doc_mismatch:
+                            _normalizer_mismatches += 1
+                        # source vocabulary: tag | scan | filename
+                        _source = (
+                            "tag" if doc_strategy == "1a"
+                            else "scan" if doc_strategy == "1b"
+                            else "filename"
+                        )
+                        # Store normalizer fields in file_stats for __main__.py summary
+                        file_stats[file_path.name]["normalizer_entity"] = doc_entity
+                        file_stats[file_path.name]["normalizer_year"] = doc_year or ""
+                        file_stats[file_path.name]["normalizer_source"] = _source
+                        file_stats[file_path.name]["normalizer_mismatch"] = doc_mismatch
+
+                        _fmt_label = doc_fmt or "unknown"
+                        # Human-readable prefix label
+                        _prefix_label = (
+                            f'"{doc_entity} · FY{doc_year}"'
+                            if doc_year
+                            else f'"{doc_entity}"'
+                        )
+
+                        # STD §8 completion line — scrolls in terminal, stays in history
+                        _completion = (
+                            f"  {_n_str} of {_t_str} · {file_path.name} · "
+                            f"size: {_file_size:,} · chunks: {_file_chunks:,} · "
+                            f"format: {_fmt_label} · prefix: {_prefix_label} · source: {_source}"
+                        )
+                        if doc_mismatch:
+                            _completion += f" · \u26a0 entity mismatch: filename={file_path.stem[:30]}"
+                        _tqdm_write(p_process, _completion)
+
+                        # Structured machine-parseable line for api.py → UI (AIStudio_680)
+                        _structured = (
+                            f"[ingest] normalizer: file={file_path.name} "
+                            f"format={_fmt_label} "
+                            f'entity="{doc_entity}" '
+                            f"year={doc_year or ''} "
+                            f"chunks={_file_chunks} "
+                            f"source={_source} "
+                            f"mismatch={str(doc_mismatch).lower()}"
+                        )
+                        _tqdm_write(p_process, _structured)
+
+                    else:
+                        _normalizer_misses += 1
+                        # No normalizer hit — emit completion line without prefix fields
+                        _completion = (
+                            f"  {_n_str} of {_t_str} · {file_path.name} · "
+                            f"size: {_file_size:,} · chunks: {_file_chunks:,}"
+                        )
+                        _tqdm_write(p_process, _completion)
+
+                else:
+                    # Non-markup file — plain completion line, no normalizer fields
+                    # AIStudio_707: use files_supported as total
+                    _n_width = len(str(files_supported))
+                    _n_str = str(files_processed + 1).rjust(_n_width)
+                    _t_str = str(files_supported)
+                    _completion = (
+                        f"  {_n_str} of {_t_str} · {file_path.name} · "
+                        f"size: {_file_size:,} · chunks: {_file_chunks:,}"
+                    )
+                    _tqdm_write(p_process, _completion)
                 # Per-file completion line — newline-terminated so api.py's async
                 # stderr iterator sees it (tqdm's bar uses \r-updates which the
                 # iterator never receives). _tqdm_write routes through pbar.write()
@@ -915,4 +1036,7 @@ def ingest_corpus(
         chunks_written=chunks_written,
         duration_sec=round(dur, 3),
         file_stats=file_stats,
+        normalizer_hits=_normalizer_hits,
+        normalizer_misses=_normalizer_misses,
+        normalizer_mismatches=_normalizer_mismatches,
     )

@@ -1126,12 +1126,18 @@
 
             loadingEl.remove();
 
-            // Convert newlines to paragraph breaks for readable formatting
-            let html = escapeHtml(data.answer)
+            // AIStudio_716 — convert markdown to HTML before paragraph splitting.
+            // markdownToHtml handles escaping internally (inlineMarkdown calls escapeHtml).
+            // Split on double newlines for paragraph breaks; single newlines become <br>.
+            let html = markdownToHtml(data.answer)
                 .split(/\n\n+/)
                 .map(p => p.trim())
                 .filter(p => p)
-                .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                .map(p => {
+                    // Don't wrap list blocks in <p>
+                    if (p.startsWith('<ul>') || p.startsWith('<ol>') || p.startsWith('<li>')) return p;
+                    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+                })
                 .join('');
             if (data.citations && data.citations.length) {
                 responseCounter++;
@@ -1373,10 +1379,7 @@
                     box-shadow:0 8px 32px rgba(0,0,0,0.18);">
                     <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text,#111);">Edit Corpus: ${escapeHtml(data.name)}</div>
                     <div style="display:flex;gap:16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);">
-                        <span>· <strong>${totalFiles}</strong> files</span>
-                        <span>· <strong>${totalChunks}</strong> chunks</span>
-                        <span>· <strong>${totalSize}</strong></span>
-                        <span>· last ingest: <strong>${ingestDur}</strong></span>
+                        <span><strong>${totalFiles}</strong> files · <strong>${typeof totalChunks === 'number' ? totalChunks.toLocaleString() : totalChunks}</strong> chunks · <strong>${totalSize}</strong> · last ingest: <strong>${ingestDur}</strong></span>
                     </div>
 
                     <div style="margin-bottom:14px;">
@@ -1479,7 +1482,11 @@
                         const d = new Date(fm.ingested_at);
                         return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
                     })() : 'N/A';
-                    const metaLine = `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${kb} · ${chunks} · ${ingestedAt}</div>`;
+                    // AIStudio_681 — normalizer prefix from corpus_metadata files entry
+                    const normPrefix = fm.normalizer_prefix
+                        ? `<div style="font-size:10px;color:var(--accent);margin-top:1px;font-family:'DM Mono',monospace;">${escapeHtml(fm.normalizer_prefix)}${fm.normalizer_mismatch ? ' <span style="color:var(--warning,#f59e0b)" title="Entity extracted did not match filename stem">⚠</span>' : ''}</div>`
+                        : '';
+                    const metaLine = `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${kb} · ${chunks} · ${ingestedAt}</div>${normPrefix}`;
 
                     return '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
                         + '<div style="flex:1;min-width:0;">'
@@ -2334,6 +2341,25 @@
                             }
                             if (ingestStatusEl) ingestStatusEl.textContent = statusText;
 
+                            // AIStudio_680 — render normalizer hits below progress bar
+                            const hits = d.normalizer_hits || [];
+                            let normEl = ingestMsgDiv ? ingestMsgDiv.querySelector('.normalizer-hits') : null;
+                            if (hits.length > 0) {
+                                if (!normEl && ingestMsgDiv) {
+                                    normEl = document.createElement('div');
+                                    normEl.className = 'normalizer-hits';
+                                    normEl.style.cssText = 'font-size:10px;color:var(--text-dim);margin-top:4px;line-height:1.8;font-family:"DM Mono",monospace;';
+                                    ingestMsgDiv.appendChild(normEl);
+                                }
+                                if (normEl) {
+                                    normEl.innerHTML = hits.map(h => {
+                                        const prefix = h.year ? `${h.entity} · FY${h.year}` : h.entity;
+                                        const warn = h.mismatch ? ' <span style="color:var(--warning,#f59e0b)">⚠ mismatch</span>' : '';
+                                        return `<div>[normalizer] ${escapeHtml(h.format)} detected · augmenting with "${escapeHtml(prefix)}" · source: ${escapeHtml(h.source)}${warn}</div>`;
+                                    }).join('');
+                                }
+                            }
+
                         } else if (d.status === 'done') {
                             if (ingestBar) ingestBar.style.width = '100%';
                             const finalChunks = d.chunks_written || 0;
@@ -2400,6 +2426,62 @@
         const d = document.createElement('div');
         d.textContent = str;
         return d.innerHTML;
+    }
+
+    // AIStudio_716 — lightweight markdown → HTML converter for LLM answer rendering.
+    // Handles: **bold**, *italic*, `inline code`, * bullet lists, numbered lists.
+    // Must run BEFORE escapeHtml on raw LLM text (not on already-escaped HTML).
+    // Citation markers [1], [2,3] are preserved as-is for parseCitations() downstream.
+    function markdownToHtml(text) {
+        if (!text) return '';
+
+        // Split into lines for list detection
+        const lines = text.split('\n');
+        const out = [];
+        let inUl = false;
+        let inOl = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+
+            // Detect unordered list item: "* text" or "- text" or "+ text"
+            const ulMatch = line.match(/^[\*\-\+]\s+(.+)/);
+            // Detect ordered list item: "1. text" or "1) text"
+            const olMatch = line.match(/^(\d+)[.)]\s+(.+)/);
+
+            if (ulMatch) {
+                if (!inUl) { if (inOl) { out.push('</ol>'); inOl = false; } out.push('<ul>'); inUl = true; }
+                out.push('<li>' + inlineMarkdown(ulMatch[1]) + '</li>');
+            } else if (olMatch) {
+                if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol>'); inOl = true; }
+                out.push('<li>' + inlineMarkdown(olMatch[2]) + '</li>');
+            } else {
+                if (inUl) { out.push('</ul>'); inUl = false; }
+                if (inOl) { out.push('</ol>'); inOl = false; }
+                // Empty line → paragraph break (handled by caller's split on \n\n)
+                out.push(inlineMarkdown(line));
+            }
+        }
+        if (inUl) out.push('</ul>');
+        if (inOl) out.push('</ol>');
+
+        return out.join('\n');
+    }
+
+    // Apply inline markdown: **bold**, *italic*, `code`
+    // Preserves citation markers [N] and [N,M] untouched.
+    function inlineMarkdown(text) {
+        // Escape HTML entities first (security)
+        const d = document.createElement('div');
+        d.textContent = text;
+        text = d.innerHTML;
+        // **bold** (must come before *italic*)
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // *italic* (single asterisk, not part of bold or list)
+        text = text.replace(/(?<![*])\*([^*\n]+)\*(?![*])/g, '<em>$1</em>');
+        // `inline code`
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return text;
     }
 
     // ── Event listeners ────────────────────────────────────────────

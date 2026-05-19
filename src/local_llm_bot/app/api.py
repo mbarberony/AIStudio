@@ -1,4 +1,10 @@
-# Version: 1.4.6
+# Version: 1.5.1
+# Changelog: 1.5.1 — AIStudio_720: strip [Document: entity FY year] chunk augmentation
+#            prefix from chunk content before LLM context assembly. Prefix served its
+#            purpose at retrieval time; sending it to LLM caused verbatim quoting in
+#            answer body. Belt-and-suspenders: also strip from generated answer text.
+#            pipeline.py v1.8.0. Hits stored in _ingest_status normalizer_hits list; carried
+#            into done status. Frontend renders normalizer hits below ingest progress bar.
 # Changelog: 1.7.2 — AIStudio_635 + AIStudio_636 (bundled). (635) Inject today's date into system prompt — appends "TODAY'S DATE: YYYY-MM-DD (Weekday)." after the SOURCE COUNT block. Fixes the failure mode where queries like "what happened in the last 5 days" anchor temporally to the most-recent retrieved chunk's date rather than to actual today. Becomes structurally important as M2.D query-understanding progresses (recency filters, "this week" queries all implicitly depend on "now"). (636) Bump conversation_history slice [-6:] → [-20:] = last 10 exchanges (was 3). Aligns implementation with the documented mental model. Negligible memory cost for 7B model (~6KB additional context per query). Comment updated to reflect new depth. NOTE: rag_core.py has a duplicate generate_answer_with_citations() with its own [-6:] slice on line ~252; verified dead code (api.py defines its own at line 118, used by /ask at line 434, rag_core imports only RetrievedDoc + retrieve). Filed AIStudio_637 to remove the duplicate.
 # Changelog: 1.7.1 — AIStudio_124 (partial resolution): system prompt now loaded from prompts/system.txt instead of hardcoded inline. New _load_system_prompt() helper with module-level memoization. Inline prompt block at line ~131 replaced with base = _load_system_prompt() + dynamic source-count lines. Corpus search_guidance injection (per-query, post-base) unchanged. Anti-mechanism citation rules + synthesis directives + length-calibration rules added to system.txt simultaneously (addresses retrieval-quality findings AIStudio_628/629/630 at prompt layer).
 # Changelog: 1.7.0 — AIStudio_613: ingest progress bar fix. (a) Parse [ingest] file_complete: N/M chunks=C bytes=B lines from pipeline.py v1.5.0+ in async stderr iterator → primary source of files_processed/chunks_written/bytes_processed/d_observed updates (previous tqdm-postfix path only fires at run end). (b) Self-correct d_observed in Qdrant polling path: write live_chunks/bytes_done back to cached state with [1e-5, 1e-2] chunks/byte clamp (rejects pathological intermediate ratios). (c) Reconcile both D_SEED sites (line ~729 and ~1078) to 200 chunks/MB midpoint — between PDF (~40) and markdown (~1000) regimes. Value matters less now that self-correction works.
@@ -145,7 +151,16 @@ def generate_answer_with_citations(
             seen_sources[src] = idx
             source_chunks[idx] = []
         idx = seen_sources[src]
-        source_chunks[idx].append(doc.content)
+        # AIStudio_720 — strip [Document: entity FY year] chunk augmentation prefix
+        # before sending to LLM. The prefix was injected at ingest time for vector
+        # retrieval quality (anaphora resolution). It has done its job — the right
+        # chunks were retrieved. Sending it to the LLM causes two problems:
+        # (1) the model quotes it verbatim in the answer body as if it were source text;
+        # (2) it wastes context window on non-content tokens.
+        # Entity/year attribution is already conveyed by the source filename in the
+        # context header "[N] filename" which the model uses for citation.
+        _content = re.sub(r'^\[Document:[^\]]+\]\s*', '', doc.content)
+        source_chunks[idx].append(_content)
         doc_to_index[i] = idx
 
     context_parts = []
@@ -207,6 +222,10 @@ def generate_answer_with_citations(
     answer = re.sub(
         r"\n+(?:References|Sources)\s*:?\s*\n(?:.*\n?)*$", "", answer, flags=re.IGNORECASE
     ).rstrip()
+
+    # AIStudio_720 belt-and-suspenders: strip any [Document: ...] prefix that leaked
+    # into the answer from conversation history or other path
+    answer = re.sub(r'\[Document:[^\]]+\]\s*', '', answer).strip()
 
     # Extract citations from answer
     citations = []
@@ -671,6 +690,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         "file_sizes": existing.get("file_sizes", []),
         "elapsed_sec": 0,
         "message": existing.get("message", "Indexing…"),
+        "normalizer_hits": [],
     }
 
     proc = await asyncio.create_subprocess_exec(
@@ -761,6 +781,37 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 # Print non-tqdm lines (e.g. [ingest] per-file logs) to API stdout
                 if line.startswith("[ingest]"):
                     print(line, flush=True)
+
+                # AIStudio_680 — parse [ingest] normalizer: structured line from pipeline.py
+                # Line shape: [ingest] normalizer: file=NAME format=FMT entity="ENTITY" year=YYYY chunks=N source=tag mismatch=false
+                if line.startswith("[ingest] normalizer:"):
+                    try:
+                        _m_file = re.search(r"file=(\S+)", line)
+                        _m_fmt = re.search(r"format=(\S+)", line)
+                        _m_entity = re.search(r'entity="([^"]+)"', line)
+                        _m_year = re.search(r"year=(\S+)", line)
+                        _m_chunks = re.search(r"chunks=(\d+)", line)
+                        _m_source = re.search(r"source=(\S+)", line)
+                        _m_mismatch = re.search(r"mismatch=(\S+)", line)
+                        if _m_entity:
+                            _hit = {
+                                "file": _m_file.group(1) if _m_file else "",
+                                "format": _m_fmt.group(1) if _m_fmt else "",
+                                "entity": _m_entity.group(1),
+                                "year": _m_year.group(1) if _m_year else "",
+                                "chunks": int(_m_chunks.group(1)) if _m_chunks else 0,
+                                "source": _m_source.group(1) if _m_source else "",
+                                "mismatch": _m_mismatch.group(1) == "true" if _m_mismatch else False,
+                            }
+                            _cached_norm = _ingest_status.get(corpus_name, {})
+                            _existing_hits = list(_cached_norm.get("normalizer_hits", []))
+                            _existing_hits.append(_hit)
+                            _ingest_status[corpus_name] = {
+                                **_cached_norm,
+                                "normalizer_hits": _existing_hits,
+                            }
+                    except Exception as _ne:
+                        print(f"[ingest] normalizer parse warning: {_ne}", flush=True)
                 continue
 
             last_process_line = line
@@ -913,6 +964,7 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             "elapsed_str": elapsed_str,
             "summary": summary,
             "message": summary,
+            "normalizer_hits": cached.get("normalizer_hits", []),
         }
         print(f"[ingest] '{corpus_name}' complete — {summary}")
 
@@ -947,13 +999,22 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
             try:
                 _result_json = json.loads(stdout_text.strip()) if stdout_text.strip() else {}
                 _file_stats = _result_json.get("result", {}).get("file_stats") or {}
+                # Build normalizer prefix lookup from normalizer_hits accumulated during ingest
+                _norm_hits = {h["file"]: h for h in cached.get("normalizer_hits", [])}
                 for _fname, _fdata in _file_stats.items():
-                    _meta["files"][_fname] = {
+                    _norm = _norm_hits.get(_fname, {})
+                    _entry = {
                         "size_bytes": _fdata.get("size_bytes", 0),
                         "chunks": _fdata.get("chunks", 0),
                         "duration_sec": _fdata.get("duration_sec", 0),
                         "ingested_at": _fdata.get("ingested_at", now_iso),
                     }
+                    # AIStudio_681 — persist normalizer prefix for UI display in Inspect panel
+                    if _norm.get("entity"):
+                        _prefix = f"[Document: {_norm['entity']} FY{_norm['year']}]" if _norm.get("year") else f"[Document: {_norm['entity']}]"
+                        _entry["normalizer_prefix"] = _prefix
+                        _entry["normalizer_mismatch"] = _norm.get("mismatch", False)
+                    _meta["files"][_fname] = _entry
             except Exception as _fe:
                 print(f"[ingest] warning: could not parse file_stats: {_fe}")
             with open(_meta_path, "w") as _f:

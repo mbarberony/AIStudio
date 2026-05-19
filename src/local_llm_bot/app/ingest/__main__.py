@@ -11,6 +11,16 @@ from local_llm_bot.app.ingest.pipeline import ingest_corpus
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
+# Version: 1.2.0
+# Changelog: 1.2.0 — Fix stdout/stderr split: human-readable summary → stderr.
+#            JSON payload → stdout unconditionally (parsed by api.py _capture_stdout
+#            to populate file_stats in corpus_metadata.yaml). Previously JSON was
+#            gated on --verbose so files: {} in corpus_metadata was always empty.
+#            Normalizer summary improved: source breakdown when mixed, entity list
+#            alphabetical, year-absent note when year missing, mismatch warning.
+#            --verbose now prints pretty JSON to stderr for operator inspection.
+# Changelog: 1.1.0 — AIStudio_675: normalizer summary section added.
+
 
 def _repo_root() -> Path:
     return find_repo_root(Path(__file__))
@@ -68,38 +78,84 @@ def main(argv: list[str] | None = None) -> int:
     )
     dur = time.time() - t0
 
-    # ── Human-readable summary ──────────────────────────────────────────────
+    import sys as _sys
+
+    # ── Human-readable summary → stderr ─────────────────────────────────────
+    # stderr = operator-visible stream (same as tqdm). stdout = JSON for api.py.
     mins, secs = divmod(int(dur), 60)
     dur_str = f"{mins}m {secs}s" if mins else f"{secs}s"
     avg_chunks = result.chunks_written / result.files_processed if result.files_processed else 0
     avg_secs = dur / result.files_processed if result.files_processed else 0
 
-    # Largest and smallest files by chunk count
     file_stats = result.file_stats or {}
     if file_stats:
         sorted_files = sorted(file_stats.items(), key=lambda x: x[1].get("chunks", 0))
         smallest = sorted_files[0]
         largest = sorted_files[-1]
         size_line = (
-            f"· Largest : {largest[0]} ({largest[1].get('chunks', 0):,} chunks)\n"
-            f"· Smallest: {smallest[0]} ({smallest[1].get('chunks', 0):,} chunks)"
+            f"· largest    : {largest[0]} ({largest[1].get('chunks', 0):,} chunks)\n"
+            f"· smallest   : {smallest[0]} ({smallest[1].get('chunks', 0):,} chunks)"
         )
     else:
         size_line = ""
 
     failures = result.files_failed or 0
-    failure_line = f"· ⚠ Failures : {failures}" if failures else "· Failures  : 0"
+    failure_line = f"· ⚠ failures : {failures}" if failures else "· failures   : 0"
 
-    print("")
-    print("--- Ingest result")
-    print(f"✅ {result.files_processed} files ingested · {result.chunks_written:,} chunks · {dur_str}")
-    print(f"· Config    : chunk_size={result.chunk_size} overlap={result.overlap} model={result.embed_model}")
-    print(f"· Avg       : {avg_chunks:.0f} chunks/file · {avg_secs:.1f}s/file")
+    print("--- Ingest result", file=_sys.stderr)
+    print(f"✅ {result.files_processed} files ingested · {result.chunks_written:,} chunks · {dur_str}", file=_sys.stderr)
+    print(f"· config     : chunk_size={result.chunk_size:,} · overlap={result.overlap} · model={result.embed_model}", file=_sys.stderr)
+    print(f"· avg        : {avg_chunks:,.0f} chunks/file · {avg_secs:.1f}s/file", file=_sys.stderr)
     if size_line:
-        print(size_line)
-    print(failure_line)
+        print(size_line, file=_sys.stderr)
+    print(failure_line, file=_sys.stderr)
 
-    # ── JSON payload (always written for operator use) ───────────────────
+    # ── Normalizer summary → stderr ──────────────────────────────────────────
+    _n_hits = getattr(result, "normalizer_hits", 0)
+    _n_misses = getattr(result, "normalizer_misses", 0)
+    _n_mm = getattr(result, "normalizer_mismatches", 0)
+    _n_markup = _n_hits + _n_misses
+    # Collect per-file normalizer data from file_stats for entity list + source breakdown
+    _norm_by_source: dict[str, int] = {}
+    _entities: list[str] = []
+    _year_missing = 0
+    for _fname, _fdata in file_stats.items():
+        _src = _fdata.get("normalizer_source", "")
+        _ent = _fdata.get("normalizer_entity", "")
+        _yr = _fdata.get("normalizer_year", "")
+        if _src:
+            _norm_by_source[_src] = _norm_by_source.get(_src, 0) + 1
+        if _ent:
+            _entities.append(_ent)
+            if not _yr:
+                _year_missing += 1
+
+    if _n_markup > 0:
+        print("--- Normalizer", file=_sys.stderr)
+        if _n_hits == _n_markup:
+            # All hits — show source breakdown
+            if len(_norm_by_source) == 1:
+                _src_label = f"source: {list(_norm_by_source.keys())[0]}"
+            elif _norm_by_source:
+                _src_label = "source: " + " · ".join(f"{v} {k}" for k, v in sorted(_norm_by_source.items()))
+            else:
+                _src_label = "source: tag"
+            print(f"✅ {_n_hits}/{_n_markup} markup files augmented · {_src_label}", file=_sys.stderr)
+        else:
+            print(f"· {_n_hits}/{_n_markup} markup files augmented · {_n_misses} no structured header detected", file=_sys.stderr)
+        if _year_missing > 0 and _year_missing == _n_hits:
+            print("· prefix     : [Document: <entity>] — year tag absent in all files, filename year used", file=_sys.stderr)
+        elif _year_missing > 0:
+            print(f"· prefix     : [Document: <entity> FY<year>] · ⚠ {_year_missing} files missing year tag", file=_sys.stderr)
+        else:
+            print("· prefix     : [Document: <entity> FY<year>]", file=_sys.stderr)
+        if _entities:
+            _entity_list = " · ".join(sorted(_entities))
+            print(f"· entities   : {_entity_list}", file=_sys.stderr)
+        if _n_mm > 0:
+            print(f"· ⚠ {_n_mm} entity mismatch warning{'s' if _n_mm > 1 else ''} — entity did not match filename stem", file=_sys.stderr)
+
+    # ── JSON payload → stdout (always — consumed by api.py _capture_stdout) ──
     payload = {
         "action": "ingest",
         "corpus": corpus,
@@ -114,9 +170,11 @@ def main(argv: list[str] | None = None) -> int:
         "paths": {k: str(v) for k, v in paths.items()},
         "result": asdict(result),
     }
+    print(json.dumps(payload))
+
     if args.verbose:
-        print("")
-        print(json.dumps(payload, indent=2))
+        print("", file=_sys.stderr)
+        print(json.dumps(payload, indent=2), file=_sys.stderr)
 
     return 0
 

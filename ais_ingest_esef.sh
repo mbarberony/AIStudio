@@ -1,24 +1,16 @@
 #!/usr/bin/env zsh
 # ais_ingest_esef.sh — Ingest an ESEF iXBRL corpus into AIStudio
-# Version: 1.0.0
+# Version: 1.0.1
 # Changelog:
-#   1.0.0 — Initial version. Thin wrapper over python -m local_llm_bot.app.ingest.
-#           Improvements over ais_ingest_sec_10k baseline:
-#           - --force flag with Qdrant collection check (warns before re-ingesting)
-#           - --corpus flag to support multi-vintage or custom ESEF corpora
-#           - --verbose flag passed through to __main__.py JSON payload
-#           - Metadata file gate: hard fail if <corpus>_corpus_metadata.yaml absent
-#           - File count + total size shown in preflight (not just count)
-#           - Hardware-aware time estimate
-#           - STD - AIStudio - CLI Output §8 three-phase output pattern
-# Ingests .xhtml ESEF iXBRL files from data/corpora/<corpus>/uploads/ into Qdrant.
-# Requires: AIStudio backend running (ais_start) + files downloaded (ais_download_esef)
-# Reference implementation for ESEF corpus ingest — see AIStudio Tutorial §3.
+#   1.0.1 — STD CLI Output §6 compliance: move terminal/sleep notices into
+#           --- Important section before --- Ingesting. Remove blank line
+#           before --- Ingesting (section label IS the visual break per §6).
+#   1.0.0 — Initial version.
 
 # ── Source guard ─────────────────────────────────────────────────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 SCRIPT_NAME="ais_ingest_esef"
 REPO="${0:A:h}"
 HELP_FILE="$REPO/ais_command_help.txt"
@@ -153,7 +145,6 @@ else
 fi
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
-echo ""
 echo "--- Setup"
 echo "· Corpus      : $CORPUS"
 echo "· Files       : $FILE_COUNT filings · ${TOTAL_MB} MB"
@@ -163,16 +154,17 @@ echo "· Chunk size  : 1,200 chars · Overlap: 200 chars"
 echo "· Embed model : nomic-embed-text"
 echo "· Source      : $UPLOADS"
 
+# ── Important notice ─────────────────────────────────────────────────────────
+echo "--- Important"
+echo "· This terminal can be minimized but not closed."
+echo "· Sleep prevention: caffeinate -i is active for the duration."
 # ── Hardware-aware time estimate ──────────────────────────────────────────────
-echo ""
-echo "--- Ingesting"
 # ~130s/file on M4 Pro 128GB (observed 2026-05-18: 716s / 9 files)
 # ~320s/file estimated on M4 Air 16GB (proportional from sec_10k ratio)
 ESTIMATE_PRO=$(( FILE_COUNT * 130 / 60 ))
 ESTIMATE_AIR=$(( FILE_COUNT * 320 / 60 ))
+echo "--- Ingesting"
 echo "▶ Ingesting $FILE_COUNT filings — ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air."
-echo "· This terminal can be minimized but not closed."
-echo "· Sleep prevention: caffeinate -i is active for the duration."
 
 # ── Ingest ────────────────────────────────────────────────────────────────────
 cd "$REPO"
@@ -191,7 +183,6 @@ caffeinate -i env AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
 INGEST_EXIT=$?
 
 # ── Post-ingest summary ───────────────────────────────────────────────────────
-echo ""
 echo "--- Next steps"
 if [[ "$INGEST_EXIT" -eq 0 ]]; then
     echo "✅ Corpus '$CORPUS' ready."
