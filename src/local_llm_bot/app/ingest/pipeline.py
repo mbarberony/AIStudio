@@ -1,4 +1,8 @@
-# Version: 1.8.25
+# Version: 1.8.26
+# Changelog: 1.8.26 — Fix _extract_document_metadata() early-exit returns: 5-tuple
+#            → 7-tuple (None, None appended for doc_tag/doc_year_tag). Fixes
+#            ValueError unpacking for all non-markup files (PDF, DOCX, MD, etc.).
+#            AIStudio_736.
 # Changelog: 1.8.8 — Plain tqdm, no subclass. bar_format mutated per-file via
 #            p_process.bar_format = f"  {n} of {T} · {pct}|{bar}| {elapsed}<{remaining}"
 #            tqdm native {elapsed}/{remaining} supply timing. Chunk-based total.
@@ -445,7 +449,7 @@ def _extract_document_head(
 
 def _extract_document_metadata(
     file_path: Path | None,
-) -> tuple[str | None, str | None, str | None, str | None, bool]:
+) -> tuple[str | None, str | None, str | None, str | None, bool, str | None, str | None]:
     """
     AIStudio_682 — Merged Document-Head + Temporal Context extraction.
 
@@ -460,13 +464,13 @@ def _extract_document_metadata(
       mismatch    — True if company namespace prefix doesn't match filename stem
 
     None entity is a no-op — caller uses entity-only or no prefix.
-    Only applies to .htm/.html files; non-HTML returns (None, None, None, None, False).
+    Only applies to .htm/.html files; non-HTML returns (None, None, None, None, False, None, None).
     """
     if _os.getenv("AISTUDIO_DOC_HEAD_NORMALIZER", "true").lower() == "false":
-        return None, None, None, None, False
+        return None, None, None, None, False, None, None
 
     if file_path is None or file_path.suffix.lower() not in (".htm", ".html", ".xhtml"):
-        return None, None, None, None, False
+        return None, None, None, None, False, None, None
 
 
     _XBRL_STD = {

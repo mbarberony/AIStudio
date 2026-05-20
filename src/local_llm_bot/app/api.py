@@ -1,4 +1,4 @@
-# Version: 1.5.5
+# Version: 1.7.2
 # Changelog: 1.5.5 — Add avg_seconds_per_file to /corpus/{name}/info response.
 #            Add DELETE /corpus/{name}/file/{filename}/chunks endpoint for reingest:
 #            wipes Qdrant chunks only (file stays on disk), resets metadata stub.
