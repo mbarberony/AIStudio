@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ais_start.sh — Start all AIStudio services
-# Version: 2.0.4
+# Version: 2.0.5
+# Changelog: 2.0.5 — extend backend health poll from 15s to 30s (AIStudio_714)
 # Changelog: 2.0.4 — fix Ollama "already running" check: use /api/tags not bare port (AIStudio_541)
 # Changelog: 2.0.3 — replace hardcoded llama3.1:8b check with /api/tags API check (AIStudio_532)
 # Changelog: 2.0.1 — fix ZSH_EVAL_CONTEXT unbound variable under set -u in bash (use :- default)
@@ -10,7 +11,7 @@ set -euo pipefail
 # ── Source guard ──────────────────────────────────────────────────────────────
 [[ "${ZSH_EVAL_CONTEXT:-}" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.0.4"
+VERSION="2.0.5"
 SCRIPT_NAME="ais_start"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$SCRIPT_DIR"
@@ -176,7 +177,7 @@ else
 fi
 
 BACKEND_READY=0
-for i in $(seq 1 15); do
+for i in $(seq 1 30); do
     sleep 1
     if curl -s "$API/health" > /dev/null 2>&1; then
         BACKEND_READY=1

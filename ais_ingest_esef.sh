@@ -1,7 +1,12 @@
 #!/usr/bin/env zsh
 # ais_ingest_esef.sh — Ingest an ESEF iXBRL corpus into AIStudio
-# Version: 1.0.1
+# Version: 1.0.3
 # Changelog:
+#   1.0.3 — Wording: "should not be closed" (clearer intent).
+#   1.0.2 — Dynamic time estimate from avg_seconds_per_file in corpus_metadata.yaml.
+#           M4 Air ratio ~2.5x M4 Pro applied to observed avg. Fallback to
+#           hardware constants when no prior ingest data available.
+#           STD §1+§8: ▶ line uses · separators + trailing ellipsis.
 #   1.0.1 — STD CLI Output §6 compliance: move terminal/sleep notices into
 #           --- Important section before --- Ingesting. Remove blank line
 #           before --- Ingesting (section label IS the visual break per §6).
@@ -10,7 +15,7 @@
 # ── Source guard ─────────────────────────────────────────────────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.0.1"
+VERSION="1.0.3"
 SCRIPT_NAME="ais_ingest_esef"
 REPO="${0:A:h}"
 HELP_FILE="$REPO/ais_command_help.txt"
@@ -149,22 +154,44 @@ echo "--- Setup"
 echo "· Corpus      : $CORPUS"
 echo "· Files       : $FILE_COUNT filings · ${TOTAL_MB} MB"
 echo "· Format      : ESEF iXBRL (.xhtml) — IFRS inline XBRL"
-echo "· Normalizer  : ESEF Document-Head Extraction (pipeline.py) — entity + FY year prefix per chunk"
+echo "· Normalizer  : chunk prefix injection — entity from XBRL tag · fiscal year from filename"
 echo "· Chunk size  : 1,200 chars · Overlap: 200 chars"
 echo "· Embed model : nomic-embed-text"
 echo "· Source      : $UPLOADS"
 
 # ── Important notice ─────────────────────────────────────────────────────────
 echo "--- Important"
-echo "· This terminal can be minimized but not closed."
+echo "· This terminal can be minimized but should not be closed."
 echo "· Sleep prevention: caffeinate -i is active for the duration."
 # ── Hardware-aware time estimate ──────────────────────────────────────────────
-# ~130s/file on M4 Pro 128GB (observed 2026-05-18: 716s / 9 files)
-# ~320s/file estimated on M4 Air 16GB (proportional from sec_10k ratio)
-ESTIMATE_PRO=$(( FILE_COUNT * 130 / 60 ))
-ESTIMATE_AIR=$(( FILE_COUNT * 320 / 60 ))
+# Read avg_seconds_per_file from corpus_metadata.yaml if available.
+# Fallback to hardware-observed constants: ~130s/file M4 Pro, ~320s/file M4 Air.
+AVG_SECS_PER_FILE=""
+if [[ -f "$METADATA_FILE" ]]; then
+    AVG_SECS_PER_FILE=$(python3 -c "
+import sys, yaml
+try:
+    with open('$METADATA_FILE') as f:
+        d = yaml.safe_load(f) or {}
+    v = d.get('avg_seconds_per_file')
+    print(v if v else '')
+except: print('')
+" 2>/dev/null || echo "")
+fi
+
+if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
+    # Use observed avg from previous ingest, with M4 Air ratio ~2.5x M4 Pro
+    ESTIMATE_PRO=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * 2.5 * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
+else
+    # No prior ingest data — use hardware constants
+    ESTIMATE_PRO=$(( FILE_COUNT * 130 / 60 ))
+    ESTIMATE_AIR=$(( FILE_COUNT * 320 / 60 ))
+fi
+
 echo "--- Ingesting"
-echo "▶ Ingesting $FILE_COUNT filings — ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air."
+# STD §1+§8: ▶ action line with · separators between fields, trailing ...
+echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air..."
 
 # ── Ingest ────────────────────────────────────────────────────────────────────
 cd "$REPO"

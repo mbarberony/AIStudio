@@ -1,10 +1,14 @@
 #!/usr/bin/env zsh
 # ais_ingest_sec_10k.sh — Ingest the SEC 10-K corpus into AIStudio
-# Version: 1.3.1
+# Version: 1.3.4
 # Changelog:
 #   1.3.2 — AIStudio_673: Populate --- Setup section with effective config defaults.
 #           Ingest summary now shown as human-readable table (via __main__.py).
 #           Raw JSON output moved to --verbose flag in __main__.py.
+#   1.3.4 — Move --- Important above --- Ingesting per STD §8.
+#   1.3.4 — Fix zsh "unmatched quote" error: use ${FORCE_FLAG:+--force} expansion.
+#   1.3.3 — STD §8 minimal compliance: wording fixes, --- Important section,
+#           ▶ line with · separators + ellipsis, --force flag, --- Next steps.
 #   1.3.1 — Wrap ingest with caffeinate -i to prevent macOS sleep during long runs.
 #           Updated "leave terminal open" message to clarify "minimized but not closed."
 #           Hardware-aware time estimate: Pro vs Air.
@@ -20,7 +24,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.2"
+VERSION="1.3.4"
 
 SCRIPT_NAME="ais_ingest_sec_10k"
 REPO="${0:A:h}"
@@ -196,21 +200,27 @@ EOF
 fi
 
 # --- Ingesting
-echo ""
+echo "--- Important"
+echo "· This terminal can be minimized but should not be closed."
+echo "· Sleep prevention: caffeinate -i is active for the duration."
 echo "--- Ingesting"
-echo "▶ Ingesting $FILE_COUNT filings — ~35 min on M4 Pro 128 GB / ~90 min on M4 Air 16 GB."
-echo "· This terminal can be minimized but not closed."
-echo "· Sleep prevention: caffeinate -i is wrapping the run to keep the Mac awake."
+echo "▶ Ingesting $FILE_COUNT filings · ~35 min on M4 Pro · ~90 min on M4 Air..."
+
+# Parse --force flag
+FORCE_FLAG=""
+for arg in "$@"; do
+    [[ "$arg" == "--force" ]] && FORCE_FLAG="--force"
+done
 
 cd "$REPO"
 source .venv/bin/activate
 caffeinate -i env AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
     python3 -m local_llm_bot.app.ingest \
     --corpus sec_10k \
-    --root "$UPLOADS"
+    --root "$UPLOADS" ${FORCE_FLAG:+--force}
 
-echo ""
-echo "--- Summary"
-echo "✅ SEC 10-K corpus ingested."
-echo "· Select 'sec_10k' in the AIStudio corpus dropdown."
-echo "· To benchmark: ais_bench --corpus sec_10k"
+echo "--- Next steps"
+echo "✅ Corpus 'sec_10k' ready."
+echo "· Select 'sec_10k' in the AIStudio corpus dropdown to query."
+echo "· To benchmark : ais_bench --corpus sec_10k"
+echo "· To re-ingest : $SCRIPT_NAME --force"

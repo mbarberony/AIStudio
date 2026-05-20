@@ -1476,19 +1476,44 @@
 
                     // Per-file stats from corpus_metadata.yaml
                     const fm = fileMeta[fname] || {};
-                    const kb = f.size_bytes ? (f.size_bytes / 1024).toFixed(0) + ' KB' : (fm.size_bytes ? (fm.size_bytes/1024).toFixed(0) + ' KB' : 'N/A');
-                    const chunks = fm.chunks != null ? fm.chunks + ' chunks' : 'N/A';
-                    const ingestedAt = fm.ingested_at ? (() => {
-                        const d = new Date(fm.ingested_at);
-                        return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-                    })() : 'N/A';
-                    // AIStudio_681 — normalizer prefix from corpus_metadata files entry
-                    const normPrefix = fm.normalizer_prefix
-                        ? `<div style="font-size:10px;color:var(--accent);margin-top:1px;font-family:'DM Mono',monospace;">${escapeHtml(fm.normalizer_prefix)}${fm.normalizer_mismatch ? ' <span style="color:var(--warning,#f59e0b)" title="Entity extracted did not match filename stem">⚠</span>' : ''}</div>`
-                        : '';
-                    const metaLine = `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${kb} · ${chunks} · ${ingestedAt}</div>${normPrefix}`;
 
-                    return '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
+                    // file type from metadata or extension fallback
+                    const extMap = {xhtml:'ESEF iXBRL', htm:'SEC XBRL', html:'SEC XBRL', pdf:'PDF', md:'Markdown', txt:'Text', docx:'Word', xlsx:'Excel'};
+                    const ext = fname.split('.').pop().toLowerCase();
+                    const fileTypeStr = fm.file_type || extMap[ext] || ext.toUpperCase();
+
+                    // Size
+                    const sizeKb = f.size_bytes ? (f.size_bytes / 1024).toFixed(0) : (fm.size_bytes ? (fm.size_bytes/1024).toFixed(0) : null);
+                    const sizeStr = sizeKb ? `size: ${Number(sizeKb).toLocaleString()} KB` : null;
+
+                    // Chunks
+                    const chunksStr = fm.chunks != null ? `chunks: ${Number(fm.chunks).toLocaleString()}` : null;
+
+                    // Ingested at
+                    const ingestedStr = fm.ingested_at ? (() => {
+                        const d = new Date(fm.ingested_at);
+                        return 'ingested: ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+                    })() : null;
+
+                    // Duration
+                    const durStr = fm.duration_sec != null ? `duration: ${Number(fm.duration_sec).toFixed(0)}s` : null;
+
+                    // Normalizer prefix appended at end, no label, in brackets
+                    const normEntity = fm.normalizer_entity || '';
+                    const normYear = fm.normalizer_year || '';
+                    const normPrefixText = normEntity ? (normYear ? `[${normEntity} FY${normYear}]` : `[${normEntity}]`) : '';
+                    const normSuffix = normPrefixText
+                        ? `&nbsp;&nbsp;<span style="font-family:'DM Mono',monospace;color:var(--accent);">${escapeHtml(normPrefixText)}${fm.normalizer_mismatch ? ' <span title="Entity mismatch">⚠</span>' : ''}</span>`
+                        : '';
+
+                    // Single meta line: file type · size · chunks · ingested · duration   [prefix]
+                    const metaParts = [`file type: ${fileTypeStr}`, sizeStr, chunksStr, ingestedStr, durStr].filter(Boolean);
+                    const metaLine = `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;white-space:normal;overflow-wrap:break-word;">${metaParts.join(' · ')}${normSuffix}</div>`;
+
+                    return '<div class="file-row" style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
+                        + '<input type="checkbox" class="file-select-cb" data-fname="' + fname + '" '
+                        + 'style="flex-shrink:0;width:14px;height:14px;accent-color:var(--accent);cursor:pointer;" '
+                        + 'onchange="updateDeleteBar()">'
                         + '<div style="flex:1;min-width:0;">'
                         + '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + fname + '">' + fname + '</div>'
                         + metaLine
@@ -1515,15 +1540,143 @@
             }
 
             const sizeLabel = data.size_bytes ? (data.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—';
+            // Multi-select toolbar: hidden until a checkbox is checked
+            const avgSecsPerFile = data.avg_seconds_per_file || null;
+            const selectToolbar = `
+                <div id="file-select-toolbar" data-avg-secs="${avgSecsPerFile}" style="display:none;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;margin-top:8px;margin-bottom:4px;">
+                    <input type="checkbox" id="select-all-cb" title="Select all"
+                        style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;"
+                        onchange="toggleSelectAll(this.checked)">
+                    <span id="select-count" style="font-size:12px;color:var(--text-mid);">0 selected</span>
+                    <span style="flex:1;"></span>
+                    <button id="reingest-selected-btn" onclick="reingestSelectedFiles()"
+                        style="display:none;padding:4px 12px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-right:4px;">
+                        Reingest selected
+                    </button>
+                    <button id="delete-selected-btn" onclick="deleteSelectedFiles()"
+                        style="display:none;padding:4px 12px;background:var(--error,#ef4444);color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">
+                        Delete selected
+                    </button>
+                </div>`;
             const summary = '<strong>Files: ' + escapeHtml(data.name) + '</strong>'
                 + ' <span style="font-size:12px;color:var(--text-dim);font-weight:400;">(' + (data.file_count ?? '—') + ' files · ' + (data.chunk_count ?? '—') + ' chunks · ' + sizeLabel + ')</span>'
-                + '<div style="max-height:calc(100vh - 280px);overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin-top:8px;">'
+                + selectToolbar
+                + '<div style="max-height:calc(100vh - 320px);overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin-top:4px;">'
                 + fileRows + '</div>';
 
             addMessage('assistant', summary, true);
         } catch (err) {
             addMessage('assistant', 'Error: ' + err.message, false);
         }
+    }
+
+    function updateDeleteBar() {
+        const cbs = document.querySelectorAll('.file-select-cb:checked');
+        const total = document.querySelectorAll('.file-select-cb').length;
+        const n = cbs.length;
+        const toolbar = document.getElementById('file-select-toolbar');
+        const countEl = document.getElementById('select-count');
+        const deleteBtn = document.getElementById('delete-selected-btn');
+        const reingestBtn = document.getElementById('reingest-selected-btn');
+        const selectAllCb = document.getElementById('select-all-cb');
+        if (!toolbar) return;
+        if (n > 0) {
+            toolbar.style.display = 'flex';
+            countEl.textContent = n + ' selected';
+            // Estimate reingest time from avg_seconds_per_file stored on toolbar
+            const avgSecs = parseFloat(toolbar.dataset.avgSecs) || null;
+            const estSecs = avgSecs ? Math.round(avgSecs * n) : null;
+            const estLabel = estSecs ? (estSecs >= 60 ? ` (~${Math.floor(estSecs/60)}m ${estSecs%60}s)` : ` (~${estSecs}s)`) : '';
+            if (reingestBtn) { reingestBtn.style.display = ''; reingestBtn.textContent = 'Reingest ' + n + ' file' + (n > 1 ? 's' : '') + estLabel; }
+            if (deleteBtn)   { deleteBtn.style.display = '';   deleteBtn.textContent = 'Delete ' + n + ' file' + (n > 1 ? 's' : ''); }
+        } else {
+            toolbar.style.display = 'none';
+        }
+        if (selectAllCb) {
+            selectAllCb.checked = n > 0 && n === total;
+            selectAllCb.indeterminate = n > 0 && n < total;
+        }
+    }
+
+    function toggleSelectAll(checked) {
+        document.querySelectorAll('.file-select-cb').forEach(cb => { cb.checked = checked; });
+        updateDeleteBar();
+    }
+
+    async function reingestSelectedFiles() {
+        const cbs = [...document.querySelectorAll('.file-select-cb:checked')];
+        if (cbs.length === 0) return;
+        const names = cbs.map(cb => cb.dataset.fname);
+        const toolbar = document.getElementById('file-select-toolbar');
+        const avgSecs = toolbar ? parseFloat(toolbar.dataset.avgSecs) || null : null;
+        const estSecs = avgSecs ? Math.round(avgSecs * names.length) : null;
+        const estStr = estSecs ? (estSecs >= 60
+            ? `~${Math.floor(estSecs/60)}m ${estSecs%60}s`
+            : `~${estSecs}s`) : null;
+
+        const estLine = estStr
+            ? `<br><br><span style="color:var(--text-mid);font-size:12px;">⏱ Estimated time: <strong>${estStr}</strong> based on previous ingest.</span>`
+            : '';
+
+        const confirmed = await showModal({
+            title: 'Reingest ' + names.length + ' file' + (names.length > 1 ? 's' : '') + " in corpus '" + currentCorpus + "'",
+            body: names.map(n => '<strong>' + escapeHtml(n) + '</strong>').join('<br>')
+                + '<br><br>Existing chunks for these files will be removed and re-embedded with current normalizer settings. Other files are untouched.'
+                + estLine,
+            confirmLabel: 'Type YES to confirm',
+            requireYes: true,
+        });
+        if (!confirmed) return;
+
+        // Step 1: wipe chunks for each selected file (keep file on disk)
+        let wiped = 0, wipeFailed = 0;
+        for (const fname of names) {
+            try {
+                const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(fname)}/chunks`, { method: 'DELETE' });
+                if (!res.ok) { wipeFailed++; } else { wiped++; }
+            } catch { wipeFailed++; }
+        }
+
+        if (wipeFailed > 0) {
+            addSystemMessage(`⚠ ${wipeFailed} file${wipeFailed > 1 ? 's' : ''} could not have chunks cleared. Reingest may include stale data.`);
+        }
+
+        // Step 2: trigger full ingest (pipeline skips already-indexed files;
+        // wiped files will be re-embedded, others are skipped via Qdrant skip logic)
+        try {
+            const res = await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
+            if (!res.ok) throw new Error('Ingest trigger failed');
+            addSystemMessage(
+                `Reingest started for ${wiped} file${wiped > 1 ? 's' : ''}${estStr ? ' · est. ' + estStr : ''}. Progress visible in the ingest bar.`
+            );
+        } catch (err) {
+            addMessage('assistant', 'Reingest trigger failed: ' + err.message, false);
+        }
+        inspectCorpus();
+    }
+
+    async function deleteSelectedFiles() {
+        const cbs = [...document.querySelectorAll('.file-select-cb:checked')];
+        if (cbs.length === 0) return;
+        const names = cbs.map(cb => cb.dataset.fname);
+        const confirmed = await showModal({
+            title: 'Remove ' + names.length + ' file' + (names.length > 1 ? 's' : '') + " from corpus '" + currentCorpus + "'",
+            body: names.map(n => '<strong>' + escapeHtml(n) + '</strong>').join('<br>') + '<br><br>Files will be moved to trash and removed from the search index.',
+            confirmLabel: 'Type YES to confirm',
+            requireYes: true,
+        });
+        if (!confirmed) return;
+        let deleted = 0, failed = 0;
+        for (const fname of names) {
+            try {
+                const res = await fetch(`${API}/corpus/${currentCorpus}/file/${encodeURIComponent(fname)}`, { method: 'DELETE' });
+                if (!res.ok) { failed++; } else { deleted++; }
+            } catch { failed++; }
+        }
+        const msg = deleted + ' file' + (deleted !== 1 ? 's' : '') + ' removed from index'
+            + (failed > 0 ? ' · ' + failed + ' failed' : '') + '.';
+        addSystemMessage(msg);
+        inspectCorpus();
     }
 
     async function confirmDeleteFile(filename) {
@@ -1851,10 +2004,11 @@
                 const data = await res.json();
                 document.getElementById(loadingId)?.remove();
 
-                let html = escapeHtml(data.answer)
-                    .replace(/\[Citation\s*\[?\d+\]?\]/gi, '')  // strip [Citation [N]] and [Citation N]
-                    .replace(/\[CITE\s*\d+\]/gi, '')             // strip [CITE N] variants
-                    .split(/\n\n+/).map(p => p.trim()).filter(p=>p).map(p=>`<p style="margin:0 0 6px;">${p.replace(/\n/g,'<br>')}</p>`).join('');
+                // Use markdownToHtml so **bold**, * bullets, `code` render correctly
+                const _cleanAnswer = data.answer
+                    .replace(/\[Citation\s*\[?\d+\]?\]/gi, '')
+                    .replace(/\[CITE\s*\d+\]/gi, '');
+                let html = markdownToHtml(_cleanAnswer);
                 if (data.citations?.length) {
                     html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);">';
                     data.citations.forEach(c => {
@@ -2450,11 +2604,11 @@
             const olMatch = line.match(/^(\d+)[.)]\s+(.+)/);
 
             if (ulMatch) {
-                if (!inUl) { if (inOl) { out.push('</ol>'); inOl = false; } out.push('<ul>'); inUl = true; }
-                out.push('<li>' + inlineMarkdown(ulMatch[1]) + '</li>');
+                if (!inUl) { if (inOl) { out.push('</ol>'); inOl = false; } out.push('<ul style="margin:6px 0 6px 0;padding-left:20px;">'); inUl = true; }
+                out.push('<li style="margin:2px 0;">' + inlineMarkdown(ulMatch[1]) + '</li>');
             } else if (olMatch) {
-                if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol>'); inOl = true; }
-                out.push('<li>' + inlineMarkdown(olMatch[2]) + '</li>');
+                if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol style="margin:6px 0 6px 0;padding-left:20px;">'); inOl = true; }
+                out.push('<li style="margin:2px 0;">' + inlineMarkdown(olMatch[2]) + '</li>');
             } else {
                 if (inUl) { out.push('</ul>'); inUl = false; }
                 if (inOl) { out.push('</ol>'); inOl = false; }

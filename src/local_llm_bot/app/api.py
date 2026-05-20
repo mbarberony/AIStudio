@@ -1,8 +1,20 @@
-# Version: 1.5.1
-# Changelog: 1.5.1 — AIStudio_720: strip [Document: entity FY year] chunk augmentation
-#            prefix from chunk content before LLM context assembly. Prefix served its
-#            purpose at retrieval time; sending it to LLM caused verbatim quoting in
-#            answer body. Belt-and-suspenders: also strip from generated answer text.
+# Version: 1.5.5
+# Changelog: 1.5.5 — Add avg_seconds_per_file to /corpus/{name}/info response.
+#            Add DELETE /corpus/{name}/file/{filename}/chunks endpoint for reingest:
+#            wipes Qdrant chunks only (file stays on disk), resets metadata stub.
+#            Reingest flow: wipe chunks → POST /ingest to re-embed with current settings.
+# Changelog: 1.5.4 — Upload endpoint writes stub to corpus_metadata.yaml (file_type +
+#            size_bytes, ingest fields null) so UI shows metadata before ingest.
+#            Ingest metadata write now includes file_type label and normalizer fields
+#            directly from file_stats (normalizer_entity/year/source/mismatch).
+#            Removes normalizer_prefix computed field — UI derives it from entity+year.
+# Changelog: 1.5.3 — AIStudio_718: entity alias query expansion before retrieval.
+#            _build_entity_alias_map() reads normalizer_entity from corpus_metadata.yaml
+#            file_stats and builds token→canonical map. _expand_query_entities() detects
+#            entity mentions in query and appends canonical names so BM25 hits right chunks.
+#            "BNP Paribas" → "BNP Paribas Groupe BNP Paribas" at retrieval time only;
+#            original query preserved for LLM generation. Module-level cache per corpus;
+#            invalidated on corpus metadata update. Wired into /ask and /debug/retrieve.
 #            pipeline.py v1.8.0. Hits stored in _ingest_status normalizer_hits list; carried
 #            into done status. Frontend renders normalizer hits below ingest progress bar.
 # Changelog: 1.7.2 — AIStudio_635 + AIStudio_636 (bundled). (635) Inject today's date into system prompt — appends "TODAY'S DATE: YYYY-MM-DD (Weekday)." after the SOURCE COUNT block. Fixes the failure mode where queries like "what happened in the last 5 days" anchor temporally to the most-recent retrieved chunk's date rather than to actual today. Becomes structurally important as M2.D query-understanding progresses (recency filters, "this week" queries all implicitly depend on "now"). (636) Bump conversation_history slice [-6:] → [-20:] = last 10 exchanges (was 3). Aligns implementation with the documented mental model. Negligible memory cost for 7B model (~6KB additional context per query). Comment updated to reflect new depth. NOTE: rag_core.py has a duplicate generate_answer_with_citations() with its own [-6:] slice on line ~252; verified dead code (api.py defines its own at line 118, used by /ask at line 434, rag_core imports only RetrievedDoc + retrieve). Filed AIStudio_637 to remove the duplicate.
@@ -90,6 +102,94 @@ def _load_corpus_search_guidance(corpus_name: str) -> str:
     return ""
 
 
+def _build_entity_alias_map(corpus_name: str) -> dict[str, str]:
+    """
+    AIStudio_718 — Build a token→canonical_entity map from corpus_metadata.yaml file_stats.
+
+    Each file entry with a normalizer_entity field contributes its canonical name.
+    The map covers common abbreviation patterns:
+      - Each individual word in the entity name (≥4 chars, not stopwords)
+      - The full entity name lowercased
+      - Common short forms (e.g. "bnp" from "Groupe BNP Paribas")
+
+    Returns {lowercase_token: canonical_entity_name}
+    Used by _expand_query_entities() to rewrite queries before retrieval.
+    """
+    _STOPWORDS = {"the", "and", "for", "bank", "group", "groep", "groupe", "holding",
+                  "corp", "inc", "ltd", "plc", "nv", "sa", "spa", "s.a.", "n.v.",
+                  "s.p.a.", "aktiengesellschaft", "konzern", "koncernen"}
+    alias_map: dict[str, str] = {}
+    try:
+        repo_root = _get_repo_root()
+        meta_path = (
+            repo_root / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_metadata.yaml"
+        )
+        if not meta_path.exists():
+            return alias_map
+        with open(meta_path) as f:
+            meta = _yaml.safe_load(f) or {}
+        files = meta.get("files", {}) or {}
+        seen_entities: set[str] = set()
+        for _fname, fdata in files.items():
+            entity = (fdata or {}).get("normalizer_entity", "")
+            if not entity or entity in seen_entities:
+                continue
+            seen_entities.add(entity)
+            # Full entity name → itself
+            alias_map[entity.lower()] = entity
+            # Each significant token
+            for token in re.split(r"[\s\.,·\-]+", entity):
+                token_clean = re.sub(r"[^a-z0-9]", "", token.lower())
+                # Only map if significant and unambiguous (don't let short tokens clobber each other)
+                if len(token_clean) >= 3 and token_clean not in _STOPWORDS and token_clean not in alias_map:
+                    alias_map[token_clean] = entity
+    except Exception:
+        pass
+    return alias_map
+
+
+# Module-level cache: {corpus_name: alias_map}
+_ENTITY_ALIAS_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _expand_query_entities(query: str, corpus_name: str) -> str:
+    """
+    AIStudio_718 — Expand entity mentions in query to canonical corpus names.
+
+    Detects entity tokens in the query and appends canonical entity names so
+    BM25 keyword matching hits the right chunks. Example:
+      "what is the CET1 ratio for BNP" →
+      "what is the CET1 ratio for BNP [Groupe BNP Paribas]"
+
+    This is a lightweight pre-retrieval rewrite — it does NOT modify the query
+    sent to the LLM, only the query used for vector + BM25 retrieval.
+    Falls back to original query silently on any error.
+    """
+    try:
+        global _ENTITY_ALIAS_CACHE
+        if corpus_name not in _ENTITY_ALIAS_CACHE:
+            _ENTITY_ALIAS_CACHE[corpus_name] = _build_entity_alias_map(corpus_name)
+        alias_map = _ENTITY_ALIAS_CACHE[corpus_name]
+        if not alias_map:
+            return query
+
+        query_lower = query.lower()
+        expansions: list[str] = []
+        already_present: set[str] = set()
+
+        for token, canonical in alias_map.items():
+            # Only expand if token appears in query but full canonical name does not
+            if token in query_lower and canonical.lower() not in query_lower and canonical not in already_present:
+                expansions.append(canonical)
+                already_present.add(canonical)
+
+        if expansions:
+            return query + " " + " ".join(expansions)
+    except Exception:
+        pass
+    return query
+
+
 # AIStudio_124 (partial): system prompt base loaded from prompts/system.txt
 # Memoized at module level — file is read once per process. Restart api.py
 # to pick up edits. Fallback to minimal inline string if file missing so
@@ -151,16 +251,13 @@ def generate_answer_with_citations(
             seen_sources[src] = idx
             source_chunks[idx] = []
         idx = seen_sources[src]
-        # AIStudio_720 — strip [Document: entity FY year] chunk augmentation prefix
-        # before sending to LLM. The prefix was injected at ingest time for vector
-        # retrieval quality (anaphora resolution). It has done its job — the right
-        # chunks were retrieved. Sending it to the LLM causes two problems:
-        # (1) the model quotes it verbatim in the answer body as if it were source text;
-        # (2) it wastes context window on non-content tokens.
-        # Entity/year attribution is already conveyed by the source filename in the
-        # context header "[N] filename" which the model uses for citation.
-        _content = re.sub(r'^\[Document:[^\]]+\]\s*', '', doc.content)
-        source_chunks[idx].append(_content)
+        # AIStudio_720 — [Document: entity FY year] prefix is intentionally preserved in
+        # chunk content sent to LLM. It is the entity attribution signal in a multi-firm
+        # corpus — without it the model cannot reliably attribute CET1 ratios, financial
+        # metrics, or any entity-specific claim to the correct firm. Stripping it here
+        # caused hallucinated entity attribution (T2.46). The prefix is stripped from the
+        # generated *answer* text only (post-processing below), never from the input context.
+        source_chunks[idx].append(doc.content)
         doc_to_index[i] = idx
 
     context_parts = []
@@ -451,8 +548,13 @@ async def ask(req: AskRequest) -> AskResponse:
     # If both are None, retrieve() runs in vector-only mode (preserves pre-M2.A behavior).
     hybrid_alpha = req.hybrid_alpha if req.hybrid_alpha is not None else CONFIG.rag.hybrid_alpha
 
+    # AIStudio_718 — expand entity mentions in query to canonical corpus names before
+    # retrieval. "BNP Paribas" → "BNP Paribas Groupe BNP Paribas" so BM25 hits the
+    # right chunks. Original query preserved for LLM generation (user sees their words).
+    retrieval_query = _expand_query_entities(req.query, req.corpus)
+
     # Retrieve relevant documents
-    docs = retrieve(query=req.query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha)
+    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha)
 
     # Generate answer with citations
     result = generate_answer_with_citations(
@@ -476,8 +578,9 @@ async def ask(req: AskRequest) -> AskResponse:
 async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     _require_corpus(req.corpus)
     hybrid_alpha = req.hybrid_alpha if req.hybrid_alpha is not None else CONFIG.rag.hybrid_alpha
+    retrieval_query = _expand_query_entities(req.query, req.corpus)
     docs = retrieve(
-        query=req.query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha
+        query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha
     )
     return {
         "count": len(docs),
@@ -566,6 +669,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     schema_version = "1.0"
     last_updated = None
     files_meta: dict = {}
+    avg_seconds_per_file = None
     try:
         meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
         if meta_path.exists():
@@ -582,6 +686,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
             schema_version = meta.get("schema_version", "1.0")
             last_updated = meta.get("last_updated")
             files_meta = meta.get("files") or {}
+            avg_seconds_per_file = meta.get("avg_seconds_per_file")
     except Exception:
         pass
 
@@ -604,6 +709,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "search_guidance": search_guidance,
         "schema_version": schema_version,
         "last_updated": last_updated,
+        "avg_seconds_per_file": avg_seconds_per_file,
         "files_meta": files_meta,
         "paths": {
             "base": str(paths["base"]),
@@ -648,6 +754,9 @@ async def update_corpus_metadata(corpus_name: str, request: Request) -> dict[str
         f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
         f.write("# Corpus metadata — loaded by api.py at query time\n\n")
         _yaml.dump(meta, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+    # Invalidate entity alias cache so next query rebuilds from updated metadata
+    _ENTITY_ALIAS_CACHE.pop(corpus_name, None)
 
     return {
         "status": "updated",
@@ -1003,17 +1112,26 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
                 _norm_hits = {h["file"]: h for h in cached.get("normalizer_hits", [])}
                 for _fname, _fdata in _file_stats.items():
                     _norm = _norm_hits.get(_fname, {})
+                    # Derive file_type label from extension
+                    _ext = Path(_fname).suffix.lower()
+                    _file_type_labels = {
+                        ".xhtml": "ESEF iXBRL", ".htm": "SEC XBRL", ".html": "SEC XBRL",
+                        ".pdf": "PDF", ".md": "Markdown", ".txt": "Text",
+                        ".docx": "Word", ".xlsx": "Excel",
+                    }
+                    _file_type = _file_type_labels.get(_ext, _ext.lstrip(".").upper())
                     _entry = {
+                        "file_type": _file_type,
                         "size_bytes": _fdata.get("size_bytes", 0),
                         "chunks": _fdata.get("chunks", 0),
                         "duration_sec": _fdata.get("duration_sec", 0),
                         "ingested_at": _fdata.get("ingested_at", now_iso),
+                        # Normalizer fields written by pipeline.py into file_stats
+                        "normalizer_entity": _fdata.get("normalizer_entity") or "",
+                        "normalizer_year": _fdata.get("normalizer_year") or "",
+                        "normalizer_source": _fdata.get("normalizer_source") or "",
+                        "normalizer_mismatch": _fdata.get("normalizer_mismatch") or False,
                     }
-                    # AIStudio_681 — persist normalizer prefix for UI display in Inspect panel
-                    if _norm.get("entity"):
-                        _prefix = f"[Document: {_norm['entity']} FY{_norm['year']}]" if _norm.get("year") else f"[Document: {_norm['entity']}]"
-                        _entry["normalizer_prefix"] = _prefix
-                        _entry["normalizer_mismatch"] = _norm.get("mismatch", False)
                     _meta["files"][_fname] = _entry
             except Exception as _fe:
                 print(f"[ingest] warning: could not parse file_stats: {_fe}")
@@ -1081,6 +1199,39 @@ async def upload_to_corpus(
             f.write(content)
 
         file_size = len(content)
+
+        # Write stub entry to corpus_metadata.yaml so the UI can show file type + size
+        # immediately after upload, before ingest runs. Ingest will fill in remaining fields.
+        _file_type_map = {
+            ".xhtml": "ESEF iXBRL", ".htm": "SEC XBRL", ".html": "SEC XBRL",
+            ".pdf": "PDF", ".md": "Markdown", ".txt": "Text",
+            ".docx": "Word", ".xlsx": "Excel",
+        }
+        try:
+            _meta_path = (
+                paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
+            )
+            if _meta_path.exists():
+                with open(_meta_path) as _f:
+                    _meta = _yaml.safe_load(_f) or {}
+            else:
+                _meta = {"corpus_name": corpus_name, "schema_version": "1.0"}
+            if "files" not in _meta or not isinstance(_meta.get("files"), dict):
+                _meta["files"] = {}
+            # Only write stub if no entry exists yet (don't clobber post-ingest data)
+            if file.filename not in _meta["files"]:
+                _meta["files"][file.filename] = {
+                    "file_type": _file_type_map.get(file_ext, file_ext.lstrip(".").upper()),
+                    "size_bytes": file_size,
+                    "chunks": None,
+                    "duration_sec": None,
+                    "ingested_at": None,
+                }
+                with open(_meta_path, "w") as _f:
+                    _f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
+                    _yaml.dump(_meta, _f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        except Exception:
+            pass  # Metadata stub failure is non-fatal — upload still succeeds
 
         # File saved only — ingest triggered separately via POST /corpus/{name}/ingest
         # Batch uploads must NOT each spawn their own ingest: concurrent processes
@@ -1550,6 +1701,84 @@ async def get_file_md5(corpus_name: str, filename: str) -> dict[str, Any]:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"MD5 lookup failed: {str(e)}") from e
+
+
+@app.delete("/corpus/{corpus_name}/file/{filename:path}/chunks")
+async def delete_file_chunks_only(corpus_name: str, filename: str) -> dict[str, Any]:
+    """Remove a file's Qdrant chunks without moving the file to trash.
+    Used for reingest: wipe stale chunks then re-trigger ingest so the file
+    is re-embedded with current normalizer settings. File stays in uploads/.
+    """
+    _require_corpus(corpus_name)
+    repo_root = _get_repo_root()
+    paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+    uploads_dir = paths["uploads"]
+    file_path = uploads_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+
+    try:
+        file_path.resolve().relative_to(uploads_dir.resolve())
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail="Access denied") from e
+
+    abs_file_path = str(file_path.resolve())
+    deleted_chunks = 0
+    try:
+        from qdrant_client import QdrantClient
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        qc = QdrantClient(host="localhost", port=6333)
+        collection = f"aistudio_{corpus_name}"
+        scroll_result = qc.scroll(
+            collection_name=collection,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="source_path", match=MatchValue(value=abs_file_path))]
+            ),
+            limit=10000,
+            with_payload=False,
+        )
+        point_ids = [p.id for p in scroll_result[0]]
+        deleted_chunks = len(point_ids)
+        if point_ids:
+            qc.delete(collection_name=collection, points_selector=point_ids)
+    except Exception as e:
+        print(f"[delete_chunks] Qdrant warning: {e}")
+
+    # Clear file entry from corpus_metadata.yaml so it re-ingests cleanly
+    try:
+        _repo = _get_repo_root()
+        _meta_path = _repo / "data" / "corpora" / corpus_name / f"{corpus_name}_corpus_metadata.yaml"
+        if _meta_path.exists():
+            with open(_meta_path) as _f:
+                _meta = _yaml.safe_load(_f) or {}
+            if "files" in _meta and filename in _meta["files"]:
+                # Keep file_type and size_bytes (known pre-ingest), clear ingest fields
+                _stub = _meta["files"][filename]
+                _meta["files"][filename] = {
+                    "file_type": _stub.get("file_type", ""),
+                    "size_bytes": _stub.get("size_bytes", 0),
+                    "chunks": None,
+                    "duration_sec": None,
+                    "ingested_at": None,
+                    "normalizer_entity": None,
+                    "normalizer_year": None,
+                    "normalizer_source": None,
+                    "normalizer_mismatch": None,
+                }
+            with open(_meta_path, "w") as _f:
+                _f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
+                _yaml.dump(_meta, _f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    except Exception:
+        pass
+
+    return {
+        "status": "ok",
+        "filename": filename,
+        "chunks_removed": deleted_chunks,
+        "message": f"'{filename}' chunks removed from index. File retained for reingest.",
+    }
 
 
 @app.delete("/corpus/{corpus_name}/file/{filename:path}")

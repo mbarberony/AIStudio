@@ -11,7 +11,21 @@ from local_llm_bot.app.ingest.pipeline import ingest_corpus
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
-# Version: 1.2.0
+# Version: 1.2.8
+# Changelog: 1.2.5 — Normalizer summary source label updated to match pipeline
+#            completion line format: "tag(s) [ns:]" not "tag (ns:)".
+# Changelog: 1.2.4 — Write file_stats to corpus_metadata.yaml unconditionally
+#            in __main__.py. Previously relied on api.py subprocess path which
+#            never fires when ais_ingest_esef.sh calls pipeline directly (TTY).
+#            Writes: file_type, size_bytes, chunks, duration_sec, ingested_at,
+#            normalizer_entity/year/source/mismatch, avg_seconds_per_file.
+# Changelog: 1.2.3 — Remove spurious f prefix from entities label print (F541).
+# Changelog: 1.2.2 — Remove "--- Ingest result" section header per STD §8 update:
+#            summary flows directly after completion lines as closing ✅ of ▶.
+#            Entities formatted as numbered list (one per line) not inline ·.
+# Changelog: 1.2.1 — AIStudio_722: config line format fixed (chunk size: not chunk_size=
+#            per STD §8 summary rules). JSON payload TTY-gated: only emits to stdout
+#            when stdout is a pipe (api.py subprocess), not operator terminal.
 # Changelog: 1.2.0 — Fix stdout/stderr split: human-readable summary → stderr.
 #            JSON payload → stdout unconditionally (parsed by api.py _capture_stdout
 #            to populate file_stats in corpus_metadata.yaml). Previously JSON was
@@ -86,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     dur_str = f"{mins}m {secs}s" if mins else f"{secs}s"
     avg_chunks = result.chunks_written / result.files_processed if result.files_processed else 0
     avg_secs = dur / result.files_processed if result.files_processed else 0
+    avg_ms_chunk = (dur * 1000) / result.chunks_written if result.chunks_written else 0
 
     file_stats = result.file_stats or {}
     if file_stats:
@@ -102,10 +117,12 @@ def main(argv: list[str] | None = None) -> int:
     failures = result.files_failed or 0
     failure_line = f"· ⚠ failures : {failures}" if failures else "· failures   : 0"
 
-    print("--- Ingest result", file=_sys.stderr)
+    # STD §8: ✅ echoes the ▶ action line subject — no section header needed
+    # Ensure we start on a fresh line after tqdm bar closes
+    print("", file=_sys.stderr)  # newline separator after bar
     print(f"✅ {result.files_processed} files ingested · {result.chunks_written:,} chunks · {dur_str}", file=_sys.stderr)
-    print(f"· config     : chunk_size={result.chunk_size:,} · overlap={result.overlap} · model={result.embed_model}", file=_sys.stderr)
-    print(f"· avg        : {avg_chunks:,.0f} chunks/file · {avg_secs:.1f}s/file", file=_sys.stderr)
+    print(f"· config     : chunk size: {result.chunk_size:,} · overlap: {result.overlap} · model: {result.embed_model}", file=_sys.stderr)
+    print(f"· avg        : {avg_chunks:,.0f} chunks/file · {avg_secs:.1f}s/file · {avg_ms_chunk:.0f}ms/chunk", file=_sys.stderr)
     if size_line:
         print(size_line, file=_sys.stderr)
     print(failure_line, file=_sys.stderr)
@@ -133,14 +150,15 @@ def main(argv: list[str] | None = None) -> int:
     if _n_markup > 0:
         print("--- Normalizer", file=_sys.stderr)
         if _n_hits == _n_markup:
-            # All hits — show source breakdown
+            # All hits — show source breakdown using the tag format from pipeline
+            # _norm_by_source keys are now "tag [ns:]" or "tag(s) [ns1:, ns2:]"
             if len(_norm_by_source) == 1:
-                _src_label = f"source: {list(_norm_by_source.keys())[0]}"
+                _src_label = list(_norm_by_source.keys())[0]
             elif _norm_by_source:
-                _src_label = "source: " + " · ".join(f"{v} {k}" for k, v in sorted(_norm_by_source.items()))
+                _src_label = " · ".join(f"{v}× {k}" for k, v in sorted(_norm_by_source.items()))
             else:
-                _src_label = "source: tag"
-            print(f"✅ {_n_hits}/{_n_markup} markup files augmented · {_src_label}", file=_sys.stderr)
+                _src_label = "tag"
+            print(f"✅ {_n_hits}/{_n_markup} markup files augmented · source: {_src_label}", file=_sys.stderr)
         else:
             print(f"· {_n_hits}/{_n_markup} markup files augmented · {_n_misses} no structured header detected", file=_sys.stderr)
         if _year_missing > 0 and _year_missing == _n_hits:
@@ -150,12 +168,80 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("· prefix     : [Document: <entity> FY<year>]", file=_sys.stderr)
         if _entities:
-            _entity_list = " · ".join(sorted(_entities))
-            print(f"· entities   : {_entity_list}", file=_sys.stderr)
+            # STD §8: unique entities only, sorted, deduplicated case-insensitively
+            _seen: set[str] = set()
+            _unique_entities: list[str] = []
+            for _e in sorted(_entities):
+                if _e.lower() not in _seen:
+                    _seen.add(_e.lower())
+                    _unique_entities.append(_e)
+            print("· entities   :", file=_sys.stderr)
+            for _i, _ent in enumerate(_unique_entities, 1):
+                print(f"  {_i:>2}. {_ent}", file=_sys.stderr)
         if _n_mm > 0:
             print(f"· ⚠ {_n_mm} entity mismatch warning{'s' if _n_mm > 1 else ''} — entity did not match filename stem", file=_sys.stderr)
 
-    # ── JSON payload → stdout (always — consumed by api.py _capture_stdout) ──
+    # ── Write file_stats to corpus_metadata.yaml unconditionally ───────────────
+    # This must happen regardless of TTY — metadata persistence is not optional.
+    # api.py also writes this when orchestrating ingest via subprocess, but when
+    # ais_ingest_esef.sh calls the pipeline directly (TTY), api.py is not involved.
+    # __main__.py is the canonical writer for operator-invoked ingests.
+    import yaml as _yaml_meta  # type: ignore
+
+    try:
+        _repo_path = _repo_root()
+        _meta_path = _repo_path / "data" / "corpora" / corpus / f"{corpus}_corpus_metadata.yaml"
+        if _meta_path.exists():
+            with open(_meta_path) as _mf:
+                _meta = _yaml_meta.safe_load(_mf) or {}
+        else:
+            _meta = {"corpus_name": corpus, "schema_version": "1.0"}
+
+        # Top-level stats
+        _meta["last_ingested_at"] = _dt_now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
+        _meta["last_updated"] = __import__("datetime").date.today().isoformat()
+        _meta["ingest_duration_seconds"] = round(dur, 2)
+        _meta["last_ingest_chunks"] = result.chunks_written
+        _meta["last_ingest_files"] = result.files_processed
+        if result.files_processed > 0:
+            _meta["avg_seconds_per_file"] = round(dur / result.files_processed, 2)
+        if "schema_version" not in _meta:
+            _meta["schema_version"] = "1.0"
+        if "files" not in _meta or not isinstance(_meta.get("files"), dict):
+            _meta["files"] = {}
+        if "deleted_files" not in _meta or not isinstance(_meta.get("deleted_files"), dict):
+            _meta["deleted_files"] = {}
+
+        # Per-file stats
+        _file_type_map = {
+            ".xhtml": "ESEF iXBRL", ".htm": "SEC XBRL", ".html": "SEC XBRL",
+            ".pdf": "PDF", ".md": "Markdown", ".txt": "Text",
+            ".docx": "Word", ".xlsx": "Excel",
+        }
+        for _fname, _fdata in file_stats.items():
+            _ext = Path(_fname).suffix.lower()
+            _meta["files"][_fname] = {
+                "file_type": _file_type_map.get(_ext, _ext.lstrip(".").upper()),
+                "size_bytes": _fdata.get("size_bytes", 0),
+                "chunks": _fdata.get("chunks", 0),
+                "duration_sec": _fdata.get("duration_sec", 0),
+                "ingested_at": _fdata.get("ingested_at", _dt_now),
+                "normalizer_entity": _fdata.get("normalizer_entity", ""),
+                "normalizer_year": _fdata.get("normalizer_year", ""),
+                "normalizer_source": _fdata.get("normalizer_source", ""),
+                "normalizer_mismatch": _fdata.get("normalizer_mismatch", False),
+            }
+
+        with open(_meta_path, "w") as _mf:
+            _mf.write(f"# {corpus}_corpus_metadata.yaml\n")
+            _yaml_meta.dump(dict(_meta), _mf, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    except Exception as _me:
+        print(f"⚠ Could not write corpus metadata: {_me}", file=_sys.stderr)
+
+    # ── JSON payload → stdout (pipe only — consumed by api.py _capture_stdout) ──
+    # AIStudio_722a — TTY-gate: emit JSON only when stdout is a pipe (api.py subprocess).
+    # When operator runs ais_ingest directly in terminal, raw JSON dumped to terminal
+    # is noise. The human-readable summary above is sufficient for operator use.
     payload = {
         "action": "ingest",
         "corpus": corpus,
@@ -170,7 +256,8 @@ def main(argv: list[str] | None = None) -> int:
         "paths": {k: str(v) for k, v in paths.items()},
         "result": asdict(result),
     }
-    print(json.dumps(payload))
+    if not _sys.stdout.isatty():
+        print(json.dumps(payload))
 
     if args.verbose:
         print("", file=_sys.stderr)

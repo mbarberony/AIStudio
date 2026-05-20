@@ -1,5 +1,40 @@
-# Version: 1.8.1
-# Changelog: 1.8.1 — Year filename fallback: parse _YYYY from filename stem when
+# Version: 1.8.23
+# Changelog: 1.8.8 — Plain tqdm, no subclass. bar_format mutated per-file via
+#            p_process.bar_format = f"  {n} of {T} · {pct}|{bar}| {elapsed}<{remaining}"
+#            tqdm native {elapsed}/{remaining} supply timing. Chunk-based total.
+#            dynamic_ncols=True auto-detects terminal width (no parasitic box).
+#            No {desc} in bar_format — eliminates ": " desc_pad artifact.
+#            update(_file_chunks) for smooth chunk-based fill per file.
+# Changelog: 1.8.7 — Definitive bar overhaul. tqdm subclass _NoColonTqdm suppresses
+#            ": " desc_pad artifact. Chunk-based total (D_SEED * supported_bytes).
+#            All set_postfix_str/set_postfix replaced with set_description carrying
+#            full "N of T · elapsed · remaining · avg" label. update(file_chunks)
+#            for smooth chunk-based fill. ncols=None auto-detects terminal width.
+#            Completion lines indented 2 spaces to align under ▶ Ingesting "I".
+# Changelog: 1.8.4 — Bar fixes: move brackets to bar_format (removes leading comma
+#            from set_postfix_str). Remove p_process.update(1) for unsupported files
+#            (fixes 100% at file 8 and spurious 10/None tick). Add compact XBRL tag
+#            name to source field: "tag (ifrs-full:)" / "tag (dei:)".
+#            _extract_document_metadata() returns 6-tuple (adds tag_name).
+# Changelog: 1.8.3 — AIStudio_722: CLI terminal output fixes.
+#            (a) TTY-gate [ingest] normalizer: and [ingest] file_complete: lines —
+#            these machine signals now only emit when stderr is a pipe (api.py subprocess),
+#            not when running in an operator TTY. Fixes noisy terminal output.
+#            (b) Pre-compute _total_supported before loop — fixes "1 of 1", "2 of 2"
+#            denominator bug. files_supported incremented during loop; _total_supported
+#            is fixed. N-of-T in activity + completion lines now correct from file 1.
+#            (c) Fix tqdm bar format: bar_format now starts with "Process:" label + bar,
+#            not {desc}, eliminating the "size: 16,005,771: : 20%" double-colon artifact.
+#            Activity line lives in set_description() only (description-only, no bar).
+#            Postfix brackets in set_postfix_str() not bar_format (avoids leading comma).
+#            avg unit changed to s/file (per prescription) from ms/chunk.
+#            (d) prefix: [brackets] not "quotes" in completion lines per STD §8.
+# Changelog: 1.8.2 — AIStudio_721: normalize entity string in _extract_document_metadata()
+#            before return. XBRL source documents contain \u00a0 (non-breaking space),
+#            \u200b (zero-width space), \ufeff (BOM) in entity name tags. These corrupt
+#            the [Document: entity FY year] prefix and break BM25 tokenization in alias
+#            map. Fix: replace \u00a0 → space, strip zero-width/BOM, NFC normalize,
+#            collapse multiple spaces. Affects all HTML/XHTML corpora (SEC + ESEF).
 #            XML year tag absent (ESEF DateOfEndOfReportingPeriod2013 + DEI FiscalYear).
 #            ESEF year tag value is YYYY-MM-DD — extract first 4 chars.
 #            AIStudio_707: use files_supported (not len(discovered)) as N-of-T total
@@ -105,6 +140,7 @@ import json
 import os as _os
 import re as _re
 import sys as _sys
+import threading
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -258,9 +294,13 @@ def _md5_of_file(path: Path) -> str:
 
 
 def _tqdm_write(pbar: Any | None, msg: str) -> None:
-    """Write a message without disrupting the tqdm progress bar."""
+    """Write a message without disrupting the tqdm progress bar.
+    Clears the bar before writing so the line does not collide.
+    """
     if pbar is not None:
+        pbar.clear()  # erase current bar line before writing
         pbar.write(msg, file=_sys.stderr)
+        pbar.refresh()  # redraw bar below the written line
     else:
         print(msg, file=_sys.stderr)
 
@@ -434,12 +474,19 @@ def _extract_document_metadata(
         "xlink", "iso4217", "num", "nonnum", "ref", "ix", "ixt",
         "link", "xl", "xsi", "xml", "srt", "ecd", "cyd",
     }
+    # Entity tag registry — maps format name to XBRL namespace + authoritative entity tag.
+    # Strategy 1a: extract entity from the tag with this name attribute.
+    # Source logic: entity from tag, year from DateOfEndOfReportingPeriod (ESEF) or
+    # DocumentFiscalYearFocus (SEC), falling back to filename year if tag absent.
+    # Year filename rules: 4-digit 1900–2099 used as-is; 2-digit 60–99 → 19xx; 00–59 → 20xx.
+    # Decoupling target: src/local_llm_bot/app/ingest/normalizers/xbrl.py (AIStudio_724).
     _XML_ENTITY_REGISTRY = [
         ("SEC_XBRL", "dei:",       "dei:EntityRegistrantName",                                    "1a"),
         ("ESEF",     "ifrs-full:", "ifrs-full:NameOfReportingEntityOrOtherMeansOfIdentification", "1a"),
         ("UK_GAAP",  "uk-bus:",    "uk-bus:NameOfUltimateParentOfGroup",                          "1a"),
         ("UK_GAAP",  "uk-gaap:",   "uk-gaap:EntityCurrentLegalOrRegisteredName",                  "1a"),
     ]
+
     _SKIP_PATTERNS = _re.compile(
         r"^(Exhibit\s+\d|Table\s+of|Annual\s+Report|Financial\s+(Review|Section|"
         r"Summary|Highlights|Statements?)|Overview|General|Contents|Index)$",
@@ -461,6 +508,7 @@ def _extract_document_metadata(
         fmt = None
         strategy = None
 
+        _matched_tag = None
         for format_name, _ns_prefix, entity_tag, strat in _XML_ENTITY_REGISTRY:
             tag = soup.find(attrs={"name": entity_tag})
             if tag:
@@ -469,12 +517,15 @@ def _extract_document_metadata(
                     entity = val
                     fmt = format_name
                     strategy = strat
+                    _matched_tag = entity_tag  # e.g. "ifrs-full:NameOfReportingEntity..."
                     break
 
         # Extract fiscal year (single parse — same soup object)
+        _year_tag_name = None
         year_tag = soup.find(attrs={"name": "dei:DocumentFiscalYearFocus"})
         if year_tag:
             yr = year_tag.get_text(strip=True)
+            _year_tag_name = "dei:DocumentFiscalYearFocus"
             if yr and yr.isdigit() and len(yr) == 4:
                 year = yr
 
@@ -483,18 +534,27 @@ def _extract_document_metadata(
             esef_year_tag = soup.find(attrs={"name": "ifrs-full:DateOfEndOfReportingPeriod2013"})
             if esef_year_tag:
                 yr_raw = esef_year_tag.get_text(strip=True)
+                _year_tag_name = "ifrs-full:DateOfEndOfReportingPeriod2013"
                 if yr_raw and len(yr_raw) >= 4 and yr_raw[:4].isdigit():
                     year = yr_raw[:4]
 
-        # Filename year fallback — parse _YYYY from stem when XML tag absent
-        # e.g. ING_Group_ESEF_2025.xhtml → 2025, JPMorgan_Chase_10K_2022.htm → 2022
+        # Filename year fallback — parse year from stem when XML tag absent.
+        # 4-digit: 1900–2099 used as-is.
+        # 2-digit: 60–99 → 1960–1999; 00–59 → 2000–2059 (for projections).
+        # Decoupling target: src/local_llm_bot/app/ingest/normalizers/xbrl.py (AIStudio_724).
         if year is None and file_path is not None:
+            # 4-digit year first
             _yr_match = _re.search(r"[_\-](\d{4})(?:[_\-.]|$)", file_path.stem)
             if _yr_match:
-                _yr_cand = _yr_match.group(1)
-                # Sanity check: plausible filing year range
-                if 2000 <= int(_yr_cand) <= 2050:
-                    year = _yr_cand
+                _yr_cand = int(_yr_match.group(1))
+                if 1900 <= _yr_cand <= 2099:
+                    year = str(_yr_cand)
+            # 2-digit year fallback
+            if year is None:
+                _yr2_match = _re.search(r"[_\-](\d{2})(?:[_\-.]|$)", file_path.stem)
+                if _yr2_match:
+                    _yr2 = int(_yr2_match.group(1))
+                    year = str(1900 + _yr2) if _yr2 >= 60 else str(2000 + _yr2)
 
         # Strategy 1b — visible text scan (fallback for older XBRL without entity tag)
         company_prefixes = set()  # initialized here so mismatch block can always reference it
@@ -542,11 +602,39 @@ def _extract_document_metadata(
         if entity is None:
             fmt = "plain_html" if fmt is None else fmt
 
-        return entity, year, fmt, strategy, mismatch
+        # AIStudio_721 — normalize entity string before return.
+        # XBRL source documents contain non-breaking spaces (\u00a0) and other
+        # Unicode noise in entity name tags. These corrupt the prefix and break
+        # BM25 tokenization. Normalize: collapse \u00a0 → regular space, strip
+        # leading/trailing whitespace, collapse multiple spaces.
+        if entity is not None:
+            import unicodedata as _unicodedata
+            entity = entity.replace("\u00a0", " ")   # non-breaking space → space
+            entity = entity.replace("\u200b", "")    # zero-width space → remove
+            entity = entity.replace("\ufeff", "")    # BOM → remove
+            entity = _unicodedata.normalize("NFC", entity)  # canonical Unicode form
+            entity = " ".join(entity.split())        # collapse multiple spaces
+
+        return entity, year, fmt, strategy, mismatch, _matched_tag, _year_tag_name
 
     except Exception:
-        return None, None, None, None, False
+        return None, None, None, None, False, None, None
 
+
+
+def _tag_local_name(tag: str | None) -> str:
+    """Extract local part of XBRL tag name, stripping namespace prefix and verbose suffixes.
+    e.g. "ifrs-full:NameOfReportingEntityOrOtherMeansOfIdentification" → "NameOfReportingEntity"
+         "ifrs-full:DateOfEndOfReportingPeriod2013" → "DateOfEndOfReportingPeriod"
+         "dei:EntityRegistrantName" → "EntityRegistrantName"
+         "dei:DocumentFiscalYearFocus" → "DocumentFiscalYearFocus"
+    """
+    if not tag:
+        return ""
+    local = tag.split(":")[-1]  # strip namespace prefix
+    local = local.replace("OrOtherMeansOfIdentification", "")  # verbose ESEF suffix
+    local = local.rstrip("0123456789")  # strip trailing year digits e.g. "2013"
+    return local
 
 
 def ingest_corpus(
@@ -658,17 +746,55 @@ def ingest_corpus(
     # enabling accurate progress reporting.
 
     # Pre-compute total bytes for byte-based progress estimation (same algo as UI).
-    # Byte-based is more accurate than file-count-based because file sizes vary
-    # significantly — larger files take proportionally more time to embed.
     _total_bytes = sum(f.stat().st_size for f in discovered if f.is_file())
 
+    # AIStudio_722b — pre-compute supported file count BEFORE the loop so N-of-T
+    # denominator is fixed. Without this, files_supported increments during the loop
+    # producing "1 of 1", "2 of 2" etc. in completion lines.
+    _total_supported = sum(
+        1 for f in discovered
+        if f.suffix.lower() in SUPPORTED_EXTS and not f.name.startswith("~$")
+    )
+
+    # Estimate total chunks for chunk-based bar fill.
+    # D_SEED_BAR = 40 chunks/MB — slightly above observed ESEF/SEC ratio (~37/MB)
+    # so bar runs a touch slower than reality (better UX than overshooting).
+    # Property of document type + chunk size (1,200 chars), not hardware.
+    # Self-corrects to actual d_observed after file 1 completes.
+    _D_SEED_BAR = 40.0 / (1024 * 1024)
+    _supported_bytes = sum(
+        f.stat().st_size for f in discovered
+        if f.suffix.lower() in SUPPORTED_EXTS and not f.name.startswith("~$")
+    )
+    _est_total_chunks_bar = max(1, int(_D_SEED_BAR * _supported_bytes))
+    _n_width = len(str(_total_supported))  # digit width for right-justify in label
+
+    # Seed chunks_per_sec — used for interpolation before file 1 completes.
+    # 45 chunks/sec is the observed M4 Pro embedding rate (nomic-embed-text).
+    # Self-corrects to actual observed rate after each file completes.
+    _chunks_per_sec = 45.0
+
     if tqdm_cls is not None:
+        # STD §8 Phase 2 — plain tqdm, no subclass, full label control via bar_format.
+        # bar_format is mutated per-file update (p_process.bar_format = ...) to inject
+        # the current "N of T" file counter directly into the format string.
+        # tqdm's own {elapsed} and {remaining} supply timing (EMA-based — acceptable
+        # for operator UX; d_observed drives the UI bar separately).
+        # Rate displayed as ms/chunk computed from tqdm's {rate} field.
+        # No {desc} in bar_format — avoids the hardcoded ": " desc_pad artifact.
+        # dynamic_ncols=True auto-detects terminal width — avoids parasitic box.
+        _bar_n_str = "0".rjust(_n_width)
+        _bar_fmt_base = (
+            f"  {_bar_n_str} of {_total_supported} · "
+            "{percentage:.0f}%|{bar:40}| elapsed: -- · remaining: -- · avg: --"
+        )
         p_process = tqdm_cls(
-            total=len(discovered),
-            desc="[ingesting]",
-            unit=" file",
-            ncols=120,
-            bar_format="{desc}: {percentage:3.0f}%|{bar:20}| {n}/{total} [{postfix}]",
+            total=_est_total_chunks_bar,
+            desc="",
+            unit="chunk",
+            ncols=130,  # wide enough for label + bar:40 + timing without parasitic artifact
+            bar_format=_bar_fmt_base,
+            leave=True,
         )
     else:
         p_process = None
@@ -677,42 +803,9 @@ def ingest_corpus(
         for file_path in discovered:
             ext = file_path.suffix.lower()
             if ext not in SUPPORTED_EXTS or file_path.name.startswith("~$"):
-                if p_process is not None:
-                    p_process.update(1)
-                    # Chunk-based progress estimation — same algorithm as the UI
-                    # (AIStudio_613 / api.py). Time scales with chunks not bytes
-                    # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
-                    # "time scales linearly with chunks, not file size").
-                    # d_observed = chunks/byte ratio, self-corrects each file.
-                    # D_SEED = 200/MB starting estimate (same as api.py reconciled seed).
-                    # remaining = remaining_chunks_est / chunks_per_sec
-                    _D_SEED = 200.0 / (1024 * 1024)  # 200 chunks/MB starting estimate
-                    _elapsed = time.time() - t0
-                    _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
-                    _d_obs = (
-                        chunks_written / _bytes_done
-                        if _bytes_done > 0
-                        else _D_SEED
-                    )
-                    # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
-                    _d_obs = max(1e-5, min(1e-2, _d_obs))
-                    _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
-                    _est_total_chunks = _d_obs * _total_bytes
-                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
-                    _remaining = (
-                        _est_remaining_chunks / _chunks_per_sec
-                        if _chunks_per_sec > 0
-                        else 0.0
-                    )
-                    def _fmt_sec(s: float) -> str:
-                        m, sec = divmod(int(s), 60)
-                        return f"{m:02d}:{sec:02d}"
-                    p_process.set_postfix_str(
-                        f"elapsed: {_fmt_sec(_elapsed)} · "
-                        f"remaining: ~{_fmt_sec(_remaining)} · "
-                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
-                        refresh=True,
-                    )
+                # Unsupported file — skip silently. Do NOT update the bar:
+                # _total_supported excludes these files, so updating here would
+                # push the bar past 100% and produce a spurious 10/None final tick.
                 continue
 
             files_supported += 1
@@ -729,15 +822,20 @@ def ingest_corpus(
                     continue
 
                 t_file_start = time.time()
-                # AIStudio_675 / STD §8 — update tqdm activity line with current file
-                _file_size_mb = file_path.stat().st_size / (1024 * 1024)
+                # AIStudio_722a — STD §8 Phase 1 activity line: gerund header + N of T +
+                # filename + size. Format/augmentation fields added after normalizer runs.
+                # Uses _total_supported (pre-computed) so N-of-T is always correct.
+                # Description-only — bar is a separate line below (no bar content here).
                 if p_process is not None:
-                    _n_width = len(str(len(discovered)))
-                    _n_str = str(files_processed + 1).rjust(_n_width)
-                    p_process.set_description(
-                        f"[ingesting] · {_n_str} of {len(discovered)} · {file_path.name[:40]} · size: {file_path.stat().st_size:,}",
-                        refresh=True,
+                    # Update bar_format: N of T + file size as % of corpus
+                    _n_str = str(files_supported).rjust(_n_width)
+                    _fsize_mb = file_path.stat().st_size / (1024 * 1024)
+                    _fsize_pct = round(_fsize_mb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
+                    p_process.bar_format = (
+                        f"  {_n_str} of {_total_supported} · {_fsize_mb:.0f}MB ({_fsize_pct}%) · "
+                        "{percentage:.0f}%|{bar:16}| elapsed: -- · remaining: -- · avg: --"
                     )
+                    p_process.refresh()
                 doc = load_document(file_path)
                 if not doc or not doc.text.strip():
                     write_manifest_entry(paths["manifest"], build_entry(file_path))
@@ -755,7 +853,7 @@ def ingest_corpus(
                 # both identity and time in vector space. When only entity is found,
                 # prefix is "[Document: <entity>]". Neither found = no-op.
                 # AIStudio_682 — single parse via merged _extract_document_metadata()
-                doc_entity, doc_year, doc_fmt, doc_strategy, doc_mismatch = (
+                doc_entity, doc_year, doc_fmt, doc_strategy, doc_mismatch, doc_tag, doc_year_tag = (
                     _extract_document_metadata(file_path)
                 )
 
@@ -798,6 +896,7 @@ def ingest_corpus(
                         }
                     )
 
+
                 # Embed + upsert this file's chunks immediately — no accumulation
                 if file_rows:
                     ids = [str(r["chunk_id"]) for r in file_rows]
@@ -811,6 +910,71 @@ def ingest_corpus(
                         }
                         for r in file_rows
                     ]
+
+                    # Interpolation thread: tick bar forward at expected rate
+                    # during upsert so progress appears continuous not jumpy.
+                    # Uses seed _chunks_per_sec (45/s) for file 1, then
+                    # self-corrects to observed rate from file 2 onwards.
+                    _interp_bar_n = p_process.n if p_process is not None else 0
+                    _interp_stop = threading.Event()
+
+                    def _fmt_s(s: float) -> str:
+                        m, sec = divmod(int(s), 60)
+                        return f"{m:02d}:{sec:02d}"
+
+                    def _interpolate(pbar, n_chunks, cps, stop, t_start,
+                                     n_file, n_total, n_w, t_remaining_est,
+                                     file_mb=0, file_pct=0):
+                        if cps <= 0 or pbar is None:
+                            return
+                        tick_interval = 0.1  # 100ms ticks
+                        bar_update_interval = 0.5  # refresh bar_format every 500ms
+                        chunks_per_tick = max(1, int(cps * tick_interval))
+                        sent = 0
+                        last_bar_update = -bar_update_interval  # force immediate first update
+                        while not stop.is_set() and sent < n_chunks:
+                            time.sleep(tick_interval)
+                            if stop.is_set():
+                                break
+                            ticks = min(chunks_per_tick, n_chunks - sent)
+                            pbar.update(ticks)
+                            sent += ticks
+                            # Update timing in bar_format every 500ms
+                            now = time.time()
+                            if now - last_bar_update >= bar_update_interval:
+                                last_bar_update = now
+                                _el = now - t_start
+                                _frac = sent / n_chunks if n_chunks > 0 else 0
+                                _file_remaining = (n_chunks - sent) / cps if cps > 0 else 0
+                                _total_remaining = max(0.0, t_remaining_est - _el + (n_chunks - sent) / cps)
+                                _avg = f"{1000/cps:.0f}ms/chunk"
+                                _n_str = str(n_file).rjust(n_w)
+                                pbar.bar_format = (
+                                    f"  {_n_str} of {n_total} · {file_mb:.0f}MB ({file_pct}%) · "
+                                    f"{{percentage:.0f}}%|{{bar:40}}| "
+                                    f"elapsed: {_fmt_s(_el)} · "
+                                    f"remaining: ~{_fmt_s(_total_remaining)} · "
+                                    f"avg: {_avg}"
+                                )
+
+                    # Estimate remaining time at start of this file
+                    _interp_remaining_est = (
+                        (_est_total_chunks_bar - p_process.n) / _chunks_per_sec
+                        if _chunks_per_sec > 0 and hasattr(p_process, "n") and p_process is not None
+                        else 0.0
+                    )
+                    _file_mb_interp = file_path.stat().st_size / (1024 * 1024)
+                    _file_pct_interp = round(_file_mb_interp / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
+                    _interp_thread = threading.Thread(
+                        target=_interpolate,
+                        args=(p_process, len(file_rows), _chunks_per_sec, _interp_stop,
+                              t0, files_supported, _total_supported, _n_width,
+                              _interp_remaining_est, _file_mb_interp, _file_pct_interp),
+                        daemon=True,
+                    )
+                    if p_process is not None:
+                        _interp_thread.start()
+
                     _store.upsert_chunks(
                         persist_dir=Path("."),
                         collection_name=collection_name,
@@ -819,6 +983,17 @@ def ingest_corpus(
                         documents=documents,
                         metadatas=metadatas,
                     )
+
+                    # Stop interpolation and correct any over/undershoot
+                    _interp_stop.set()
+                    if p_process is not None:
+                        _interp_thread.join(timeout=0.5)
+                        # Correct bar to exact chunk count (interp may over/undershoot)
+                        _interp_actual = p_process.n - _interp_bar_n
+                        _interp_delta = len(file_rows) - _interp_actual
+                        if _interp_delta != 0:
+                            p_process.update(_interp_delta)
+
                     # Persist JSONL audit log per file
                     append_rows(paths["index"], file_rows)
 
@@ -842,23 +1017,42 @@ def ingest_corpus(
                 _file_size = file_path.stat().st_size
 
                 if _is_markup:
-                    # AIStudio_707: use files_supported as total, not len(discovered)
-                    # len(discovered) includes unsupported files (e.g. .DS_Store, .yaml)
-                    # which inflates the count. files_supported is the correct denominator.
-                    _n_width = len(str(files_supported))
+                    # Use _total_supported (pre-computed before loop) as fixed denominator.
+                    # files_supported increments during the loop so using it here would
+                    # produce "1 of 1", "2 of 2" etc. _total_supported is correct.
+                    _n_width = len(str(_total_supported))
                     _n_str = str(files_processed + 1).rjust(_n_width)
-                    _t_str = str(files_supported)
+                    _t_str = str(_total_supported)
 
                     if doc_entity:
                         _normalizer_hits += 1
                         if doc_mismatch:
                             _normalizer_mismatches += 1
-                        # source vocabulary: tag | scan | filename
-                        _source = (
-                            "tag" if doc_strategy == "1a"
-                            else "scan" if doc_strategy == "1b"
-                            else "filename"
-                        )
+                        # Build source label — reflects what provided entity and year.
+                        # Three cases per STD prescription:
+                        #   (a) Both from XBRL tags  → tags [NameOfReportingEntity, DateOfEndOfReportingPeriod]
+                        #   (b) Entity from tag, year from filename → sources [tag: NameOfReportingEntity · filename]
+                        #   (c) Entity from tag, no year → source: tag [NameOfReportingEntity]
+                        # Decoupling target: src/local_llm_bot/app/ingest/normalizers/xbrl.py (AIStudio_724)
+                        if doc_strategy == "1a":
+                            _entity_local = _tag_local_name(doc_tag)
+                            _year_local = _tag_local_name(doc_year_tag)
+                            if _year_local and doc_year_tag:
+                                # (a) Both entity and year from XBRL tags
+                                _tag_sep = ", "
+                                _tag_parts = list(dict.fromkeys([p for p in [_entity_local, _year_local] if p]))
+                                _tag_suffix = "s" if len(_tag_parts) > 1 else ""
+                                _source = f"tag{_tag_suffix} [{_tag_sep.join(_tag_parts)}]" if _tag_parts else "tag"
+                            elif doc_year and _entity_local:
+                                # (b) Entity from tag, year from filename
+                                _source = f"sources [tag: {_entity_local} · filename]"
+                            else:
+                                # (c) Entity from tag, no year extracted
+                                _source = f"source: tag [{_entity_local}]" if _entity_local else "tag"
+                        elif doc_strategy == "1b":
+                            _source = "scan"
+                        else:
+                            _source = "filename"
                         # Store normalizer fields in file_stats for __main__.py summary
                         file_stats[file_path.name]["normalizer_entity"] = doc_entity
                         file_stats[file_path.name]["normalizer_year"] = doc_year or ""
@@ -866,34 +1060,38 @@ def ingest_corpus(
                         file_stats[file_path.name]["normalizer_mismatch"] = doc_mismatch
 
                         _fmt_label = doc_fmt or "unknown"
-                        # Human-readable prefix label
+                        # Human-readable prefix label — STD §8 uses [brackets] not "quotes"
                         _prefix_label = (
-                            f'"{doc_entity} · FY{doc_year}"'
+                            f"[{doc_entity} FY{doc_year}]"
                             if doc_year
-                            else f'"{doc_entity}"'
+                            else f"[{doc_entity}]"
                         )
 
                         # STD §8 completion line — scrolls in terminal, stays in history
                         _completion = (
                             f"  {_n_str} of {_t_str} · {file_path.name} · "
                             f"size: {_file_size:,} · chunks: {_file_chunks:,} · "
-                            f"format: {_fmt_label} · prefix: {_prefix_label} · source: {_source}"
+                            f"format: {_fmt_label} · chunk prefix aug.: {_prefix_label} · source: {_source}"
                         )
                         if doc_mismatch:
                             _completion += f" · \u26a0 entity mismatch: filename={file_path.stem[:30]}"
                         _tqdm_write(p_process, _completion)
 
                         # Structured machine-parseable line for api.py → UI (AIStudio_680)
-                        _structured = (
-                            f"[ingest] normalizer: file={file_path.name} "
-                            f"format={_fmt_label} "
-                            f'entity="{doc_entity}" '
-                            f"year={doc_year or ''} "
-                            f"chunks={_file_chunks} "
-                            f"source={_source} "
-                            f"mismatch={str(doc_mismatch).lower()}"
-                        )
-                        _tqdm_write(p_process, _structured)
+                        # AIStudio_722a — TTY-gate: emit only when stderr is a pipe
+                        # (subprocess from api.py). In TTY (operator terminal) this line
+                        # is noise — the completion line above already shows all info.
+                        if not _sys.stderr.isatty():
+                            _structured = (
+                                f"[ingest] normalizer: file={file_path.name} "
+                                f"format={_fmt_label} "
+                                f'entity="{doc_entity}" '
+                                f"year={doc_year or ''} "
+                                f"chunks={_file_chunks} "
+                                f"source={_source} "
+                                f"mismatch={str(doc_mismatch).lower()}"
+                            )
+                            _tqdm_write(p_process, _structured)
 
                     else:
                         _normalizer_misses += 1
@@ -906,33 +1104,33 @@ def ingest_corpus(
 
                 else:
                     # Non-markup file — plain completion line, no normalizer fields
-                    # AIStudio_707: use files_supported as total
-                    _n_width = len(str(files_supported))
+                    # Use _total_supported (pre-computed) as fixed denominator.
+                    _n_width = len(str(_total_supported))
                     _n_str = str(files_processed + 1).rjust(_n_width)
-                    _t_str = str(files_supported)
+                    _t_str = str(_total_supported)
                     _completion = (
                         f"  {_n_str} of {_t_str} · {file_path.name} · "
                         f"size: {_file_size:,} · chunks: {_file_chunks:,}"
                     )
                     _tqdm_write(p_process, _completion)
-                # Per-file completion line — newline-terminated so api.py's async
-                # stderr iterator sees it (tqdm's bar uses \r-updates which the
-                # iterator never receives). _tqdm_write routes through pbar.write()
-                # when the bar is active, preserving visual cleanliness while still
-                # emitting a parseable progress signal. AIStudio_613.
-                _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
-                _tqdm_write(
-                    p_process,
-                    f"[ingest] file_complete: {files_processed + 1}/{len(discovered)} "
-                    f"chunks={chunks_written} bytes={_bytes_done} "
-                    f"file={file_path.name}",
-                )
+                # Per-file completion signal for api.py async stderr iterator.
+                # AIStudio_722a — TTY-gate: emit only when stderr is a pipe (api.py
+                # subprocess). In TTY (operator terminal) this is noise.
+                # api.py parses this line to update UI progress bar (AIStudio_613).
+                if not _sys.stderr.isatty():
+                    _bytes_done = sum(s["size_bytes"] for s in file_stats.values())
+                    _tqdm_write(
+                        p_process,
+                        f"[ingest] file_complete: {files_processed + 1}/{len(discovered)} "
+                        f"chunks={chunks_written} bytes={_bytes_done} "
+                        f"file={file_path.name}",
+                    )
 
                 write_manifest_entry(paths["manifest"], build_entry(file_path))
                 files_processed += 1
 
                 if p_process is not None:
-                    p_process.update(1)
+                    # Bar advance handled by interpolation thread + correction above
                     # Chunk-based progress estimation — same algorithm as the UI
                     # (AIStudio_613 / api.py). Time scales with chunks not bytes
                     # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
@@ -949,24 +1147,39 @@ def ingest_corpus(
                         else _D_SEED
                     )
                     # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
-                    _d_obs = max(1e-5, min(1e-2, _d_obs))
+                    _d_obs = max(1e-6, min(1e-2, _d_obs))
                     _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
-                    _est_total_chunks = _d_obs * _total_bytes
-                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
+                    # Simple remaining formula: (elapsed / pct_complete) - elapsed
+                    # No clamping needed, self-corrects naturally each file.
+                    _est_total_chunks = _d_obs * _supported_bytes
+                    if p_process is not None:
+                        p_process.total = max(chunks_written + 1, int(_est_total_chunks))
+                    _pct_complete = chunks_written / max(1, int(_est_total_chunks))
                     _remaining = (
-                        _est_remaining_chunks / _chunks_per_sec
-                        if _chunks_per_sec > 0
+                        (_elapsed / _pct_complete) - _elapsed
+                        if _pct_complete > 0.001
                         else 0.0
                     )
                     def _fmt_sec(s: float) -> str:
                         m, sec = divmod(int(s), 60)
                         return f"{m:02d}:{sec:02d}"
-                    p_process.set_postfix_str(
+                    # STD §8 Phase 2: brackets in postfix string (not bar_format) to
+                    # avoid tqdm leading comma artifact. avg: ms/chunk (chunk is the
+                    # fundamental processing unit — consistent with STD §8).
+                    # Bake d_observed timing into bar_format as literal strings —
+                    # avoids tqdm {elapsed}/{remaining} tokens which use EMA not d_observed.
+                    _n_done = str(files_processed).rjust(_n_width)  # files_processed already incremented
+                    _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
+                    _fmb = file_path.stat().st_size / (1024 * 1024)
+                    _fpct = round(_fmb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
+                    p_process.bar_format = (
+                        f"  {_n_done} of {_total_supported} · {_fmb:.0f}MB ({_fpct}%) · "
+                        f"{{percentage:.0f}}%|{{bar:40}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
-                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
-                        refresh=True,
+                        f"avg: {_avg_ms}"
                     )
+                    p_process.refresh()
 
             except Exception as e:
                 files_failed += 1
@@ -974,7 +1187,7 @@ def ingest_corpus(
                     {"source_path": str(file_path), "reason": type(e).__name__, "detail": str(e)}
                 )
                 if p_process is not None:
-                    p_process.update(1)
+                    # Failed file — no chunks to advance, just refresh timing
                     # Chunk-based progress estimation — same algorithm as the UI
                     # (AIStudio_613 / api.py). Time scales with chunks not bytes
                     # (per NOTES - AIStudio - Indexing Performance Notes 2026-05-03:
@@ -991,28 +1204,48 @@ def ingest_corpus(
                         else _D_SEED
                     )
                     # Clamp d_observed to sane range [1e-5, 1e-2] per api.py
-                    _d_obs = max(1e-5, min(1e-2, _d_obs))
+                    _d_obs = max(1e-6, min(1e-2, _d_obs))
                     _chunks_per_sec = chunks_written / _elapsed if _elapsed > 0.001 else 0.001
-                    _est_total_chunks = _d_obs * _total_bytes
-                    _est_remaining_chunks = max(0.0, _est_total_chunks - chunks_written)
+                    # Simple remaining formula: (elapsed / pct_complete) - elapsed
+                    # No clamping needed, self-corrects naturally each file.
+                    _est_total_chunks = _d_obs * _supported_bytes
+                    if p_process is not None:
+                        p_process.total = max(chunks_written + 1, int(_est_total_chunks))
+                    _pct_complete = chunks_written / max(1, int(_est_total_chunks))
                     _remaining = (
-                        _est_remaining_chunks / _chunks_per_sec
-                        if _chunks_per_sec > 0
+                        (_elapsed / _pct_complete) - _elapsed
+                        if _pct_complete > 0.001
                         else 0.0
                     )
                     def _fmt_sec(s: float) -> str:
                         m, sec = divmod(int(s), 60)
                         return f"{m:02d}:{sec:02d}"
-                    p_process.set_postfix_str(
+                    # STD §8 Phase 2: brackets in postfix string (not bar_format) to
+                    # avoid tqdm leading comma artifact. avg: ms/chunk (chunk is the
+                    # fundamental processing unit — consistent with STD §8).
+                    # Bake d_observed timing into bar_format as literal strings —
+                    # avoids tqdm {elapsed}/{remaining} tokens which use EMA not d_observed.
+                    _n_done = str(files_processed).rjust(_n_width)  # files_processed already incremented
+                    _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
+                    _fmb = file_path.stat().st_size / (1024 * 1024)
+                    _fpct = round(_fmb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
+                    p_process.bar_format = (
+                        f"  {_n_done} of {_total_supported} · {_fmb:.0f}MB ({_fpct}%) · "
+                        f"{{percentage:.0f}}%|{{bar:40}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
-                        f"avg: {1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "avg: --ms/chunk",
-                        refresh=True,
+                        f"avg: {_avg_ms}"
                     )
+                    p_process.refresh()
 
     finally:
         if p_process is not None:
+            # Erase the final bar render, then disable before close.
+            # clear() wipes the current line; disable=True prevents close() re-rendering.
+            p_process.clear()  # erase final 100% line from terminal
+            p_process.disable = True
             p_process.close()
+            print("", file=_sys.stderr)  # ensure ✅ summary starts on fresh line
 
     if failures:
         paths["failures"].parent.mkdir(parents=True, exist_ok=True)
