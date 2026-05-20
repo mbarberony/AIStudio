@@ -1,4 +1,4 @@
-# Version: 1.8.23
+# Version: 1.8.25
 # Changelog: 1.8.8 — Plain tqdm, no subclass. bar_format mutated per-file via
 #            p_process.bar_format = f"  {n} of {T} · {pct}|{bar}| {elapsed}<{remaining}"
 #            tqdm native {elapsed}/{remaining} supply timing. Chunk-based total.
@@ -829,10 +829,8 @@ def ingest_corpus(
                 if p_process is not None:
                     # Update bar_format: N of T + file size as % of corpus
                     _n_str = str(files_supported).rjust(_n_width)
-                    _fsize_mb = file_path.stat().st_size / (1024 * 1024)
-                    _fsize_pct = round(_fsize_mb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
                     p_process.bar_format = (
-                        f"  {_n_str} of {_total_supported} · {_fsize_mb:.0f}MB ({_fsize_pct}%) · "
+                        f"  {_n_str} of {_total_supported} · {file_path.name} · "
                         "{percentage:.0f}%|{bar:16}| elapsed: -- · remaining: -- · avg: --"
                     )
                     p_process.refresh()
@@ -924,7 +922,7 @@ def ingest_corpus(
 
                     def _interpolate(pbar, n_chunks, cps, stop, t_start,
                                      n_file, n_total, n_w, t_remaining_est,
-                                     file_mb=0, file_pct=0):
+                                     fname=""):
                         if cps <= 0 or pbar is None:
                             return
                         tick_interval = 0.1  # 100ms ticks
@@ -950,7 +948,7 @@ def ingest_corpus(
                                 _avg = f"{1000/cps:.0f}ms/chunk"
                                 _n_str = str(n_file).rjust(n_w)
                                 pbar.bar_format = (
-                                    f"  {_n_str} of {n_total} · {file_mb:.0f}MB ({file_pct}%) · "
+                                    f"  {_n_str} of {n_total} · {fname} · "
                                     f"{{percentage:.0f}}%|{{bar:40}}| "
                                     f"elapsed: {_fmt_s(_el)} · "
                                     f"remaining: ~{_fmt_s(_total_remaining)} · "
@@ -963,13 +961,11 @@ def ingest_corpus(
                         if _chunks_per_sec > 0 and hasattr(p_process, "n") and p_process is not None
                         else 0.0
                     )
-                    _file_mb_interp = file_path.stat().st_size / (1024 * 1024)
-                    _file_pct_interp = round(_file_mb_interp / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
                     _interp_thread = threading.Thread(
                         target=_interpolate,
                         args=(p_process, len(file_rows), _chunks_per_sec, _interp_stop,
                               t0, files_supported, _total_supported, _n_width,
-                              _interp_remaining_est, _file_mb_interp, _file_pct_interp),
+                              _interp_remaining_est, file_path.name),
                         daemon=True,
                     )
                     if p_process is not None:
@@ -1031,7 +1027,7 @@ def ingest_corpus(
                         # Build source label — reflects what provided entity and year.
                         # Three cases per STD prescription:
                         #   (a) Both from XBRL tags  → tags [NameOfReportingEntity, DateOfEndOfReportingPeriod]
-                        #   (b) Entity from tag, year from filename → sources [tag: NameOfReportingEntity · filename]
+                        #   (b) Entity from tag, year from filename → [tag: NameOfReportingEntity · filename]
                         #   (c) Entity from tag, no year → source: tag [NameOfReportingEntity]
                         # Decoupling target: src/local_llm_bot/app/ingest/normalizers/xbrl.py (AIStudio_724)
                         if doc_strategy == "1a":
@@ -1045,7 +1041,7 @@ def ingest_corpus(
                                 _source = f"tag{_tag_suffix} [{_tag_sep.join(_tag_parts)}]" if _tag_parts else "tag"
                             elif doc_year and _entity_local:
                                 # (b) Entity from tag, year from filename
-                                _source = f"sources [tag: {_entity_local} · filename]"
+                                _source = f"[tag: {_entity_local} · filename]"
                             else:
                                 # (c) Entity from tag, no year extracted
                                 _source = f"source: tag [{_entity_local}]" if _entity_local else "tag"
@@ -1170,10 +1166,8 @@ def ingest_corpus(
                     # avoids tqdm {elapsed}/{remaining} tokens which use EMA not d_observed.
                     _n_done = str(files_processed).rjust(_n_width)  # files_processed already incremented
                     _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
-                    _fmb = file_path.stat().st_size / (1024 * 1024)
-                    _fpct = round(_fmb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
                     p_process.bar_format = (
-                        f"  {_n_done} of {_total_supported} · {_fmb:.0f}MB ({_fpct}%) · "
+                        f"  {_n_done} of {_total_supported} · {file_path.name} · "
                         f"{{percentage:.0f}}%|{{bar:40}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
@@ -1227,10 +1221,8 @@ def ingest_corpus(
                     # avoids tqdm {elapsed}/{remaining} tokens which use EMA not d_observed.
                     _n_done = str(files_processed).rjust(_n_width)  # files_processed already incremented
                     _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
-                    _fmb = file_path.stat().st_size / (1024 * 1024)
-                    _fpct = round(_fmb / (_supported_bytes / (1024 * 1024)) * 100) if _supported_bytes > 0 else 0
                     p_process.bar_format = (
-                        f"  {_n_done} of {_total_supported} · {_fmb:.0f}MB ({_fpct}%) · "
+                        f"  {_n_done} of {_total_supported} · {file_path.name} · "
                         f"{{percentage:.0f}}%|{{bar:40}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
@@ -1245,7 +1237,6 @@ def ingest_corpus(
             p_process.clear()  # erase final 100% line from terminal
             p_process.disable = True
             p_process.close()
-            print("", file=_sys.stderr)  # ensure ✅ summary starts on fresh line
 
     if failures:
         paths["failures"].parent.mkdir(parents=True, exist_ok=True)
