@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-05-01*
+*Version: Beta | Updated: 2026-05-21*
 
 ---
 
@@ -15,6 +15,7 @@ you need to do something specific or something isn't working as expected.
 - [Corpus Management](#corpus-management)
 - [Installing and Managing LLMs](#installing-and-managing-llms)
 - [Query Settings](#query-settings)
+- [Understanding Citations](#understanding-citations)
 - [Benchmark & Corpus Testing](#benchmark--corpus-testing)
 
 ---
@@ -221,21 +222,54 @@ Higher values give the model more context but increase latency slightly.
 - Default: `5` — good for most queries
 - Try `10` for complex questions spanning multiple documents
 - Try `3` for faster responses on focused questions
+
+**Choosing Top K by query type:**
+
+| Query type | Recommended Top K | Example |
+|---|---|---|
+| Point-in-time, single firm | 5 | "What was Goldman's CET1 ratio in 2024?" |
+| Trend across multiple years | 10–15 | "How has JPMorgan's capital ratio changed 2022–2025?" |
+| Cross-firm comparison | 10 | "Compare risk disclosures at JPMorgan, Goldman, and Citi" |
+| General question | 5 | "What is the company's AI strategy?" |
+
+If an answer seems incomplete or missing years/firms you expected — increase Top K first before rephrasing the question.
+
 Adjust using the **Top K** input field in the sidebar.
 
 **Temperature** — *How creative vs. precise the answer is*
 Controls randomness in the model's output.
-- `0.1–0.3` — precise, factual, stays close to the source documents. Best for research.
+- `0.1–0.3` — precise, factual, stays close to the source documents. Best for financial data, specific numbers, compliance questions.
 - `0.5–0.7` — more varied, synthesizes across sources. Better for summaries.
 - Default: `0.3` — recommended starting point
 Adjust using the **Temperature** input field in the sidebar.
 
-**Keywords (optional)** — *Pre-filter the corpus before retrieval*
-Enter comma-separated terms to narrow retrieval to chunks containing those keywords.
-Useful when your corpus spans multiple topics and you want to focus on a specific area.
-Example: `Goldman Sachs, 2024, risk`
-Leave blank for full corpus retrieval.
-Enter keywords in the **Keywords** field in the sidebar.
+**Keywords (optional)** — *Boost retrieval for specific entities or terms*
+Enter comma-separated terms to give extra weight to chunks containing those keywords.
+Useful when your corpus spans multiple entities and semantic similarity alone pulls in the wrong results.
+
+Examples:
+- `JPMorgan, Bank of America, Wells Fargo` — focus on specific firms
+- `CET1, capital ratio, regulatory capital` — focus on a specific topic
+- `2024, 2025` — focus on recent filings
+
+Leave blank for full corpus retrieval. Use keywords when you know the specific entity or term you need.
+
+---
+
+## Understanding Citations
+
+Every answer includes numbered citations — `[1]`, `[2]`, `[3]` — in the text. These refer to the source passages listed in the **References** panel on the right side of the screen.
+
+**What citations tell you:**
+- Which document the information came from
+- Which page in that document
+
+**What to do when an answer seems wrong:**
+Check the citations first. If the referenced chunks don't actually contain the claim — the model may be reasoning beyond its sources. Try increasing Top K, adding Keywords for the specific entity, or rephrasing to be more specific.
+
+**Uncited claims:** if a sentence has no citation marker, the model is drawing on general context rather than a specific retrieved passage. Treat uncited claims with more caution, especially for specific numbers or facts.
+
+**Opening the source:** click the citation chip in the References panel to see the full chunk text and open the source document.
 
 ---
 
@@ -331,12 +365,12 @@ Delete the corpus via the UI and re-ingest. The Qdrant collection may be out of 
 ---
 
 ***How do I rename a corpus?***
-Use the **Rename** button in the corpus header in the UI. AIStudio renames the directory, cascades the corpus_meta.yaml, and triggers a background re-index automatically. Do not rename corpus folders manually on disk — use the UI only.
+Use the **Rename** button in the corpus header in the UI. AIStudio renames the directory, updates the corpus metadata, and triggers a background re-index. You'll see a progress estimate for large corpora. Do not rename corpus folders manually on disk — use the UI only.
 
-***Do not rename corpus files or folders after ingestion***
-AIStudio records file and folder names at ingest time. Renaming a file after ingestion breaks citation lookup — queries will still return results but the "Open ↗" link will fail to resolve.
+***How do I rename a file inside a corpus?***
+AIStudio records file names at ingest time. Renaming a file after ingestion breaks citation lookup — queries will still return results but the "Open ↗" link will fail to resolve.
 
-**Safe approach for file renames:** delete the corpus via the UI, recreate it, and re-ingest with the correct filenames.
+**Safe approach:** delete the file from the corpus using the **Delete** button in the Inspect view, then re-upload it with the correct filename via **Add**. AIStudio will re-ingest only the changed file.
 
 ---
 
