@@ -74,6 +74,9 @@ data/corpora/help/manifest.jsonl
 # AIStudio — sec_10k corpus benchmark (user builds their own — see QUICKSTART Step 7)
 benchmarks/sec_10k/
 
+# AIStudio — benchmark reports (generated output, not for public repo)
+benchmarks/*/reports/
+
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
 DEMO_SCRIPT.md
 HOWTO_OPS.md
