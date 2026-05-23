@@ -421,11 +421,9 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
-| Top K | 5 | Chunks retrieved per query. Higher = more context, slower. **Use 10 for the SEC 10-K corpus** or any large multi-firm corpus — default 5 often returns chunks from a single source. |
+| Top K | 5 | Chunks retrieved per query. Higher = more context, slightly slower. **Use 10 for the SEC 10-K corpus** or any large multi-firm corpus — default 5 often returns chunks from a single source. |
 | Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
-| Firm | (empty) | Filter by firm name — only applies to corpora with firm metadata (e.g. SEC 10-K). Leave empty for all other corpora. |
-| Year | (empty) | Filter by year — only applies to corpora with year metadata (e.g. SEC 10-K). Leave empty for all other corpora. |
-| Keywords | (empty) | Boost retrieval with specific terms. Useful when your query uses synonyms the model may not match automatically. |
+| Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (finds related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
 
 > For more on query settings, see [HOWTO.md](HOWTO.md).
 

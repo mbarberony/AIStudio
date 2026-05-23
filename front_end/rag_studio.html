@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 1.9.2 -->
+<!-- Version: 2.0.1 -->
 <!-- Changelog: 1.9.2 — fix pollIngestStatus: use pct_complete + rich status text matching upload bar (AIStudio_543)
 <!-- Changelog: 1.9.1 — red close button on help modal; Help button group margin-right
 <!-- Changelog: 1.9.0 — first-run corpus auto-index: detect empty demo/help on init, trigger ingest, show live progress banner via pollIngestStatus; AIStudio_434 help modal alignment + close button -->
@@ -152,6 +152,37 @@
         .param-row input[type="number"] {
             text-align: center;
             width: 80px;
+        }
+
+        /* Hybrid alpha slider */
+        .slider-row { display: flex; flex-direction: column; margin-bottom: 10px; }
+        .slider-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .slider-label { font-size: 13px; color: var(--text-mid); }
+        .slider-value { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 32px; text-align: right; }
+        .slider-track { display: flex; align-items: center; gap: 6px; }
+        .slider-end { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            flex: 1; height: 4px;
+            background: var(--border); border-radius: 2px;
+            outline: none; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+            border: 2px solid var(--bg-panel);
+            box-shadow: 0 0 0 1px var(--accent);
+            transition: box-shadow 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+            border: 2px solid var(--bg-panel);
+            box-shadow: 0 0 0 1px var(--accent);
         }
 
         /* Corpus action buttons */
@@ -427,6 +458,40 @@
             line-height: 1.7;
             color: var(--text);
             padding: 4px 0;
+        }
+
+        /* Inline code in assistant responses (AIStudio_138) */
+        .bubble .text code {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.88em;
+            font-style: italic;
+            color: var(--accent);
+            background: var(--accent-light);
+            padding: 1px 5px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Fenced code blocks in assistant responses */
+        .bubble .text pre {
+            background: #1e1e2e;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        .bubble .text pre code {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85em;
+            font-style: normal;
+            color: #cdd6f4;
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            white-space: pre;
+            word-break: normal;
         }
 
         /* Loading dots */
@@ -734,10 +799,22 @@
                     <span class="param-label">Temperature</span>
                     <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3">
                 </div>
+                <div class="slider-row">
+                    <div class="slider-row-header">
+                        <span class="slider-label">Retrieval Mix</span>
+                        <span class="slider-value" id="alphaDisplay">0.50</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;line-height:1.4;">Literal matches exact words. Conceptual finds related meaning.</div>
+                    <div class="slider-track">
+                        <span class="slider-end">Literal</span>
+                        <input type="range" id="hybridAlpha" min="0" max="1" step="0.05" value="0.5">
+                        <span class="slider-end">Conceptual</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Keywords -->
-            <div class="section">
+            <!-- Keywords — hidden pending AIStudio_618 (M1 keyword steering wiring) -->
+            <div class="section" style="display:none;">
                 <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
                 <div class="param-row">
                     <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
@@ -887,6 +964,8 @@
     const modelSelect  = document.getElementById('modelSelect');
     const topKInput    = document.getElementById('topK');
     const tempInput    = document.getElementById('temperature');
+    const alphaInput   = document.getElementById('hybridAlpha');
+    const alphaDisplay = document.getElementById('alphaDisplay');
     const filterKeywords = document.getElementById('filterKeywords');
     const convMeta     = document.getElementById('convMeta');
     const topbarTitle  = document.getElementById('topbarTitle');
@@ -1006,12 +1085,14 @@
                 setCorpus(null);
                 return;
             }
-            corpusSelect.innerHTML = corpora
+            const sorted = corpora
                 .filter(c => c.name !== 'help')
-                .slice().sort((a, b) => a.name.localeCompare(b.name))
+                .slice().sort((a, b) => a.name.localeCompare(b.name));
+            corpusSelect.innerHTML = sorted
                 .map(c => `<option value="${c.name}">${c.name}</option>`)
                 .join('');
-            setCorpus(corpora[0].name);
+            const defaultCorpus = sorted.find(c => c.name === 'demo') || sorted[0];
+            setCorpus(defaultCorpus.name);
         } catch {
             corpusSelect.innerHTML = '<option value="">Error loading corpora</option>';
             setCorpus(null);
@@ -1104,6 +1185,7 @@
                 corpus: currentCorpus,
                 top_k: parseInt(topKInput.value) || 5,
                 temperature: parseFloat(tempInput.value) || 0.3,
+                hybrid_alpha: 1 - parseFloat(alphaInput.value),
                 // Keywords input wiring TODO — see PIPELINE AIStudio_NNN (M1 keyword steering)
                 conversation_history: conversationHistory.length > 1
                     ? conversationHistory.slice(0, -1).map(msg => ({
@@ -2583,7 +2665,10 @@
     }
 
     // AIStudio_716 — lightweight markdown → HTML converter for LLM answer rendering.
-    // Handles: **bold**, *italic*, `inline code`, * bullet lists, numbered lists.
+    // Handles: **bold**, *italic*, `inline code`, * bullet lists, numbered lists,
+    //          fenced code blocks (``` or ```bash).
+    // AIStudio_748 — blank lines between list items no longer break the list into
+    // separate <ul> blocks; empty lines are skipped while inside a list context.
     // Must run BEFORE escapeHtml on raw LLM text (not on already-escaped HTML).
     // Citation markers [1], [2,3] are preserved as-is for parseCitations() downstream.
     function markdownToHtml(text) {
@@ -2594,9 +2679,35 @@
         const out = [];
         let inUl = false;
         let inOl = false;
+        let inFence = false;
+        let fenceLines = [];
 
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
+
+            // Fenced code block: opening or closing ```
+            if (line.match(/^```/)) {
+                if (!inFence) {
+                    // Close any open list first
+                    if (inUl) { out.push('</ul>'); inUl = false; }
+                    if (inOl) { out.push('</ol>'); inOl = false; }
+                    inFence = true;
+                    fenceLines = [];
+                } else {
+                    // Close the fence — escape and emit as <pre><code>
+                    const d = document.createElement('div');
+                    d.textContent = fenceLines.join('\n');
+                    out.push('<pre><code>' + d.innerHTML + '</code></pre>');
+                    inFence = false;
+                    fenceLines = [];
+                }
+                continue;
+            }
+
+            if (inFence) {
+                fenceLines.push(line);
+                continue;
+            }
 
             // Detect unordered list item: "* text" or "- text" or "+ text"
             const ulMatch = line.match(/^[\*\-\+]\s+(.+)/);
@@ -2609,12 +2720,34 @@
             } else if (olMatch) {
                 if (!inOl) { if (inUl) { out.push('</ul>'); inUl = false; } out.push('<ol style="margin:6px 0 6px 0;padding-left:20px;">'); inOl = true; }
                 out.push('<li style="margin:2px 0;">' + inlineMarkdown(olMatch[2]) + '</li>');
+            } else if (line.trim() === '' && (inUl || inOl)) {
+                // AIStudio_748: blank line inside a list — skip it, don't close the list
+                continue;
+            } else if (line.trim() === '') {
+                // Blank line — but peek ahead: if next non-empty line is a list item,
+                // skip the blank so the intro sentence flows straight into the list
+                let nextListItem = false;
+                for (let j = i + 1; j < lines.length; j++) {
+                    const peek = lines[j].trim();
+                    if (peek === '') continue;
+                    if (peek.match(/^[\*\-\+]\s+/) || peek.match(/^\d+[.)]\s+/)) nextListItem = true;
+                    break;
+                }
+                if (nextListItem) continue;
+                if (inUl) { out.push('</ul>'); inUl = false; }
+                if (inOl) { out.push('</ol>'); inOl = false; }
+                out.push(inlineMarkdown(line));
             } else {
                 if (inUl) { out.push('</ul>'); inUl = false; }
                 if (inOl) { out.push('</ol>'); inOl = false; }
-                // Empty line → paragraph break (handled by caller's split on \n\n)
                 out.push(inlineMarkdown(line));
             }
+        }
+        // Close any unclosed fence (malformed LLM output)
+        if (inFence && fenceLines.length) {
+            const d = document.createElement('div');
+            d.textContent = fenceLines.join('\n');
+            out.push('<pre><code>' + d.innerHTML + '</code></pre>');
         }
         if (inUl) out.push('</ul>');
         if (inOl) out.push('</ol>');
@@ -2687,6 +2820,10 @@
     document.getElementById('newCorpusBtn').addEventListener('click', createCorpus);
     document.getElementById('renameCorpusBtn').addEventListener('click', renameCorpus);
     document.getElementById('clearBtn').addEventListener('click', clearConversation);
+
+    alphaInput.addEventListener('input', () => {
+        alphaDisplay.textContent = (1 - parseFloat(alphaInput.value)).toFixed(2);
+    });
 
     document.getElementById('cancelUpload').addEventListener('click', closeUpload);
     document.getElementById('confirmUpload').addEventListener('click', uploadFile);

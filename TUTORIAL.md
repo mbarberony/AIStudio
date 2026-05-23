@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.0.0 | Updated: 2026-05-01*
+*Version: 1.1.0 | Updated: 2026-05-22*
 
 Get the most out of AIStudio with three guided modules — from your first query to benchmarking at scale.
 
@@ -54,6 +54,11 @@ Try adjusting **Top K** in the settings sidebar:
 - 0.1–0.3: precise, factual, stays close to source documents
 - 0.5–0.7: more varied synthesis across sources
 - Default 0.3 is right for document Q&A
+
+**Retrieval Mix** controls how the system finds relevant passages:
+- Drag left toward **Literal** — prioritizes exact word matching (BM25). Better when you know the specific term, entity name, or ticker that appears in your documents.
+- Drag right toward **Conceptual** — prioritizes semantic meaning. Better for thematic questions where the document may use different phrasing than your query.
+- Default 0.5 blends both. For the SEC 10-K corpus, try 0.5–0.6 for multi-firm queries and full Conceptual for single-firm trend questions.
 
 ### 1.5 The Help Corpus — AIStudio Answering About Itself
 
@@ -184,7 +189,7 @@ Each corpus can carry search guidance — routing hints that tell the model whic
 
 In this release, guidance is added by manually editing the corpus metadata file:
 ```
-data/corpora/<your-corpus-name>/<your-corpus-name>_corpus_meta.yaml
+data/corpora/<your-corpus-name>/<your-corpus-name>_corpus_metadata.yaml
 ```
 
 See `data/corpora/demo/demo_corpus_meta.yaml` for a worked example.

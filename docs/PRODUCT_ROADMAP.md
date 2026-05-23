@@ -1,6 +1,6 @@
 # AIStudio — Product Roadmap
 
-*Version: 1.0.0 | Updated: 2026-04-30*
+*Version: 1.1.0 | Updated: 2026-05-22*
 
 > A product-level view of where AIStudio is, where it is going, and why.
 > For the technical backlog and implementation detail, see [roadmap.md](roadmap.md).
@@ -22,17 +22,16 @@ training data.
 
 ## Release Philosophy
 
-AIStudio ships when it is ready. There is no v1.0 — the product goes directly
-from Beta to v2.0. This reflects a deliberate choice: Beta is the last milestone
-before the codebase is opened for external use, and v2.0 is the first release
-suitable for that.
+AIStudio is intentionally in a state of permanent Beta. Not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning marks milestones, not completion.
+
+There is no v1.0. The product goes directly from Beta to v2.1 — the first release intended for external use. This reflects a deliberate choice: internal development milestones don't need public version numbers.
 
 Each release milestone has a clear definition of "ready":
 
 | Milestone | Definition |
 |---|---|
-| **Beta** | Stable on Apple Silicon, clean install in under 30 minutes, benchmark-validated retrieval quality, full documentation |
-| **v2.0** | Source Dive (click citation → open to exact page), one-click installer, API documentation published, corpus metadata at creation time |
+| **Beta** | Stable on Apple Silicon, clean install under 30 minutes, benchmark-validated retrieval quality, full documentation. Permanent — never closed. |
+| **v2.1** | Source Dive (click citation → open to exact page), one-click installer, API documentation published, corpus metadata at creation time |
 | **v3.0** | Multi-user, shared corpora, cloud deployment |
 
 ---
@@ -49,6 +48,7 @@ explicitly documented as a known limitation.
 - Multiple LLM options via Ollama (llama3.1:8b default, llama3.1:70b for quality)
 - Conversation memory within a session, persisted across page refresh
 - Per-corpus routing guidance to steer retrieval toward the right documents
+- Hybrid retrieval (M2.A) — Retrieval Mix slider blends vector semantic search with BM25 keyword matching; tunable per query
 - Benchmark harness with YAML question files and timestamped pass/fail reports
 - REST API exposing all capabilities for scripted access
 - Full documentation: QUICKSTART, HOWTO, architecture decisions, benchmark guide
@@ -61,9 +61,9 @@ explicitly documented as a known limitation.
 
 ---
 
-## v2.0 — Next Major Release
+## v2.1 — First External Release
 
-v2.0 is the open-source release. The three themes are: **better source access,
+v2.1 is the first external release. The three themes are: **better source access,
 easier onboarding, and a published API**.
 
 ### Source Dive
@@ -75,7 +75,7 @@ The remaining work is the frontend PDF viewer (PDF.js).
 
 ### One-Click Installer
 The current install is guided and takes under 30 minutes, but requires terminal
-familiarity. v2.0 ships a `.dmg` installer that handles the full setup — Python
+familiarity. v2.1 ships a `.dmg` installer that handles the full setup — Python
 environment, Qdrant, Ollama pull, alias registration — without a terminal.
 
 ### Corpus Metadata at Creation Time
@@ -83,16 +83,19 @@ When creating a corpus, users can provide a short description, a summary of
 what's in it, and routing guidance (hints about which documents answer which
 kinds of questions). This metadata is injected into the system prompt at query
 time to improve retrieval precision. Currently this requires manual YAML editing;
-v2.0 adds UI fields to the New Corpus modal.
+v2.1 adds UI fields to the New Corpus modal.
 
 ### Published API Documentation
-AIStudio's REST API is stable at Beta. v2.0 publishes full API documentation
+AIStudio's REST API is stable at Beta. v2.1 publishes full API documentation
 (`API_DOC.md`) with request/response schemas, error codes, and examples. FastAPI's
 built-in Swagger UI (`/docs`) is also enabled, making the API self-documenting
 for developers integrating AIStudio into their own workflows.
 
 ### Intel Mac, Windows, Linux
 Platform support extended beyond Apple Silicon.
+
+### Benchmark Harness v2
+Comparison tooling — run benchmarks across multiple configurations and view results side by side.
 
 ---
 

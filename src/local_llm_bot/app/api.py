@@ -1,4 +1,10 @@
-# Version: 1.7.2
+# Version: 1.7.5
+# Changelog: 1.7.5 — AIStudio_752: strip citation markers [N] from conversation history
+#            before injecting into prompt. Citation indices from prior turns refer to
+#            different source sets — leaving them in causes the LLM to reuse stale [1]/[2]
+#            references against the current query's sources, producing wrong file citations
+#            for follow-up questions. Strip [N] from history content only; factual text
+#            is preserved. Fixes single-file citation on cross-temporal trend queries.
 # Changelog: 1.5.5 — Add avg_seconds_per_file to /corpus/{name}/info response.
 #            Add DELETE /corpus/{name}/file/{filename}/chunks endpoint for reingest:
 #            wipes Qdrant chunks only (file stays on disk), resets metadata stub.
@@ -302,9 +308,14 @@ def generate_answer_with_citations(
 
     # Build prompt with conversation history
     if conversation_history:
+        # Strip citation markers [N] from history — indices from prior turns refer to
+        # different source sets and bleed into current citations if left in (AIStudio_752).
+        def _strip_citations(text: str) -> str:
+            return re.sub(r"\[\d+(?:\s*,\s*\d+)*\]", "", text).strip()
+
         history_text = "\n".join(
             [
-                f"{msg['role'].upper()}: {msg['content']}"
+                f"{msg['role'].upper()}: {_strip_citations(msg['content'])}"
                 for msg in conversation_history[-20:]  # Last 10 exchanges (user+assistant = 20 msgs) — AIStudio_636 v1.7.2
             ]
         )
@@ -315,9 +326,10 @@ def generate_answer_with_citations(
     # Generate answer
     answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
 
-    # Strip any trailing References/Sources block the LLM appended despite instructions
+    # Strip any trailing References/Sources block the LLM appended despite instructions.
+    # Handles both newline-prefixed and inline variants (Mistral:7b appends inline).
     answer = re.sub(
-        r"\n+(?:References|Sources)\s*:?\s*\n(?:.*\n?)*$", "", answer, flags=re.IGNORECASE
+        r"\n*(?:References|Sources|Citations)\s*:?\s*(?:\n.*)*$", "", answer, flags=re.IGNORECASE
     ).rstrip()
 
     # AIStudio_720 belt-and-suspenders: strip any [Document: ...] prefix that leaked
@@ -2081,6 +2093,18 @@ async def get_config() -> dict[str, Any]:
             "overlap": CONFIG.ingest.overlap,
         },
     }
+
+
+@app.post("/prompt/reload")
+async def reload_prompt() -> dict[str, Any]:
+    """
+    Clear the cached system prompt and reload from prompts/system.txt.
+    Allows live system prompt edits without restarting the backend.
+    """
+    global _SYSTEM_PROMPT_BASE
+    _SYSTEM_PROMPT_BASE = None
+    _load_system_prompt()
+    return {"status": "ok", "prompt_length": len(_SYSTEM_PROMPT_BASE)}
 
 
 @app.get("/source")

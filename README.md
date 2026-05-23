@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-05-01*
+*Version: Beta | Updated: 2026-05-22*
 
 # AIStudio
 
@@ -100,7 +100,8 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 
 - CrossEncoder reranker (ms-marco-MiniLM) — fixes vocabulary mismatch ✅
 - Page-aware PDF chunking via pdfplumber — page numbers in citations ✅
-- PDF viewer — direct access to source page from inline citation ✅
+- `Open ↗` links — click any citation reference to open the source file directly in your browser ✅
+- Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
 - Demo corpus benchmark: 14/14 questions pass, 6.9s avg latency (M4 Max) / 26s avg (M4 Air) ✅
@@ -118,15 +119,18 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 
 ## Roadmap in a Nutshell
 
-| Beta (now) | v2.0 | v3.0 |
+| Beta (now) | v2.1 | v3.0 |
 |------------|------|------|
-| ✅ CrossEncoder reranker | PDF viewer click → source page | Docker + AWS ECS Fargate |
-| ✅ Page-aware PDF chunking | PDF image identification + citation | Multi-user + shared corpora |
-| ✅ PDF viewer Open ↗ links | Clean install validation | GPU inference (Inferentia2) |
-| ✅ `--force` atomic ingest | MacBook Air validation ✅ | Compiled installer (.dmg) |
-| Relevance threshold | Benchmark comparison tooling | urCrew integration |
+| ✅ CrossEncoder reranker | Source Dive — click citation → exact page | Docker + AWS ECS Fargate |
+| ✅ Page-aware PDF chunking | One-click installer (.dmg) | Multi-user + shared corpora |
+| ✅ `Open ↗` source file links | Published API documentation | GPU inference (Inferentia2) |
+| ✅ Hybrid retrieval slider (M2.A) | MacBook Air clean install ✅ | Compiled installer (.dmg) |
+| ✅ `--force` atomic ingest | Benchmark comparison tooling | urCrew integration |
+| Relevance threshold | | |
 
-See [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) for the full phased plan. Releases go Beta → v2.0 → v3.0. There is no v1.0 by design.
+See [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) for the full phased plan. Releases go Beta → v2.1 → v3.0.
+
+> AIStudio is intentionally in a state of permanent Beta. Not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning exists to mark milestones, not to signal completion.
 
 ---
 
@@ -139,7 +143,7 @@ flowchart TD
     UI -->|HTTP POST /ask| API
 
     subgraph API["FastAPI · uvicorn · :8000"]
-        AV["Request validation\nfirm / year / top_k / temperature"]
+        AV["Request validation\ntop_k / temperature / hybrid_alpha"]
         AR["RAG pipeline\nretrieve → prompt → generate"]
         AC["Citation parser\ninline [1][2] + References"]
     end
@@ -245,13 +249,14 @@ flowchart TD
 
 Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
 
-- **Sub-7s latency** per query once the model is warm — including complex multi-source synthesis
-- **99.1% pass rate** across 126 Q/A pairs (9 runs × 14 questions, identical conditions)
-- **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at 6.9–7.2s; the bottleneck is output token generation, not parameter count
+- **Sub-6s latency** per query once the model is warm — including complex multi-source synthesis
+- **14/14 pass rate** on demo corpus benchmark (M4 Pro, 128GB unified memory)
+- **7/8 (88%)** on SEC 10-K corpus benchmark (8 questions across 25 firms, 105,964 chunks)
+- **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
 
-Testing spans the Apple Silicon performance spectrum: the M4 Max (128GB) establishes the baseline above. The same system runs correctly on an M4 Air — the other end of the Apple Silicon range — with approximately 40% higher latency under equivalent conditions. Systematic benchmark data on the Air is being collected. The goal is to characterize behavior across the full range of likely deployment hardware, not just optimal conditions.
+All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base.
 
 → [Benchmark reports and question sets](benchmarks/demo/reports/)
 
@@ -263,8 +268,8 @@ Testing spans the Apple Silicon performance spectrum: the M4 Max (128GB) establi
 Corpus:     144 SEC 10-K filings, 25 financial services firms
 Chunks:     105,964
 Ingest:     34 min, 54 chunks/sec, 0 failures
-Latency:    ~6–7s warm (8b and 70b identical on Apple Silicon)
-Filtering:  firm + year metadata filters, zero latency overhead
+Latency:    ~6s warm (8b and 70b identical on Apple Silicon, M4 Pro 128GB)
+Benchmark:  7/8 (88%) on SEC 10-K, 14/14 (100%) on demo corpus
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 105,964 chunks
 ```

@@ -60,8 +60,6 @@ If a command is not found, run `source ~/.zshrc` first.
 | `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
 | `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
 | `ais_ingest_sec_10k` | Ingest SEC 10-K corpus into AIStudio (~30 min, backend must be running) |
-| `ais_download_esef` | Download ESEF iXBRL corpus from filings.xbrl.org (~10 European banks) |
-| `ais_ingest_esef` | Ingest ESEF iXBRL corpus into AIStudio (~20 min, backend must be running) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:
@@ -243,16 +241,23 @@ Controls randomness in the model's output.
 - Default: `0.3` — recommended starting point
 Adjust using the **Temperature** input field in the sidebar.
 
-**Keywords (optional)** — *Boost retrieval for specific entities or terms*
-Enter comma-separated terms to give extra weight to chunks containing those keywords.
-Useful when your corpus spans multiple entities and semantic similarity alone pulls in the wrong results.
+**Retrieval Mix** — *Balance between literal and conceptual search*
+Controls how the system finds relevant passages in your corpus.
 
-Examples:
-- `JPMorgan, Bank of America, Wells Fargo` — focus on specific firms
-- `CET1, capital ratio, regulatory capital` — focus on a specific topic
-- `2024, 2025` — focus on recent filings
+- **Literal** (slider left, value 1.0) — prioritizes exact word and phrase matching (BM25). Use when you know the specific term, entity name, or abbreviation that appears in your documents. Example: searching for "CET1" by exact term.
+- **Conceptual** (slider right, value 0.0) — prioritizes semantic meaning. Finds passages related to your query even when the document uses different phrasing. Example: asking about "capital strength" returns passages about CET1, Tier 1 capital, and capital ratios.
+- **Default 0.5** — blends both. Works well for most queries.
 
-Leave blank for full corpus retrieval. Use keywords when you know the specific entity or term you need.
+**Choosing by query type:**
+
+| Query type | Recommended setting | Why |
+|---|---|---|
+| Named entity, ticker, exact term | Literal (0.7–1.0) | BM25 matches the token directly |
+| Thematic or conceptual question | Conceptual (0.0–0.3) | Semantic search handles paraphrase |
+| Multi-firm comparison | Center (0.4–0.6) | Entity names + topic meaning both matter |
+| Single firm, multiple years | Conceptual (0.0–0.2) | Year context is in documents; meaning guides retrieval |
+
+Adjust using the **Retrieval Mix** slider in the Query Settings sidebar.
 
 ---
 
@@ -265,7 +270,7 @@ Every answer includes numbered citations — `[1]`, `[2]`, `[3]` — in the text
 - Which page in that document
 
 **What to do when an answer seems wrong:**
-Check the citations first. If the referenced chunks don't actually contain the claim — the model may be reasoning beyond its sources. Try increasing Top K, adding Keywords for the specific entity, or rephrasing to be more specific.
+Check the citations first. If the referenced chunks don't actually contain the claim — the model may be reasoning beyond its sources. Try increasing Top K, adjusting the Retrieval Mix toward Literal, or rephrasing to be more specific.
 
 **Uncited claims:** if a sentence has no citation marker, the model is drawing on general context rather than a specific retrieved passage. Treat uncited claims with more caution, especially for specific numbers or facts.
 
