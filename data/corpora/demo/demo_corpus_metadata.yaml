@@ -1,3 +1,6 @@
+# demo_corpus_metadata.yaml
+# Corpus metadata — loaded by api.py at query time
+
 avg_seconds_per_file: 6.33
 content_summary: '9 documents covering: enterprise architecture methodology and toolset
   (Barbero 2006), QFD and architecture toolset (Erder|Pureur 2003), FS Journal volumes
@@ -63,7 +66,7 @@ ingest_duration_seconds: 57
 last_ingest_chunks: 1070
 last_ingest_files: 9
 last_ingested_at: '2026-04-30T15:03:02'
-last_updated: '2026-04-30'
+last_updated: '2026-05-23'
 schema_version: '2.0'
 search_guidance: 'Route questions to the most relevant document based on intent:
 
@@ -106,11 +109,9 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   across the corpus.
 
   Answer directly and confidently from what the sources contain. Do not hedge or qualify
-  unnecessarily.
-
-  '
+  unnecessarily.'
 short_description: 20 years of original thought leadership — architecture, strategy,
-  AI
+  AI, IT Infrastructure
 sources:
 - description: Enterprise architecture methodology and toolset — universal architecture
     concepts for organizational design

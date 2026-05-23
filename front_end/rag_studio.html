@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.1.1 -->
-<!-- Changelog: 2.1.0 — AIStudio_754: Source Dive v1 — click citation → PDF opens in side panel at exact page (iframe + /source endpoint, offline-compatible, no highlight). Renames "Open ↗" to "Source Dive ↗" for PDF sources.
+<!-- Version: 2.1.4 -->
+<!-- Changelog: 2.1.4 — Revert page-1 offset (Chrome iframe is 1-indexed). ArrowUp in empty input restores last query. HTM/HTML inline render (requires api.py 1.7.6).
+     Changelog: 2.1.3 — AIStudio_763: replace lock icon with sparkle on assistant avatar. AIStudio_760: header description truncates with ellipsis. AIStudio_761: Source Dive panel expanded 52%→72%. Page offset fix: #page=N-1 (Chrome iframe PDF viewer is 0-indexed).
+     Changelog: 2.1.2 — AIStudio_759: fix onclick source path — JSON.stringify produced double-quoted string inside onclick="" attribute, truncating handler. Replaced with single-quoted template literal + escape.
+     Changelog: 2.1.1 — AIStudio_759: move sourceDivePanel div inside body before script block to fix null getElementById on load.
+     Changelog: 2.1.0 — AIStudio_754: Source Dive v1 — click citation → PDF opens in side panel at exact page (iframe + /source endpoint, offline-compatible, no highlight). Renames "Open ↗" to "Source Dive ↗" for PDF sources.
 <!-- Changelog: 1.9.2 — fix pollIngestStatus: use pct_complete + rich status text matching upload bar (AIStudio_543)
 <!-- Changelog: 1.9.1 — red close button on help modal; Help button group margin-right
 <!-- Changelog: 1.9.0 — first-run corpus auto-index: detect empty demo/help on init, trigger ingest, show live progress banner via pollIngestStatus; AIStudio_434 help modal alignment + close button -->
@@ -310,6 +314,10 @@
             font-size: 13px;
             color: var(--text-mid);
             font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 65%;
         }
 
         .topbar-left strong {
@@ -602,7 +610,7 @@
             position: fixed;
             top: 0;
             right: 0;
-            width: 52%;
+            width: 72%;
             height: 100vh;
             background: var(--bg-panel);
             border-left: 1px solid var(--border);
@@ -995,6 +1003,8 @@
     let currentCorpusFiles = []; // filenames in current corpus — used by linkify()
     let isLoading = false;
     let conversationHistory = [];
+    let _lastQuery = '';
+    let _queryHistoryPos = -1;
 
     // ── Conversation persistence across refresh (sessionStorage) ──
     const HISTORY_KEY = 'aistudio_conv_history';
@@ -1234,6 +1244,8 @@
         if (!query || isLoading || !currentCorpus) return;
 
         hideEmpty();
+        _lastQuery = query;
+        _queryHistoryPos = -1;
         chatInput.value = '';
         chatInput.style.height = 'auto';
 
@@ -1346,7 +1358,7 @@
 
         const avatarIcon = role === 'user'
             ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
-            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`;
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>`;
 
         div.innerHTML = `
             <div class="avatar ${role}">${avatarIcon}</div>
@@ -1438,10 +1450,10 @@
                 : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
             const isPdf = name.toLowerCase().endsWith('.pdf');
             const openLink = isPdf
-                ? `<a href="#" class="footnote-open" title="Source Dive — open PDF at this page" onclick="event.preventDefault();openSourceDive(${JSON.stringify(c.source)},${c.page||'null'})">Source Dive &#8599;</a>`
+                ? `<a href="#" class="footnote-open" title="Source Dive — open PDF at this page" onclick="event.preventDefault();openSourceDive('${c.source.replace(/\'/g, "\\'")}',${c.page||'null'})">Source Dive &#8599;</a>`
                 : `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
             const nameLink = isPdf
-                ? `<a href="#" class="footnote-name" title="Source Dive: ${name}" onclick="event.preventDefault();openSourceDive(${JSON.stringify(c.source)},${c.page||'null'})">${name}</a>`
+                ? `<a href="#" class="footnote-name" title="Source Dive: ${name}" onclick="event.preventDefault();openSourceDive('${c.source.replace(/\'/g, "\\'")}',${c.page||'null'})">${name}</a>`
                 : `<a href="${openUrl}" target="_blank" class="footnote-name" title="Open ${name}">${name}</a>`;
             return `<div class="footnote" id="fn-${rc}-${c.index}">
                 <span class="footnote-num">[${c.index}]</span>
@@ -2848,7 +2860,16 @@
     sendBtn.addEventListener('click', sendMessage);
 
     chatInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); return; }
+        // ArrowUp when input is empty — restore last query
+        if (e.key === 'ArrowUp' && chatInput.value === '' && _lastQuery) {
+            e.preventDefault();
+            chatInput.value = _lastQuery;
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+            // Move cursor to end
+            chatInput.selectionStart = chatInput.selectionEnd = chatInput.value.length;
+        }
     });
 
     chatInput.addEventListener('input', () => {
