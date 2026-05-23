@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-*Version: 1.0.0 | Updated: 2026-04-30*
+*Version: 1.1.0 | Updated: 2026-05-23*
 
 Key technical choices made in this project, with rationale. This document is
 intended for anyone reviewing the codebase who wants to understand not just
@@ -162,8 +162,7 @@ in `RetrievedDoc.page` → rendered in UI citation footnotes with `Open ↗` lin
 **Null pages are expected** for: non-PDF files (PPTX, DOCX), scanned PDFs
 with no text layer, and continuation chunks that start mid-page.
 
-**PDF viewer — click citation → scroll to page** remains a v2.0 item requiring
-frontend PDF rendering (pdfjs). Page numbers are ready in the backend; the
+**PDF viewer — click citation → scroll to page** is tracked as Source Dive (pre-Jessica gate item). Page numbers are ready in the backend; the
 viewer frontend is the remaining work.
 
 ---
@@ -206,9 +205,9 @@ lines, no build step.
 - No npm, no webpack, no node_modules. Nothing to break on a new machine.
 - Consistent with the "runnable in under 30 minutes" QUICKSTART promise.
 
-**Current UI features:** Corpus management (create, rename, delete, stats, inspect), file upload with ingest progress, chat with inline citations, corpus/model change separators, auto-linkify of URLs and file paths in responses, clickable citation filenames, corpus selector with alphabetical sort.
+**Current UI features (v2.0.1):** Corpus management (create, rename, delete, stats, inspect), file upload with ingest progress, chat with inline citations and inline code rendering (backtick and fenced block), corpus/model change separators, auto-linkify of URLs and file paths, clickable citation filenames, corpus selector with alphabetical sort, Retrieval Mix slider (hybrid_alpha, Literal↔Conceptual), query settings sidebar, system prompt hot-reload via `/prompt/reload`.
 
-**Tradeoff:** A single ~1,900-line file is harder to navigate than a componentized
+**Tradeoff:** A single ~2,200-line file is harder to navigate than a componentized
 React app. The tradeoff is deliberate — operational simplicity over developer
 ergonomics at this scale.
 
@@ -347,7 +346,7 @@ interactions go through this API — the frontend is a pure client with no
 direct access to the filesystem, Qdrant, or Ollama.
 
 **Current endpoints (Beta):**
-- `POST /ask` — RAG query with corpus, model, top-K, temperature, keywords, conversation history
+- `POST /ask` — RAG query with corpus, model, top-K, temperature, hybrid_alpha, keywords, conversation history
 - `POST /corpus/{name}/ingest` — trigger ingest of uploaded files
 - `GET /corpus/{name}/ingest-status` — streaming ingest progress (files, chunks, elapsed)
 - `GET /corpora` — list available corpora with metadata
@@ -359,6 +358,7 @@ direct access to the filesystem, Qdrant, or Ollama.
 - `POST /corpus/{name}/upload` — upload files to corpus
 - `POST /prewarm` — warm Ollama model into memory before first query
 - `GET /source` — serve source documents for citation Open ↗ links
+- `POST /prompt/reload` — hot-swap system prompt without restart (clears memoized `_SYSTEM_PROMPT_BASE`)
 - `GET /health` — liveness check (used by start.sh health-check poll)
 - `GET /models` — list available Ollama models
 
@@ -372,3 +372,98 @@ orchestration layers. No SDK required.
 published alongside the API. Swagger/OpenAPI auto-docs via FastAPI's built-in
 support (`/docs` endpoint). This is a v2.0 item — the API surface is stable
 at Beta but not yet formally documented.
+---
+
+## 16. Hybrid Retrieval: BM25 + Vector Score Combination (M2.A)
+
+**Decision:** Hybrid retrieval combining Qdrant vector search with BM25 sparse
+retrieval, score-combined via a weighted `hybrid_alpha` parameter. Exposed as
+a per-query slider ("Retrieval Mix") in the UI and as a `--alpha` flag in the
+benchmark harness.
+
+**Why:**
+Pure vector retrieval (semantic similarity) retrieves conceptually related
+chunks but can miss exact-match keyword queries — e.g. a query for
+"Goldman Sachs CET1 ratio 2024" may return semantically related risk content
+instead of the specific number. BM25 is token-based and excels at exact-match
+recall. Combining both captures the strengths of each.
+
+**Empirical finding:** α=0.5 (equal blend) + K=10 achieves 14/14 on the demo
+corpus benchmark. Pure vector (α=0.0, K=5) achieves 13/14 — the two failures
+were both list-format answers where the model dropped citations. At α=0.5,
+retrieval precision is higher and citation compliance improves.
+
+**Implementation:** `scoring.py` — pure functions `normalize_minmax()` and
+`combine_hybrid()`. `qdrant_store.py` v1.1.0 adds `query_bm25()` and
+`_ensure_text_index()`. `rag_core.py` v1.5.0 accepts `hybrid_alpha` kwarg.
+`api.py` v1.6.0 exposes `hybrid_alpha` on `AskRequest`. UI slider: Literal=left
+(α=1.0 BM25), Conceptual=right (α=0.0 vector) — display shows actual α sent.
+
+**UI convention note:** The slider direction inverts the raw parameter —
+`hybrid_alpha: 1 - parseFloat(alphaInput.value)`. Documented to prevent
+future confusion.
+
+**Tradeoff:** BM25 index must be built on Qdrant collection creation.
+`_ensure_text_index()` is idempotent — safe to call on existing collections.
+Minimal overhead.
+
+**Default:** Backend default is pure vector (α=None). UI default is α=0.5.
+The separation allows the API to remain backward-compatible while the UI
+surfaces the recommended setting.
+
+---
+
+## 17. Document-Head Extraction Normalizer
+
+**Decision:** At ingest time, `.htm/.html/.xhtml` files (SEC XBRL, ESEF iXBRL)
+have a `[Document: <entity> FY<year>]` prefix injected into every chunk before
+embedding.
+
+**Why:**
+Financial filings use anaphora pervasively — "the Company", "the Firm",
+"the registrant" rather than the entity name. A chunk reading "the Company's
+CET1 ratio was 15.7%" is semantically indistinguishable from the same sentence
+in any other filing at embedding time. The prefix resolves anaphora at the
+embedding layer: "Goldman Sachs FY2024 — the Company's CET1 ratio was 15.7%"
+embeds near other Goldman Sachs content, not near generic CET1 content.
+
+**Implementation:** `pipeline.py` `_extract_document_metadata()` — extracts
+`dei:EntityRegistrantName` and `dei:DocumentFiscalYearFocus` from inline XBRL
+tags. Fallback chain: authoritative tag → scan → filename stem. Non-markup
+files (PDF, DOCX, MD) receive null returns — no prefix, no overhead.
+Controlled by `AISTUDIO_DOC_HEAD_NORMALIZER` env var.
+
+**Measured impact:** Entity extraction 9/9, year extraction 9/9 on ESEF corpus.
+SEC 10-K corpus: enables temporal trend queries at K=5 that previously required
+K=20+ to retrieve both the entity and the relevant year.
+
+**Tradeoff:** Prefix adds ~8–12 tokens per chunk. Context window budget is
+slightly reduced. Negligible at current chunk sizes (1,200 chars, ~300 tokens).
+
+---
+
+## 18. System Prompt Architecture: File-Based with Hot-Reload
+
+**Decision:** The system prompt lives in `prompts/system.txt`, loaded at
+runtime by `api.py` and memoized. A `POST /prompt/reload` endpoint clears the
+cache, enabling prompt updates without restarting the backend.
+
+**Why:**
+Embedding the system prompt in code (`api.py`) ties prompt iteration to
+deployment cycles. Separating it into a file makes prompt engineering a
+first-class workflow: edit the file, hit reload, query immediately. No
+`ais_start` required.
+
+**Memoization pattern:** `_SYSTEM_PROMPT_BASE` is a module-level variable
+initialized to `None`. On first query, `api.py` reads and caches the file.
+`/prompt/reload` sets it back to `None` — next query re-reads from disk.
+
+**Prompt design:** Citation rules use positive + negative examples, not just
+ban lists. Small models (llama3.1:8b) respond better to CORRECT/WRONG pairs
+than to prohibition lists alone — prohibitions suppress the cited behavior
+but can inadvertently suppress the citation marker entirely. The positive
+example pattern ("Net revenue increased 12% in fiscal 2024 [2]") anchors the
+correct output format explicitly.
+
+**Tradeoff:** System prompt is not version-controlled in git (it's a runtime
+file, not source code). Tracked via the BUNDLE/PACKET protocol.

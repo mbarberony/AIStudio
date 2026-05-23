@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_download_sec_10k.sh — Download SEC 10-K corpus from EDGAR
-# Version: 1.1.3
+# Version: 1.1.5
 # Downloads ~143 filings from 25 financial services firms (~500MB)
 # Output goes to data/corpora/sec_10k/uploads/ by default
 

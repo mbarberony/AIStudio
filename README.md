@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-05-22*
+*Version: Beta | Updated: 2026-05-23*
 
 # AIStudio
 
@@ -104,7 +104,7 @@ Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vecto
 - Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 14/14 questions pass, 6.9s avg latency (M4 Max) / 26s avg (M4 Air) ✅
+- Demo corpus benchmark: 14/14 questions pass, 8.6s avg latency at α=0.5 hybrid retrieval, K=10 (M4 Pro) ✅
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
 - Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
@@ -247,16 +247,16 @@ flowchart TD
 
 ## Performance Findings
 
-Synthesized from 15 benchmark runs on MacBook Pro M4 Max (128GB unified memory):
+Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
-- **Sub-6s latency** per query once the model is warm — including complex multi-source synthesis
-- **14/14 pass rate** on demo corpus benchmark (M4 Pro, 128GB unified memory)
+- **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
+- **14/14 pass rate** on demo corpus benchmark (M4 Pro, 128GB unified memory, α=0.5 hybrid retrieval)
 - **7/8 (88%)** on SEC 10-K corpus benchmark (8 questions across 25 firms, 105,964 chunks)
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
 
-All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base.
+All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base. Demo corpus results use hybrid retrieval (α=0.5, K=10); pure vector retrieval (default) achieves 13/14.
 
 → [Benchmark reports and question sets](benchmarks/demo/reports/)
 
@@ -269,7 +269,7 @@ Corpus:     144 SEC 10-K filings, 25 financial services firms
 Chunks:     105,964
 Ingest:     34 min, 54 chunks/sec, 0 failures
 Latency:    ~6s warm (8b and 70b identical on Apple Silicon, M4 Pro 128GB)
-Benchmark:  7/8 (88%) on SEC 10-K, 14/14 (100%) on demo corpus
+Benchmark:  7/8 (88%) on SEC 10-K, 14/14 (100%) on demo corpus (α=0.5 hybrid retrieval, K=10)
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 105,964 chunks
 ```

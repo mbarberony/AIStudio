@@ -86,7 +86,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -102,6 +102,7 @@ Options:
   --subset <group>       Run only questions whose firm is in the named subset
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
+  --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
   --questions <path>     Path to YAML question file (default: auto-detect from corpus name)
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
@@ -146,7 +147,7 @@ Options:
 ---
 ## ais_download_sec_10k
 
-Usage: ais_download_sec_10k [--help] [--version] [--limit <n>] [--out <dir>]
+Usage: ais_download_sec_10k [--help] [--version] [--out <dir>]
 
 Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/.
 Downloads the most recent 10-K for each company in the default list.
@@ -154,7 +155,6 @@ Downloads the most recent 10-K for each company in the default list.
 Options:
   --help         Show this help
   --version      Show script version
-  --limit <n>    Maximum number of filings to download (default: all)
   --out <dir>    Output directory (default: ~/Downloads/sec_10k_corpus/)
 
 · After downloading: ingest via the UI — select sec_10k corpus, Add files

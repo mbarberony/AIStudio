@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# Version: 1.8.0
+# Version: 1.8.1
+# Changelog: 1.8.1 — AIStudio_752: add --alpha flag for hybrid retrieval; pass hybrid_alpha
+#            to /ask payload. Removes env var workaround.
 """
 AIStudio RAG Benchmark Script
 Usage:
@@ -27,6 +29,7 @@ Flags:
                     exchanges, insurance, custody, boutiques. Filters by firm names in question text.
     --topics        Filter questions by topic name (comma-separated, AND with --subset)
     --question-ids  Filter to specific question IDs (comma-separated, AND with other filters)
+    --alpha         Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25, None=backend default
 
 Output files (in benchmarks/<corpus>/reports/):
     benchmark_<corpus>_<timestamp>.json
@@ -169,6 +172,13 @@ def parse_args() -> argparse.Namespace:
             "Filter to specific question IDs (comma-separated). "
             "Example: --question-ids capital_ratios_trend,latency_test"
         ),
+    )
+
+    p.add_argument(
+        "--alpha",
+        type=float,
+        default=None,
+        help="Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25. None=backend default.",
     )
 
     return p.parse_args()
@@ -373,6 +383,7 @@ def run_query(
     model: str | None,
     firm: str | None,
     year: str | None,
+    hybrid_alpha: float | None = None,
 ) -> dict:
     import urllib.request
 
@@ -388,6 +399,8 @@ def run_query(
         payload["firm"] = firm
     if year:
         payload["year"] = year
+    if hybrid_alpha is not None:
+        payload["hybrid_alpha"] = hybrid_alpha
 
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
@@ -693,6 +706,7 @@ def main() -> None:
             model=args.model,
             firm=effective_firm,
             year=q.get("year"),
+            hybrid_alpha=args.alpha,
         )
 
         ev = evaluate(result, q.get("expected_keywords", []))

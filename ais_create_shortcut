@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_create_shortcut — Create AIStudio desktop shortcut on macOS
-# Version: 1.4.3
+# Version: 1.5.4
 # Changelog:
 #   1.4.3 — codesign --sign - (ad-hoc, removes lock icon); splash after 3s not 0s; Option 2 icon
 #   1.4.2 — Info.plist notification keys; splash dialog
