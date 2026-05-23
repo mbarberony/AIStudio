@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.0.1 -->
+<!-- Version: 2.1.1 -->
+<!-- Changelog: 2.1.0 — AIStudio_754: Source Dive v1 — click citation → PDF opens in side panel at exact page (iframe + /source endpoint, offline-compatible, no highlight). Renames "Open ↗" to "Source Dive ↗" for PDF sources.
 <!-- Changelog: 1.9.2 — fix pollIngestStatus: use pct_complete + rich status text matching upload bar (AIStudio_543)
 <!-- Changelog: 1.9.1 — red close button on help modal; Help button group margin-right
 <!-- Changelog: 1.9.0 — first-run corpus auto-index: detect empty demo/help on init, trigger ingest, show live progress banner via pollIngestStatus; AIStudio_434 help modal alignment + close button -->
@@ -596,6 +597,63 @@
 
         .footnote-open:hover { opacity: 1; text-decoration: underline; }
 
+        /* Source Dive panel */
+        .source-dive-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 52%;
+            height: 100vh;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        .source-dive-panel.open { transform: translateX(0); }
+
+        .source-dive-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-sidebar);
+            flex-shrink: 0;
+        }
+        .source-dive-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 80%;
+        }
+        .source-dive-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .source-dive-close:hover { background: var(--bg-hover); color: var(--text); }
+
+        .source-dive-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: #fff;
+        }
+
         /* Input area */
         .input-area {
             padding: 16px 28px 20px;
@@ -918,6 +976,15 @@
             <button class="btn btn-primary" id="dupReingestBtn">Re-ingest</button>
         </div>
     </div>
+</div>
+
+<!-- Source Dive panel -->
+<div class="source-dive-panel" id="sourceDivePanel">
+    <div class="source-dive-header">
+        <span class="source-dive-title" id="sourceDiveTitle">Source</span>
+        <button class="source-dive-close" id="sourceDiveClose" title="Close Source Dive">&#x2715;</button>
+    </div>
+    <iframe class="source-dive-frame" id="sourceDiveFrame" src="about:blank"></iframe>
 </div>
 
 <script>
@@ -1367,12 +1434,18 @@
             const name = c.source.split('/').pop();
             const pageLabel = c.page ? `<span class="footnote-page">p. ${c.page}</span>` : '';
             const openUrl = c.page
-                ? `http://localhost:8000/source?path=${encodeURIComponent(c.source)}#page=${c.page}`
+                ? `${API}/source?path=${encodeURIComponent(c.source)}#page=${c.page}`
                 : `http://localhost:8000/source?path=${encodeURIComponent(c.source)}`;
-            const openLink = `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
+            const isPdf = name.toLowerCase().endsWith('.pdf');
+            const openLink = isPdf
+                ? `<a href="#" class="footnote-open" title="Source Dive — open PDF at this page" onclick="event.preventDefault();openSourceDive(${JSON.stringify(c.source)},${c.page||'null'})">Source Dive &#8599;</a>`
+                : `<a href="${openUrl}" target="_blank" class="footnote-open" title="Open source document">Open &#8599;</a>`;
+            const nameLink = isPdf
+                ? `<a href="#" class="footnote-name" title="Source Dive: ${name}" onclick="event.preventDefault();openSourceDive(${JSON.stringify(c.source)},${c.page||'null'})">${name}</a>`
+                : `<a href="${openUrl}" target="_blank" class="footnote-name" title="Open ${name}">${name}</a>`;
             return `<div class="footnote" id="fn-${rc}-${c.index}">
                 <span class="footnote-num">[${c.index}]</span>
-                <a href="${openUrl}" target="_blank" class="footnote-name" title="Open ${name}">${name}</a>
+                ${nameLink}
                 ${pageLabel}
                 ${openLink}
             </div>`;
@@ -2838,7 +2911,30 @@
         if (e.dataTransfer.files.length) selectFiles(e.dataTransfer.files);
     });
 
+
+    // ── Source Dive ────────────────────────────────────────────────
+    function openSourceDive(source, page) {
+        const panel = document.getElementById('sourceDivePanel');
+        const frame = document.getElementById('sourceDiveFrame');
+        const title = document.getElementById('sourceDiveTitle');
+        const name = source.split('/').pop();
+        const url = page
+            ? `${API}/source?path=${encodeURIComponent(source)}#page=${page}`
+            : `${API}/source?path=${encodeURIComponent(source)}`;
+        title.textContent = page ? `${name}  ·  p. ${page}` : name;
+        frame.src = url;
+        panel.classList.add('open');
+    }
+
+    document.getElementById('sourceDiveClose').addEventListener('click', () => {
+        const panel = document.getElementById('sourceDivePanel');
+        panel.classList.remove('open');
+        // Clear iframe after transition to avoid keeping PDF in memory
+        setTimeout(() => { document.getElementById('sourceDiveFrame').src = 'about:blank'; }, 250);
+    });
+
     init();
 </script>
+
 </body>
 </html>
