@@ -1,4 +1,6 @@
-# Version: 1.7.5
+# Version: 1.7.7
+# Changelog: 1.7.7 — AIStudio_768: deduplicate citations by (source, page) instead of source only. Same file at different pages now gets distinct [N] citations, each pointing to the correct page. LLM context labels each source with its page number.
+# Changelog: 1.7.6 — AIStudio_765: serve_source returns text/html for .htm/.html/.xhtml files so browser renders inline instead of downloading.
 # Changelog: 1.7.5 — AIStudio_752: strip citation markers [N] from conversation history
 #            before injecting into prompt. Citation indices from prior turns refer to
 #            different source sets — leaving them in causes the LLM to reuse stale [1]/[2]
@@ -245,18 +247,21 @@ def generate_answer_with_citations(
         }
 
     # Build context with numbered sources
-    # Deduplicate by source file — merge chunks from same doc into one numbered source
-    seen_sources: dict[str, int] = {}
+    # AIStudio_768 — Deduplicate by (source, page) so chunks from the same file but
+    # different pages get distinct citation numbers. Same file + same page → merged.
+    # This ensures each [N] in the answer maps to a specific page, not just a file.
+    seen_source_pages: dict[tuple[str, int | None], int] = {}
     source_chunks: dict[int, list[str]] = {}
-    doc_to_index: dict[int, int] = {}  # original doc position -> source index
+    doc_to_index: dict[int, int] = {}  # original doc position -> source-page index
 
     for i, doc in enumerate(docs):
-        src = doc.source
-        if src not in seen_sources:
-            idx = len(seen_sources) + 1
-            seen_sources[src] = idx
+        page = extract_page_number(doc.source, doc.id)
+        key = (doc.source, page)
+        if key not in seen_source_pages:
+            idx = len(seen_source_pages) + 1
+            seen_source_pages[key] = idx
             source_chunks[idx] = []
-        idx = seen_sources[src]
+        idx = seen_source_pages[key]
         # AIStudio_720 — [Document: entity FY year] prefix is intentionally preserved in
         # chunk content sent to LLM. It is the entity attribution signal in a multi-firm
         # corpus — without it the model cannot reliably attribute CET1 ratios, financial
@@ -267,18 +272,21 @@ def generate_answer_with_citations(
         doc_to_index[i] = idx
 
     context_parts = []
-    for src, idx in seen_sources.items():
+    for (src, page), idx in seen_source_pages.items():
         combined = "\n\n".join(source_chunks[idx])
-        context_parts.append(f"[{idx}] {src}\n{combined}")
+        page_label = f" (p. {page})" if page is not None else ""
+        context_parts.append(f"[{idx}] {src}{page_label}\n{combined}")
 
     context = "\n\n".join(context_parts)
 
-    # Remap docs list to deduplicated unique sources for citation building
+    # Build unique_docs list keyed by (source, page) for citation metadata lookup
     unique_docs = []
-    seen = set()
+    seen_keys: set[tuple[str, int | None]] = set()
     for doc in docs:
-        if doc.source not in seen:
-            seen.add(doc.source)
+        page = extract_page_number(doc.source, doc.id)
+        key = (doc.source, page)
+        if key not in seen_keys:
+            seen_keys.add(key)
             unique_docs.append(doc)
     docs = unique_docs
 
@@ -2129,8 +2137,11 @@ async def serve_source(path: str, page: int | None = None) -> FileResponse:
     if not any(str(resolved).startswith(str(r.resolve())) for r in allowed_roots):
         raise HTTPException(status_code=403, detail="Access to this path is not permitted")
 
+    _ext = file_path.suffix.lower()
     media_type = (
-        "application/pdf" if file_path.suffix.lower() == ".pdf" else "application/octet-stream"
+        "application/pdf" if _ext == ".pdf"
+        else "text/html" if _ext in (".htm", ".html", ".xhtml")
+        else "application/octet-stream"
     )
 
     headers = {}
