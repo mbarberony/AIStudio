@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.1.4 -->
-<!-- Changelog: 2.1.4 — Revert page-1 offset (Chrome iframe is 1-indexed). ArrowUp in empty input restores last query. HTM/HTML inline render (requires api.py 1.7.6).
+<!-- Version: 2.3.1 -->
+<!-- Changelog: 2.3.1 — fix: hash corpus selection guarded by option existence check; New Corpus Query Defaults fields empty with placeholder (not pre-filled); ais_start --start_with uses python3 webbrowser to handle # fragment.
+     Changelog: 2.2.0 — AIStudio_755 v1: Defaults modal Tab 1 + Tab 2. Defaults button in header.
      Changelog: 2.1.3 — AIStudio_763: replace lock icon with sparkle on assistant avatar. AIStudio_760: header description truncates with ellipsis. AIStudio_761: Source Dive panel expanded 52%→72%. Page offset fix: #page=N-1 (Chrome iframe PDF viewer is 0-indexed).
      Changelog: 2.1.2 — AIStudio_759: fix onclick source path — JSON.stringify produced double-quoted string inside onclick="" attribute, truncating handler. Replaced with single-quoted template literal + escape.
      Changelog: 2.1.1 — AIStudio_759: move sourceDivePanel div inside body before script block to fix null getElementById on load.
@@ -912,6 +913,7 @@
         <div class="topbar">
             <div class="topbar-left" id="topbarTitle">AIStudio — ready</div>
             <div style="display:flex;align-items:center;gap:8px;margin-right:8px;">
+                <button onclick="showDefaults()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'" title="Defaults — query settings and system prompt">Defaults</button>
                 <button id="helpBtn" onclick="showHelp()" style="background:#16a34a;border:1px solid #15803d;border-radius:20px;padding:4px 12px;font-size:12px;color:#fff;cursor:pointer;font-family:inherit;font-weight:500;" onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'" title="Help">Help</button>
                 <button onclick="showAbout()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-mid);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--bg-panel)'" onmouseout="this.style.background='none'">About</button>
                 <div class="status-pill">
@@ -1062,8 +1064,29 @@
                 document.getElementById('modelSelect').innerHTML = '<option value="">Backend not running</option>';
             }
         }
+        // Apply saved defaults from localStorage (AIStudio_755)
+        _applyStoredDefaults();
+        // AIStudio_767: auto-select corpus from URL hash if present (set by ais_start --start_with)
+        // Must run after loadCorpora() so corpusSelect is populated
+        const _hashCorpus = (location.hash.match(/[#&]corpus=([^&]+)/) || [])[1];
+        if (_hashCorpus && corpusSelect.querySelector(`option[value="${_hashCorpus}"]`)) {
+            corpusSelect.value = _hashCorpus;
+            setCorpus(_hashCorpus);
+        }
         // First-run detection: trigger ingest for demo/help if empty
         await _checkFirstRunIngest();
+    }
+
+    function _applyStoredDefaults() {
+        try {
+            const d = JSON.parse(localStorage.getItem('ais_defaults') || '{}');
+            if (d.topK != null)    topKInput.value    = d.topK;
+            if (d.temp  != null)   tempInput.value    = d.temp;
+            if (d.alpha != null) {
+                alphaInput.value = d.alpha;
+                alphaDisplay.textContent = (1 - parseFloat(d.alpha)).toFixed(2);
+            }
+        } catch(_) {}
     }
 
     // ── First-run corpus auto-index ────────────────────────────────
@@ -1192,6 +1215,13 @@
             const sd = (info.short_description || '').trim();
             if (sd) {
                 topbarTitle.innerHTML = `AIStudio &nbsp;·&nbsp; <strong>${name}</strong> &nbsp;·&nbsp; <span style="font-weight:400;color:var(--text-mid);font-size:13px;">${escapeHtml(sd)}</span>`;
+            }
+            // AIStudio_738B: apply per-corpus stored defaults to left panel if present
+            if (info.default_top_k   != null) topKInput.value  = info.default_top_k;
+            if (info.default_temperature != null) tempInput.value = info.default_temperature;
+            if (info.default_hybrid_alpha != null) {
+                alphaInput.value = info.default_hybrid_alpha;
+                alphaDisplay.textContent = (1 - parseFloat(info.default_hybrid_alpha)).toFixed(2);
             }
         }).catch(() => {});
             chatInput.placeholder = `Ask a question about ${name}…`;
@@ -1986,6 +2016,29 @@
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example. You can add or edit this later.</div>
                     </div>
 
+                    <!-- Query Defaults — AIStudio_738C -->
+                    <div style="margin-bottom:20px;border-top:1px solid var(--border,#e2e8f0);padding-top:16px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Query Defaults <span style="font-weight:400;text-transform:none;font-size:11px;">(pre-set from your app defaults)</span></label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Top K</label>
+                                <input id="_ccTopK" type="number" min="1" max="20"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Temperature</label>
+                                <input id="_ccTemp" type="number" min="0" max="2" step="0.1"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Retrieval Mix (α)</label>
+                                <input id="_ccAlpha" type="number" min="0" max="1" step="0.05"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
+                    </div>
+
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
                         <button id="_ccCancel" style="padding:9px 18px;border-radius:8px;
                             border:1.5px solid var(--border,#d0d5dd);background:transparent;
@@ -2000,6 +2053,18 @@
             document.body.appendChild(overlay);
             const nameInput = overlay.querySelector('#_ccName');
             nameInput.focus();
+
+            // Pre-populate Query Defaults from localStorage
+            try {
+                const _sd = JSON.parse(localStorage.getItem('ais_defaults') || '{}');
+                overlay.querySelector('#_ccTopK').placeholder  = _sd.topK  ?? 5;
+                overlay.querySelector('#_ccTemp').placeholder  = _sd.temp  ?? 0.3;
+                overlay.querySelector('#_ccAlpha').placeholder = parseFloat(_sd.alpha ?? 0.5).toFixed(2);
+            } catch(_) {
+                overlay.querySelector('#_ccTopK').placeholder  = 5;
+                overlay.querySelector('#_ccTemp').placeholder  = 0.3;
+                overlay.querySelector('#_ccAlpha').placeholder = '0.50';
+            }
 
             const finish = (val) => { document.body.removeChild(overlay); resolve(val); };
 
@@ -2025,6 +2090,9 @@
                     description: overlay.querySelector('#_ccDesc').value.trim(),
                     content_summary: '',
                     search_guidance: overlay.querySelector('#_ccGuidance').value.trim(),
+                    default_top_k: parseInt(overlay.querySelector('#_ccTopK').value || overlay.querySelector('#_ccTopK').placeholder) || 5,
+                    default_temperature: parseFloat(overlay.querySelector('#_ccTemp').value || overlay.querySelector('#_ccTemp').placeholder) || 0.3,
+                    default_hybrid_alpha: parseFloat(overlay.querySelector('#_ccAlpha').value || overlay.querySelector('#_ccAlpha').placeholder) || 0.5,
                 });
             };
 
@@ -2953,6 +3021,126 @@
         // Clear iframe after transition to avoid keeping PDF in memory
         setTimeout(() => { document.getElementById('sourceDiveFrame').src = 'about:blank'; }, 250);
     });
+
+    // ── Defaults Modal (AIStudio_755 v1) ──────────────────────────────
+    async function showDefaults() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+        // Load current system prompt text
+        let promptText = '';
+        try {
+            const r = await fetch(`${API}/prompt/text`);
+            if (r.ok) { const d = await r.json(); promptText = d.prompt || ''; }
+        } catch(_) {}
+
+        // Load stored query defaults
+        let stored = {};
+        try { stored = JSON.parse(localStorage.getItem('ais_defaults') || '{}'); } catch(_) {}
+        const curTopK  = stored.topK  ?? topKInput.value;
+        const curTemp  = stored.temp  ?? tempInput.value;
+        const curAlpha = stored.alpha ?? alphaInput.value;
+
+        overlay.innerHTML = `
+        <div style="background:var(--bg-panel);border-radius:16px;padding:0;width:660px;min-width:360px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.22);">
+            <div style="padding:20px 24px 0;font-size:17px;font-weight:700;letter-spacing:-0.3px;color:var(--text);">Defaults</div>
+            <!-- Tab bar -->
+            <div style="display:flex;gap:0;padding:12px 24px 0;border-bottom:1px solid var(--border);">
+                <button id="_defTab1" onclick="document.getElementById('_defPanel1').style.display='block';document.getElementById('_defPanel2').style.display='none';this.style.borderBottom='2px solid var(--accent)';this.style.color='var(--text)';document.getElementById('_defTab2').style.borderBottom='2px solid transparent';document.getElementById('_defTab2').style.color='var(--text-mid)';"
+                    style="background:none;border:none;border-bottom:2px solid var(--accent);padding:6px 14px 10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;">Query defaults</button>
+                <button id="_defTab2" onclick="document.getElementById('_defPanel1').style.display='none';document.getElementById('_defPanel2').style.display='block';this.style.borderBottom='2px solid var(--accent)';this.style.color='var(--text)';document.getElementById('_defTab1').style.borderBottom='2px solid transparent';document.getElementById('_defTab1').style.color='var(--text-mid)';"
+                    style="background:none;border:none;border-bottom:2px solid transparent;padding:6px 14px 10px;font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;font-family:inherit;">System prompt</button>
+            </div>
+
+            <!-- Tab 1: Query defaults -->
+            <div id="_defPanel1" style="padding:20px 24px;overflow-y:auto;flex:1;">
+                <p style="font-size:12px;color:var(--text-mid);margin:0 0 16px;">Saved to this browser. Applied when AIStudio loads. Current-session values are unaffected until next reload.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Top K</label>
+                        <input id="_defTopK" type="number" min="1" max="20" value="${curTopK}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Temperature</label>
+                        <input id="_defTemp" type="number" min="0" max="2" step="0.1" value="${curTemp}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Retrieval Mix (α)</label>
+                        <input id="_defAlpha" type="number" min="0" max="1" step="0.05" value="${parseFloat(curAlpha).toFixed(2)}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
+                        <div style="font-size:11px;color:var(--text-mid);margin-top:4px;">0 = vector · 1 = keyword</div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);">Cancel</button>
+                    <button id="_defSave1" style="padding:8px 18px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;">Save defaults</button>
+                </div>
+            </div>
+
+            <!-- Tab 2: System prompt -->
+            <div id="_defPanel2" style="padding:20px 24px;overflow-y:auto;flex:1;display:none;">
+                <p style="font-size:12px;color:var(--text-mid);margin:0 0 10px;">Edit <code style="font-size:11px;">prompts/system.txt</code>. Saving applies immediately to the current session — no restart needed.</p>
+                <textarea id="_defPrompt" spellcheck="false" style="width:100%;box-sizing:border-box;height:340px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:monospace;font-size:12px;line-height:1.5;resize:vertical;">${promptText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+                    <span id="_defPromptStatus" style="font-size:12px;color:var(--text-mid);"></span>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);">Cancel</button>
+                        <button id="_defSave2" style="padding:8px 18px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;">Save &amp; Reload</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        // Tab 1: save query defaults to localStorage
+        overlay.querySelector('#_defSave1').onclick = () => {
+            const topK  = parseFloat(overlay.querySelector('#_defTopK').value);
+            const temp  = parseFloat(overlay.querySelector('#_defTemp').value);
+            const alpha = parseFloat(overlay.querySelector('#_defAlpha').value);
+            if (isNaN(topK) || isNaN(temp) || isNaN(alpha)) return;
+            const d = { topK, temp, alpha };
+            try { localStorage.setItem('ais_defaults', JSON.stringify(d)); } catch(_) {}
+            // Apply to current session fields too
+            topKInput.value  = topK;
+            tempInput.value  = temp;
+            alphaInput.value = alpha;
+            alphaDisplay.textContent = (1 - alpha).toFixed(2);
+            overlay.remove();
+        };
+
+        // Tab 2: save system prompt → write file + reload backend cache
+        overlay.querySelector('#_defSave2').onclick = async () => {
+            const btn = overlay.querySelector('#_defSave2');
+            const status = overlay.querySelector('#_defPromptStatus');
+            const text = overlay.querySelector('#_defPrompt').value;
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+            status.textContent = '';
+            try {
+                // Write file
+                const wr = await fetch(`${API}/prompt/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text })
+                });
+                if (!wr.ok) throw new Error(`Write failed: HTTP ${wr.status}`);
+                // Reload backend cache
+                const rr = await fetch(`${API}/prompt/reload`, { method: 'POST' });
+                if (!rr.ok) throw new Error(`Reload failed: HTTP ${rr.status}`);
+                const rd = await rr.json();
+                status.textContent = `✓ Saved · ${rd.prompt_length} chars · active now`;
+                status.style.color = 'var(--green, #16a34a)';
+                btn.textContent = 'Save & Reload';
+                btn.disabled = false;
+            } catch(err) {
+                status.textContent = `❌ ${err.message}`;
+                status.style.color = 'var(--red, #dc2626)';
+                btn.textContent = 'Save & Reload';
+                btn.disabled = false;
+            }
+        };
+
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+    }
 
     init();
 </script>

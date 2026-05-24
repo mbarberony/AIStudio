@@ -1,5 +1,6 @@
-# Version: 1.7.7
-# Changelog: 1.7.7 — AIStudio_768: deduplicate citations by (source, page) instead of source only. Same file at different pages now gets distinct [N] citations, each pointing to the correct page. LLM context labels each source with its page number.
+# Version: 1.7.9
+# Changelog: 1.7.9 — AIStudio_738 B+C: per-corpus stored defaults. CreateCorpusRequest accepts default_top_k/temperature/hybrid_alpha; written to corpus_metadata.yaml at creation. get_corpus_info reads and returns those three fields so the UI can apply them on corpus switch.
+# Changelog: 1.7.8 — AIStudio_755: add GET /prompt/text and POST /prompt/update. Same file at different pages now gets distinct [N] citations, each pointing to the correct page. LLM context labels each source with its page number.
 # Changelog: 1.7.6 — AIStudio_765: serve_source returns text/html for .htm/.html/.xhtml files so browser renders inline instead of downloading.
 # Changelog: 1.7.5 — AIStudio_752: strip citation markers [N] from conversation history
 #            before injecting into prompt. Citation indices from prior turns refer to
@@ -690,6 +691,9 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     last_updated = None
     files_meta: dict = {}
     avg_seconds_per_file = None
+    default_top_k = None
+    default_temperature = None
+    default_hybrid_alpha = None
     try:
         meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
         if meta_path.exists():
@@ -707,6 +711,9 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
             last_updated = meta.get("last_updated")
             files_meta = meta.get("files") or {}
             avg_seconds_per_file = meta.get("avg_seconds_per_file")
+            default_top_k = meta.get("default_top_k")
+            default_temperature = meta.get("default_temperature")
+            default_hybrid_alpha = meta.get("default_hybrid_alpha")
     except Exception:
         pass
 
@@ -731,6 +738,9 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "last_updated": last_updated,
         "avg_seconds_per_file": avg_seconds_per_file,
         "files_meta": files_meta,
+        "default_top_k": default_top_k,
+        "default_temperature": default_temperature,
+        "default_hybrid_alpha": default_hybrid_alpha,
         "paths": {
             "base": str(paths["base"]),
             "uploads": str(paths["uploads"]),
@@ -1351,6 +1361,9 @@ class CreateCorpusRequest(BaseModel):
     description: str = ""
     content_summary: str = ""
     search_guidance: str = ""
+    default_top_k: int | None = None
+    default_temperature: float | None = None
+    default_hybrid_alpha: float | None = None
 
 
 @app.get("/corpus/{corpus_name}/ingest-status")
@@ -1513,6 +1526,13 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
             "content_summary": request.content_summary or "",
             "search_guidance": request.search_guidance or "",
         }
+        # AIStudio_738C: persist user-set query defaults if provided at creation time
+        if request.default_top_k is not None:
+            _meta_content["default_top_k"] = request.default_top_k
+        if request.default_temperature is not None:
+            _meta_content["default_temperature"] = request.default_temperature
+        if request.default_hybrid_alpha is not None:
+            _meta_content["default_hybrid_alpha"] = request.default_hybrid_alpha
         corpus_meta_path.write_text(
             f"# {name}_corpus_metadata.yaml\n"
             f"# Corpus metadata — loaded by api.py at query time\n"
@@ -2113,6 +2133,42 @@ async def reload_prompt() -> dict[str, Any]:
     _SYSTEM_PROMPT_BASE = None
     _load_system_prompt()
     return {"status": "ok", "prompt_length": len(_SYSTEM_PROMPT_BASE)}
+
+
+@app.get("/prompt/text")
+async def get_prompt_text() -> dict[str, Any]:
+    """
+    Return the current contents of prompts/system.txt for the Defaults modal editor.
+    """
+    try:
+        repo_root = _get_repo_root()
+        prompts_path = repo_root / "prompts" / "system.txt"
+        if prompts_path.exists():
+            text = prompts_path.read_text(encoding="utf-8")
+            return {"prompt": text, "path": str(prompts_path)}
+        return {"prompt": "", "path": str(prompts_path), "warning": "system.txt not found"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not read system prompt: {e}") from e
+
+
+class PromptUpdateRequest(BaseModel):
+    prompt: str
+
+
+@app.post("/prompt/update")
+async def update_prompt_text(req: PromptUpdateRequest) -> dict[str, Any]:
+    """
+    Write new prompt text to prompts/system.txt.
+    Call POST /prompt/reload after this to activate the new prompt.
+    """
+    try:
+        repo_root = _get_repo_root()
+        prompts_path = repo_root / "prompts" / "system.txt"
+        prompts_path.parent.mkdir(parents=True, exist_ok=True)
+        prompts_path.write_text(req.prompt, encoding="utf-8")
+        return {"status": "ok", "path": str(prompts_path), "length": len(req.prompt)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not write system prompt: {e}") from e
 
 
 @app.get("/source")

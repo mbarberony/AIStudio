@@ -1,6 +1,6 @@
 version: 1.0.0
 regenerated_from: meta/bundle_manifest.yaml
-regenerated_at: '2026-05-21T22:25:08'
+regenerated_at: '2026-05-23T18:33:26'
 commands:
 - alias: ais_bench
   path: ais_bench.sh
@@ -19,8 +19,9 @@ commands:
     \ descriptions"
 - alias: ais_start
   path: ais_start.sh
-  description: "Start all AIStudio services \u2014 Qdrant, Ollama, FastAPI, opens\
-    \ UI; first-run auto-indexes demo and help corpora"
+  description: "Start all AIStudio services \u2014 thin wrapper over scripts/ais_start.py\
+    \ (STD \xA77). Qdrant, Ollama, FastAPI, opens UI; first-run auto-indexes demo\
+    \ and help corpora"
 - alias: ais_stop
   path: ais_stop.sh
   description: "Stop all AIStudio services \u2014 Qdrant and FastAPI backend"

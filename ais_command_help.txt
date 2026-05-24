@@ -34,21 +34,25 @@ Options:
 
 ## ais_start
 
-Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open]
+Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open] [--start_with <corpus>]
 
 Start all AIStudio services and open the UI.
 Stops any running services first — safe to run even if already running.
 Services: Qdrant (vector store), Ollama (LLM host), FastAPI backend.
-On first run, automatically indexes the demo and help corpora.
+On first run, automatically indexes the demo and help corpora (tracked in git;
+Qdrant collections are empty until indexed). Backend health is polled every second for up to
+30s — browser only opens once the backend is confirmed healthy.
 
 Options:
-  --help          Show this help
-  --version       Show script version
-  --verbose       Show full service output (Qdrant, uvicorn logs)
-  --show-log      Open new iTerm2 tab with live backend log after start
-  --show-splash   Show splash dialog on startup (useful when launching from Terminal)
-  --no-separator  Use blank lines between sections instead of --- labels
-  --no-open       Skip opening the browser (used by ais_create_shortcut desktop app)
+  --help               Show this help
+  --version            Show script version
+  --verbose            Show full service output (Qdrant, uvicorn logs)
+  --show-log           Open new iTerm2 tab with live backend log after start
+  --show-splash        Show splash dialog on startup (useful when launching from Terminal)
+  --no-separator       Use blank lines between sections instead of --- labels
+  --no-open            Skip opening the browser (used by ais_create_shortcut desktop app)
+  --start_with <name>  Open UI with the named corpus pre-selected
+                       Example: ais_start --start_with sec_10k
 
 · To stop:    ais_stop
 · Logs:       ais_log
