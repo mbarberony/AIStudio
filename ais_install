@@ -8,7 +8,10 @@
 #   ais_install --list               # show all installable user commands
 #   ais_install --verify             # check which commands are active in .zshrc
 #
-# Version: 2.4.5
+# Version: 2.4.7
+# Changelog: 2.4.7 — Add DYLD_LIBRARY_PATH="/opt/homebrew/lib" to ~/.zshrc and .venv/bin/activate
+#             at install time. Required for weasyprint/pango PDF generation on macOS. Without this,
+#             weasyprint fails to load libgobject even when pango is installed via Homebrew.
 # Changelog: 2.4.6 — Fix manifest parser regex \s+ → \s* to match zero-indented YAML list items (AIStudio_688). First-time install of new commands failed with "not found" because the parser required leading whitespace before "- alias:" but ais_user_commands_manifest.yaml uses no indentation.
 # Changelog: 2.4.5 — pip cache purge before install to suppress deserialization warnings (AIStudio_540)
 # Changelog: 2.4.4 — stdlib-only manifest parser, no pyyaml required (AIStudio_514)
@@ -18,7 +21,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.4.6"
+VERSION="2.4.7"
 
 SCRIPT_NAME="ais_install"
 SCRIPT_DIR="${0:A:h}"
@@ -174,6 +177,26 @@ source "$REPO/.venv/bin/activate"
 pip cache purge --quiet 2>/dev/null || true  # clear stale cache entries (AIStudio_540)
 pip install -r "$REPO/requirements.txt" --quiet
 echo "✅ Dependencies installed."
+
+# ── DYLD_LIBRARY_PATH — required for weasyprint/pango PDF generation on macOS ─
+# Homebrew installs pango to /opt/homebrew/lib but macOS dyld doesn't search there
+# by default. Without this, `import weasyprint` fails with libgobject not found.
+DYLD_LINE='export DYLD_LIBRARY_PATH="/opt/homebrew/lib:$DYLD_LIBRARY_PATH"'
+if ! grep -q 'DYLD_LIBRARY_PATH.*homebrew' "$ZSHRC" 2>/dev/null; then
+    echo "" >> "$ZSHRC"
+    echo "# AIStudio: Homebrew lib path for weasyprint/pango PDF generation" >> "$ZSHRC"
+    echo "$DYLD_LINE" >> "$ZSHRC"
+    echo "✅ Added DYLD_LIBRARY_PATH to ~/.zshrc (weasyprint/pango support)."
+else
+    echo "✅ DYLD_LIBRARY_PATH already set in ~/.zshrc."
+fi
+# Also inject into .venv/bin/activate so it applies whenever the venv is activated directly
+ACTIVATE="$REPO/.venv/bin/activate"
+if ! grep -q 'DYLD_LIBRARY_PATH.*homebrew' "$ACTIVATE" 2>/dev/null; then
+    echo "" >> "$ACTIVATE"
+    echo "# AIStudio: Homebrew lib path for weasyprint/pango PDF generation" >> "$ACTIVATE"
+    echo "$DYLD_LINE" >> "$ACTIVATE"
+fi
 
 _sep "Install"
 echo "▶ Installing user commands..."

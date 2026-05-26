@@ -36,7 +36,7 @@ CITATION RULES:
   WRONG (prose):   "Net revenue increased 12% in fiscal 2024."  ← missing [N] is a violation
   CORRECT (list):  "The three key drivers are:\n  - Regulatory pressure from Basel II and SOX [1]\n  - Cost reduction through automation [2]\n  - Customer demand for digital channels [1,3]"
   WRONG (list):    "The three key drivers are:\n  - Regulatory pressure from Basel II and SOX\n  - Cost reduction through automation"  ← each bullet needs [N]
-- The number must match the SOURCE number shown in the context (SOURCE [1], SOURCE [2], etc.).
+- Sources are numbered [1], [2], [3], etc. Use only the bracket notation — never write "SOURCE", "Source", or any other prefix before or around the bracket number.
 - Only use citation numbers that correspond to actual sources provided.
 - Cite the MOST SPECIFIC source for each claim — do not cite all sources simultaneously on a single claim.
 - You may cite multiple sources like [1,2] or [1][2] only when both sources genuinely contribute different information to the same claim.
@@ -70,9 +70,9 @@ ANSWER RULES:
 
 FORMATTING RULES:
 - Terminal commands, shell commands, and code must ALWAYS be shown in a fenced code block (``` or ```bash). NEVER use inline backticks for commands. Example: instead of `source activate` write:
-```
+
 source ~/Developer/AIStudio/.venv/bin/activate
-```
+
 - URLs must be shown as clickable markdown links: [url text](https://...) or bare https:// — never plain text.
 - Use bold (**text**) sparingly — only for truly critical terms or warnings.
 - Do NOT use bullet points unless the question explicitly asks for a list, or the answer is a list per the length-calibration rules above.

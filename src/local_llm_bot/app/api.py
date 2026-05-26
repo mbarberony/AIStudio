@@ -1,4 +1,13 @@
-# Version: 1.7.9
+# Version: 1.8.3
+# Changelog: 1.8.3 — AIStudio_618: keywords field on AskRequest — passed to BM25
+#             channel as boost terms. Comma-separated list from UI KEYWORDS field.
+# Changelog: 1.8.2 — AIStudio_798: entity_filter field on AskRequest + RetrieveRequest.
+#            List of source_path substrings with OR semantics — filters retrieval to
+#            matching documents only. Works across all corpora without re-ingest.
+# Changelog: 1.8.1 — Fix lint: move _read_corpus_meta_defaults() after all imports (E402).
+# Changelog: 1.8.0 — AIStudio_778 v2: min_score per-request field on AskRequest + RetrieveRequest.
+#            Resolved: per-request override → corpus metadata default_min_score → hardcoded 0.5.
+#            Passed to retrieve() as min_score kwarg.
 # Changelog: 1.7.9 — AIStudio_738 B+C: per-corpus stored defaults. CreateCorpusRequest accepts default_top_k/temperature/hybrid_alpha; written to corpus_metadata.yaml at creation. get_corpus_info reads and returns those three fields so the UI can apply them on corpus switch.
 # Changelog: 1.7.8 — AIStudio_755: add GET /prompt/text and POST /prompt/update. Same file at different pages now gets distinct [N] citations, each pointing to the correct page. LLM context labels each source with its page number.
 # Changelog: 1.7.6 — AIStudio_765: serve_source returns text/html for .htm/.html/.xhtml files so browser renders inline instead of downloading.
@@ -64,6 +73,32 @@ from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.rag_core import RetrievedDoc, retrieve
 from local_llm_bot.app.utils.corpus_paths import corpus_exists, corpus_paths, list_corpora
 from local_llm_bot.app.utils.repo_root import find_repo_root
+
+
+def _read_corpus_meta_defaults(corpus_name: str) -> dict:
+    """
+    Lightweight helper — reads only default_* fields from corpus_metadata.yaml.
+    Used by /ask and /debug/retrieve to resolve per-corpus defaults without
+    invoking the full get_corpus_info() route handler.
+    Returns dict with default_top_k, default_temperature, default_hybrid_alpha,
+    default_min_score — any absent field returns None.
+    """
+    try:
+        repo_root = _get_repo_root()
+        paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
+        meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
+        if meta_path.exists():
+            with open(meta_path) as f:
+                meta = _yaml.safe_load(f) or {}
+            return {
+                "default_top_k":        meta.get("default_top_k"),
+                "default_temperature":  meta.get("default_temperature"),
+                "default_hybrid_alpha": meta.get("default_hybrid_alpha"),
+                "default_min_score":    meta.get("default_min_score"),
+            }
+    except Exception:
+        pass
+    return {"default_top_k": None, "default_temperature": None, "default_hybrid_alpha": None, "default_min_score": None}
 
 # ============================================================================
 # INLINE CITATION SUPPORT (embedded in API for simplicity)
@@ -430,6 +465,9 @@ class AskRequest(BaseModel):
     top_p: float | None = None
     conversation_history: list[dict[str, str]] | None = None  # NEW: For follow-up questions
     hybrid_alpha: float | None = None  # M2.A: per-query override; None falls back to CONFIG.rag.hybrid_alpha
+    min_score: float | None = None    # AIStudio_778: per-query min score threshold override
+    entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
+    keywords: list[str] | None = None         # AIStudio_618: BM25 boost terms from UI KEYWORDS field
 
 
 class CitationResponse(BaseModel):
@@ -451,6 +489,8 @@ class RetrieveRequest(BaseModel):
     corpus: str = "default"
     top_k: int = 5
     hybrid_alpha: float | None = None  # M2.A: per-call hybrid weight override
+    min_score: float | None = None    # AIStudio_778: per-call min score threshold override
+    entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
 
 
 class CorpusInfo(BaseModel):
@@ -575,7 +615,12 @@ async def ask(req: AskRequest) -> AskResponse:
     retrieval_query = _expand_query_entities(req.query, req.corpus)
 
     # Retrieve relevant documents
-    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha)
+    # Resolve min_score: per-request → corpus metadata default → hardcoded fallback
+    _corpus_meta = _read_corpus_meta_defaults(req.corpus)
+    _corpus_min_score = _corpus_meta.get("default_min_score")
+    _MIN_SCORE_FALLBACK = 0.5
+    min_score = req.min_score if req.min_score is not None else (_corpus_min_score if _corpus_min_score is not None else _MIN_SCORE_FALLBACK)
+    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=req.entity_filter or None, keywords=req.keywords or None)
 
     # Generate answer with citations
     result = generate_answer_with_citations(
@@ -600,8 +645,11 @@ async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     _require_corpus(req.corpus)
     hybrid_alpha = req.hybrid_alpha if req.hybrid_alpha is not None else CONFIG.rag.hybrid_alpha
     retrieval_query = _expand_query_entities(req.query, req.corpus)
+    _corpus_meta_dbg = _read_corpus_meta_defaults(req.corpus)
+    _corpus_min_score_dbg = _corpus_meta_dbg.get("default_min_score")
+    min_score_dbg = req.min_score if req.min_score is not None else (_corpus_min_score_dbg if _corpus_min_score_dbg is not None else 0.5)
     docs = retrieve(
-        query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha
+        query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score_dbg, entity_filter=req.entity_filter or None
     )
     return {
         "count": len(docs),
@@ -694,6 +742,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     default_top_k = None
     default_temperature = None
     default_hybrid_alpha = None
+    default_min_score = None
     try:
         meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
         if meta_path.exists():
@@ -714,6 +763,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
             default_top_k = meta.get("default_top_k")
             default_temperature = meta.get("default_temperature")
             default_hybrid_alpha = meta.get("default_hybrid_alpha")
+            default_min_score = meta.get("default_min_score")
     except Exception:
         pass
 
@@ -741,6 +791,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "default_top_k": default_top_k,
         "default_temperature": default_temperature,
         "default_hybrid_alpha": default_hybrid_alpha,
+        "default_min_score": default_min_score,
         "paths": {
             "base": str(paths["base"]),
             "uploads": str(paths["uploads"]),
@@ -770,8 +821,11 @@ async def update_corpus_metadata(corpus_name: str, request: Request) -> dict[str
     else:
         meta = {"schema_version": "1.0", "corpus_name": corpus_name}
 
-    # Update only fields provided in request
-    editable = ["short_description", "description", "content_summary", "search_guidance"]
+    # Update only fields provided in request — text metadata + per-corpus query defaults
+    editable = [
+        "short_description", "description", "content_summary", "search_guidance",
+        "default_top_k", "default_temperature", "default_hybrid_alpha", "default_min_score",
+    ]
     for field in editable:
         if field in body:
             meta[field] = body[field]
@@ -1364,6 +1418,7 @@ class CreateCorpusRequest(BaseModel):
     default_top_k: int | None = None
     default_temperature: float | None = None
     default_hybrid_alpha: float | None = None
+    default_min_score: float | None = None
 
 
 @app.get("/corpus/{corpus_name}/ingest-status")
@@ -1533,6 +1588,8 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
             _meta_content["default_temperature"] = request.default_temperature
         if request.default_hybrid_alpha is not None:
             _meta_content["default_hybrid_alpha"] = request.default_hybrid_alpha
+        if request.default_min_score is not None:
+            _meta_content["default_min_score"] = request.default_min_score
         corpus_meta_path.write_text(
             f"# {name}_corpus_metadata.yaml\n"
             f"# Corpus metadata — loaded by api.py at query time\n"

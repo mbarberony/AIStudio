@@ -14,18 +14,16 @@ _show_help() {
     else
         echo "$SCRIPT_NAME — Download ESEF iXBRL annual reports from filings.xbrl.org"
         echo ""
-        echo "Usage: $SCRIPT_NAME [--out DIR] [--period-start YYYY-MM-DD] [--period-end YYYY-MM-DD]"
+        echo "Usage: $SCRIPT_NAME [--help] [--version] [options]"
         echo ""
         echo "Options:"
         echo "  --help            Show this help"
         echo "  --version         Show script version"
-        echo "  --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)"
-        echo "  --period-start    Earliest filing period end date (default: 2022-01-01)"
-        echo "  --period-end      Latest filing period end date (default: 2025-12-31)"
         echo ""
         echo "· Downloads ~10 ESEF XHTML filings (~50-200MB total)"
         echo "· Source: filings.xbrl.org (XBRL International public repository)"
         echo "· Next step: create corpus 'esef_banks' in UI, then ingest"
+        echo "· Additional options: see ais_command_help.txt ## ais_download_esef"
     fi
 }
 
@@ -38,6 +36,4 @@ mkdir -p "$UPLOADS"
 cd "$REPO"
 source .venv/bin/activate
 
-exec env PYTHONPATH=src python3 "$REPO/scripts/download_esef_corpus.py" \
-    --out "$UPLOADS" \
-    "$@"
+exec env PYTHONPATH=src python3 "$REPO/scripts/download_esef_corpus.py" --out "$UPLOADS" "$@"

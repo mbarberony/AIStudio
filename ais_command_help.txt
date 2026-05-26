@@ -107,7 +107,10 @@ Options:
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
   --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
-  --questions <path>     Path to YAML question file (default: auto-detect from corpus name)
+  --questions <path>     Path to YAML question file, or bare stem without extension
+                         (e.g. sec_10k_questions_no_filter auto-expands to
+                         benchmarks/<corpus>/sec_10k_questions_no_filter.yaml).
+                         Default: auto-detect from corpus name
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)

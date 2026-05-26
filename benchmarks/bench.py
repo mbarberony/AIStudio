@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
-# Version: 1.8.1
+# Version: 1.9.9
+# Changelog: 1.9.9 — fix keywords field: read "keywords" first, fall back to "expected_keywords";
+#             add Alpha and Min Score to report Configuration markdown section.
+# Changelog: 1.9.8 — CRITICAL: entity_filter field was not extracted from YAML
+#             questions during load_questions() — q.get("entity_filter") always
+#             returned None. Added entity_filter to the question dict.
+# Changelog: 1.9.7 — auto-copy .md report to ~/Downloads/ at end of run
+#             so urc_deploy --last picks it up immediately.
+# Changelog: 1.9.6 — fix evaluate() over-aggressive no_info_signal:
+#             only penalize no_info when citation_count == 0. When model has
+#             citations it is answering substantively — hedging about missing
+#             firms is honest, not a failure.
+# Changelog: 1.9.5 — corpus metadata defaults applied for top_k/temperature/alpha/min_score
+#             when not explicitly passed via CLI. Uses None sentinel.
+# Changelog: 1.9.4 — --questions accepts stem (no path, no .yaml extension);
+#             auto-expands to benchmarks/<corpus>/<stem>.yaml.
+#             Example: --questions sec_10k_questions_no_filter
+# Changelog: 1.9.3 — Fix evaluate() false positives/negatives:
+#             (a) 0 citations always fails regardless of keyword pass
+#             (b) keyword check restricted to substantive answer only —
+#             keywords found in refusal phrases no longer count as keyword pass
+#             (c) no_info_signal phrases expanded with observed patterns
 # Changelog: 1.8.1 — AIStudio_752: add --alpha flag for hybrid retrieval; pass hybrid_alpha
 #            to /ask payload. Removes env var workaround.
 """
@@ -131,10 +152,12 @@ def _sep(label: str) -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="AIStudio RAG Benchmark")
     p.add_argument("--corpus", default="demo", help="Corpus name")
-    p.add_argument("--top-k", type=int, default=5, help="Top K chunks to retrieve")
-    p.add_argument("--temperature", type=float, default=0.3, help="LLM temperature")
+    p.add_argument("--top-k", type=int, default=None, help="Top K chunks to retrieve (default: corpus metadata or 5)")
+    p.add_argument("--temperature", type=float, default=None, help="LLM temperature (default: corpus metadata or 0.3)")
     p.add_argument("--model", default=None, help="Model ID (default: API default)")
-    p.add_argument("--questions", default=None, help="Path to questions YAML/JSONL file")
+    p.add_argument("--questions", default=None,
+                    help="Path to questions YAML file, or bare stem (e.g. sec_10k_questions_no_filter). "
+                         "Stem auto-expands to benchmarks/<corpus>/<stem>.yaml.")
     p.add_argument("--api", default="http://localhost:8000", help="API base URL")
     p.add_argument("--no-markdown", action="store_true", help="Skip writing .md report")
     p.add_argument("--full", action="store_true", help="Include full answers in report")
@@ -178,7 +201,14 @@ def parse_args() -> argparse.Namespace:
         "--alpha",
         type=float,
         default=None,
-        help="Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25. None=backend default.",
+        help="Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25. None=corpus metadata or backend default.",
+    )
+    p.add_argument(
+        "--min-score",
+        type=float,
+        default=None,
+        dest="min_score",
+        help="Minimum chunk score threshold. None=corpus metadata or backend default.",
     )
 
     return p.parse_args()
@@ -279,6 +309,16 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
     2. Auto-detect: data/demo/demo_questions.json for demo corpus
     3. Fallback: DEFAULT_QUESTIONS (sec_10k hardcoded set)
     """
+    # AIStudio_618b: if path is a bare stem (no slashes, no extension),
+    # expand to benchmarks/<corpus>/<stem>.yaml
+    if path is not None and "/" not in path and "\\" not in path and "." not in path:
+        script_dir_stem = Path(__file__).parent
+        expanded = script_dir_stem / corpus / f"{path}.yaml"
+        if expanded.exists():
+            path = str(expanded)
+        else:
+            print(f"Questions stem not found: {expanded} — trying as literal path")
+
     # Auto-detect corpus question file if no explicit path given
     # Priority: {corpus}_questions.yaml > {corpus}_questions.json > DEFAULT_QUESTIONS
     if path is None:
@@ -337,6 +377,7 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
                         "firm": q.get("firm", None),
                         "year": q.get("year", None),
                         "keywords": q.get("keywords", []),
+                        "entity_filter": q.get("entity_filter", None),
                         "notes": q.get("notes", topic),
                         "topic": topic,
                     }
@@ -384,6 +425,8 @@ def run_query(
     firm: str | None,
     year: str | None,
     hybrid_alpha: float | None = None,
+    min_score: float | None = None,
+    entity_filter: list[str] | None = None,
 ) -> dict:
     import urllib.request
 
@@ -399,6 +442,10 @@ def run_query(
         payload["firm"] = firm
     if year:
         payload["year"] = year
+    if min_score is not None:
+        payload["min_score"] = min_score
+    if entity_filter:
+        payload["entity_filter"] = entity_filter
     if hybrid_alpha is not None:
         payload["hybrid_alpha"] = hybrid_alpha
 
@@ -424,6 +471,53 @@ def run_query(
 # ── Evaluate result ───────────────────────────────────────────────────────────
 
 
+# Refusal phrases — keywords found inside these do not count as substantive keyword hits.
+# Expanded from observed benchmark failures where model says "no information about X"
+# and X happens to be a required keyword — mechanically passing but substantively failing.
+_REFUSAL_PHRASES = [
+    "no information available",
+    "no relevant information",
+    "sources do not contain",
+    "sources do not address",
+    "cannot find any information",
+    "not found in the provided",
+    "no data available",
+    "unfortunately, there is no",
+    "no direct mention of",
+    "the documents primarily discuss",
+    "i cannot find specific information",
+    "based on general knowledge",
+    "based on my general knowledge",
+    "is not mentioned in",
+    "i do not see any information about",
+    "there is no mention of",
+    "purely speculative and not based on actual data",
+    "the available sources do not",
+    "absent from the available sources",
+    "does not contain information about",
+    "no sources provided",
+    "not explicitly stated",
+    "not explicitly mentioned",
+    "the provided sources do not",
+    "the sources do not provide",
+    "based on the provided",
+]
+
+
+def _strip_refusal_context(answer: str) -> str:
+    """
+    Remove sentences containing refusal phrases from the answer before keyword
+    checking. This prevents keywords that appear in 'no information about X'
+    phrases from counting as substantive keyword hits.
+    """
+    sentences = answer.split(".")
+    clean = []
+    for sentence in sentences:
+        if not any(phrase in sentence.lower() for phrase in _REFUSAL_PHRASES):
+            clean.append(sentence)
+    return ".".join(clean)
+
+
 def evaluate(result: dict, expected_keywords: list[str]) -> dict:
     if not result["ok"]:
         return {"pass": False, "reason": f"Request failed: {result['error']}"}
@@ -433,43 +527,43 @@ def evaluate(result: dict, expected_keywords: list[str]) -> dict:
     citations = data.get("citations") or []
     has_citations = data.get("has_citations", False)
 
-    # Check expected keywords
-    missing = [kw for kw in expected_keywords if kw.lower() not in answer]
-    keyword_pass = len(missing) == 0
-
-    # Check citation quality
+    # AIStudio_796 fix (a): 0 citations always fails — no citation means either
+    # hallucination or refusal. Never pass a 0-citation answer regardless of keywords.
     citation_pass = has_citations and len(citations) > 0
 
-    # Check for hallucination signal — model saying "no information" despite having sources
-    no_info_signal = any(
-        phrase in answer.lower()
-        for phrase in [
-            "no information available",
-            "no relevant information",
-            "sources do not contain",
-            "sources do not address",
-            "cannot find any information",
-            "not found in the provided",
-            "no data available",
-            # Additional patterns observed in cross-firm bench runs:
-            "unfortunately, there is no",
-            "no direct mention of",
-            "the documents primarily discuss",
-            "i cannot find specific information",
-            "based on general knowledge",  # model falling back to training data
-            "based on my general knowledge",
-            "is not mentioned in",
-            "i do not see any information about",
-            "there is no mention of",
-            "purely speculative and not based on actual data",
-        ]
-    )
+    # Check for no-information signal
+    no_info_signal = any(phrase in answer for phrase in _REFUSAL_PHRASES)
+
+    # AIStudio_796 fix (b): keyword check on substantive content only.
+    # Strip sentences containing refusal phrases before checking keywords —
+    # prevents "no information about JPMorgan" from counting as a JPMorgan keyword hit.
+    substantive_answer = _strip_refusal_context(answer)
+    missing = [kw for kw in expected_keywords if kw.lower() not in substantive_answer]
+    keyword_pass = len(missing) == 0
+
+    # AIStudio_796 fix (a): explicit 0-citation guard — belt and suspenders.
+    if not citation_pass:
+        return {
+            "pass": False,
+            "keyword_pass": keyword_pass,
+            "citation_pass": False,
+            "no_info_signal": no_info_signal,
+            "missing_keywords": missing,
+            "citation_count": 0,
+            "cited_sources": [],
+        }
+
+    # AIStudio_796 fix (c): no_info_signal only penalizes when citations are absent.
+    # When the model has citations it found substantive content — hedging about
+    # missing firms ("sources do not address Wells Fargo") is honest partial coverage,
+    # not a failure. Only fire no_info_signal as a hard fail when citation_count == 0.
+    effective_no_info = no_info_signal and not citation_pass
 
     return {
-        "pass": keyword_pass and citation_pass and not no_info_signal,
+        "pass": keyword_pass and citation_pass and not effective_no_info,
         "keyword_pass": keyword_pass,
         "citation_pass": citation_pass,
-        "no_info_signal": no_info_signal,
+        "no_info_signal": effective_no_info,
         "missing_keywords": missing,
         "citation_count": len(citations),
         "cited_sources": [c.get("source", "").split("/")[-1] for c in citations],
@@ -495,6 +589,8 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         f"- **Corpus:** `{args.corpus}`",
         f"- **Top K:** {args.top_k}",
         f"- **Temperature:** {args.temperature}",
+        *([ f"- **Alpha:** {args.alpha}" ] if args.alpha is not None else []),
+        *([ f"- **Min Score:** {args.min_score}" ] if args.min_score is not None else []),
         f"- **Model:** {args.model or 'API default'}",
         f"- **API:** {args.api}",
         "",
@@ -627,6 +723,30 @@ def filter_questions(
 def main() -> None:
     args = parse_args()
 
+    # ── Fetch corpus metadata defaults ───────────────────────────────────────
+    # Apply corpus metadata defaults for params not explicitly set via CLI.
+    # CLI flag → corpus metadata default → hardcoded fallback.
+    try:
+        import urllib.request
+        info_url = f"{args.api}/corpus/{args.corpus}/info"
+        with urllib.request.urlopen(info_url, timeout=5) as resp:
+            _info = __import__("json").loads(resp.read())
+        _corpus_top_k = _info.get("default_top_k")
+        _corpus_temp  = _info.get("default_temperature")
+        _corpus_alpha = _info.get("default_hybrid_alpha")
+        _corpus_min   = _info.get("default_min_score")
+    except Exception:
+        _corpus_top_k = _corpus_temp = _corpus_alpha = _corpus_min = None
+
+    if args.top_k is None:
+        args.top_k = _corpus_top_k if _corpus_top_k is not None else 5
+    if args.temperature is None:
+        args.temperature = _corpus_temp if _corpus_temp is not None else 0.3
+    if args.alpha is None and _corpus_alpha is not None:
+        args.alpha = _corpus_alpha
+    if args.min_score is None and _corpus_min is not None:
+        args.min_score = _corpus_min
+
     # Resolve paths — output to benchmarks/{corpus}/reports/ with timestamp
     script_dir = Path(__file__).parent
     reports_dir = script_dir / args.corpus / "reports"
@@ -679,8 +799,11 @@ def main() -> None:
         print(f"✅ Questions loaded: {len(questions)} ({questions_label})")
 
     model_label = args.model if args.model else "API default (llama3.1:8b)"
+    _alpha_label = f"  |  Alpha: {args.alpha}" if args.alpha is not None else ""
+    _min_label   = f"  |  Min Score: {args.min_score}" if args.min_score is not None else ""
     print(
-        f"· Corpus: {args.corpus}  |  Top K: {args.top_k}  |  Temperature: {args.temperature}  |  Model: {model_label}"
+        f"· Corpus: {args.corpus}  |  Top K: {args.top_k}  |  Temperature: {args.temperature}"
+        f"{_alpha_label}{_min_label}  |  Model: {model_label}"
     )
 
     # --- Firm override message
@@ -707,6 +830,8 @@ def main() -> None:
             firm=effective_firm,
             year=q.get("year"),
             hybrid_alpha=args.alpha,
+            min_score=args.min_score,
+            entity_filter=q.get("entity_filter") or None,
         )
 
         ev = evaluate(result, q.get("expected_keywords", []))
@@ -805,12 +930,25 @@ HTML(filename={str(html_path)!r}).write_pdf({str(pdf_path)!r})
     except FileNotFoundError:
         print("  ⚠ PDF skipped — install pandoc: brew install pandoc")
 
+    # Auto-copy .md report to ~/Downloads/ so urc_deploy --last picks it up immediately
+    if not args.no_markdown and md_path.exists():
+        import shutil as _shutil
+        downloads = Path.home() / "Downloads"
+        downloads.mkdir(exist_ok=True)
+        dest = downloads / md_path.name
+        _shutil.copy2(md_path, dest)
+        _copied_to_downloads = True
+    else:
+        _copied_to_downloads = False
+
     print(f"\n· Reports written to {reports_dir}/")
     print(f"  · {output_path.name}")
     if not args.no_markdown:
         print(f"  · {md_path.name}")
     if pdf_path.exists():
         print(f"  · {pdf_path.name}")
+    if _copied_to_downloads:
+        print(f"  · Copied to ~/Downloads/{md_path.name}")
 
 
 if __name__ == "__main__":

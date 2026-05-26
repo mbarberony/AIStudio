@@ -66,39 +66,58 @@ ingest_duration_seconds: 57
 last_ingest_chunks: 1070
 last_ingest_files: 9
 last_ingested_at: '2026-04-30T15:03:02'
-last_updated: '2026-05-23'
+last_updated: '2026-05-25'
+default_top_k: 5
+default_temperature: 0.3
+default_hybrid_alpha: 0.5
+default_min_score: 0.3
 schema_version: '2.0'
 search_guidance: 'Route questions to the most relevant document based on intent:
 
-  - QFD, Quality Function Deployment, House of Quality, HoQ — route EXCLUSIVELY to:
-  Erder | Pureur - 2003 - Architecture and QFD.pdf. This is the dedicated QFD document.
-  Always check it first for any QFD-related query.
+
+  - QFD, Quality Function Deployment, House of Quality, HoQ, functional deployment
+  — route EXCLUSIVELY to: Erder | Pureur - 2003 - Architecture and QFD.pdf. This is
+  the ONLY document about QFD. Do NOT cite any other document for QFD questions. If
+  this document does not appear in your sources, say so explicitly rather than substituting
+  another source.
+
+
+  - Agentic AI, generative AI, AI strategy, AI agents, AI in financial services, LLMs,
+  knowledge productivity, Verifier Law — route EXCLUSIVELY to: Barbero - 2026 - Agentic
+  AI in Financial Services.pdf. This is the ONLY document about AI. Do NOT substitute
+  2005 infrastructure or risk documents for AI questions.
+
 
   - Enterprise architecture principles, architecture methodology, architecture toolset,
   architecture concepts → Barbero - 2006 - Architecture Concepts and How To Use Them
   To Design an Organization.pdf
 
-  - CTO strategy, three-year technology strategy, IT transformation programs, target
-  state → Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts
-  and Techniques.pdf
+
+  - Business strategy drives technology strategy, CTO strategy, three-year technology
+  strategy, IT transformation programs, technology target state, end-state architecture
+  → Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf.
+  This is the PRIMARY source for all strategy and target state questions.
+
 
   - IT infrastructure strategy, CMDB, infrastructure architecture → Barbero et al.
   - 2005 - FS Journal - IT Infrastructure.pdf
 
+
   - Digitization in financial services, digital transformation, end-to-end solutions
   → Barbero et al. - 2005 - FS Journal - Digitization.pdf
+
 
   - Risk, compliance, security in financial services, Sarbanes-Oxley, Basel II → Barbero
   et al. - 2005 - FS Journal - Risk Compliance and Security.pdf
 
+
   - Cloud migration, legacy modernization, application rationalization, Refactor/Rehost/Replace
   → Barbero - 2020 - Technology Modernization and Cloud Migration.pdf
+
 
   - Data strategy, data governance, data architecture → Barbero | Hunt - 2021 - Data
   Strategy.pdf
 
-  - Agentic AI, generative AI, AI strategy, AI in financial services, LLMs, knowledge
-  productivity → Barbero - 2026 - Agentic AI in Financial Services.pdf
 
   When a question spans multiple documents, cite the most specific one first.
 

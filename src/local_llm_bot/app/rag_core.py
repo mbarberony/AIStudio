@@ -1,14 +1,17 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.5.0
+# Version: 1.7.6
+# Changelog: 1.6.1 — AIStudio_778: lower MIN_HYBRID_SCORE default 0.5 → 0.3. Threshold of 0.5
+#            was filtering small-document chunks (Erder|Pureur 34 chunks, Agentic AI 20 chunks)
+#            causing Q1 QFD and Q13 Agentic AI regressions (12/14 vs 14/14 baseline).
+# Changelog: 1.6.0 — AIStudio_778: MIN_HYBRID_SCORE threshold filter. Drops retrieved chunks
+#            whose combined distance >= MIN_HYBRID_SCORE (i.e. combined score <= 0.5) after
+#            score combination. Eliminates BM25-floor noise (e.g. p.3 TOC chunks). Applied
+#            to both hybrid and vector-only paths in retrieve(). Threshold: 0.5.
+# Changelog: 1.5.0 — hybrid retrieval support via optional hybrid_alpha kwarg on retrieve().
+# Changelog: 1.3.3 — fix swap collision in renumbering (AIStudio_480).
+# Changelog: 1.3.2 — renumber citations by first appearance in answer text (AIStudio_480).
 """
 RAG core: retrieval, answer generation, citation support, and conversation memory.
-
-v1.3.2: renumber citations by first appearance in answer text, not retrieval order (AIStudio_480)
-v1.3.3: fix swap collision in renumbering — two-pass placeholder approach (AIStudio_480)
-v1.5.0: hybrid retrieval support via optional hybrid_alpha kwarg on retrieve() — when set,
-        runs vector + BM25 in parallel and combines via scoring.combine_hybrid(). When
-        None (default), behaves identically to vector-only retrieval (full backward compat).
-        See CONCEPT - AIStudio - Hybrid Retrieval Design - 2026-05-05 for design rationale.
 """
 
 from __future__ import annotations
@@ -24,6 +27,10 @@ from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ollama_client import ollama_generate
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
+
+# AIStudio_778: hardcoded fallback threshold used when retrieve() caller passes min_score=None.
+# api.py resolves: per-request → corpus metadata default_min_score → this fallback.
+_MIN_HYBRID_SCORE_FALLBACK: float = 0.5
 
 _VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
 if _VECTORSTORE == "chroma":
@@ -147,6 +154,9 @@ def retrieve(
     top_k: int | None = None,
     corpus: str = "default",
     hybrid_alpha: float | None = None,
+    min_score: float | None = None,
+    entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
+    keywords: list[str] | None = None,        # AIStudio_618: BM25 boost terms
 ) -> list[RetrievedDoc]:
     """
     Retrieve relevant chunks for a query.
@@ -174,7 +184,13 @@ def retrieve(
         # Hybrid retrieval branch — only active when hybrid_alpha is set AND we're on Qdrant.
         # When hybrid_alpha is None, the vector-only path below runs unchanged (byte-identical
         # to v1.4.0 behavior — the backward-compat guarantee).
-        if hybrid_alpha is not None and _VECTORSTORE != "chroma":
+        # AIStudio_800 v3: when entity_filter is set, force vector-only retrieval.
+        # BM25 channel returns corpus-wide top results regardless of entity_filter,
+        # and dominates combine_hybrid() pushing entity-filtered vector hits out of
+        # the merged top-K. Vector-only with entity_filter is both correct and fast.
+        _use_hybrid = hybrid_alpha is not None and _VECTORSTORE != "chroma" and not entity_filter
+
+        if _use_hybrid:
             # Retrieve more candidates per channel than top_k to give the merge step
             # room to surface chunks that excel in one channel but not the other.
             # 2x is a reasonable starting heuristic; can be tuned.
@@ -185,11 +201,17 @@ def retrieve(
                 top_k=channel_k,
                 embed_model=CONFIG.rag.default_embed_model,
                 collection_name=collection,
+                entity_filter=entity_filter,
             )
+            # AIStudio_618: append keywords to BM25 query for boost
+            _bm25_query = query
+            if keywords:
+                _bm25_query = query + " " + " ".join(keywords)
             bm25_hits = _store.query_bm25(
-                query_text=query,
+                query_text=_bm25_query,
                 top_k=channel_k,
                 collection_name=collection,
+                entity_filter=entity_filter,
             )
 
             hits = _scoring.combine_hybrid(
@@ -199,13 +221,29 @@ def retrieve(
                 top_k=k,
             )
         else:
-            # Vector-only path (existing v1.4.0 behavior, unchanged)
+            # Vector-only path — used when entity_filter is set OR hybrid_alpha is None
             hits = _store.query(
                 query_text=query,
                 top_k=k,
                 embed_model=CONFIG.rag.default_embed_model,
                 collection_name=collection,
+                entity_filter=entity_filter,
             )
+
+        # AIStudio_800: apply entity_filter post-filter on combined hits.
+        # This guarantees entity isolation regardless of which channel (vector/BM25)
+        # provided each hit — BM25 post-filter alone is insufficient because vector
+        # hits pass through combine_hybrid() without source_path filtering.
+        if entity_filter:
+            hits = [
+                h for h in hits
+                if any(token in str(h.metadata.get("source_path", "")) for token in entity_filter)
+            ]
+
+        # AIStudio_778: drop BM25-floor chunks below minimum score threshold
+        # AIStudio_778: apply min_score threshold — resolved by api.py, fallback is _MIN_HYBRID_SCORE_FALLBACK
+        _threshold = min_score if min_score is not None else _MIN_HYBRID_SCORE_FALLBACK
+        hits = [h for h in hits if float(h.distance) < _threshold]
 
         max_d = CONFIG.rag.max_distance
         if max_d is not None:
@@ -233,8 +271,15 @@ def retrieve(
                 for h in hits
             ]
 
+        # AIStudio_800 v2: if entity_filter is set, do not fall back to unfiltered
+        # lexical retrieve — return empty list rather than unfiltered results.
+        if entity_filter:
+            return []
         return _lexical_jsonl_retrieve(query=query, top_k=k, corpus=corpus)
 
+    # AIStudio_800 v2: same guard on outer fallback
+    if entity_filter:
+        return []
     return _lexical_jsonl_retrieve(query=query, top_k=k, corpus=corpus)
 
 

@@ -1,5 +1,31 @@
 # src/local_llm_bot/app/vectorstore/qdrant_store.py
-# Version: 1.1.1
+# Version: 1.2.5
+# Changelog: 1.2.5 — AIStudio_800 v4: post-filter BM25 results by source_path in Python.
+#             Qdrant BM25 path (query_points with MatchText filter, no vector) does not
+#             reliably enforce additional payload filters. Fetch 4x candidates then filter
+#             client-side to guarantee entity isolation on BM25 channel.
+# Changelog: 1.2.4 — AIStudio_800 v3: use nested Filter(should=[entity_conds]) inside
+#             must list. Qdrant docs confirm Filter is a valid Condition type — must list
+#             accepts both FieldCondition and nested Filter objects. This gives:
+#             must=[text_FC, Filter(should=[src1, src2])] = text AND (src1 OR src2).
+# Changelog: 1.2.3 — AIStudio_800 v2: nested Filter in must not supported by client.
+#             Fix: build combined filter with must=[text_condition] + must_not empty
+#             and use should for entity OR, but wrap in outer Filter with must=[text]
+#             and a second Filter(should=entity_conds, minimum_should_match=1).
+#             Simpler: use two separate must conditions joined via Filter.must list
+#             where entity is a plain FieldCondition using MatchText on source_path.
+# Changelog: 1.2.2 — AIStudio_800: fix entity_filter ignored on BM25 path.
+#             Qdrant Filter(must=[...], should=[entity]) treats should as optional.
+#             Fix: nest entity conditions as Filter(should=[...]) inside must list
+#             so entity isolation is enforced on both vector and BM25 channels.
+# Changelog: 1.2.1 — Fix AIStudio_798: MatchValue does exact match, not substring.
+#             Switch to MatchText on source_path field (requires text index).
+#             Add source_path text index in _ensure_text_index() — idempotent,
+#             no re-ingest needed. Qdrant indexes existing payload on creation.
+# Changelog: 1.2.0 — AIStudio_798: add optional payload_filter to query() and query_bm25().
+#             Accepts list[str] of filename substrings; matched against source_path field
+#             with OR semantics using Qdrant Should. Works for both sec_10k (firm names
+#             in filenames) and esef_banks (no firm metadata field needed). No re-ingest.
 from __future__ import annotations
 
 import contextlib
@@ -87,6 +113,14 @@ def _ensure_text_index(client: QdrantClient, collection_name: str) -> None:
         client.create_payload_index(
             collection_name=collection_name,
             field_name="text",
+            field_schema=PayloadSchemaType.TEXT,
+        )
+    # AIStudio_798: text index on source_path enables MatchText substring filtering.
+    # Idempotent — safe to call on every access. Qdrant indexes existing payload.
+    with contextlib.suppress(Exception):
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name="source_path",
             field_schema=PayloadSchemaType.TEXT,
         )
 
@@ -187,6 +221,28 @@ def delete_chunks(
     )
 
 
+def _build_entity_filter(entity_filter: list[str]) -> Filter:
+    """
+    AIStudio_798: Build a Qdrant OR filter matching source_path against any of the
+    provided substrings using MatchText (requires text index on source_path — created
+    by _ensure_text_index() on first access, no re-ingest needed).
+
+    MatchText tokenizes the field value and the filter string, then checks for token
+    presence. "JPMorgan_Chase" matches any source_path containing that token, e.g.:
+    /Users/.../sec_10k/uploads/JPMorgan_Chase_10K_2023-02-21.htm
+
+    OR semantics: chunk is included if source_path contains ANY of the filter strings.
+    Also checks firm metadata field if present (sec_10k stores explicit firm field).
+    """
+    conditions = []
+    for token in entity_filter:
+        # MatchText substring match on source_path (works for all corpora, no re-ingest)
+        conditions.append(FieldCondition(key="source_path", match=MatchText(text=token)))
+        # Also match against firm metadata field if present (sec_10k explicit firm field)
+        conditions.append(FieldCondition(key="firm", match=MatchText(text=token)))
+    return Filter(should=conditions)
+
+
 def query(
     *,
     persist_dir: Path | None = None,  # API compatibility — not used by Qdrant
@@ -194,6 +250,7 @@ def query(
     query_text: str,
     top_k: int,
     embed_model: str,
+    entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
 ) -> list[QdrantHit]:
     """
     Query Qdrant using a query embedding from Ollama.
@@ -205,11 +262,15 @@ def query(
 
     q_emb = ollama_embed(model=embed_model, texts=[query_text])[0]
 
+    # AIStudio_798: build source_path OR filter if entity_filter provided
+    _query_filter = _build_entity_filter(entity_filter) if entity_filter else None
+
     results = client.query_points(
         collection_name=collection_name,
         query=q_emb,
         limit=int(top_k),
         with_payload=True,
+        query_filter=_query_filter,
     ).points
 
     out: list[QdrantHit] = []
@@ -233,6 +294,7 @@ def query_bm25(
     collection_name: str,
     query_text: str,
     top_k: int,
+    entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
 ) -> list[QdrantHit]:
     """
     Query Qdrant using BM25 full-text search over the indexed `text` payload field.
@@ -258,13 +320,17 @@ def query_bm25(
 
     # MatchText with a multi-word query matches chunks containing ANY of the tokens
     # (OR semantics). Qdrant's internal BM25 then ranks them by relevance.
+    # AIStudio_800 v2: enforce entity_filter on BM25 path using minimum_should_match=1.
+    # Filter(must=[text], should=[entity_conds], minimum_should_match=1) means:
+    # - must: chunk text contains query tokens (BM25 scoring)
+    # - should with min=1: source_path must match at least one entity token (enforced OR)
+    # AIStudio_800 v4: Qdrant BM25 path (MatchText filter, no vector) does not reliably
+    # enforce additional payload filters. Use simple text filter for BM25 scoring,
+    # then post-filter results by source_path in Python to guarantee entity isolation.
+    # Fetch 4x top_k candidates to ensure enough remain after post-filtering.
+    _bm25_fetch_k = int(top_k) * 4 if entity_filter else int(top_k)
     text_filter = Filter(
-        must=[
-            FieldCondition(
-                key="text",
-                match=MatchText(text=query_text),
-            )
-        ]
+        must=[FieldCondition(key="text", match=MatchText(text=query_text))]
     )
 
     # query_points with a filter and no vector returns scored matches.
@@ -272,9 +338,20 @@ def query_bm25(
     results = client.query_points(
         collection_name=collection_name,
         query_filter=text_filter,
-        limit=int(top_k),
+        limit=_bm25_fetch_k,
         with_payload=True,
     ).points
+
+    # AIStudio_800 v4: post-filter by source_path to enforce entity isolation.
+    if entity_filter:
+        results = [
+            r for r in results
+            if any(
+                token in str((r.payload or {}).get("source_path", ""))
+                for token in entity_filter
+            )
+        ]
+        results = results[:int(top_k)]
 
     out: list[QdrantHit] = []
     for hit in results:

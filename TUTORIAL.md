@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.1.0 | Updated: 2026-05-22*
+*Version: 1.3.0 | Updated: 2026-05-26*
 
 Get the most out of AIStudio with three guided modules — from your first query to benchmarking at scale.
 
@@ -47,18 +47,26 @@ The model uses the previous exchange as context — no need to repeat yourself.
 
 Try adjusting **Top K** in the settings sidebar:
 - Default: 5 chunks retrieved
-- Try 10 for complex questions spanning multiple documents
-- Try 3 for faster, more focused answers
+- **Use 10 for the demo corpus** — the demo includes small documents (the QFD paper has only 34 chunks; the Agentic AI paper has 20). At K=5, these small documents get outcompeted by larger ones in the retrieval pool and never surface. At K=10 they appear reliably. This is why AIStudio sets demo's default to K=10.
+- **Use 10 for the SEC 10-K corpus** — necessary for multi-firm queries where you need chunks from several different filings to appear in the same answer.
+- Try 3 for faster, more focused answers on single-document queries
 
 **Temperature** controls creativity:
 - 0.1–0.3: precise, factual, stays close to source documents
 - 0.5–0.7: more varied synthesis across sources
 - Default 0.3 is right for document Q&A
 
-**Retrieval Mix** controls how the system finds relevant passages:
-- Drag left toward **Literal** — prioritizes exact word matching (BM25). Better when you know the specific term, entity name, or ticker that appears in your documents.
-- Drag right toward **Conceptual** — prioritizes semantic meaning. Better for thematic questions where the document may use different phrasing than your query.
-- Default 0.5 blends both. For the SEC 10-K corpus, try 0.5–0.6 for multi-firm queries and full Conceptual for single-firm trend questions.
+**Retrieval Mix (α)** controls how the system finds relevant passages. The value runs 0 to 1:
+- **0 = pure keyword matching (Literal/BM25)** — prioritizes exact word matching. Best when you know the specific term, entity name, or ticker that appears verbatim in your documents.
+- **1 = pure semantic search (Conceptual/vector)** — prioritizes meaning over exact words. Best for thematic questions where the document may use different phrasing than your query.
+- **0.5 (default) blends both.** For the SEC 10-K corpus, try 0.5–0.6 for multi-firm queries; try 0.8–1.0 for single-firm trend questions where thematic understanding matters more than exact term matching.
+
+**Score Threshold** is a quality floor — chunks that scored below it are dropped before reaching the model. This prevents low-confidence results from producing hedged non-answers like *"I don't have information about this topic."*
+
+- The threshold applies after the Retrieval Mix scoring — it's the final gate before the model sees any content.
+- **Why it matters:** a corpus like the demo has documents as small as 20 chunks. In a pool where larger documents (200+ chunks) dominate, the small documents score lower by comparison even when highly relevant. Setting the threshold at 0.3 (instead of the default 0.5) ensures these small documents aren't filtered out.
+- **Corpus-level setting:** AIStudio stores the right threshold per corpus in its metadata. The demo is set to 0.3; the SEC 10-K corpus uses 0.5 (larger, more uniform documents benefit from tighter filtering). You can override it per-query from the left panel, or update it in the Edit Corpus modal.
+- This concept is well-established in the RAG literature as a *similarity cutoff* or *relevance threshold* — the principle being that passing low-confidence chunks to the model reliably degrades answer quality regardless of model size.
 
 ### 1.5 The Help Corpus — AIStudio Answering About Itself
 
@@ -126,13 +134,19 @@ ais_bench --corpus sec_10k --top-k 10
 
 This runs 7 pre-built questions, reports pass/fail per question with latency, and writes a timestamped report to `benchmarks/sec_10k/reports/`.
 
-> **What makes a benchmark question "pass"?** The harness checks whether the answer references the expected source document and contains key terms from the `notes` field. It's a quality signal, not a strict pass/fail test.
+Reports are written in three formats: `.md` (readable, with answers), `.json` (machine-readable), and `.pdf`. PDF generation requires `weasyprint`:
+```bash
+pip3 install weasyprint --break-system-packages
+```
+If weasyprint isn't installed, the run still completes and writes `.md` and `.json` — you'll see `⚠ PDF skipped` at the end.
+
+> **What makes a benchmark question "pass"?** Three checks: (1) all `keywords` in the question appear in the answer, (2) the answer includes at least one citation, (3) the model doesn't hedge with "no information available." A question can pass all three but still cite the wrong source — the keyword check is a signal, not a guarantee of source correctness.
 
 > **Want to run the demo corpus benchmark too?**
 > ```bash
 > ais_bench
 > ```
-> 14 questions, auto-detected from `benchmarks/demo/demo_questions.yaml`.
+> 14 questions, auto-detected from `benchmarks/demo/demo_questions.yaml`. AIStudio automatically uses the right parameters for each corpus — Top K, Temperature, Retrieval Mix, and Score Threshold are all read from corpus metadata, so you don't need to pass flags manually.
 
 ---
 
@@ -168,20 +182,32 @@ To run `ais_bench` against your corpus, create a questions file at:
 benchmarks/<your-corpus-name>/<your-corpus-name>_questions.yaml
 ```
 
-Format (use the SEC or demo files as examples):
+Full format:
 ```yaml
-- topic: Your Topic
+- topic: Topic Name          # groups questions in the report
   questions:
-    - id: your_question_id
-      question: What is the main argument of this document?
-      keywords: [main, argument, key]
-      notes: Should reference the introduction section
+    - id: unique_id          # snake_case, appears in summary output
+      question: The exact question sent to AIStudio.
+      keywords: [term1, term2, term3]   # all must appear in the answer to pass
+      notes: What a correct answer looks like — which document, what content.
+      # Optional: restrict retrieval to a specific firm or year
+      # firm: "Goldman Sachs"
+      # year: "2026"
 ```
+
+**What makes a question pass?** Three checks — all must pass:
+1. All `keywords` appear in the answer (case-insensitive)
+2. The answer includes at least one citation
+3. The model doesn't say "no information available" or similar hedging phrases
+
+**Tips for good keywords:** use 2–5 distinctive terms that prove the model retrieved the right content — firm names, regulatory terms, specific concepts. Avoid generic words that would appear in any answer.
 
 Then run:
 ```bash
 ais_bench --corpus your-corpus-name
 ```
+
+For the full questions file format and how questions are managed for each corpus type (demo, sec_10k, esef_banks, user), see `HOWTO_OPS.md §Benchmark` and `FILE_GUIDE_OPS.md §2a`.
 
 ### 3.5 Optional — Add Corpus Guidance
 

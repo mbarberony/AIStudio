@@ -106,3 +106,5 @@ ais_command_help_ops.txt
 ais_update_corpus_ops.sh
 scripts/urc/
 data/corpora/help/ingest_failures.jsonl
+benchmarks/esef_banks/
+benchmarks/esef_banks/

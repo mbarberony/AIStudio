@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # update_corpus_ops.py — AIStudio Corpus Updater (Operator only)
-# Version: 1.1.1
+# Version: 1.2.1
 # Unified script for updating any AIStudio corpus from seed files.
 # Called by ais_update_corpus_ops.sh wrapper.
 #
@@ -183,6 +183,10 @@ def seed_metadata(
         "content_summary": seed.get("content_summary", ""),
         "search_guidance": seed.get("search_guidance", ""),
     }
+    # Propagate per-corpus query defaults from seed if present (AIStudio_784)
+    for _field in ("default_top_k", "default_temperature", "default_hybrid_alpha", "default_min_score"):
+        if seed.get(_field) is not None:
+            meta[_field] = seed[_field]
     meta.update(runtime)
 
     # Build sources block from manifest (generated) or seed (seeded)

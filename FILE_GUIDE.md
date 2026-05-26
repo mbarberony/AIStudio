@@ -1,7 +1,7 @@
 # FILE_GUIDE.md
 *Type: REF | Domain: AIStudio | Status: ACTIVE*
-*Version: 1.0.0*
-*Created: 2026-05-20 | Last updated: 2026-05-20 | Owner: Manuel Barbero*
+*Version: 1.1.0*
+*Created: 2026-05-20 | Last updated: 2026-05-25 | Owner: Manuel Barbero*
 ---
 
 ## How to use this guide
@@ -107,7 +107,44 @@ Each corpus is a self-contained folder:
 | `manifest.jsonl` | Per-file ingest record: chunks count, last_ingested_at | Ingest pipeline |
 | `trash/` | Soft-deleted files (recoverable) | UI delete |
 
-**Demo corpus** ships with the repo. **Help corpus** is built from `docs/` + key root markdown. **User corpora** are private (gitignored).
+**Demo corpus** ships with the repo. **Help corpus** is built from `docs/` + key root markdown. **SEC 10-K corpus** is downloaded from SEC EDGAR via `ais_download_sec_10k` and ingested via `ais_ingest_sec_10k`. **User corpora** are created via the UI New button — private, gitignored, no special setup required.
+
+### `benchmarks/<corpus>/` — Benchmark questions and reports
+
+Each corpus that has a benchmark questions file can be tested with `ais_bench`:
+
+```
+benchmarks/
+  demo/
+    demo_questions.yaml       ← pre-built questions for the demo corpus
+    reports/                  ← timestamped benchmark reports (.md, .json, .pdf)
+  sec_10k/
+    sec_10k_questions.yaml    ← pre-built questions (created by ais_ingest_sec_10k)
+    reports/
+  <your-corpus>/
+    <your-corpus>_questions.yaml  ← you write this (see format below)
+    reports/
+```
+
+**Questions file format** — create `benchmarks/<name>/<name>_questions.yaml`:
+
+```yaml
+- topic: Topic Name
+  questions:
+    - id: unique_snake_case_id
+      question: The exact question text sent to AIStudio.
+      keywords: [term1, term2, term3]   # all must appear in the answer to pass
+      notes: What a correct answer looks like — which document, what content.
+```
+
+**What `ais_bench` checks** — three conditions, all must pass:
+1. All `keywords` appear in the answer (case-insensitive)
+2. The answer includes at least one citation
+3. The model doesn't hedge with "no information available" or similar phrases
+
+**Tips for good keywords:** 2–5 distinctive terms that prove the model retrieved the right content. Use specific concepts, entity names, or regulatory terms — not generic words.
+
+For full details and advanced options, see `TUTORIAL.md §3.4` and `HOWTO.md`.
 
 ### `prompts/system.txt` — System prompt
 
@@ -194,6 +231,7 @@ All commands available after running `./ais_install` from repo root.
 | `prompts/system.txt` | `api.py` | Manual edit | LLM system instructions |
 | `data/corpora/<name>/uploads/*` | Ingest pipeline | UI Add Files | Corpus chunks → Qdrant |
 | `data/corpora/<name>/index.jsonl` | `rag_core.py` retrieval | Ingest pipeline | Query → ranked chunks |
+| `benchmarks/<corpus>/<corpus>_questions.yaml` | `ais_bench` | User-authored or auto-generated | Benchmark pass/fail evaluation |
 
 ---
 
@@ -201,6 +239,7 @@ All commands available after running `./ais_install` from repo root.
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.1.0 | 2026-05-25 | Added user-created corpus type. Added benchmarks/ subsection with questions file format and pass/fail explanation. Added benchmarks row to §12. |
 | 1.0.0 | 2026-05-20 | Initial version. |
 
 ---

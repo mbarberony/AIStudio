@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-05-21*
+*Version: Beta | Updated: 2026-05-25*
 
 ---
 
@@ -288,33 +288,53 @@ The benchmark harness serves two purposes:
 ```bash
 ais_bench
 ```
+Parameters (Top K, Temperature, Retrieval Mix, Score Threshold) are read automatically from corpus metadata — no flags needed for built-in corpora.
 
 ***How do I benchmark a different corpus?***
 ```bash
+ais_bench --corpus sec_10k
 ais_bench --corpus help
-ais_bench --corpus sec_10k --top-k 10
 ```
 
-***How do I test with a specific model or settings?***
+***How do I test with a specific model or override settings?***
 ```bash
-ais_bench --corpus demo --model llama3.1:70b --top-k 10 --temperature 0.1
+ais_bench --corpus demo --model llama3.1:70b
+ais_bench --corpus demo --alpha 0.3 --min-score 0.2
+ais_bench --help   # all flags
 ```
+
+***What makes a benchmark question pass or fail?***
+Three checks — all must pass:
+1. All `keywords` appear in the answer (case-insensitive)
+2. The answer includes at least one citation
+3. The model doesn't hedge with "no information available" or similar phrases
 
 ***How do I write my own test questions for a corpus?***
 Create `benchmarks/<corpus_name>/<corpus_name>_questions.yaml`:
 ```yaml
-- topic: Getting Started
+- topic: Your Topic
   questions:
-    - id: start_aistudio
-      question: How do I start AIStudio?
-      notes: Should reference ais_start command
+    - id: unique_snake_case_id
+      question: The exact question text sent to AIStudio.
+      keywords: [term1, term2, term3]   # all must appear in the answer to pass
+      notes: What a correct answer looks like — which document, what content.
 ```
-Run `ais_bench --corpus <n>` — the questions file is auto-detected by corpus name.
+Run `ais_bench --corpus <name>` — the questions file is auto-detected by corpus name.
+
+**Tips for good keywords:** use 2–5 distinctive terms that prove the model retrieved the right content — specific concepts, entity names, or regulatory terms. Avoid generic words that would appear in any answer.
 
 ***Where do reports go?***
-`benchmarks/<corpus>/reports/` — timestamped `.md` and `.json` pairs. The `.md` shows pass/fail per question with latency and citations.
+`benchmarks/<corpus>/reports/` — timestamped `.md`, `.json`, and `.pdf` files. The `.md` shows pass/fail per question with latency, citations, and the answer text.
 
-For full benchmark documentation see [HARNESS.pdf](docs/HARNESS.pdf).
+***PDF reports aren't being generated — I see "PDF skipped"***
+
+`weasyprint` is required for PDF output and must be installed separately:
+```bash
+pip3 install weasyprint --break-system-packages
+```
+It's already in `requirements.txt` but not installed by default. Once installed, subsequent runs generate `.pdf` reports alongside `.md` and `.json`. The `⚠ PDF skipped` message is printed when weasyprint is missing — `.md` and `.json` reports are always generated regardless.
+
+See `TUTORIAL.md §3.4` for a step-by-step walkthrough.
 
 ---
 
