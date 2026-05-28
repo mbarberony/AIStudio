@@ -109,3 +109,8 @@ data/corpora/help/ingest_failures.jsonl
 benchmarks/esef_banks/
 benchmarks/esef_banks/
 data/knowledge_sources/gleif/*_entities.yaml
+data/knowledge_sources/catalog.yaml
+data/knowledge_sources/gleif/gleif_metadata.yaml
+scripts/ais_enrich_qdrant.py
+scripts/ais_import_knowledge_base.py
+ais_import_knowledge_base.sh
