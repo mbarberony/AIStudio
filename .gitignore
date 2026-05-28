@@ -108,3 +108,4 @@ scripts/urc/
 data/corpora/help/ingest_failures.jsonl
 benchmarks/esef_banks/
 benchmarks/esef_banks/
+data/knowledge_sources/gleif/*_entities.yaml
