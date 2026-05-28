@@ -1,0 +1,74 @@
+# gleif_metadata.yaml
+# Knowledge source metadata — GLEIF Legal Entity Identifier registry
+# Defines what this source is, how to connect to it, and known constraints.
+# Read by: ais_import_knowledge_base
+# Schema version: 1.0
+
+schema_version: "1.0"
+source_id: gleif
+source_type: entity_synonyms
+
+# ── Identity ────────────────────────────────────────────────────────────────
+name: GLEIF Legal Entity Identifier Registry
+publisher: Global Legal Entity Identifier Foundation
+publisher_url: https://www.gleif.org
+description: >
+  The Global LEI Index — the only global online source of open, standardized,
+  and high quality legal entity reference data. Provides canonical legal names,
+  LEI codes, jurisdictions, and entity status for registered financial entities
+  worldwide. Used in AIStudio to resolve entity aliases in queries (e.g.
+  "JPMorgan" → "JPMORGAN CHASE & CO.") and to normalize firm names across
+  corpus chunks.
+
+# ── Access ──────────────────────────────────────────────────────────────────
+access:
+  type: rest_api
+  base_url: https://api.gleif.org/api/v1
+  auth_required: false
+  rate_limit: 60_per_minute
+  docs_url: https://documenter.getpostman.com/view/7679680/SVYrrxuU
+  bulk_download_url: https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy
+  bulk_download_notes: >
+    Full golden copy (~2GB zip). Use for large-scale imports. For targeted
+    scope files (e.g. 25 firms), the REST API is preferred.
+
+# ── Endpoints used ──────────────────────────────────────────────────────────
+endpoints:
+  search_by_name:
+    path: /lei-records
+    method: GET
+    params:
+      filter_entity_legalName: "filter[entity.legalName]"
+      page_size: "page[size]"
+    response_path: data[].attributes
+    fields:
+      lei: lei
+      legal_name: entity.legalName.name
+      legal_name_language: entity.legalName.language
+      jurisdiction: entity.jurisdiction
+      status: entity.status
+      legal_form: entity.legalForm.id
+
+# ── License ──────────────────────────────────────────────────────────────────
+license:
+  name: GLEIF LEI Data Terms of Use
+  url: https://www.gleif.org/en/meta/lei-data-terms-of-use
+  restrictions:
+    - Free for any use including commercial
+    - Attribution required — cite GLEIF as source
+    - Redistribution permitted with attribution
+    - No restriction on derivative works
+
+# ── Known constraints ────────────────────────────────────────────────────────
+constraints:
+  - Legal names are stored in ALL CAPS in GLEIF registry
+  - Canonical name may differ from common usage (e.g. "JPMORGAN CHASE & CO." vs "JPMorgan Chase")
+  - Some entities have multiple registrations — scope file must specify which LEI to use
+  - Non-US entities may have names in local language as primary; English variant in otherNames
+  - LEI codes are stable identifiers — safe to hardcode in scope files
+
+# ── Output produced ──────────────────────────────────────────────────────────
+produces:
+  file_pattern: "gleif_{scope_id}_entities.yaml"
+  content_type: entity_synonyms
+  schema_version: "1.0"

@@ -1,0 +1,32 @@
+# gleif_sec10k_25_firms_entities.yaml
+# GLEIF entity data for sec_10k 25_firms scope — populated by ais_import_knowledge_base
+# DO NOT EDIT MANUALLY — regenerate with:
+#   ais_import_knowledge_base --corpus sec_10k --scope 25_firms --source gleif
+# Schema version: 1.0
+
+schema_version: "1.0"
+source_id: gleif
+corpus: sec_10k
+scope_id: 25_firms
+generated: null          # set by downloader: YYYY-MM-DD
+entity_count: 0          # set by downloader
+
+# ── How this file is used ────────────────────────────────────────────────────
+# rag_core.py _apply_knowledge_sources() reads this at query time.
+# For each entity, aliases are expanded into the BM25 query so that
+# "JPMorgan" in a user query also matches "JPMORGAN CHASE & CO." in chunks.
+# Applied to BM25 channel only — vector query is unchanged.
+
+# ── Entity records ───────────────────────────────────────────────────────────
+# Populated by downloader from GLEIF API + corpus filename scan.
+# canonical      — official GLEIF legal name (ALL CAPS, from API)
+# lei            — 20-char LEI code (from API)
+# jurisdiction   — ISO country code (from API)
+# status         — ACTIVE | INACTIVE | MERGED (from API)
+# corpus_name    — how firm appears in [Document:] chunk prefix (from corpus scan)
+# corpus_files   — filename prefix pattern in uploads/ (from corpus scan)
+# aliases        — query expansion targets (derived from canonical + corpus_name)
+# ticker         — exchange ticker (from API or SEC EDGAR cross-reference)
+# gleif_url      — direct link to GLEIF registry record
+
+entities: []

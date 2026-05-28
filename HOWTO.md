@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-05-25*
+*Version: Beta | Updated: 2026-05-27*
 
 ---
 
@@ -110,6 +110,9 @@ Use the UI — open AIStudio, create a new corpus using the **New** button, then
 
 ***How do I re-ingest a corpus from scratch?***
 Delete the corpus using the **Delete Corpus** button in the UI (type YES to confirm — it moves to Trash, recoverable). Then create a new corpus with the same name and re-upload your files via **Add**. AIStudio ingests everything in one pass.
+
+***How do I delete a file from a corpus?***
+Use the UI — select your corpus, click **Inspect** to open the file list, then click **Delete** next to the file you want to remove. AIStudio moves the file to trash and removes its chunks from the vector index. You do not need to re-ingest the rest of the corpus — only the deleted file's chunks are removed.
 
 ***What happens when I delete a file from a corpus — is it gone forever?***
 No. Deleted files move to `data/corpora/<name>/uploads/trash/` — not permanently deleted.

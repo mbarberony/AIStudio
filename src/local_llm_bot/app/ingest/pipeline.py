@@ -1,4 +1,12 @@
-# Version: 1.8.26
+# Version: 1.8.27
+# Changelog: 1.8.27 — AIStudio_801: ingest-time alias injection into [Document:] prefix.
+#            _load_ks_alias_map() reads gleif_{corpus}_*_entities.yaml and returns
+#            canonical → [wikidata_label, wikidata_short_name, wikidata_tickers] map.
+#            Loaded once per ingest run. When doc_entity matches a known entity,
+#            prefix becomes "[Document: CANONICAL | scope_name | ticker FY year]".
+#            Format-driven (XBRL tag extraction must succeed) — not corpus-dependent.
+#            Graceful no-op when no knowledge sources exist for the corpus.
+# Changelog: 1.8.26 — prior version.
 # Changelog: 1.8.26 — Fix _extract_document_metadata() early-exit returns: 5-tuple
 #            → 7-tuple (None, None appended for doc_tag/doc_year_tag). Fixes
 #            ValueError unpacking for all non-markup files (PDF, DOCX, MD, etc.).
@@ -167,6 +175,66 @@ from local_llm_bot.app.utils.repo_root import find_repo_root
 # Qdrant is the only supported vectorstore.
 # Chroma support has been removed — see chroma eradication ticket.
 from local_llm_bot.app.vectorstore import qdrant_store as _store
+
+try:
+    import yaml as _yaml
+    _YAML_AVAILABLE = True
+except ImportError:
+    _YAML_AVAILABLE = False
+
+
+def _load_ks_alias_map(repo: Path, corpus: str) -> dict[str, list[str]]:
+    """
+    Load GLEIF entity Wikidata fields for a corpus and return a dict mapping
+    canonical name → list of natural query forms for [Document:] prefix injection.
+
+    Uses wikidata_label, wikidata_short_name, wikidata_tickers from the entities
+    YAML (schema_version 1.1+). These are the forms users naturally type in queries.
+    Full aliases list (mechanical variants) is used query-side in rag_core, not here.
+
+    Returns empty dict if no knowledge sources file exists — prefix falls back to
+    unenriched form silently. Format-driven: only called when doc_entity was
+    extracted from an XBRL tag (iXBRL/ESEF filings).
+    """
+    if not _YAML_AVAILABLE:
+        return {}
+    ks_dir = repo / "data" / "knowledge_sources" / "gleif"
+    if not ks_dir.exists():
+        return {}
+    matches = sorted(ks_dir.glob(f"gleif_{corpus}_*_entities.yaml"))
+    if not matches:
+        return {}
+    try:
+        with open(matches[0], encoding="utf-8") as f:
+            data = _yaml.safe_load(f)
+        alias_map: dict[str, list[str]] = {}
+        for entity in data.get("entities", []):
+            canonical = entity.get("canonical", "")
+            if not canonical:
+                continue
+            # Natural query forms only — Wikidata-sourced
+            natural: list[str] = []
+            label = entity.get("wikidata_label", "")
+            short = entity.get("wikidata_short_name", "")
+            tickers = entity.get("wikidata_tickers", [])
+            scope_name = entity.get("scope_name", "")
+            # scope_name is always a natural form (what users type)
+            if scope_name and scope_name != canonical:
+                natural.append(scope_name)
+            # Wikidata label if different from scope_name
+            if label and label != scope_name and label != canonical:
+                natural.append(label)
+            # Wikidata short name if different
+            if short and short not in natural and short != canonical:
+                natural.append(short)
+            # Tickers — short discriminating tokens
+            for t in (tickers or []):
+                if t and len(t) <= 6 and t not in natural:
+                    natural.append(t)
+            alias_map[canonical] = natural
+        return alias_map
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _dt_now() -> str:
@@ -684,6 +752,11 @@ def ingest_corpus(
 
     collection_name = f"aistudio_{corpus}"
 
+    # AIStudio_801: load knowledge source alias map once per ingest run.
+    # Maps canonical GLEIF name → [natural query forms] for [Document:] prefix enrichment.
+    # Empty dict if no knowledge sources exist for this corpus — graceful no-op.
+    _ks_alias_map = _load_ks_alias_map(repo, corpus)
+
     # Reset handling
     if reset_index:
         for k in ("index", "manifest", "failures"):
@@ -873,14 +946,21 @@ def ingest_corpus(
                     clean_text = _PAGE_RE.sub("", c).strip()
 
                     # Apply normalizer prefix if entity was extracted.
-                    # Format (entity + year): "[Document: JPMorgan Chase & Co. FY2025] <chunk>"
-                    # Format (entity only):   "[Document: JPMorgan Chase & Co.] <chunk>"
-                    # The bracketed tag is compact and unlikely to appear in
-                    # organic text, reducing false-positive embedding signal.
+                    # AIStudio_801: if knowledge sources exist for this corpus,
+                    # enrich prefix with Wikidata natural query forms (scope_name,
+                    # label, short_name, tickers). These are embedded into every
+                    # chunk from this entity — improving both BM25 and vector recall
+                    # for user queries that use the natural name rather than the
+                    # full GLEIF legal name.
+                    # Format (entity + aliases + year): "[Document: THE GOLDMAN SACHS GROUP, INC. | Goldman Sachs | GS FY2025] <chunk>"
+                    # Format (entity + year, no aliases): "[Document: JPMorgan Chase & Co. FY2025] <chunk>"
+                    # Format (entity only):               "[Document: JPMorgan Chase & Co.] <chunk>"
+                    _ks_aliases = _ks_alias_map.get(doc_entity, []) if doc_entity else []
+                    _alias_suffix = (" | " + " | ".join(_ks_aliases)) if _ks_aliases else ""
                     if doc_entity and doc_year:
-                        clean_text = f"[Document: {doc_entity} FY{doc_year}] {clean_text}"
+                        clean_text = f"[Document: {doc_entity}{_alias_suffix} FY{doc_year}] {clean_text}"
                     elif doc_entity:
-                        clean_text = f"[Document: {doc_entity}] {clean_text}"
+                        clean_text = f"[Document: {doc_entity}{_alias_suffix}] {clean_text}"
 
                     chunk_id = (
                         f"{abs_path}::page-{page_num}::chunk-{i}"

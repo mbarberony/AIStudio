@@ -1,0 +1,518 @@
+schema_version: '1.1'
+source_id: gleif
+corpus: sec_10k
+scope_id: 25_firms
+generated: '2026-05-27'
+entity_count: 25
+failed_count: 0
+failed: []
+entities:
+- canonical: JPMORGAN CHASE & CO.
+  lei: 8I5DZWZKVSZI1NUHU748
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/8I5DZWZKVSZI1NUHU748
+  scope_name: JPMorgan Chase
+  aliases:
+  - '8634'
+  - JPM
+  - JPMORGAN CHASE
+  - JPMORGAN CHASE & CO
+  - JPMORGAN CHASE and CO.
+  - JPMorgan Chase
+  - Jpmorgan Chase
+  - Jpmorgan Chase & Co
+  - Jpmorgan Chase & Co.
+  - jpmorgan chase
+  - jpmorgan chase & co.
+  - n/a
+  wikidata_label: JPMorgan Chase
+  wikidata_short_name: n/a
+  wikidata_tickers:
+  - '8634'
+  - JPM
+- canonical: BANK OF AMERICA CORPORATION
+  lei: 9DJT3UXIJIZJI4WXO774
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/9DJT3UXIJIZJI4WXO774
+  scope_name: Bank of America
+  aliases:
+  - '8648'
+  - BAC
+  - BANK OF AMERICA
+  - Bank Of America
+  - Bank Of America Corporation
+  - Bank of America
+  - BofA
+  - bank of america
+  - bank of america corporation
+  wikidata_label: Bank of America
+  wikidata_short_name: BofA
+  wikidata_tickers:
+  - '8648'
+  - BAC
+- canonical: CITIGROUP INC.
+  lei: 6SHGI4ZSSLCXXQSBB395
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/6SHGI4ZSSLCXXQSBB395
+  scope_name: Citigroup
+  aliases:
+  - '8710'
+  - CITIGROUP
+  - CITIGROUP INC
+  - Citi
+  - Citigroup
+  - Citigroup Inc
+  - Citigroup Inc.
+  - citigroup
+  - citigroup inc.
+  wikidata_label: Citigroup
+  wikidata_short_name: Citi
+  wikidata_tickers:
+  - '8710'
+  - C
+- canonical: WELLS FARGO & COMPANY
+  lei: PBLD0EJDB5FWOLXP3B76
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/PBLD0EJDB5FWOLXP3B76
+  scope_name: Wells Fargo
+  aliases:
+  - WELLS FARGO
+  - WELLS FARGO &
+  - WELLS FARGO and COMPANY
+  - WFC
+  - Wells Fargo
+  - Wells Fargo &
+  - Wells Fargo & Company
+  - wells fargo
+  - wells fargo & company
+  wikidata_label: Wells Fargo
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - WFC
+- canonical: THE GOLDMAN SACHS GROUP, INC.
+  lei: 784F5XWPLTWKTBV3E584
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/784F5XWPLTWKTBV3E584
+  scope_name: Goldman Sachs
+  aliases:
+  - GOLDMAN SACHS
+  - GOLDMAN SACHS GROUP, INC.
+  - GS
+  - Goldman Sachs
+  - Goldman Sachs Group, Inc.
+  - THE GOLDMAN SACHS
+  - THE GOLDMAN SACHS GROUP INC
+  - The Goldman Sachs
+  - The Goldman Sachs Group Inc
+  - The Goldman Sachs Group, Inc.
+  - goldman sachs
+  - the goldman sachs group, inc.
+  wikidata_label: Goldman Sachs
+  wikidata_short_name: GS
+  wikidata_tickers:
+  - GS
+- canonical: MORGAN STANLEY
+  lei: IGJSJL3JD5P30I6NJZ34
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/IGJSJL3JD5P30I6NJZ34
+  scope_name: Morgan Stanley
+  aliases:
+  - MS
+  - Morgan Stanley
+  - morgan stanley
+  wikidata_label: Morgan Stanley
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - MS
+- canonical: BlackRock, Inc.
+  lei: 529900VBK42Y5HHRMD23
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/529900VBK42Y5HHRMD23
+  scope_name: BlackRock
+  aliases:
+  - BLACKROCK
+  - BLACKROCK, INC.
+  - BlackRock
+  - BlackRock Inc
+  - Blackrock
+  - Blackrock Inc
+  - Blackrock, Inc.
+  - blackrock
+  - blackrock, inc.
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: STATE STREET CORPORATION
+  lei: 549300ZFEEJ2IP5VME73
+  jurisdiction: US-MA
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300ZFEEJ2IP5VME73
+  scope_name: State Street
+  aliases:
+  - STATE STREET
+  - STT
+  - State Street
+  - State Street Corporation
+  - state street
+  - state street corporation
+  wikidata_label: State Street Corporation
+  wikidata_short_name: STT
+  wikidata_tickers:
+  - STT
+- canonical: THE BANK OF NEW YORK MELLON CORPORATION
+  lei: WFLLPEPC7FZXENRZV188
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/WFLLPEPC7FZXENRZV188
+  scope_name: BNY Mellon
+  aliases:
+  - BANK OF NEW YORK MELLON
+  - BANK OF NEW YORK MELLON CORPORATION
+  - BK
+  - BNY MELLON
+  - BNY Mellon
+  - Bank Of New York Mellon
+  - Bank Of New York Mellon Corporation
+  - Bank of New York Mellon
+  - Bny Mellon
+  - THE BANK OF NEW YORK MELLON
+  - The Bank Of New York Mellon
+  - The Bank Of New York Mellon Corporation
+  - The Bank of New York Mellon
+  - bank of new york mellon
+  - bny mellon
+  - the bank of new york mellon
+  - the bank of new york mellon corporation
+  wikidata_label: The Bank of New York Mellon
+  wikidata_short_name: BNY Mellon
+  wikidata_tickers:
+  - BK
+- canonical: JEFFERIES FINANCIAL GROUP INC.
+  lei: 549300HOF34RGOJ5YL07
+  jurisdiction: US-NY
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300HOF34RGOJ5YL07
+  scope_name: Jefferies
+  aliases:
+  - JEFFERIES
+  - JEFFERIES FINANCIAL GROUP
+  - JEFFERIES FINANCIAL GROUP INC
+  - Jefferies
+  - Jefferies Financial Group
+  - Jefferies Financial Group Inc
+  - Jefferies Financial Group Inc.
+  - LUK
+  - jefferies
+  - jefferies financial group
+  - jefferies financial group inc.
+  wikidata_label: Jefferies Financial Group
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - LUK
+- canonical: RAYMOND JAMES FINANCIAL, INC.
+  lei: RGUZHJ05YTITL6D76949
+  jurisdiction: US-FL
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/RGUZHJ05YTITL6D76949
+  scope_name: Raymond James
+  aliases:
+  - RAYMOND JAMES
+  - RAYMOND JAMES FINANCIAL
+  - RAYMOND JAMES FINANCIAL INC
+  - RJF
+  - Raymond James
+  - Raymond James Financial
+  - Raymond James Financial Inc
+  - Raymond James Financial, Inc.
+  - raymond james
+  - raymond james financial
+  - raymond james financial, inc.
+  wikidata_label: Raymond James Financial
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - RJF
+- canonical: STIFEL FINANCIAL CORP.
+  lei: 549300E5F07FE5GHJX84
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300E5F07FE5GHJX84
+  scope_name: Stifel Financial
+  aliases:
+  - SF
+  - STIFEL
+  - STIFEL FINANCIAL
+  - STIFEL FINANCIAL CORP
+  - Stifel
+  - Stifel Financial
+  - Stifel Financial Corp
+  - Stifel Financial Corp.
+  - stifel
+  - stifel financial
+  - stifel financial corp.
+  wikidata_label: Stifel
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - SF
+- canonical: NASDAQ, INC.
+  lei: 549300L8X1Q78ERXFD06
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300L8X1Q78ERXFD06
+  scope_name: Nasdaq
+  aliases:
+  - NASDAQ
+  - NASDAQ INC
+  - NDAQ
+  - Nasdaq
+  - Nasdaq Inc
+  - Nasdaq, Inc.
+  - nasdaq
+  - nasdaq, inc.
+  wikidata_label: Nasdaq, Inc.
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - NDAQ
+- canonical: INTERCONTINENTAL EXCHANGE, INC.
+  lei: 5493000F4ZO33MV32P92
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/5493000F4ZO33MV32P92
+  scope_name: Intercontinental Exchange
+  aliases:
+  - ICE
+  - INTERCONTINENTAL EXCHANGE
+  - INTERCONTINENTAL EXCHANGE INC
+  - Intercontinental Exchange
+  - Intercontinental Exchange Inc
+  - Intercontinental Exchange, Inc.
+  - intercontinental exchange
+  - intercontinental exchange, inc.
+  wikidata_label: Intercontinental Exchange
+  wikidata_short_name: ICE
+  wikidata_tickers:
+  - ICE
+- canonical: CBOE GLOBAL MARKETS, INC.
+  lei: 529900RLNSGA90UPEH54
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/529900RLNSGA90UPEH54
+  scope_name: CBOE Global Markets
+  aliases:
+  - CBOE GLOBAL MARKETS
+  - CBOE GLOBAL MARKETS INC
+  - CBOE Global Markets
+  - Cboe Global Markets
+  - Cboe Global Markets Inc
+  - Cboe Global Markets, Inc.
+  - cboe global markets
+  - cboe global markets, inc.
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: AMERICAN INTERNATIONAL GROUP, INC.
+  lei: ODVCVCQG2BP6VHV36M30
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/ODVCVCQG2BP6VHV36M30
+  scope_name: AIG
+  aliases:
+  - '8685'
+  - AIG
+  - AMERICAN INTERNATIONAL
+  - AMERICAN INTERNATIONAL GROUP
+  - AMERICAN INTERNATIONAL GROUP INC
+  - Aig
+  - American International
+  - American International Group
+  - American International Group Inc
+  - American International Group, Inc.
+  - aig
+  - american international group
+  - american international group, inc.
+  wikidata_label: American International Group
+  wikidata_short_name: AIG
+  wikidata_tickers:
+  - '8685'
+  - AIG
+- canonical: NORTHERN TRUST CORPORATION
+  lei: 549300GLF98S992BC502
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300GLF98S992BC502
+  scope_name: Northern Trust
+  aliases:
+  - NORTHERN TRUST
+  - NTRS
+  - Northern Trust
+  - Northern Trust Corporation
+  - northern trust
+  - northern trust corporation
+  wikidata_label: Northern Trust
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - NTRS
+- canonical: ALLY FINANCIAL INC.
+  lei: 549300JBN1OSM8YNAI90
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300JBN1OSM8YNAI90
+  scope_name: Ally Financial
+  aliases:
+  - ALLY
+  - ALLY FINANCIAL
+  - ALLY FINANCIAL INC
+  - Ally
+  - Ally Financial
+  - Ally Financial Inc
+  - Ally Financial Inc.
+  - ally financial
+  - ally financial inc.
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: AMERIPRISE FINANCIAL, INC.
+  lei: 6ZLKQF7QB6JAEKQS5388
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/6ZLKQF7QB6JAEKQS5388
+  scope_name: Ameriprise Financial
+  aliases:
+  - AMERIPRISE
+  - AMERIPRISE FINANCIAL
+  - AMERIPRISE FINANCIAL INC
+  - AMP
+  - Ameriprise
+  - Ameriprise Financial
+  - Ameriprise Financial Inc
+  - Ameriprise Financial, Inc.
+  - ameriprise financial
+  - ameriprise financial, inc.
+  wikidata_label: Ameriprise Financial
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - AMP
+- canonical: PRINCIPAL FINANCIAL GROUP, INC.
+  lei: CUMYEZJOAF02RYZ1JJ85
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/CUMYEZJOAF02RYZ1JJ85
+  scope_name: Principal Financial
+  aliases:
+  - PFG
+  - PRINCIPAL
+  - PRINCIPAL FINANCIAL
+  - PRINCIPAL FINANCIAL GROUP
+  - PRINCIPAL FINANCIAL GROUP INC
+  - Principal
+  - Principal Financial
+  - Principal Financial Group
+  - Principal Financial Group Inc
+  - Principal Financial Group, Inc.
+  - principal financial
+  - principal financial group
+  - principal financial group, inc.
+  wikidata_label: Principal Financial Group
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - PFG
+- canonical: UNUM GROUP
+  lei: 549300E32YFDO6TZ8R31
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300E32YFDO6TZ8R31
+  scope_name: Unum
+  aliases:
+  - UNM
+  - UNUM
+  - Unum
+  - Unum Group
+  - unum
+  - unum group
+  wikidata_label: Unum
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - UNM
+- canonical: VOYA FINANCIAL, INC.
+  lei: 549300T065Z4KJ686G75
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300T065Z4KJ686G75
+  scope_name: Voya Financial
+  aliases:
+  - VOYA
+  - VOYA FINANCIAL
+  - VOYA FINANCIAL INC
+  - Voya
+  - Voya Financial
+  - Voya Financial Inc
+  - Voya Financial, Inc.
+  - voya financial
+  - voya financial, inc.
+  wikidata_label: Voya Financial
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - VOYA
+- canonical: LINCOLN NATIONAL CORPORATION
+  lei: EFQMQROEDSNBRIP7LE47
+  jurisdiction: US-IN
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/EFQMQROEDSNBRIP7LE47
+  scope_name: Lincoln National
+  aliases:
+  - LINCOLN NATIONAL
+  - LNC
+  - Lincoln National
+  - Lincoln National Corporation
+  - lincoln national
+  - lincoln national corporation
+  wikidata_label: Lincoln National Corporation
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - LNC
+- canonical: T. ROWE PRICE GROUP, INC.
+  lei: 549300SIV6FPS9Y7IH33
+  jurisdiction: US-MD
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300SIV6FPS9Y7IH33
+  scope_name: T. Rowe Price
+  aliases:
+  - T ROWE PRICE GROUP INC
+  - T Rowe Price
+  - T Rowe Price Group Inc
+  - T. ROWE PRICE
+  - T. Rowe Price
+  - T. Rowe Price Group, Inc.
+  - t. rowe price
+  - t. rowe price group, inc.
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: FRANKLIN RESOURCES, INC.
+  lei: RIFQSET379FOGTEFKS80
+  jurisdiction: US-DE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/RIFQSET379FOGTEFKS80
+  scope_name: Franklin Resources
+  aliases:
+  - BEN
+  - FRANKLIN RESOURCES
+  - FRANKLIN RESOURCES INC
+  - FRANKLIN TEMPLETON INVESTMENTS
+  - Franklin Resources
+  - Franklin Resources Inc
+  - Franklin Resources, Inc.
+  - Franklin Templeton Investments
+  - franklin resources
+  - franklin resources, inc.
+  - franklin templeton investments
+  wikidata_label: Franklin Templeton Investments
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - BEN

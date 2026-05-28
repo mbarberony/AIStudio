@@ -1,6 +1,15 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.7.6
-# Changelog: 1.6.1 — AIStudio_778: lower MIN_HYBRID_SCORE default 0.5 → 0.3. Threshold of 0.5
+# Version: 1.7.8
+# Changelog: 1.7.8 — AIStudio_801: _load_knowledge_sources() now exposes
+#            wikidata_label, wikidata_short_name, wikidata_tickers from entities
+#            YAML schema_version 1.1. Query-time expansion (_apply_knowledge_sources)
+#            continues to use full aliases set for wide BM25 net.
+# Changelog: 1.7.7 — AIStudio_801: _apply_knowledge_sources() auto-expands BM25 keywords.
+#            from GLEIF entity alias files (data/knowledge_sources/gleif/). Loaded lazily
+#            per corpus, cached after first call. User query "Goldman Sachs CET1" auto-
+#            expands to include "THE GOLDMAN SACHS GROUP", "GS", etc. without manual
+#            keyword entry. Replaces AIStudio_618 manual keywords as the primary path.
+# Changelog: 1.6.1 — AIStudio_778: lower MIN_HYBRID_SCORE default 0.5 → 0.3.
 #            was filtering small-document chunks (Erder|Pureur 34 chunks, Agentic AI 20 chunks)
 #            causing Q1 QFD and Q13 Agentic AI regressions (12/14 vs 14/14 baseline).
 # Changelog: 1.6.0 — AIStudio_778: MIN_HYBRID_SCORE threshold filter. Drops retrieved chunks
@@ -90,6 +99,98 @@ class AnswerWithCitations:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+# AIStudio_801: Knowledge sources — lazy-loaded entity alias cache per corpus.
+# Populated on first retrieve() call for a given corpus.
+# Maps: corpus_name → list of {canonical, aliases: set[str]}
+_KS_CACHE: dict[str, list[dict]] = {}
+
+
+def _load_knowledge_sources(corpus: str) -> list[dict]:
+    """
+    Load GLEIF entity aliases for a corpus from data/knowledge_sources/gleif/.
+    Returns list of {canonical, scope_name, aliases, wikidata_label,
+    wikidata_short_name, wikidata_tickers} dicts.
+    Empty list if no file exists. Cached after first load.
+    """
+    if corpus in _KS_CACHE:
+        return _KS_CACHE[corpus]
+
+    import yaml  # local import — yaml not needed at module level
+
+    repo = find_repo_root(Path(__file__))
+    ks_dir = repo / "data" / "knowledge_sources" / "gleif"
+    pattern = f"gleif_{corpus}_*_entities.yaml"
+    matches = list(ks_dir.glob(pattern)) if ks_dir.exists() else []
+
+    if not matches:
+        _KS_CACHE[corpus] = []
+        return []
+
+    entities_path = matches[0]
+    try:
+        with open(entities_path) as f:
+            data = yaml.safe_load(f)
+        records = []
+        for e in data.get("entities", []):
+            aliases_raw = e.get("aliases", [])
+            records.append({
+                "canonical": e.get("canonical", ""),
+                "scope_name": e.get("scope_name", ""),
+                "aliases": {a.lower() for a in aliases_raw} | {e.get("canonical", "").lower()},
+                "wikidata_label": e.get("wikidata_label", ""),
+                "wikidata_short_name": e.get("wikidata_short_name", ""),
+                "wikidata_tickers": e.get("wikidata_tickers", []),
+            })
+        _KS_CACHE[corpus] = records
+        return records
+    except Exception:  # noqa: BLE001
+        _KS_CACHE[corpus] = []
+        return []
+
+
+def _apply_knowledge_sources(query: str, corpus: str,
+                              existing_keywords: list[str] | None) -> list[str] | None:
+    """
+    Expand BM25 keywords automatically from knowledge sources.
+
+    For each entity whose aliases appear in the query, add all its aliases
+    to the keyword set. This replaces manual keyword entry — user types
+    "Goldman Sachs CET1" and BM25 automatically searches for
+    "THE GOLDMAN SACHS GROUP" and "GS" without user intervention.
+
+    Returns merged keyword list, or None if no expansion occurred and
+    existing_keywords was also None (preserves None → no-keywords path).
+    """
+    entities = _load_knowledge_sources(corpus)
+    if not entities:
+        return existing_keywords
+
+    query_lower = query.lower()
+    expanded: set[str] = set(existing_keywords or [])
+    matched = False
+
+    for entity in entities:
+        # Check if any alias appears in the query
+        hit = False
+        for alias in entity["aliases"]:
+            if alias and len(alias) > 2 and alias in query_lower:
+                hit = True
+                break
+        # Also check scope_name directly
+        if not hit and entity["scope_name"].lower() in query_lower:
+            hit = True
+
+        if hit:
+            # Add all aliases for this entity to the BM25 query expansion
+            expanded.update(a for a in entity["aliases"] if len(a) > 1)
+            expanded.add(entity["canonical"])
+            matched = True
+
+    if not matched and not existing_keywords:
+        return None  # preserve no-keywords path — no expansion, no overhead
+
+    return sorted(expanded) if expanded else existing_keywords
 
 
 def _repo_root() -> Path:
@@ -203,10 +304,14 @@ def retrieve(
                 collection_name=collection,
                 entity_filter=entity_filter,
             )
+            # AIStudio_801: auto-expand keywords from knowledge sources (GLEIF entity aliases).
+            # Runs before BM25 query construction — no user intervention needed.
+            _expanded_keywords = _apply_knowledge_sources(query, corpus, keywords)
+
             # AIStudio_618: append keywords to BM25 query for boost
             _bm25_query = query
-            if keywords:
-                _bm25_query = query + " " + " ".join(keywords)
+            if _expanded_keywords:
+                _bm25_query = query + " " + " ".join(_expanded_keywords)
             bm25_hits = _store.query_bm25(
                 query_text=_bm25_query,
                 top_k=channel_k,

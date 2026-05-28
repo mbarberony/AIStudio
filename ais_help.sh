@@ -4,7 +4,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.0.3"
+VERSION="2.0.4"
 SCRIPT_DIR="${0:A:h}"
 SCRIPT_NAME="ais_help"
 HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
@@ -60,6 +60,7 @@ echo "  ais_download_sec_10k  Download SEC 10-K corpus from EDGAR (~2GB)"
 echo "  ais_ingest_sec_10k    Ingest SEC 10-K corpus (~30 min, backend required)"
 echo "  ais_download_esef     Download ESEF iXBRL corpus from filings.xbrl.org (~10 European banks)"
 echo "  ais_ingest_esef       Ingest ESEF iXBRL corpus (~20 min, backend required)"
+echo "  ais_import_knowledge_base  Import entity/glossary data from external sources (GLEIF, BIS, NIST...)"
 echo ""
 echo "── Benchmarking ─────────────────────────────────────────────"
 echo "  ais_bench             Run benchmark on demo corpus (default settings)"

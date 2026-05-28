@@ -152,6 +152,38 @@ Options:
 · Next step: create corpus 'esef_banks' in AIStudio UI, then ingest
 
 ---
+## ais_import_knowledge_base
+ais_import_knowledge_base v1.0.0 — Import external knowledge source data for a corpus scope
+
+Fetches entity or glossary data from an external knowledge source (K) for a specific
+corpus (C) and scope (S), and writes the enriched output to data/knowledge_sources/<K>/.
+Updates catalog.yaml with import metadata (date, count, file path).
+
+Usage: ais_import_knowledge_base --source <K> --corpus <C> --scope <S> [options]
+       ais_import_knowledge_base --list
+
+Options:
+  --source <K>      Knowledge source: gleif | sec_edgar | bis_basel | nist_ai_rmf | esrs
+  --corpus <C>      Corpus name (e.g. sec_10k, esef_banks, any_corpus)
+  --scope <S>       Scope ID matching a <C>_<S>_scope.yaml file (e.g. 25_firms, full)
+  --force           Overwrite existing output file
+  --list            Show all imported knowledge sources from catalog.yaml
+  --help            Show this help
+  --version         Show version
+
+Examples:
+  ais_import_knowledge_base --source gleif --corpus sec_10k --scope 25_firms
+  ais_import_knowledge_base --source bis_basel --corpus any_corpus --scope full
+  ais_import_knowledge_base --list
+
+· Scope file:   benchmarks/<C>/<C>_<S>_scope.yaml (flat list of entity/term names)
+· Metadata:     data/knowledge_sources/<K>/<K>_metadata.yaml (API config, license)
+· Output:       data/knowledge_sources/<K>/<K>_<C>_<S>_<A>.yaml (A = entities|glossary|companies)
+· Catalog:      data/knowledge_sources/catalog.yaml (registry of all imports)
+· Sources implemented: gleif
+· Sources planned:     sec_edgar, bis_basel, nist_ai_rmf, esrs
+
+---
 ## ais_download_sec_10k
 
 Usage: ais_download_sec_10k [--help] [--version] [--out <dir>]

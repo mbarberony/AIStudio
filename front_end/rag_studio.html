@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.4.2 -->
+<!-- Version: 2.4.3 -->
 <!-- Changelog: 2.3.1 — fix: hash corpus selection guarded by option existence check; New Corpus Query Defaults fields empty with placeholder (not pre-filled); ais_start --start_with uses python3 webbrowser to handle # fragment.
      Changelog: 2.2.0 — AIStudio_755 v1: Defaults modal Tab 1 + Tab 2. Defaults button in header.
      Changelog: 2.1.3 — AIStudio_763: replace lock icon with sparkle on assistant avatar. AIStudio_760: header description truncates with ellipsis. AIStudio_761: Source Dive panel expanded 52%→72%. Page offset fix: #page=N-1 (Chrome iframe PDF viewer is 0-indexed).
@@ -880,8 +880,8 @@
                 </div>
             </div>
 
-            <!-- Keywords — hidden pending AIStudio_618 (M1 keyword steering wiring) -->
-            <div class="section" style="display:none;">
+            <!-- Keywords — AIStudio_618: wired 2026-05-27 -->
+            <div class="section">
                 <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
                 <div class="param-row">
                     <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
@@ -1295,7 +1295,12 @@
                 top_k: parseInt(topKInput.value) || 5,
                 temperature: parseFloat(tempInput.value) || 0.3,
                 hybrid_alpha: 1 - parseFloat(alphaInput.value),
-                // Keywords input wiring TODO — see PIPELINE AIStudio_NNN (M1 keyword steering)
+                keywords: (() => {
+                    const raw = document.getElementById('filterKeywords').value.trim();
+                    if (!raw) return null;
+                    const terms = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                    return terms.length > 0 ? terms : null;
+                })(),
                 conversation_history: conversationHistory.length > 1
                     ? conversationHistory.slice(0, -1).map(msg => ({
                         role: msg.role,

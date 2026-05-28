@@ -1,0 +1,204 @@
+schema_version: '1.1'
+source_id: gleif
+corpus: esef_banks
+scope_id: 9_firms
+generated: '2026-05-27'
+entity_count: 9
+failed_count: 0
+failed: []
+entities:
+- canonical: ABN AMRO Bank N.V.
+  lei: BFXS5XCH7N0Y05NIXW11
+  jurisdiction: NL
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/BFXS5XCH7N0Y05NIXW11
+  scope_name: ABN AMRO
+  aliases:
+  - AAVMY
+  - ABN
+  - ABN AMRO
+  - ABN AMRO BANK
+  - ABN AMRO BANK N.V.
+  - ABN AMRO Bank
+  - ABN AMRO Bank NV
+  - Abn Amro
+  - Abn Amro Bank
+  - Abn Amro Bank N.V.
+  - Abn Amro Bank Nv
+  - abn amro
+  - abn amro bank
+  - abn amro bank n.v.
+  xbrl_name: ABN AMRO Bank N.V.
+  wikidata_label: ABN AMRO
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - AAVMY
+  - ABN
+- canonical: BNP PARIBAS
+  lei: 2763TSAJ0VP4CVMFM028
+  jurisdiction: FR
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/2763TSAJ0VP4CVMFM028
+  scope_name: BNP Paribas
+  aliases:
+  - BNP Paribas
+  - Bnp Paribas
+  - bnp paribas
+  xbrl_name: Groupe BNP Paribas
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: ING GROEP N.V.
+  lei: 549300NYKK9MWM7GGW15
+  jurisdiction: NL
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300NYKK9MWM7GGW15
+  scope_name: ING Group
+  aliases:
+  - ING
+  - ING GROEP
+  - ING GROEP NV
+  - ING GROUP
+  - ING Groep
+  - ING Group
+  - INGA
+  - Ing
+  - Ing Groep
+  - Ing Groep N.V.
+  - Ing Groep Nv
+  - Ing Group
+  - ing groep
+  - ing groep n.v.
+  - ing group
+  xbrl_name: ING Groep N.V.
+  wikidata_label: ING Group
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - ING
+  - INGA
+- canonical: KBC GROEP
+  lei: 213800X3Q9LSAKRUWY91
+  jurisdiction: BE
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/213800X3Q9LSAKRUWY91
+  scope_name: KBC Group
+  aliases:
+  - KBC
+  - KBC GROUP
+  - KBC Group
+  - Kbc
+  - Kbc Groep
+  - Kbc Group
+  - kbc groep
+  - kbc group
+  xbrl_name: KBC Groep NV
+  wikidata_label: KBC Group
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - KBC
+- canonical: Nordea Bank Abp
+  lei: 529900ODI3047E2LIV03
+  jurisdiction: FI
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/529900ODI3047E2LIV03
+  scope_name: Nordea
+  aliases:
+  - NDA DK
+  - NDA FI
+  - NDA SE
+  - NORDEA
+  - NORDEA BANK
+  - NORDEA BANK ABP
+  - Nordea
+  - Nordea Bank
+  - nordea
+  - nordea bank
+  - nordea bank abp
+  xbrl_name: Nordeakoncernen
+  wikidata_label: Nordea
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - NDA DK
+  - NDA FI
+  - NDA SE
+- canonical: Banco Santander S.A.
+  lei: 7245000NHIQTPK869X55
+  jurisdiction: ES
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/7245000NHIQTPK869X55
+  scope_name: Santander
+  aliases:
+  - BANCO SANTANDER
+  - BANCO SANTANDER S.A.
+  - Banco Santander
+  - Banco Santander SA
+  - Banco Santander Sa
+  - SANTANDER
+  - Santander
+  - banco santander
+  - banco santander s.a.
+  - santander
+  xbrl_name: Banco Santander, S.A.
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: SOCIETE GENERALE
+  lei: 213800O66553ESU7RD35
+  jurisdiction: FR
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/213800O66553ESU7RD35
+  scope_name: Societe Generale
+  aliases:
+  - SOCIÉTÉ GÉNÉRALE
+  - Societe Generale
+  - Société Générale
+  - societe generale
+  - société générale
+  xbrl_name: Société Générale
+  wikidata_label: ''
+  wikidata_short_name: ''
+  wikidata_tickers: []
+- canonical: UNICREDIT, SOCIETA' PER AZIONI
+  lei: 549300TRUWO2CD2G5692
+  jurisdiction: IT
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/549300TRUWO2CD2G5692
+  scope_name: UniCredit
+  aliases:
+  - CRI
+  - UCG
+  - UNICREDIT
+  - UNICREDIT SOCIETA PER AZIONI
+  - UniCredit
+  - Unicredit
+  - Unicredit Societa Per Azioni
+  - Unicredit, Societa' Per Azioni
+  - unicredit
+  - unicredit, societa' per azioni
+  xbrl_name: UniCreditS.p.A.
+  wikidata_label: UniCredit
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - CRI
+  - UCG
+- canonical: CREDIT AGRICOLE SA
+  lei: 969500TJ5KRTCJQWXH05
+  jurisdiction: FR
+  status: ACTIVE
+  gleif_url: https://search.gleif.org/#/record/969500TJ5KRTCJQWXH05
+  scope_name: Credit Agricole
+  aliases:
+  - ACA
+  - CREDIT AGRICOLE
+  - CREDIT AGRICOLE GROUP
+  - Credit Agricole
+  - Credit Agricole Group
+  - Credit Agricole Sa
+  - credit agricole
+  - credit agricole group
+  - credit agricole sa
+  xbrl_name: CRÉDIT AGRICOLE S.A.
+  wikidata_label: Credit Agricole Group
+  wikidata_short_name: ''
+  wikidata_tickers:
+  - ACA
