@@ -90,7 +90,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang <list>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -99,57 +99,77 @@ Options:
   --help                 Show this help
   --version              Show script version
   --corpus <name>        Corpus to benchmark (default: demo)
-  --top-k <n>            Number of chunks to retrieve (default: 5)
+  --scope <stem>         Scope stem: filters to a language/firm subset.
+                         Reads benchmarks/<corpus>/<corpus>_<stem>_scope.yaml.
+                         Used to resolve --questions stem.
+                         Example: --scope lang_en
+  --questions <stem>     Question set stem. With --scope, resolves to
+                         benchmarks/<corpus>/<corpus>_<scope>_<stem>_questions.yaml.
+                         Without --scope, tries <corpus>_<stem>_questions.yaml.
+                         Example: --questions basic
+  --top-k <n>            Number of chunks to retrieve (default: from corpus metadata or 10)
   --temperature <t>      LLM temperature (default: 0.3)
   --model <name>         LLM model to use (default: from API config)
+  --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
+  --min-score <f>        Minimum chunk retrieval score threshold (default: from corpus metadata)
+  --lang <list>          Filter questions by language code (space-separated, e.g. --lang en fr)
   --firm <name>          Inject firm filter into all queries (overrides YAML firm fields)
   --subset <group>       Run only questions whose firm is in the named subset
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
-  --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
-  --questions <path>     Path to YAML question file, or bare stem without extension
-                         (e.g. sec_10k_questions_no_filter auto-expands to
-                         benchmarks/<corpus>/sec_10k_questions_no_filter.yaml).
-                         Default: auto-detect from corpus name
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
+  --verbose (-v)         Per-question: show chunks_retrieved, entity_filter, first_source,
+                         difficulty, answer_location
+  --super-verbose (-vv)  Everything in --verbose plus: retrieval query, entity tokens,
+                         keywords sent, model used, and full answer preview
+
+Usage patterns:
+  ais_bench --corpus esef_banks --model gemma3:27b
+  ais_bench --corpus esef_banks --scope lang_en --questions basic --verbose
+  ais_bench --corpus sec_10k --subset big_banks --topics "Capital & Financial Position"
+  ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
 
 Question subset filtering (sec_10k):
   ais_bench --corpus sec_10k --subset big_banks
   ais_bench --corpus sec_10k --topics "AI Risk Evolution,Cybersecurity"
-  ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
   ais_bench --corpus sec_10k --topics "Capital & Financial Position" --subset big_banks
 
-· Subsets compose with --topics and --question-ids using AND
+· Subsets compose with --topics, --question-ids, and --lang using AND
 · Available subsets: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
 · Requires: ais_start must be running
-· Questions: benchmarks/<corpus>/<corpus>_questions.yaml
-· Reports:   benchmarks/<corpus>/reports/ (filename includes filter suffix when active)
+· Questions: benchmarks/<corpus>/<corpus>_questions.yaml (default) or scope/stem resolution
+· Reports:   benchmarks/<corpus>/reports/ (filename includes scope + filter suffix when active)
+· Bundle:    ~/Downloads/benchmark_<corpus>_<scope>_<date>_<time>.zip — upload and say
+             "audit that report" for qualitative review (T2.47)
 
 ---
 
 ## ais_download_esef
-ais_download_esef v1.0.0 — Download ESEF iXBRL annual reports from filings.xbrl.org
+ais_download_esef v1.4.1 — Download ESEF iXBRL annual reports from filings.xbrl.org
 
-Downloads XHTML annual reports for 10 major European financial institutions
+Downloads XHTML annual reports for European financial institutions
 from the XBRL International public filing repository (filings.xbrl.org).
-Covers: ING Group, BNP Paribas, Deutsche Bank, Santander, Société Générale,
-UniCredit, ABN AMRO, KBC Group, Crédit Agricole, Nordea.
+Default: all firms in the operator seed file (17 firms as of 2026-05-29).
+With --scope: only firms in the named scope subset.
 
 Usage: ais_download_esef [options]
 
 Options:
   --help            Show this help
   --version         Show script version
+  --scope STEM      Scope stem: download only firms in esef_banks_<STEM>_scope.yaml
+                    e.g. --scope lang_en downloads 12 EN-primary firms only.
+                    Absence downloads the full seed list (default behavior).
   --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)
   --period-start    Earliest filing period end date (default: 2022-01-01)
   --period-end      Latest filing period end date (default: 2025-12-31)
 
-· Downloads ~10 ESEF XHTML filings (~50-200MB total)
+· Skips files already present in output directory
 · Source: filings.xbrl.org (XBRL International, 24,800+ filings)
 · Files named: <Entity>_ESEF_<year>.xhtml
-· Next step: create corpus 'esef_banks' in AIStudio UI, then ingest
+· Next step: ingest new files via AIStudio UI Upload button
 
 ---
 ## ais_import_knowledge_base

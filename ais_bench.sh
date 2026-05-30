@@ -1,15 +1,19 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.3.8
+# Version: 1.4.1
+# Changelog: 1.4.1 — version bump to match bench.py v2.0.12 capabilities:
+#   --scope, --questions stem resolution, --verbose, --super-verbose,
+#   --min-score, --lang flags now active (all passed through via $@).
 
 
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.8"
+VERSION="1.4.1"
 
 SCRIPT_NAME="ais_bench"
-HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
+REPO="${0:A:h}"
+HELP_FILE="$REPO/ais_command_help.txt"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
@@ -25,8 +29,6 @@ _show_help() {
 
 if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
 if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
-
-REPO="${0:A:h}"
 
 # ANSI helpers
 _dim()  { printf '\033[2m\033[3m%s\033[0m' "$1"; }

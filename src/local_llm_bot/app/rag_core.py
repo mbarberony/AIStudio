@@ -1,5 +1,40 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.7.8
+# Version: 1.8.7
+# Changelog: 1.8.7 — AIStudio_837: unified K formula. Replaces two independent K
+#            calculations (AIStudio_814 GLEIF-based dynamic K + AIStudio_836 entity_filter
+#            _store_k) with single formula: k = max(configured_k, 10 + 2×n_entities).
+#            n = max(GLEIF entity count, entity_filter list length). beta=2 gives
+#            n=1→12, n=2→14, n=3→16, n=5→20. Both Qdrant query and CrossEncoder reranker
+#            now use the same k — eliminates divergence that caused CrossEncoder to rerank
+#            k=30-40 chunks while Qdrant returned only 15-25. Max k=20 targets ~31s/question.
+# Changelog: 1.8.6 — AIStudio_836 (revised v2): simpler linear formula 10 + (n*5).
+#            Decoupled from k. n=1→15, n=2→20, n=3→25, n=4→30. k×4 was flooding LLM context (40-120 chunks) causing
+#            100s+ latency and timeouts. New formula: n=1→15, n=2→20, n=3→25 chunks.
+# Changelog: 1.8.4 — AIStudio_836: multiply k×4 when entity_filter active on vector-only path.
+#            Qdrant HNSW returns 0 results for selective filters (~10% collection) at low k.
+#            Fix is in rag_core only — no qdrant_store change. Both 835 (min_score skip)
+#            and 836 (k×4) are active together.
+# Changelog: 1.8.3 — AIStudio_835: skip min_score filter when entity_filter is active.
+#            Entity post-filter already guarantees source relevance; min_score was
+#            wiping all ESEF hits (high cosine distances due to long iXBRL docs).
+#            Artifacts on esg_cross_firm/digital_ing/digital_nordea post-restart fixed.
+# Changelog: 1.8.2 — AIStudio_826 (revised): revert vector query enrichment — empirically
+#            validated regression on esef_banks (Q1/Q4/Q6 dropped citations). Glossary
+#            expansion now BM25-only. Vector query always uses original text. Lesson: vector
+#            embedding is sensitive to query length/vocabulary shift; BM25 exact-match is not.
+# Changelog: 1.8.1 — AIStudio_826: glossary expansion applied before branch split (reverted).
+#            _load_glossary_sources() loads bis_basel_*_glossary.yaml from
+#            data/knowledge_sources/bis_basel/. _apply_glossary_sources() matches
+#            acronyms/terms in query (word-boundary, case-insensitive) and injects
+#            expansion strings into BM25 query. Separate from entity path so
+#            glossary term matches do not inflate _count_matched_entities() K scaling.
+#            _GS_CACHE mirrors _KS_CACHE pattern. retrieve() merges both expansions.
+# Changelog: 1.7.9 — AIStudio_814: dynamic K as function of entity count. retrieve()
+#            computes effective_k = max(configured_k, 10 * entity_count) where
+#            entity_count = number of GLEIF-known entities matched in the query.
+#            1 entity → K unchanged (≥10), 2 → K≥20, 3 → K≥30, 4+ → K≥40.
+#            Stepping stone toward M2.D p×q×r decomposition (AIStudio_816).
+#            New helper: _count_matched_entities(query, corpus) → int.
 # Changelog: 1.7.8 — AIStudio_801: _load_knowledge_sources() now exposes
 #            wikidata_label, wikidata_short_name, wikidata_tickers from entities
 #            YAML schema_version 1.1. Query-time expansion (_apply_knowledge_sources)
@@ -105,6 +140,12 @@ class AnswerWithCitations:
 # Maps: corpus_name → list of {canonical, aliases: set[str]}
 _KS_CACHE: dict[str, list[dict]] = {}
 
+# AIStudio_815: Glossary sources — lazy-loaded BIS Basel term cache.
+# Corpus-wide (not per-corpus) — same glossary applies to all corpora.
+# _UNLOADED sentinel distinguishes "not yet loaded" from "loaded, empty list".
+_UNLOADED: object = object()
+_GS_CACHE: object = _UNLOADED  # set to list[dict] after first load
+
 
 def _load_knowledge_sources(corpus: str) -> list[dict]:
     """
@@ -193,6 +234,104 @@ def _apply_knowledge_sources(query: str, corpus: str,
     return sorted(expanded) if expanded else existing_keywords
 
 
+def _load_glossary_sources() -> list[dict]:
+    """
+    Load BIS Basel glossary from data/knowledge_sources/bis_basel/*.yaml.
+    Corpus-wide — same glossary applies to all corpora.
+    Returns list of {term, full_form, expansion} dicts. Cached after first load.
+    """
+    global _GS_CACHE  # noqa: PLW0603
+    if _GS_CACHE is not _UNLOADED:
+        return _GS_CACHE or []
+
+    import yaml  # local import
+
+    repo = find_repo_root(Path(__file__))
+    ks_dir = repo / "data" / "knowledge_sources" / "bis_basel"
+    matches = list(ks_dir.glob("bis_basel_*_glossary.yaml")) if ks_dir.exists() else []
+
+    if not matches:
+        _GS_CACHE = []
+        return []
+
+    glossary_path = matches[0]
+    try:
+        with open(glossary_path) as f:
+            data = yaml.safe_load(f)
+        records = []
+        for entry in data.get("glossary", []):
+            term = entry.get("term", "")
+            if not term:
+                continue
+            records.append({
+                "term": term,
+                "full_form": entry.get("full_form", ""),
+                "expansion": entry.get("expansion", ""),
+            })
+        _GS_CACHE = records
+        return records
+    except Exception:  # noqa: BLE001
+        _GS_CACHE = []
+        return []
+
+
+def _apply_glossary_sources(query: str) -> list[str]:
+    """
+    Expand BM25 keywords from BIS Basel glossary.
+
+    For each glossary term found in the query (word-boundary match,
+    case-insensitive), inject its expansion string into the keyword set.
+    This bridges the acronym/full-form vocabulary gap:
+      "FRTB exposure" → BM25 also searches "Fundamental Review Trading Book
+       market risk capital IMA SA"
+
+    Returns list of expansion tokens to append to BM25 query, or [] if none.
+    Kept separate from entity expansion so glossary matches do not affect
+    _count_matched_entities() K scaling (AIStudio_814).
+    """
+    glossary = _load_glossary_sources()
+    if not glossary:
+        return []
+
+    expanded: set[str] = set()
+    for entry in glossary:
+        term = entry["term"]
+        # Word-boundary match — "AT1" should not match inside "PLAT1NUM"
+        pattern = rf"\b{re.escape(term)}\b"
+        if re.search(pattern, query, re.IGNORECASE):
+            expansion = entry.get("expansion", "")
+            if expansion:
+                expanded.update(expansion.split())
+
+    return sorted(expanded) if expanded else []
+
+
+def _count_matched_entities(query: str, corpus: str) -> int:
+    """
+    Return the number of GLEIF-known entities matched in the query.
+
+    Used by retrieve() to compute dynamic K: effective_k = max(configured_k,
+    10 * entity_count). Keeps _apply_knowledge_sources() return signature
+    unchanged. Empty list (no knowledge sources for corpus) → returns 0.
+    """
+    entities = _load_knowledge_sources(corpus)
+    if not entities:
+        return 0
+
+    query_lower = query.lower()
+    count = 0
+    for entity in entities:
+        hit = any(
+            alias and len(alias) > 2 and alias in query_lower
+            for alias in entity["aliases"]
+        )
+        if not hit:
+            hit = bool(entity["scope_name"]) and entity["scope_name"].lower() in query_lower
+        if hit:
+            count += 1
+    return count
+
+
 def _repo_root() -> Path:
     return find_repo_root(Path(__file__))
 
@@ -279,6 +418,18 @@ def retrieve(
         List of RetrievedDoc, reranked by CrossEncoder if available.
     """
     k = int(top_k) if top_k is not None else int(CONFIG.rag.top_k)
+
+    # AIStudio_837: unified K formula — single source of truth for both Qdrant and CrossEncoder.
+    # Replaces AIStudio_814 (10×entity_count, too aggressive) and AIStudio_836 (10+n×5,
+    # entity_filter path only). Formula: k = max(configured_k, 10 + 2×n_entities).
+    # beta=2: n=1→12, n=2→14, n=3→16, n=5→20.
+    # At k=20: CrossEncoder ~16s + generation ~15s = ~31s/question, inside 60s budget.
+    # n = max(GLEIF entity count, entity_filter list length) — take the stronger signal.
+    _entity_count = _count_matched_entities(query, corpus)
+    _ef_count = len(entity_filter) if entity_filter else 0
+    _n = max(_entity_count, _ef_count)
+    k = max(k, 10 + 2 * _n)
+
     collection = f"aistudio_{corpus}"
 
     if True:  # Always query — works for both Qdrant and Chroma via _store
@@ -289,12 +440,16 @@ def retrieve(
         # BM25 channel returns corpus-wide top results regardless of entity_filter,
         # and dominates combine_hybrid() pushing entity-filtered vector hits out of
         # the merged top-K. Vector-only with entity_filter is both correct and fast.
+        # AIStudio_826 (revised): glossary expansion applied to BM25 query only.
+        # Vector query uses original text — enriching the embedding with 15-20 acronym
+        # expansion tokens shifts the vector away from relevant chunks (empirically
+        # validated regression on esef_banks 2026-05-28). BM25 exact-match benefits
+        # from expansion; vector semantic search does not.
+        _glossary_tokens = _apply_glossary_sources(query)
+
         _use_hybrid = hybrid_alpha is not None and _VECTORSTORE != "chroma" and not entity_filter
 
         if _use_hybrid:
-            # Retrieve more candidates per channel than top_k to give the merge step
-            # room to surface chunks that excel in one channel but not the other.
-            # 2x is a reasonable starting heuristic; can be tuned.
             channel_k = max(k * 2, 10)
 
             vector_hits = _store.query(
@@ -305,13 +460,14 @@ def retrieve(
                 entity_filter=entity_filter,
             )
             # AIStudio_801: auto-expand keywords from knowledge sources (GLEIF entity aliases).
-            # Runs before BM25 query construction — no user intervention needed.
             _expanded_keywords = _apply_knowledge_sources(query, corpus, keywords)
 
-            # AIStudio_618: append keywords to BM25 query for boost
+            # AIStudio_618 + AIStudio_815: append GLEIF aliases and glossary terms to BM25 query.
             _bm25_query = query
             if _expanded_keywords:
-                _bm25_query = query + " " + " ".join(_expanded_keywords)
+                _bm25_query = _bm25_query + " " + " ".join(_expanded_keywords)
+            if _glossary_tokens:
+                _bm25_query = _bm25_query + " " + " ".join(_glossary_tokens)
             bm25_hits = _store.query_bm25(
                 query_text=_bm25_query,
                 top_k=channel_k,
@@ -326,7 +482,10 @@ def retrieve(
                 top_k=k,
             )
         else:
-            # Vector-only path — used when entity_filter is set OR hybrid_alpha is None
+            # Vector-only path — original query only (glossary expansion degrades vector recall)
+            # AIStudio_837: use unified k (computed above) for Qdrant query.
+            # Both CrossEncoder and Qdrant now use the same k — no more divergence.
+            # _store_k removed; k is the single K for the entire retrieve() call.
             hits = _store.query(
                 query_text=query,
                 top_k=k,
@@ -345,10 +504,16 @@ def retrieve(
                 if any(token in str(h.metadata.get("source_path", "")) for token in entity_filter)
             ]
 
-        # AIStudio_778: drop BM25-floor chunks below minimum score threshold
-        # AIStudio_778: apply min_score threshold — resolved by api.py, fallback is _MIN_HYBRID_SCORE_FALLBACK
-        _threshold = min_score if min_score is not None else _MIN_HYBRID_SCORE_FALLBACK
-        hits = [h for h in hits if float(h.distance) < _threshold]
+        # AIStudio_778: drop BM25-floor chunks below minimum score threshold.
+        # AIStudio_835: skip min_score filter when entity_filter is active.
+        # Entity post-filter (above) already guarantees source relevance — the
+        # correct firm's chunks are retained regardless of score. ESEF iXBRL
+        # documents produce high cosine distances (low similarity scores) due to
+        # their length and mixed-language content; applying min_score on top of
+        # entity_filter wipes all hits and returns empty docs → Artifact answers.
+        if not entity_filter:
+            _threshold = min_score if min_score is not None else _MIN_HYBRID_SCORE_FALLBACK
+            hits = [h for h in hits if float(h.distance) < _threshold]
 
         max_d = CONFIG.rag.max_distance
         if max_d is not None:

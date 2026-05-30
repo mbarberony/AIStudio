@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def ollama_generate(*, model: str, prompt: str, system: str | None = None) -> str:
+def ollama_generate(*, model: str, prompt: str, system: str | None = None, temperature: float | None = None) -> str:
     """
     Generate text using Ollama.
     Requires the Ollama server to be installed and running.
@@ -13,6 +13,8 @@ def ollama_generate(*, model: str, prompt: str, system: str | None = None) -> st
     kwargs: dict[str, Any] = {"model": model, "prompt": prompt}
     if system:
         kwargs["system"] = system
+    if temperature is not None:
+        kwargs["options"] = {"temperature": temperature}
 
     resp = ollama.generate(**kwargs)
     return str(resp.get("response", "")).strip()

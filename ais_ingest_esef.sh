@@ -1,7 +1,12 @@
 #!/usr/bin/env zsh
 # ais_ingest_esef.sh — Ingest an ESEF iXBRL corpus into AIStudio
-# Version: 1.0.3
+# Version: 1.1.0
 # Changelog:
+#   1.1.0 — Incremental ingest by default. Remove Qdrant guard that blocked
+#           without --force. Python ingest engine already skips unchanged files
+#           via manifest (files_skipped_unchanged). --force now means explicit
+#           full rebuild only, not required for adding new files.
+#           Time estimate now reflects new files only when corpus exists.
 #   1.0.3 — Wording: "should not be closed" (clearer intent).
 #   1.0.2 — Dynamic time estimate from avg_seconds_per_file in corpus_metadata.yaml.
 #           M4 Air ratio ~2.5x M4 Pro applied to observed avg. Fallback to
@@ -15,7 +20,7 @@
 # ── Source guard ─────────────────────────────────────────────────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.0.3"
+VERSION="1.1.0"
 SCRIPT_NAME="ais_ingest_esef"
 REPO="${0:A:h}"
 HELP_FILE="$REPO/ais_command_help.txt"
@@ -31,7 +36,8 @@ _show_help() {
         echo ""
         echo "Options:"
         echo "  --corpus <name>   Corpus name (default: esef_banks)"
-        echo "  --force           Re-ingest even if corpus already indexed in Qdrant"
+        echo "  --force           Full rebuild — wipe collection and re-ingest all files"
+        echo "                    Default (no --force): incremental — only new/changed files"
         echo "  --verbose         Print full JSON result payload after summary"
         echo "  --help            Show this help and exit"
         echo "  --version         Print version and exit"
@@ -126,7 +132,7 @@ if ! curl -sf "$API/health" > /dev/null 2>&1; then
 fi
 echo "✅ Backend healthy."
 
-# 4. Qdrant collection check — warn if already indexed, require --force
+# 4. Qdrant collection check — info only, no gate
 COLLECTION="aistudio_${CORPUS}"
 QDRANT_RESPONSE=$(curl -sf "$QDRANT/collections/$COLLECTION" 2>/dev/null)
 EXISTING_CHUNKS=""
@@ -137,13 +143,10 @@ if [[ -n "$QDRANT_RESPONSE" ]]; then
 fi
 
 if [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" != "?" && "$EXISTING_CHUNKS" -gt 0 ]]; then
-    if [[ "$FORCE" -eq 0 ]]; then
-        echo "⚠ Corpus '$CORPUS' already indexed in Qdrant: ${EXISTING_CHUNKS} chunks."
-        echo "· Re-ingesting will wipe and rebuild the collection (~${TOTAL_MB} MB · ~20 min)."
-        echo "· To proceed: $SCRIPT_NAME --corpus $CORPUS --force"
-        exit 1
+    if [[ "$FORCE" -eq 1 ]]; then
+        echo "⚠ --force: wiping existing collection ($EXISTING_CHUNKS chunks) and re-ingesting all files."
     else
-        echo "⚠ --force: wiping existing collection ($EXISTING_CHUNKS chunks) and re-ingesting."
+        echo "ℹ Corpus '$CORPUS' already indexed: ${EXISTING_CHUNKS} chunks — incremental ingest (new/changed files only)."
     fi
 else
     echo "✅ No existing Qdrant collection — clean ingest."
@@ -180,18 +183,23 @@ except: print('')
 fi
 
 if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
-    # Use observed avg from previous ingest, with M4 Air ratio ~2.5x M4 Pro
     ESTIMATE_PRO=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
     ESTIMATE_AIR=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * 2.5 * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
 else
-    # No prior ingest data — use hardware constants
     ESTIMATE_PRO=$(( FILE_COUNT * 130 / 60 ))
     ESTIMATE_AIR=$(( FILE_COUNT * 320 / 60 ))
 fi
 
+# For incremental runs, note that unchanged files will be skipped
+if [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" -gt 0 && "$FORCE" -eq 0 ]]; then
+    INGEST_NOTE=" (incremental — unchanged files skipped)"
+else
+    INGEST_NOTE=" (full rebuild)"
+fi
+
 echo "--- Ingesting"
 # STD §1+§8: ▶ action line with · separators between fields, trailing ...
-echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air..."
+echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}..."
 
 # ── Ingest ────────────────────────────────────────────────────────────────────
 cd "$REPO"
@@ -215,7 +223,8 @@ if [[ "$INGEST_EXIT" -eq 0 ]]; then
     echo "✅ Corpus '$CORPUS' ready."
     echo "· Select '$CORPUS' in the AIStudio corpus dropdown to query."
     echo "· To benchmark : ais_bench --corpus $CORPUS"
-    echo "· To re-ingest : $SCRIPT_NAME --corpus $CORPUS --force"
+    echo "· To add files : ais_download_esef --scope <scope> && $SCRIPT_NAME --corpus $CORPUS"
+    echo "· To rebuild   : $SCRIPT_NAME --corpus $CORPUS --force"
 else
     echo "❌ Ingest exited with error code $INGEST_EXIT."
     echo "· Check output above for details."

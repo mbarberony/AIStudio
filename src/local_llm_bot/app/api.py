@@ -1,4 +1,18 @@
-# Version: 1.8.3
+# Version: 1.8.7
+# Changelog: 1.8.7 — AIStudio_841: add retrieval_query + model_used to AskResponse;
+#             add keywords to RetrieveRequest; return retrieval_query + min_score_used
+#             from /debug/retrieve. Makes query augmentation visible in API responses.
+# Changelog: 1.8.6 — AIStudio_839: wire temperature through AskRequest → generate_answer_with_citations
+#             → ollama_generate. Previously temperature was in AskRequest but never passed
+#             to the LLM — all runs used Ollama default temperature regardless of --temperature flag.
+#             Also: firm/year confirmed absent from AskRequest (already placebo at API level,
+#             AIStudio_589 — no change needed).
+# Changelog: 1.8.5 — AIStudio_838: add model field to AskRequest; pass through to
+#             ollama_generate. Previously model was silently ignored — all bench runs
+#             used CONFIG.rag.default_model (llama3.1:8b) regardless of --model flag.
+# Changelog: 1.8.4 — AIStudio_837: implicit citation fallback in generate_answer_with_citations.
+#             When LLM omits [N] markers (entity_filter single-source dedup), surface
+#             retrieved unique docs as implicit citations.
 # Changelog: 1.8.3 — AIStudio_618: keywords field on AskRequest — passed to BM25
 #             channel as boost terms. Comma-separated list from UI KEYWORDS field.
 # Changelog: 1.8.2 — AIStudio_798: entity_filter field on AskRequest + RetrieveRequest.
@@ -272,6 +286,8 @@ def generate_answer_with_citations(
     docs: list[RetrievedDoc],
     conversation_history: list[dict[str, str]] | None = None,
     corpus: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """Generate answer with citation support"""
 
@@ -368,7 +384,7 @@ def generate_answer_with_citations(
         prompt = f"Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
 
     # Generate answer
-    answer = ollama_generate(model=CONFIG.rag.default_model, prompt=prompt, system=system)
+    answer = ollama_generate(model=model or CONFIG.rag.default_model, prompt=prompt, system=system, temperature=temperature)
 
     # Strip any trailing References/Sources block the LLM appended despite instructions.
     # Handles both newline-prefixed and inline variants (Mistral:7b appends inline).
@@ -468,6 +484,7 @@ class AskRequest(BaseModel):
     min_score: float | None = None    # AIStudio_778: per-query min score threshold override
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
     keywords: list[str] | None = None         # AIStudio_618: BM25 boost terms from UI KEYWORDS field
+    model: str | None = None                   # Per-request model override; falls back to CONFIG.rag.default_model
 
 
 class CitationResponse(BaseModel):
@@ -482,6 +499,8 @@ class AskResponse(BaseModel):
     answer: str
     citations: list[CitationResponse] | None = None  # NEW: Citation metadata
     has_citations: bool = False  # NEW: Flag indicating if citations are present
+    retrieval_query: str | None = None   # AIStudio_841: expanded query actually sent to retrieve()
+    model_used: str | None = None        # AIStudio_841: model actually used for generation
 
 
 class RetrieveRequest(BaseModel):
@@ -491,6 +510,7 @@ class RetrieveRequest(BaseModel):
     hybrid_alpha: float | None = None  # M2.A: per-call hybrid weight override
     min_score: float | None = None    # AIStudio_778: per-call min score threshold override
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
+    keywords: list[str] | None = None  # AIStudio_841: BM25 boost terms for debug retrieval
 
 
 class CorpusInfo(BaseModel):
@@ -628,6 +648,8 @@ async def ask(req: AskRequest) -> AskResponse:
         docs=docs,
         conversation_history=req.conversation_history,
         corpus=req.corpus,
+        model=req.model or None,
+        temperature=req.temperature if req.temperature is not None else None,
     )
 
     # Convert to response format
@@ -636,7 +658,11 @@ async def ask(req: AskRequest) -> AskResponse:
     )
 
     return AskResponse(
-        answer=result["answer"], citations=citation_responses, has_citations=result["has_citations"]
+        answer=result["answer"],
+        citations=citation_responses,
+        has_citations=result["has_citations"],
+        retrieval_query=retrieval_query,  # always return — shows query after entity expansion
+        model_used=req.model or CONFIG.rag.default_model,
     )
 
 
@@ -649,10 +675,15 @@ async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     _corpus_min_score_dbg = _corpus_meta_dbg.get("default_min_score")
     min_score_dbg = req.min_score if req.min_score is not None else (_corpus_min_score_dbg if _corpus_min_score_dbg is not None else 0.5)
     docs = retrieve(
-        query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score_dbg, entity_filter=req.entity_filter or None
+        query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha,
+        min_score=min_score_dbg, entity_filter=req.entity_filter or None,
+        keywords=req.keywords or None,
     )
     return {
         "count": len(docs),
+        "retrieval_query": retrieval_query,
+        "retrieval_query_expanded": retrieval_query != req.query,
+        "min_score_used": min_score_dbg,
         "docs": [
             {
                 "id": d.id,
