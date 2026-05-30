@@ -90,7 +90,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang <list>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--augment-from <src>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang <list>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -124,6 +124,11 @@ Options:
                          difficulty, answer_location
   --super-verbose (-vv)  Everything in --verbose plus: retrieval query, entity tokens,
                          keywords sent, model used, and full answer preview
+  --augment-from <src>   Which hint source to forward to retrieval. One of:
+                         scaffold = YAML entity_filter + keywords (hand-fed isolation);
+                         ui = YAML keywords + server auto-parse of the question (DEFAULT,
+                         the production path); auto = auto-parse only, no UI keywords;
+                         none = no hints, cold vector baseline.
 
 Usage patterns:
   ais_bench --corpus esef_banks --model gemma3:27b
