@@ -120,3 +120,5 @@ data/knowledge_sources/bis_basel/
 
 # AIStudio — BIS Basel glossary (generated, gitignored)
 data/knowledge_sources/bis_basel/
+ais_setup_knowledge_sec_10k.sh
+ais_setup_knowledge_esef.sh
