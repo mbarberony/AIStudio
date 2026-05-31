@@ -1,4 +1,19 @@
-# Version: 1.8.7
+# Version: 1.9.4
+# Changelog: 1.9.4 — AIStudio_876: _detect_query_entities now delegates to rag_core._detect_entities —
+#            expansion + filter share ONE GLEIF-sourced detector. api.py normalizer_entity alias map retired.
+# Changelog: 1.9.3 — AIStudio_875 fix: _detect_query_entities word-boundary match (\\b) — token
+#            "morgan" no longer falsely matches inside "jpmorgan" (false MORGAN STANLEY expansion).
+# Changelog: 1.9.2 — AIStudio_876 lint fix: I001 sort rag_core import block (_resolve_entity_filter_tokens).
+# Changelog: 1.9.1 — AIStudio_876: _auto_entity_filter now sources the canonical→source_path
+#            token from the declared entity KB via rag_core._resolve_entity_filter_tokens
+#            (scope_name-derived), replacing the ad-hoc filename-split map. Removes
+#            _build_canonical_sourcepath_map + _CANONICAL_TO_SOURCEPATH_CACHE. Unifies
+#            expansion + filter on one knowledge base.
+# Changelog: 1.9.0 — AIStudio_875: --query-expansion + --entity-filter support. AskRequest gains
+#            query_expansion:int (entity-name expansion repeat, 0=off) and entity_filter_mode:str
+#            (none|yaml|auto). New _detect_query_entities (shared scan), _expand_query_entities now
+#            takes repeat count, _auto_entity_filter + _build_canonical_sourcepath_map wire detected
+#            entities into the Qdrant source_path filter (the F8 missing piece). Replaces bench --augment-from.
 # Changelog: 1.8.7 — AIStudio_841: add retrieval_query + model_used to AskResponse;
 #             add keywords to RetrieveRequest; return retrieval_query + min_score_used
 #             from /debug/retrieve. Makes query augmentation visible in API responses.
@@ -84,7 +99,12 @@ from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS
 from local_llm_bot.app.ollama_client import ollama_generate
-from local_llm_bot.app.rag_core import RetrievedDoc, retrieve
+from local_llm_bot.app.rag_core import (
+    RetrievedDoc,
+    _detect_entities,
+    _resolve_entity_filter_tokens,
+    retrieve,
+)
 from local_llm_bot.app.utils.corpus_paths import corpus_exists, corpus_paths, list_corpora
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
@@ -210,42 +230,74 @@ def _build_entity_alias_map(corpus_name: str) -> dict[str, str]:
 _ENTITY_ALIAS_CACHE: dict[str, dict[str, str]] = {}
 
 
-def _expand_query_entities(query: str, corpus_name: str) -> str:
+def _detect_query_entities(query: str, corpus_name: str) -> list[str]:
     """
-    AIStudio_718 — Expand entity mentions in query to canonical corpus names.
+    AIStudio_876 — Detect canonical entities mentioned in a query.
 
-    Detects entity tokens in the query and appends canonical entity names so
-    BM25 keyword matching hits the right chunks. Example:
-      "what is the CET1 ratio for BNP" →
-      "what is the CET1 ratio for BNP [Groupe BNP Paribas]"
-
-    This is a lightweight pre-retrieval rewrite — it does NOT modify the query
-    sent to the LLM, only the query used for vector + BM25 retrieval.
-    Falls back to original query silently on any error.
+    Now delegates to rag_core._detect_entities — THE single detection function
+    (GLEIF-KB-sourced, accent+case-insensitive, word-boundary matched). Expansion
+    and the entity filter therefore use identical detection: there is no longer a
+    separate api.py alias map built from normalizer_entity. Returns canonical names.
     """
     try:
-        global _ENTITY_ALIAS_CACHE
-        if corpus_name not in _ENTITY_ALIAS_CACHE:
-            _ENTITY_ALIAS_CACHE[corpus_name] = _build_entity_alias_map(corpus_name)
-        alias_map = _ENTITY_ALIAS_CACHE[corpus_name]
-        if not alias_map:
+        return [e["canonical"] for e in _detect_entities(query, corpus_name)]
+    except Exception:
+        return []
+
+
+def _expand_query_entities(query: str, corpus_name: str, repeat: int = 1) -> str:
+    """
+    AIStudio_718 / AIStudio_875 — Substitute entity mentions in a query with the
+    canonical corpus name, optionally repeated for BM25 term-weighting.
+
+    `repeat` (the --query-expansion N knob):
+      0 → no expansion, query returned unchanged.
+      1 → each detected canonical name is appended once (substitution-equivalent;
+          BM25 is bag-of-tokens so position is immaterial, and appending avoids
+          mangling the question on a partial match — see HOWTO_OPS / 2026-05-30).
+      N>1 → the canonical name is appended N times, increasing its BM25 weight.
+
+    Rewrite affects ONLY the retrieval query (vector + BM25), never the query sent
+    to the LLM (the user sees their own words). Silent fallback on any error.
+    Example (repeat=1): "CET1 ratio for BNP" → "CET1 ratio for BNP Groupe BNP Paribas"
+    """
+    try:
+        if repeat <= 0:
             return query
-
+        detected = _detect_query_entities(query, corpus_name)
         query_lower = query.lower()
-        expansions: list[str] = []
-        already_present: set[str] = set()
-
-        for token, canonical in alias_map.items():
-            # Only expand if token appears in query but full canonical name does not
-            if token in query_lower and canonical.lower() not in query_lower and canonical not in already_present:
-                expansions.append(canonical)
-                already_present.add(canonical)
-
-        if expansions:
-            return query + " " + " ".join(expansions)
+        additions: list[str] = []
+        for canonical in detected:
+            # Skip if the canonical full name is already literally in the query
+            if canonical.lower() in query_lower:
+                continue
+            additions.extend([canonical] * repeat)
+        if additions:
+            return query + " " + " ".join(additions)
     except Exception:
         pass
     return query
+
+
+def _auto_entity_filter(query: str, corpus_name: str) -> list[str] | None:
+    """
+    AIStudio_875 / AIStudio_876 — Build a retrieval entity_filter from entities
+    detected in the query (the --entity-filter auto mode). This is the wiring that
+    was missing: recognized entities feed not just the query string but the Qdrant
+    source_path filter, so off-target firms (BlackRock, BNY Mellon, …) are EXCLUDED,
+    not merely out-ranked.
+
+    AIStudio_876: the canonical→source_path-token mapping is now sourced from the
+    declared entity knowledge base (rag_core._resolve_entity_filter_tokens, keyed off
+    each entity's scope_name), unifying expansion and filter on one KB rather than an
+    ad-hoc filename split. Returns a list of source_path tokens, or None if nothing
+    detected / no KB for this corpus.
+    """
+    try:
+        tokens = _resolve_entity_filter_tokens(query, corpus_name)
+        return tokens or None
+    except Exception:
+        return None
 
 
 # AIStudio_124 (partial): system prompt base loaded from prompts/system.txt
@@ -485,6 +537,8 @@ class AskRequest(BaseModel):
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
     keywords: list[str] | None = None         # AIStudio_618: BM25 boost terms from UI KEYWORDS field
     model: str | None = None                   # Per-request model override; falls back to CONFIG.rag.default_model
+    query_expansion: int = 1                    # AIStudio_875: entity-name expansion repeat count (0=off, 1=once, N=weighted)
+    entity_filter_mode: str = "auto"            # AIStudio_875: none | yaml | auto. 'auto' self-populates entity_filter from detected entities when none supplied.
 
 
 class CitationResponse(BaseModel):
@@ -629,10 +683,24 @@ async def ask(req: AskRequest) -> AskResponse:
     # If both are None, retrieve() runs in vector-only mode (preserves pre-M2.A behavior).
     hybrid_alpha = req.hybrid_alpha if req.hybrid_alpha is not None else CONFIG.rag.hybrid_alpha
 
-    # AIStudio_718 — expand entity mentions in query to canonical corpus names before
-    # retrieval. "BNP Paribas" → "BNP Paribas Groupe BNP Paribas" so BM25 hits the
-    # right chunks. Original query preserved for LLM generation (user sees their words).
-    retrieval_query = _expand_query_entities(req.query, req.corpus)
+    # AIStudio_718 / AIStudio_875 — expand entity mentions in query to canonical corpus
+    # names before retrieval. repeat count from --query-expansion (req.query_expansion).
+    # Original query preserved for LLM generation (user sees their words).
+    retrieval_query = _expand_query_entities(req.query, req.corpus, repeat=req.query_expansion)
+
+    # AIStudio_875 — resolve the effective entity_filter from entity_filter_mode:
+    #   none → no filter; yaml → caller-supplied req.entity_filter as-is;
+    #   auto → if caller supplied none, self-populate from entities detected in the query
+    #          (maps recognized canonical entity → source_path token). This is the wiring
+    #          that turns recognition into an actual retrieval-time constraint, so off-target
+    #          firms are EXCLUDED rather than merely out-ranked (the F8 finding, 2026-05-30).
+    _mode = (req.entity_filter_mode or "auto").lower()
+    if _mode == "none":
+        _effective_entity_filter = None
+    elif _mode == "yaml":
+        _effective_entity_filter = req.entity_filter or None
+    else:  # auto
+        _effective_entity_filter = req.entity_filter or _auto_entity_filter(req.query, req.corpus)
 
     # Retrieve relevant documents
     # Resolve min_score: per-request → corpus metadata default → hardcoded fallback
@@ -640,7 +708,7 @@ async def ask(req: AskRequest) -> AskResponse:
     _corpus_min_score = _corpus_meta.get("default_min_score")
     _MIN_SCORE_FALLBACK = 0.5
     min_score = req.min_score if req.min_score is not None else (_corpus_min_score if _corpus_min_score is not None else _MIN_SCORE_FALLBACK)
-    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=req.entity_filter or None, keywords=req.keywords or None)
+    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=_effective_entity_filter, keywords=req.keywords or None)
 
     # Generate answer with citations
     result = generate_answer_with_citations(

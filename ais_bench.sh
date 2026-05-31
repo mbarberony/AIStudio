@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.5.0
+# Version: 1.6.0
+# Changelog: 1.6.0 — version bump to match bench.py v2.2.0: --augment-from REPLACED by
+#   --query-expansion N + --entity-filter {none,yaml,auto} (AIStudio_875). Passthrough via "$@".
 # Changelog: 1.5.0 — version bump to match bench.py v2.1.0 capability: --augment-from
 #   {scaffold,ui,auto,none} (AIStudio_867) passes through via "$@" (passthrough wrapper,
 #   no logic change). Default ui = production A3 path (UI keywords + server auto-parse).
@@ -12,7 +14,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.5.0"
+VERSION="1.6.0"
 
 SCRIPT_NAME="ais_bench"
 REPO="${0:A:h}"

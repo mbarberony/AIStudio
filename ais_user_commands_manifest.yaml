@@ -1,11 +1,11 @@
 version: 1.0.0
 regenerated_from: meta/bundle_manifest.yaml
-regenerated_at: '2026-05-30T16:39:01'
+regenerated_at: '2026-05-30T20:25:06'
 commands:
 - alias: ais_bench
   path: ais_bench.sh
   description: "Run AIStudio benchmark \u2014 defaults: demo corpus, top-k 5, temperature\
-    \ 0.3, --augment-from ui (UI keywords + server auto-parse)"
+    \ 0.3, --query-expansion 1, --entity-filter auto"
 - alias: ais_download_sec_10k
   path: ais_download_sec_10k.sh
   description: Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/

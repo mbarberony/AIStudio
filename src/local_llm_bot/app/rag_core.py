@@ -1,5 +1,15 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.8.7
+# Version: 1.9.3
+# Changelog: 1.9.3 — lint: SIM102 combine nested if in _detect_entities (no logic change).
+# Changelog: 1.9.2 — AIStudio_876: SINGLE entity detector _detect_entities + _normalize_for_match
+#            (lower+NFKD de-accent+word-boundary). _resolve_entity_filter_tokens AND
+#            _apply_knowledge_sources both call it — one matching rule, no drift. accent-insensitive.
+# Changelog: 1.9.1 — AIStudio_876 fix: _resolve_entity_filter_tokens word-boundary match (\\b)
+#            for alias + scope_name — prevents short-alias substring false-positives.
+# Changelog: 1.9.0 — AIStudio_876: KB-sourced entity filter. New _scope_name_to_source_token
+#            + _resolve_entity_filter_tokens — detect query entities via the same alias set
+#            used for expansion, derive each one's source_path token (scope_name spaces→_),
+#            returned for api.py _auto_entity_filter. Unifies expansion + filter on one entity KB.
 # Changelog: 1.8.7 — AIStudio_837: unified K formula. Replaces two independent K
 #            calculations (AIStudio_814 GLEIF-based dynamic K + AIStudio_836 entity_filter
 #            _store_k) with single formula: k = max(configured_k, 10 + 2×n_entities).
@@ -62,6 +72,7 @@ from __future__ import annotations
 
 import os as _os
 import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -190,6 +201,82 @@ def _load_knowledge_sources(corpus: str) -> list[dict]:
         return []
 
 
+def _scope_name_to_source_token(scope_name: str) -> str:
+    """
+    AIStudio_876 — Derive the Qdrant source_path filter token from an entity's
+    scope_name. Empirically (2026-05-30) both sec_10k and esef_banks name their
+    upload files with the firm's scope_name, spaces→underscores, as the prefix
+    before the doc-type marker:
+        "BNP Paribas"     → BNP_Paribas   (BNP_Paribas_ESEF_2025.xhtml)
+        "Bank of America" → Bank_of_America (Bank_of_America_10K_...htm)
+    The token is matched as a source_path substring by qdrant_store._build_entity_filter.
+    """
+    return scope_name.strip().replace(" ", "_")
+
+
+def _normalize_for_match(s: str) -> str:
+    """
+    AIStudio_876 — The single normalization applied to BOTH the query and every
+    alias before comparison, so all detection paths treat case and accents
+    identically: NFKD accent-strip → ASCII → lowercase. This is the one place
+    normalization is defined; every entity-detection consumer uses _detect_entities
+    (below), which calls this — there is no second matching rule anywhere.
+    """
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii").lower()
+
+
+def _detect_entities(query: str, corpus: str) -> list[dict]:
+    """
+    AIStudio_876 — THE single entity-detection function. Given a query and corpus,
+    return the list of entity records (from the GLEIF KB) the query mentions.
+
+    Matching rule (identical for every caller):
+      • normalize query and each alias/scope_name via _normalize_for_match
+        (accent-insensitive + case-insensitive)
+      • word-boundary match so a short alias never matches inside an unrelated
+        word ("morgan" must not hit "jpmorgan")
+      • aliases must be > 2 chars to be considered
+
+    Every consumer — entity filter (_resolve_entity_filter_tokens), BM25 expansion
+    (_apply_knowledge_sources), and api.py query expansion — calls THIS. There is no
+    second copy of the matching logic. Returns matched entity records (possibly empty).
+    """
+    entities = _load_knowledge_sources(corpus)
+    if not entities:
+        return []
+    q = _normalize_for_match(query)
+    matched: list[dict] = []
+    for entity in entities:
+        hit = False
+        for alias in entity["aliases"]:
+            if not alias or len(alias) <= 2:
+                continue
+            if re.search(rf"\b{re.escape(_normalize_for_match(alias))}\b", q):
+                hit = True
+                break
+        if not hit and entity["scope_name"] and re.search(
+            rf"\b{re.escape(_normalize_for_match(entity['scope_name']))}\b", q
+        ):
+            hit = True
+        if hit:
+            matched.append(entity)
+    return matched
+
+
+def _resolve_entity_filter_tokens(query: str, corpus: str) -> list[str]:
+    """
+    AIStudio_876 — KB-sourced entity filter. Detects entities via the single
+    _detect_entities function (shared with expansion) and maps each to its
+    source_path filter token. Returns [] if no entity detected or no KB exists.
+    """
+    tokens: list[str] = []
+    for entity in _detect_entities(query, corpus):
+        tok = _scope_name_to_source_token(entity["scope_name"])
+        if tok and tok not in tokens:
+            tokens.append(tok)
+    return tokens
+
+
 def _apply_knowledge_sources(query: str, corpus: str,
                               existing_keywords: list[str] | None) -> list[str] | None:
     """
@@ -207,26 +294,14 @@ def _apply_knowledge_sources(query: str, corpus: str,
     if not entities:
         return existing_keywords
 
-    query_lower = query.lower()
     expanded: set[str] = set(existing_keywords or [])
     matched = False
 
-    for entity in entities:
-        # Check if any alias appears in the query
-        hit = False
-        for alias in entity["aliases"]:
-            if alias and len(alias) > 2 and alias in query_lower:
-                hit = True
-                break
-        # Also check scope_name directly
-        if not hit and entity["scope_name"].lower() in query_lower:
-            hit = True
-
-        if hit:
-            # Add all aliases for this entity to the BM25 query expansion
-            expanded.update(a for a in entity["aliases"] if len(a) > 1)
-            expanded.add(entity["canonical"])
-            matched = True
+    # Use the SINGLE detector — identical matching to the entity filter.
+    for entity in _detect_entities(query, corpus):
+        expanded.update(a for a in entity["aliases"] if len(a) > 1)
+        expanded.add(entity["canonical"])
+        matched = True
 
     if not matched and not existing_keywords:
         return None  # preserve no-keywords path — no expansion, no overhead

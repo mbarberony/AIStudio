@@ -117,14 +117,21 @@ from pathlib import Path
 
 # Version — single source of truth for urc_deploy and runtime display.
 # Must be within first 8KB (extract_version limit). No # Version: comment.
-# Changelog: 2.1.0 — AIStudio_867: add --augment-from {scaffold,ui,all,auto,none} (default ui).
+# Changelog: 2.2.1 — AIStudio_875 lint fixes: F821 _eff_kw→_q_kw straggler (super-verbose path),
+#            SIM108 ternary for _eff_ef.
+# Changelog: 2.2.0 — AIStudio_875: REPLACE --augment-from with --query-expansion N (default 1) +
+#            --entity-filter {none,yaml,auto} (default auto). Two orthogonal axes the conflated
+#            --augment-from could not express (F8 finding). Maps: scaffold≡--query-expansion 1 --entity-filter yaml;
+#            auto≡--query-expansion 1 --entity-filter auto; none≡--query-expansion 0 --entity-filter none.
+#            Server (api.py v1.9.0) does the auto entity→source_path filter wiring.
+# Changelog: 2.1.0 — AIStudio_867: add --augment-from {scaffold,ui,auto,none} (default ui).
 #            Controls which hint source bench forwards to retrieval, isolating the
 #            scaffold-vs-auto frontier. DEFAULT CHANGE: un-flagged ais_bench now forwards
 #            UI keywords only (no hand-fed entity_filter) — was implicit scaffold. Pass
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.1.0"
+VERSION = "2.2.1"
 
 # ── Firm subset registry ──────────────────────────────────────────────────────
 # Hardwired firm groups for --subset filtering. Mirrors the FIRMS list in
@@ -300,17 +307,30 @@ def parse_args() -> argparse.Namespace:
     )
 
     p.add_argument(
-        "--augment-from",
-        dest="augment_from",
-        default="ui",
-        choices=["scaffold", "ui", "auto", "none"],
+        "--query-expansion",
+        dest="query_expansion",
+        type=int,
+        default=1,
+        metavar="N",
         help=(
-            "Which hint source to forward to retrieval (AIStudio_867). "
-            "scaffold = YAML entity_filter + keywords (hand-fed isolation, B1); "
-            "ui = YAML keywords + server auto-parse of the question (production A3 path, DEFAULT); "
-            "auto = no UI keywords, auto-parse only (B3); "
-            "none = no hints, no expansion (cold vector baseline, B2). "
-            "Isolates the hint-source variable for the scaffold-vs-auto frontier."
+            "Entity-name expansion repeat count (AIStudio_875). 0 = off (raw query); "
+            "1 = each recognized entity's canonical name appended once (DEFAULT); "
+            "N>1 = appended N times to weight BM25. Affects the retrieval query only, "
+            "never the query sent to the LLM."
+        ),
+    )
+
+    p.add_argument(
+        "--entity-filter",
+        dest="entity_filter_mode",
+        default="auto",
+        choices=["none", "yaml", "auto"],
+        help=(
+            "Source of the Qdrant retrieval filter (AIStudio_875). "
+            "none = no filter (all firms eligible); "
+            "yaml = use the question file's entity_filter field (hand-fed scaffold); "
+            "auto = detect entities from the query and filter to them (DEFAULT — the "
+            "server maps recognized entities to source_path tokens). Replaces --augment-from."
         ),
     )
 
@@ -555,6 +575,8 @@ def run_query(
     min_score: float | None = None,
     entity_filter: list[str] | None = None,
     keywords: list[str] | None = None,
+    query_expansion: int = 1,
+    entity_filter_mode: str = "auto",
 ) -> dict:
     import urllib.request
 
@@ -563,6 +585,8 @@ def run_query(
         "corpus": corpus,
         "top_k": top_k,
         "temperature": temperature,
+        "query_expansion": query_expansion,
+        "entity_filter_mode": entity_filter_mode,
     }
     if model:
         payload["model"] = model
@@ -1020,7 +1044,7 @@ def main() -> None:
     _min_label   = f"  |  Min Score: {args.min_score}" if args.min_score is not None else ""
     print(
         f"· Corpus: {args.corpus}  |  Top K: {args.top_k}  |  Temperature: {args.temperature}"
-        f"{_alpha_label}{_min_label}  |  Model: {model_label}  |  Augment-from: {args.augment_from}"
+        f"{_alpha_label}{_min_label}  |  Model: {model_label}  |  Query-expansion: {args.query_expansion}  |  Entity-filter: {args.entity_filter_mode}"
     )
 
     # --- Firm override message
@@ -1037,25 +1061,16 @@ def main() -> None:
         effective_firm = args.firm if args.firm else q.get("firm")
         print(f"▶ [{i}/{len(questions)}] {q['description']}...")
 
-        # AIStudio_867: --augment-from decides which hints bench forwards. The server's
-        # auto-expansion (_apply_knowledge_sources / glossary) fires only on the hybrid
-        # path, which requires entity_filter ABSENT and hybrid_alpha SET — so 'auto'
-        # suppresses entity_filter and ensures alpha; 'none' suppresses alpha for a true
-        # cold vector baseline (full isolation also needs --expand off, AIStudio_867b).
+        # AIStudio_875: --query-expansion and --entity-filter map directly to server request
+        # fields. --entity-filter yaml forwards the question's entity_filter; none/auto leave it
+        # to the server (auto self-populates from detected entities). Keywords always forward
+        # (independent BM25 channel). hybrid_alpha enables the hybrid path the server expansion uses.
         _q_ef = q.get("entity_filter") or None
         _q_kw = q.get("keywords") or None
-        _af = args.augment_from
-        if _af == "scaffold":
-            _eff_ef, _eff_kw = _q_ef, _q_kw
-        elif _af == "ui":
-            _eff_ef, _eff_kw = None, _q_kw
-        else:  # auto, none
-            _eff_ef, _eff_kw = None, None
-        _eff_alpha = args.alpha
-        if _af == "auto" and _eff_alpha is None:
-            _eff_alpha = 0.5  # enable hybrid so server query-analysis expansion fires
-        elif _af == "none":
-            _eff_alpha = None  # cold vector-only baseline (no BM25 expansion path)
+        _mode = args.entity_filter_mode
+        # yaml → hand-feed the question's entity_filter; none/auto → server decides (auto self-populates)
+        _eff_ef = _q_ef if _mode == "yaml" else None
+        _eff_alpha = args.alpha if args.alpha is not None else 0.5  # hybrid on so expansion/BM25 fire
 
         result = run_query(
             api=args.api,
@@ -1069,7 +1084,9 @@ def main() -> None:
             hybrid_alpha=_eff_alpha,
             min_score=args.min_score,
             entity_filter=_eff_ef,
-            keywords=_eff_kw,
+            keywords=_q_kw,
+            query_expansion=args.query_expansion,
+            entity_filter_mode=_mode,
         )
 
         ev = evaluate(result, q.get("expected_keywords", []) or q.get("keywords", []),
@@ -1102,7 +1119,7 @@ def main() -> None:
             _data = result["data"]
             _rq = _data.get("retrieval_query") or q.get("query", "")
             _model = _data.get("model_used", "?")
-            _kw = _eff_kw or []   # AIStudio_867: effective sent keywords
+            _kw = _q_kw or []   # effective sent keywords (always forwarded)
             _ef = _eff_ef or []   # AIStudio_867: effective sent entity_filter
             print(f"    · original_query:   {q.get('query', '')[:100]}")
             print(f"    · retrieval_query:  {_rq[:100]}")
