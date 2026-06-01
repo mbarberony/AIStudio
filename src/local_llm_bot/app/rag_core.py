@@ -1,5 +1,14 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.9.3
+# Version: 1.9.4
+# Changelog: 1.9.4 — AIStudio_877: per-entity retrieval quota. AIStudio_837 raised the
+#             slot COUNT with entity count but not its ALLOCATION — a single pooled query
+#             at top_k=k with an OR-filter over n firms let the densest 1-2 firms take all
+#             k slots (empirically: a 4-firm sec_10k query returned only BofA+WF chunks,
+#             0 JPM/Citi, 2026-05-31). Fix: in the vector-only branch, when entity_filter
+#             names n>1 firms, issue one filtered query per firm at ceil(k/n) each (floor 1),
+#             merge + dedup by chunk_id, then existing rerank selects the global best. n<=1
+#             path unchanged (byte-identical to 1.9.3). Guarantees every named firm is
+#             represented in the candidate set.
 # Changelog: 1.9.3 — lint: SIM102 combine nested if in _detect_entities (no logic change).
 # Changelog: 1.9.2 — AIStudio_876: SINGLE entity detector _detect_entities + _normalize_for_match
 #            (lower+NFKD de-accent+word-boundary). _resolve_entity_filter_tokens AND
@@ -558,16 +567,40 @@ def retrieve(
             )
         else:
             # Vector-only path — original query only (glossary expansion degrades vector recall)
-            # AIStudio_837: use unified k (computed above) for Qdrant query.
-            # Both CrossEncoder and Qdrant now use the same k — no more divergence.
-            # _store_k removed; k is the single K for the entire retrieve() call.
-            hits = _store.query(
-                query_text=query,
-                top_k=k,
-                embed_model=CONFIG.rag.default_embed_model,
-                collection_name=collection,
-                entity_filter=entity_filter,
-            )
+            # AIStudio_877: per-entity retrieval quota. A single pooled query at top_k=k with
+            # an OR-filter over n firms lets the densest 1-2 firms monopolize all k slots
+            # (empirically: a 4-firm query returned only BofA+WF chunks, 0 JPM/Citi —
+            # 2026-05-31). AIStudio_837 raised the slot COUNT with entity count but not its
+            # ALLOCATION. Fix: when entity_filter names n>1 firms, issue one filtered query
+            # per firm at ceil(k/n) each (floor 1), guaranteeing every named firm is
+            # represented; merge + dedup by chunk_id, then rerank below selects the global best.
+            if entity_filter and len(entity_filter) > 1:
+                _n_firms = len(entity_filter)
+                _per_entity_k = max(1, -(-k // _n_firms))  # ceil(k / n_firms), floor 1
+                _merged: dict = {}
+                for _token in entity_filter:
+                    _firm_hits = _store.query(
+                        query_text=query,
+                        top_k=_per_entity_k,
+                        embed_model=CONFIG.rag.default_embed_model,
+                        collection_name=collection,
+                        entity_filter=[_token],
+                    )
+                    for _h in _firm_hits:
+                        # dedup by chunk_id (keep first/best occurrence)
+                        if _h.chunk_id not in _merged:
+                            _merged[_h.chunk_id] = _h
+                hits = list(_merged.values())
+            else:
+                # n<=1 (single firm or no filter): original pooled behavior, unchanged.
+                # AIStudio_837: use unified k (computed above) for Qdrant query.
+                hits = _store.query(
+                    query_text=query,
+                    top_k=k,
+                    embed_model=CONFIG.rag.default_embed_model,
+                    collection_name=collection,
+                    entity_filter=entity_filter,
+                )
 
         # AIStudio_800: apply entity_filter post-filter on combined hits.
         # This guarantees entity isolation regardless of which channel (vector/BM25)

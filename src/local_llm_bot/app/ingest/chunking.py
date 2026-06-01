@@ -12,6 +12,13 @@ Key principles:
 - Falls back gracefully for unstructured text
 - Configurable for different document types via parameters
 """
+# Version: 1.0.0
+# Changelog: 1.0.0 — AIStudio_733: first version header on chunking.py.
+#            AIStudio_817: table-aware chunking. _is_markdown_table_block() detects a
+#            normalized markdown table; chunk_with_boundaries keeps such a block atomic
+#            (a single 'TABLE' chunk) instead of sentence-splitting it — sentence-splitting
+#            would ' '.join the rows and destroy the grid, re-introducing the very
+#            row/column misassociation the table normalizer fixes.
 
 from __future__ import annotations
 
@@ -90,6 +97,24 @@ def detect_list_item(line: str) -> bool:
         return True
     
     return False
+
+
+def _is_markdown_table_block(text: str) -> bool:
+    """True if `text` is predominantly GFM pipe-table rows (AIStudio_817).
+
+    Used by chunk_with_boundaries to keep a normalized table atomic instead of
+    routing it through sentence-splitting, which joins rows with spaces and
+    destroys the grid. Heuristic: >=2 non-blank lines and a clear majority of
+    them are pipe rows (start and end with '|').
+    """
+    lines = [ln for ln in text.split('\n') if ln.strip()]
+    if len(lines) < 2:
+        return False
+    pipe_rows = sum(
+        1 for ln in lines
+        if ln.lstrip().startswith('|') and ln.rstrip().endswith('|')
+    )
+    return pipe_rows >= 2 and pipe_rows >= 0.6 * len(lines)
 
 
 def detect_boundaries(text: str) -> list[TextBoundary]:
@@ -248,6 +273,29 @@ def chunk_with_boundaries(
         
         # If this single boundary exceeds max_size, split it further
         if content_size > max_size:
+            # AIStudio_817: keep a normalized markdown table atomic. Never
+            # sentence-split it — chunk_by_sentences_simple does ' '.join(...),
+            # which would collapse the rows and destroy the grid. Flush any pending
+            # chunk, emit the table whole (oversized is acceptable; an intact table
+            # beats a shattered one), and move on.
+            if _is_markdown_table_block(content):
+                if current_chunk_parts:
+                    chunk_text = '\n\n'.join(current_chunk_parts)
+                    chunks.append({
+                        'text': chunk_text,
+                        'boundary_type': prefer_boundary.name,
+                        'context': current_context,
+                        'size': len(chunk_text)
+                    })
+                    current_chunk_parts = []
+                    current_size = 0
+                chunks.append({
+                    'text': content,
+                    'boundary_type': 'TABLE',
+                    'context': current_context or boundary.context,
+                    'size': content_size
+                })
+                continue
             # Save current chunk first
             if current_chunk_parts:
                 chunk_text = '\n\n'.join(current_chunk_parts)
