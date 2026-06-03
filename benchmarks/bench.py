@@ -117,6 +117,13 @@ from pathlib import Path
 
 # Version — single source of truth for urc_deploy and runtime display.
 # Must be within first 8KB (extract_version limit). No # Version: comment.
+# Changelog: 2.3.0 — AIStudio_878: amber rating. evaluate() returns rating ∈ {GREEN,AMBER,RED}
+#            + weighted score, demoting keyword_pass from the binary verdict to a soft signal.
+#            RED = no citations / honest-empty / wrong firm (entity_coverage==0 with filter active);
+#            GREEN = cited + right-firm + honest + keywords ok + adequate density;
+#            AMBER = cited + plausibly right but a soft weakness (keyword miss, low density,
+#            partial coverage) → audit. Binary "pass" retained for back-compat. Console + summary
+#            + report surface the tri-state. Thresholds are v1 defaults — calibrate vs audited runs.
 # Changelog: 2.2.1 — AIStudio_875 lint fixes: F821 _eff_kw→_q_kw straggler (super-verbose path),
 #            SIM108 ternary for _eff_ef.
 # Changelog: 2.2.0 — AIStudio_875: REPLACE --augment-from with --query-expansion N (default 1) +
@@ -131,7 +138,7 @@ from pathlib import Path
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.2.1"
+VERSION = "2.3.0"
 
 # ── Firm subset registry ──────────────────────────────────────────────────────
 # Hardwired firm groups for --subset filtering. Mirrors the FIRMS list in
@@ -326,11 +333,13 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         choices=["none", "yaml", "auto"],
         help=(
-            "Source of the Qdrant retrieval filter (AIStudio_875). "
+            "Source of the Qdrant source_path retrieval filter (AIStudio_875). Governs the "
+            "ENTITY filter only — `keywords` are an independent BM25 channel forwarded in ALL modes. "
             "none = no filter (all firms eligible); "
             "yaml = use the question file's entity_filter field (hand-fed scaffold); "
-            "auto = detect entities from the query and filter to them (DEFAULT — the "
-            "server maps recognized entities to source_path tokens). Replaces --augment-from."
+            "auto = IGNORE the question file's entity_filter and instead detect entities from the "
+            "query, mapping them to source_path tokens via the entity KB (DEFAULT). Requires a "
+            "reachable KB for the corpus; if none loads, auto applies no filter. Replaces --augment-from."
         ),
     )
 
@@ -747,6 +756,8 @@ def evaluate(result: dict, expected_keywords: list[str],
     if not citation_pass:
         return {
             "pass": False,
+            "rating": "RED",          # AIStudio_878: no citations → always RED
+            "score": 0.0,
             "keyword_pass": keyword_pass,
             "citation_pass": False,
             "no_info_signal": no_info_signal,
@@ -765,8 +776,25 @@ def evaluate(result: dict, expected_keywords: list[str],
     # not a failure. Only fire no_info_signal as a hard fail when citation_count == 0.
     effective_no_info = no_info_signal and not citation_pass
 
+    # AIStudio_878 — amber rating + weighted score (keyword demoted from verdict to signal).
+    _ec = entity_coverage if entity_coverage is not None else 1.0  # no filter active → neutral
+    if (not citation_pass) or effective_no_info or (entity_coverage is not None and entity_coverage == 0.0):
+        rating = "RED"
+    elif keyword_pass and not low_density and _ec >= 0.5:
+        rating = "GREEN"
+    else:
+        rating = "AMBER"
+    score = round(max(0.0,
+        0.45 * (1.0 if citation_pass else 0.0)
+        + 0.25 * _ec
+        + 0.15 * (1.0 if keyword_pass else 0.0)
+        + 0.15 * (0.0 if low_density else 1.0)
+        - (0.5 if effective_no_info else 0.0)), 3)
+
     return {
         "pass": keyword_pass and citation_pass and not effective_no_info,
+        "rating": rating,
+        "score": score,
         "keyword_pass": keyword_pass,
         "citation_pass": citation_pass,
         "no_info_signal": effective_no_info,
@@ -806,7 +834,8 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         "",
         "## Summary",
         f"- **Questions:** {total}",
-        f"- **Passed:** {passed}/{total} ({round(100 * passed / total)}%)",
+        f"- **Passed (binary):** {passed}/{total} ({round(100 * passed / total)}%)",
+        f"- **Rating (AIStudio_878):** 🟢 {sum(1 for r in results if r['eval'].get('rating')=='GREEN')} GREEN · 🟡 {sum(1 for r in results if r['eval'].get('rating')=='AMBER')} AMBER · 🔴 {sum(1 for r in results if r['eval'].get('rating')=='RED')} RED",
         f"- **Avg latency:** {round(avg_latency, 1)}s",
         "",
         "## Infrastructure",
@@ -825,7 +854,7 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         q = r["question"]
         ev = r["eval"]
         res = r["result"]
-        status = "✅" if ev["pass"] else "❌"
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         latency = f"{res['elapsed_sec']}s"
         cites = ", ".join(ev.get("cited_sources", []))[:40] or "—"
         _lang = q.get("language", "en")
@@ -1091,7 +1120,7 @@ def main() -> None:
 
         ev = evaluate(result, q.get("expected_keywords", []) or q.get("keywords", []),
                       entity_filter=_eff_ef)
-        status = "✅" if ev["pass"] else "❌"
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         _lang = q.get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         _missing_str = f" | missing: {', '.join(ev['missing_keywords'])}" if ev.get("missing_keywords") else ""
@@ -1139,9 +1168,12 @@ def main() -> None:
     )
 
     _sep("Summary")
-    print(f"· {passed}/{total} passed | avg latency: {round(avg_latency, 1)}s")
+    _greens = sum(1 for r in results if r["eval"].get("rating") == "GREEN")
+    _ambers = sum(1 for r in results if r["eval"].get("rating") == "AMBER")
+    _reds = sum(1 for r in results if r["eval"].get("rating") == "RED")
+    print(f"· {passed}/{total} passed (binary) | 🟢 {_greens}  🟡 {_ambers}  🔴 {_reds} | avg latency: {round(avg_latency, 1)}s")
     for r in results:
-        status = "✅" if r["eval"]["pass"] else "❌"
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
         _lang = r["question"].get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         print(f"  {status} {r['question']['id']}{_lang_marker}")

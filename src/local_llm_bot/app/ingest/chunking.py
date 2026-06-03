@@ -12,13 +12,20 @@ Key principles:
 - Falls back gracefully for unstructured text
 - Configurable for different document types via parameters
 """
-# Version: 1.0.0
+# Version: 1.1.0
 # Changelog: 1.0.0 — AIStudio_733: first version header on chunking.py.
 #            AIStudio_817: table-aware chunking. _is_markdown_table_block() detects a
 #            normalized markdown table; chunk_with_boundaries keeps such a block atomic
 #            (a single 'TABLE' chunk) instead of sentence-splitting it — sentence-splitting
 #            would ' '.join the rows and destroy the grid, re-introducing the very
 #            row/column misassociation the table normalizer fixes.
+#            1.1.0 — AIStudio_685: loaders.py now emits EXPLODED "row_label (column-key):
+#            value" statements for data tables instead of markdown pipe-rows. Added
+#            _is_exploded_table_block() and OR'd it into the oversized-boundary atomic
+#            path so a large exploded table stays one chunk (preserves newlines / one
+#            statement per line). Exploded facts are individually self-contained, so a
+#            split is non-destructive even if it occurs — this guard is for readability
+#            and retrieval cohesion, not correctness.
 
 from __future__ import annotations
 
@@ -115,6 +122,23 @@ def _is_markdown_table_block(text: str) -> bool:
         if ln.lstrip().startswith('|') and ln.rstrip().endswith('|')
     )
     return pipe_rows >= 2 and pipe_rows >= 0.6 * len(lines)
+
+
+def _is_exploded_table_block(text: str) -> bool:
+    """True if `text` is predominantly exploded table statements (AIStudio_685).
+
+    loaders._grid_to_exploded emits one "row_label (column-key): value" per line.
+    Keeps such a block atomic in chunk_with_boundaries (parallel to the markdown
+    guard) so a large normalized table stays one chunk. Heuristic: >=2 non-blank
+    lines, a clear majority match the "...: value" shape, and at least one carries
+    the "): " column-key marker (so ordinary colon-bearing prose is not captured).
+    """
+    lines = [ln for ln in text.split('\n') if ln.strip()]
+    if len(lines) < 2:
+        return False
+    stmt_rows = sum(1 for ln in lines if re.match(r'^.{1,120}?: \S', ln))
+    has_key = any('): ' in ln for ln in lines)
+    return has_key and stmt_rows >= 2 and stmt_rows >= 0.6 * len(lines)
 
 
 def detect_boundaries(text: str) -> list[TextBoundary]:
@@ -278,7 +302,7 @@ def chunk_with_boundaries(
             # which would collapse the rows and destroy the grid. Flush any pending
             # chunk, emit the table whole (oversized is acceptable; an intact table
             # beats a shattered one), and move on.
-            if _is_markdown_table_block(content):
+            if _is_markdown_table_block(content) or _is_exploded_table_block(content):
                 if current_chunk_parts:
                     chunk_text = '\n\n'.join(current_chunk_parts)
                     chunks.append({
