@@ -1,5 +1,21 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.9.4
+# Version: 1.9.5
+# Changelog: 1.9.5 — AIStudio_881: optional hybrid-under-entity-filter. Env flag
+#             AISTUDIO_HYBRID_UNDER_FILTER (default OFF = byte-identical to 1.9.4). When
+#             OFF, entity_filter forces vector-only exactly as before. When ON, the BM25
+#             (Literal) channel is no longer disabled by entity_filter — both channels run,
+#             each isolated to the filtered firm(s) (qdrant_store.query/query_bm25 already
+#             accept entity_filter; post-filter at the merge guarantees isolation). Rationale:
+#             dense numeric tables (capital ratios) collapse in vector space — actual-CET1,
+#             overhead, and regulatory-minimum rows score within ~0.07 of each other, so the
+#             right row ranks low or drops; the Literal channel recalls it by exact tokens
+#             but AIStudio_800 disabled Literal whenever entity_filter is set. Flag lets the
+#             two channels coexist under entity isolation. Multi-firm (n>1): the per-firm
+#             quota that AIStudio_877 gave the vector-only branch is mirrored here — each firm
+#             runs its own vector+BM25 combine_hybrid at ceil(k/n), merged + deduped, so the
+#             densest firm cannot monopolize the merged top-K. Recall fix only; row-level
+#             precision (label-value binding vs. the table-blind CrossEncoder) is a separate
+#             open item. No reingest. n<=1 + no-filter hybrid paths byte-identical to 1.9.4.
 # Changelog: 1.9.4 — AIStudio_877: per-entity retrieval quota. AIStudio_837 raised the
 #             slot COUNT with entity count but not its ALLOCATION — a single pooled query
 #             at top_k=k with an OR-filter over n firms let the densest 1-2 firms take all
@@ -97,6 +113,18 @@ from local_llm_bot.app.utils.repo_root import find_repo_root
 _MIN_HYBRID_SCORE_FALLBACK: float = 0.5
 
 _VECTORSTORE = _os.getenv("AISTUDIO_VECTORSTORE", "qdrant").lower()
+
+# AIStudio_881: when truthy, allow the hybrid (vector + BM25) path to run even when an
+# entity_filter is active, instead of forcing vector-only (the AIStudio_800 behavior).
+# Default OFF — unset/empty/0/false leaves retrieve() byte-identical to 1.9.4. Process-level
+# toggle (read at import like AISTUDIO_VECTORSTORE); set in the API server's environment.
+_HYBRID_UNDER_FILTER = _os.getenv("AISTUDIO_HYBRID_UNDER_FILTER", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
 if _VECTORSTORE == "chroma":
     from local_llm_bot.app.vectorstore import chroma_store as _store
 else:
@@ -531,40 +559,87 @@ def retrieve(
         # from expansion; vector semantic search does not.
         _glossary_tokens = _apply_glossary_sources(query)
 
-        _use_hybrid = hybrid_alpha is not None and _VECTORSTORE != "chroma" and not entity_filter
+        # AIStudio_800 v3 default: entity_filter forces vector-only (the BM25 channel
+        # otherwise returns corpus-wide hits that dominate combine_hybrid()).
+        # AIStudio_881: when _HYBRID_UNDER_FILTER is ON, that force-disable is lifted —
+        # qdrant_store.query/query_bm25 now accept entity_filter (isolated per firm) and the
+        # post-filter below is a backstop, so the two channels can coexist under isolation.
+        _use_hybrid = (
+            hybrid_alpha is not None
+            and _VECTORSTORE != "chroma"
+            and (not entity_filter or _HYBRID_UNDER_FILTER)
+        )
 
         if _use_hybrid:
             channel_k = max(k * 2, 10)
 
-            vector_hits = _store.query(
-                query_text=query,
-                top_k=channel_k,
-                embed_model=CONFIG.rag.default_embed_model,
-                collection_name=collection,
-                entity_filter=entity_filter,
-            )
             # AIStudio_801: auto-expand keywords from knowledge sources (GLEIF entity aliases).
             _expanded_keywords = _apply_knowledge_sources(query, corpus, keywords)
-
             # AIStudio_618 + AIStudio_815: append GLEIF aliases and glossary terms to BM25 query.
             _bm25_query = query
             if _expanded_keywords:
                 _bm25_query = _bm25_query + " " + " ".join(_expanded_keywords)
             if _glossary_tokens:
                 _bm25_query = _bm25_query + " " + " ".join(_glossary_tokens)
-            bm25_hits = _store.query_bm25(
-                query_text=_bm25_query,
-                top_k=channel_k,
-                collection_name=collection,
-                entity_filter=entity_filter,
-            )
 
-            hits = _scoring.combine_hybrid(
-                vector_hits=vector_hits,
-                bm25_hits=bm25_hits,
-                alpha=float(hybrid_alpha),
-                top_k=k,
-            )
+            if entity_filter and len(entity_filter) > 1:
+                # AIStudio_881: multi-firm hybrid quota. Mirror the AIStudio_877 per-firm
+                # allocation onto the hybrid path so a single pooled vector+BM25 query cannot
+                # let the densest firm monopolize the merged top-K. Each firm runs its own
+                # vector+BM25 combine_hybrid at ceil(k/n); results merged + deduped by chunk_id,
+                # then the rerank below selects the global best across firms.
+                _n_firms = len(entity_filter)
+                _per_entity_k = max(1, -(-k // _n_firms))  # ceil(k / n_firms), floor 1
+                _per_channel_k = max(_per_entity_k * 2, 10)
+                _merged: dict = {}
+                for _token in entity_filter:
+                    _v_hits = _store.query(
+                        query_text=query,
+                        top_k=_per_channel_k,
+                        embed_model=CONFIG.rag.default_embed_model,
+                        collection_name=collection,
+                        entity_filter=[_token],
+                    )
+                    _b_hits = _store.query_bm25(
+                        query_text=_bm25_query,
+                        top_k=_per_channel_k,
+                        collection_name=collection,
+                        entity_filter=[_token],
+                    )
+                    _firm_hits = _scoring.combine_hybrid(
+                        vector_hits=_v_hits,
+                        bm25_hits=_b_hits,
+                        alpha=float(hybrid_alpha),
+                        top_k=_per_entity_k,
+                    )
+                    for _h in _firm_hits:
+                        # dedup by chunk_id (keep first/best occurrence)
+                        if _h.chunk_id not in _merged:
+                            _merged[_h.chunk_id] = _h
+                hits = list(_merged.values())
+            else:
+                # n<=1 (single firm or no filter): pooled hybrid — byte-identical to 1.9.4
+                # when no entity_filter; entity-isolated single-firm pair when filter is set
+                # and the flag is on.
+                vector_hits = _store.query(
+                    query_text=query,
+                    top_k=channel_k,
+                    embed_model=CONFIG.rag.default_embed_model,
+                    collection_name=collection,
+                    entity_filter=entity_filter,
+                )
+                bm25_hits = _store.query_bm25(
+                    query_text=_bm25_query,
+                    top_k=channel_k,
+                    collection_name=collection,
+                    entity_filter=entity_filter,
+                )
+                hits = _scoring.combine_hybrid(
+                    vector_hits=vector_hits,
+                    bm25_hits=bm25_hits,
+                    alpha=float(hybrid_alpha),
+                    top_k=k,
+                )
         else:
             # Vector-only path — original query only (glossary expansion degrades vector recall)
             # AIStudio_877: per-entity retrieval quota. A single pooled query at top_k=k with

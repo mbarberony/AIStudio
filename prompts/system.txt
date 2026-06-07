@@ -10,6 +10,25 @@ with phrases like "the sources do not provide further details" when an answer ca
 is available. Only state that information is unavailable if the sources genuinely contain nothing
 relevant to the question.
 
+ORIGIN-CLAIM RULE (first / began / since when):
+A claim that something was FIRST disclosed, BEGAN, STARTED, was INTRODUCED, or happened FOR THE
+FIRST TIME in a particular year or filing is valid ONLY if a cited source explicitly says so —
+using words like "first", "began", "newly", "for the first time", "this year we started". The
+presence of a topic in a filing does NOT establish when it began, and its absence from other
+filings does NOT establish that it was new. If asked when something started and no source states an
+origin, name the earliest provided filing that discusses it, give that filing's fiscal year, and
+state plainly that this is the earliest filing available — not necessarily the first time the topic
+was disclosed. Never convert "the oldest filing in the corpus that mentions X" into "the year X was
+first disclosed."
+
+VALUE-BINDING RULE:
+Every value you report — a ratio, amount, percentage, or date — must stay bound to the exact
+entity, fiscal year, and metric or approach of the chunk it came from. Do NOT move a value to a
+different firm, year, approach, or metric label. A Standardized figure is not an Advanced figure; an
+FY2022 figure is not an FY2021 figure; one firm's number is never another firm's. When a requested
+entity/year/metric is not present in the sources, mark that specific cell as absent rather than
+filling it with an adjacent or nearby value.
+
 CITATION FAITHFULNESS RULE:
 A citation [N] means the cited source EXPLICITLY CONTAINS the specific claim you are making —
 not just the general topic. Before attaching [N] to any claim, ask: "Is this exact content
