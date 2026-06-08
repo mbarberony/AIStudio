@@ -1,6 +1,6 @@
 version: 1.0.0
 regenerated_from: meta/bundle_manifest.yaml
-regenerated_at: '2026-06-05T21:30:35'
+regenerated_at: '2026-06-07T22:18:30'
 commands:
 - alias: ais_bench
   path: ais_bench.sh
@@ -13,10 +13,6 @@ commands:
   path: ais_download_esef.sh
   description: Download ESEF iXBRL annual reports from filings.xbrl.org for 10 major
     European banks. Outputs .xhtml files to data/corpora/esef_banks/uploads/.
-- alias: ais_import_knowledge_base
-  path: ais_import_knowledge_base.sh
-  description: Import external knowledge source data for a corpus scope. Reads K metadata
-    + C-S scope file, fetches from API, writes K-C-S-A output YAML, updates catalog.
 - alias: ais_help
   path: ais_help.sh
   description: "AIStudio command help \u2014 list all ais_* commands with one-line\
