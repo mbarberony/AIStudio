@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 download_esef_corpus.py — Download ESEF iXBRL annual reports from filings.xbrl.org
-Version: 1.4.0
+Version: 1.4.3
 
 Queries filings.xbrl.org API using fxo_id LIKE filter (LEI prefix match) —
 the only server-side filter that reliably returns filings for a specific entity.
@@ -17,6 +17,10 @@ Usage (via wrapper):
   ais_download_esef --scope lang_fr               # FR firms only
 
 Changelog:
+  1.4.3 — Unified-scope relocation (step 2b). _SCOPE_DIR moved
+           benchmarks/esef_banks/ -> data/corpora/esef_banks/scopes/ (scopes now live
+           with the corpus, not under benchmarks/). Reads esef_banks_<stem>_scope.yaml
+           from the new dir. Path constant only; resolver wiring is a later step.
   1.4.2 — CLI Output STD conformance: Phase 3 completion line N of T format,
            ▶ action trailing ..., summary field:value alignment, relative path.
   1.4.1 — Fix default --out: was Path.cwd() (wrong), now data/corpora/esef_banks/uploads/
@@ -41,7 +45,7 @@ try:
 except ImportError:
     _SSL_CONTEXT = None
 
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 SCRIPT_NAME = "ais_download_esef"
 API_BASE = "https://filings.xbrl.org"
 
@@ -51,7 +55,7 @@ API_BASE = "https://filings.xbrl.org"
 # Use --scope <stem> to filter to a language-segmented subset defined in a scope YAML.
 
 _SEED_YAML = Path(__file__).parent.parent / "meta/_special_corpus_seed_info/esef_banks/_esef_banks_metadata_seed_ops.yaml"
-_SCOPE_DIR = Path(__file__).parent.parent / "benchmarks/esef_banks"
+_SCOPE_DIR = Path(__file__).parent.parent / "data/corpora/esef_banks/scopes"
 
 _FALLBACK_TARGETS = [
     {"lei": "549300NYKK9MWM7GGW15", "short": "ING_Group"},
@@ -79,7 +83,7 @@ def _load_targets() -> list[dict]:
 
 
 def _load_scope_targets(scope_stem: str) -> list[dict]:
-    """Load targets from a language-scope YAML: benchmarks/esef_banks/esef_banks_{scope_stem}_scope.yaml.
+    """Load targets from a language-scope YAML: data/corpora/esef_banks/scopes/esef_banks_{scope_stem}_scope.yaml.
 
     The scope YAML (schema v1.2) lists entities with name + optional lei_override.
     For each entity in the scope, we look up its LEI from the seed YAML (authoritative
@@ -232,7 +236,7 @@ def main(argv=None) -> int:
     p.add_argument("--period-start", default="2022")
     p.add_argument("--period-end", default="2025")
     p.add_argument("--scope", default=None,
-                   help="Scope stem: reads benchmarks/esef_banks/esef_banks_<stem>_scope.yaml. "
+                   help="Scope stem: reads data/corpora/esef_banks/scopes/esef_banks_<stem>_scope.yaml. "
                         "e.g. --scope lang_en downloads EN-primary firms only. "
                         "Absence downloads the full seed list (default behavior).")
     p.add_argument("--version", action="store_true")

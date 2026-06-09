@@ -1,6 +1,14 @@
 #!/usr/bin/env zsh
-# Version: 1.0.1
-VERSION="1.0.1"
+# Version: 1.0.4
+VERSION="1.0.4"
+# Changelog: 1.0.4 — fix stale offline assertion: --scope resolution now goes through
+#            _scope_common_ops, which raises ScopeError "Scope not found" (was the
+#            downloader-local "Scope file not found" in <=1.2.x). Test string realigned.
+# Changelog: 1.0.3 — downloader v1.4.0 inventory write-back: network tests pass
+#            --no-inventory so throwaway --out runs never mutate the real *_full_scope ledger.
+# Changelog: 1.0.2 — downloader v1.3.0 year-flag split: network tests use --latest 1
+#            (was --years 1, which now means fiscal year 1). Added offline mutual-exclusion
+#            test and a --years YYYY fiscal-year network test.
 # Changelog: 1.0.1 — zsh-conform: shebang zsh + REPO via ${0:A:h} (zsh script-dir idiom,
 #            replacing the bash-only form). --verbose given its own case branch (was a
 #            combined --verbose|-v) so the §8 flag audit sees it implemented; drops -v.
@@ -114,7 +122,8 @@ run() {
 sep "Offline tests"
 run "help exits clean"                 rc0 "usage:"                      --help
 run "mutually exclusive --tkr + --cik" rcN "not allowed with argument"  --tkr GS --cik 0000886982
-run "scope file not found"             rcN "Scope file not found"       --scope "$TMP/nope.yaml"
+run "mutually exclusive --latest + --years" rcN "not allowed with argument"  --latest 2 --years 2024
+run "scope file not found"             rcN "Scope not found"            --scope "$TMP/nope.yaml"
 run "malformed scope (no entities)"    rcN "has no"                     --scope "$BAD_SCOPE"
 run "force_name rejected with --scope" rcN "single-firm modes"          --scope "$GOOD_SCOPE" --force_name "X"
 
@@ -123,14 +132,15 @@ sep "Network tests"
 if [[ $FULL -eq 0 ]]; then
   say "· skipped (use --full to run real EDGAR fetches)"
 else
-  run "ticker resolves + verify present (GS)" rc0 "entity tag present"            --tkr GS --years 1
-  run "CIK mode + verify present (GS)"         rc0 "entity tag present"            --cik 0000886982 --years 1
-  run "scope download succeeds"                rc0 "Downloaded:"                   --scope "$GOOD_SCOPE" --years 1
-  run "no-verify suppresses the check"         rc0 "!verify:"                      --tkr GS --years 1 --no-verify
-  run "verify FAIL + coaching (BNY)"           rc0 "no dei:EntityRegistrantName"   --tkr BNY --years 1
-  run "force_name asserts identity (BNY)"      rc0 "forced"                        --tkr BNY --years 1 --force_name "The Bank of New York Mellon Corporation"
-  run "unknown ticker errors cleanly"          rcN "not found in EDGAR"            --tkr ZZZZ
-  run "valid-format CIK with no filings"       rc0 "No 10-K filings found"         --cik 9999999999 --years 1
+  run "ticker resolves + verify present (GS)" rc0 "entity tag present"            --tkr GS --latest 1 --no-inventory
+  run "CIK mode + verify present (GS)"         rc0 "entity tag present"            --cik 0000886982 --latest 1 --no-inventory
+  run "scope download succeeds"                rc0 "Downloaded:"                   --scope "$GOOD_SCOPE" --latest 1 --no-inventory
+  run "years mode fetches a fiscal year (GS)" rc0 "entity tag present"            --tkr GS --years 2024 --no-inventory
+  run "no-verify suppresses the check"         rc0 "!verify:"                      --tkr GS --latest 1 --no-verify --no-inventory
+  run "verify FAIL + coaching (BNY)"           rc0 "no dei:EntityRegistrantName"   --tkr BNY --latest 1 --no-inventory
+  run "force_name asserts identity (BNY)"      rc0 "forced"                        --tkr BNY --latest 1 --force_name "The Bank of New York Mellon Corporation" --no-inventory
+  run "unknown ticker errors cleanly"          rcN "not found in EDGAR"            --tkr ZZZZ --no-inventory
+  run "valid-format CIK with no filings"       rc0 "No 10-K filings found"         --cik 9999999999 --latest 1 --no-inventory
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────

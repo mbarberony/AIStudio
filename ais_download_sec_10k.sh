@@ -1,14 +1,15 @@
 #!/usr/bin/env zsh
 # ais_download_sec_10k.sh — Download SEC 10-K corpus from EDGAR
-# Version: 1.1.5
-# Downloads ~143 filings from 25 financial services firms (~500MB)
-# Output goes to data/corpora/sec_10k/uploads/ by default
+# Version: 1.1.6
+# Thin "$@" passthrough to scripts/download_sec_corpus.py. Firm set and year selection
+# (--latest N / --years YYYY ...) are owned by the backing argparse. Default run (no args)
+# = the scope's firms × latest 1. Output → data/corpora/sec_10k/uploads/ by default.
 
 
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.1.5"
+VERSION="1.1.6"
 
 SCRIPT_NAME="ais_download_sec_10k"
 SCRIPT_DIR="${0:A:h}"
@@ -46,7 +47,7 @@ echo "✅ Output directory ready: data/corpora/sec_10k/uploads/"
 echo ""
 echo "--- Downloading"
 echo "▶ Fetching SEC 10-K filings from EDGAR..."
-echo "· ~143 filings, ~500MB — allow 5–10 minutes"
+echo "· One filing per firm by default (--latest 1); more with --latest N or --years YYYY ..."
 echo ""
 
 python3 scripts/download_sec_corpus.py --out "$UPLOADS" "$@"

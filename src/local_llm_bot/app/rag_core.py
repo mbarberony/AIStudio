@@ -1,5 +1,10 @@
 # src/local_llm_bot/app/rag_core.py
 # Version: 1.9.5
+# Changelog: 1.10.0 — AIStudio_882 (scope application): retrieve() accepts allowed_source_paths
+#             — the scope firm-boundary — threaded into all six _store.query/query_bm25
+#             call-sites and ANDed as a post-filter backstop across channels. An active scope
+#             gates hybrid like entity_filter and skips min_score (iXBRL high-distance). Default
+#             None = pre-1.10.0 behavior.
 # Changelog: 1.9.5 — AIStudio_881: optional hybrid-under-entity-filter. Env flag
 #             AISTUDIO_HYBRID_UNDER_FILTER (default OFF = byte-identical to 1.9.4). When
 #             OFF, entity_filter forces vector-only exactly as before. When ON, the BM25
@@ -508,6 +513,7 @@ def retrieve(
     hybrid_alpha: float | None = None,
     min_score: float | None = None,
     entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
+    allowed_source_paths: list[str] | None = None,  # AIStudio_882: scope boundary, ANDed with entity_filter
     keywords: list[str] | None = None,        # AIStudio_618: BM25 boost terms
 ) -> list[RetrievedDoc]:
     """
@@ -564,10 +570,12 @@ def retrieve(
         # AIStudio_881: when _HYBRID_UNDER_FILTER is ON, that force-disable is lifted —
         # qdrant_store.query/query_bm25 now accept entity_filter (isolated per firm) and the
         # post-filter below is a backstop, so the two channels can coexist under isolation.
+        # AIStudio_882: an active scope (allowed_source_paths) is a firm-boundary too — it
+        # gates hybrid exactly like entity_filter (BM25 scope post-filter added in 1.3.0).
         _use_hybrid = (
             hybrid_alpha is not None
             and _VECTORSTORE != "chroma"
-            and (not entity_filter or _HYBRID_UNDER_FILTER)
+            and (not (entity_filter or allowed_source_paths) or _HYBRID_UNDER_FILTER)
         )
 
         if _use_hybrid:
@@ -599,12 +607,14 @@ def retrieve(
                         embed_model=CONFIG.rag.default_embed_model,
                         collection_name=collection,
                         entity_filter=[_token],
+                        allowed_source_paths=allowed_source_paths,
                     )
                     _b_hits = _store.query_bm25(
                         query_text=_bm25_query,
                         top_k=_per_channel_k,
                         collection_name=collection,
                         entity_filter=[_token],
+                        allowed_source_paths=allowed_source_paths,
                     )
                     _firm_hits = _scoring.combine_hybrid(
                         vector_hits=_v_hits,
@@ -627,12 +637,14 @@ def retrieve(
                     embed_model=CONFIG.rag.default_embed_model,
                     collection_name=collection,
                     entity_filter=entity_filter,
+                    allowed_source_paths=allowed_source_paths,
                 )
                 bm25_hits = _store.query_bm25(
                     query_text=_bm25_query,
                     top_k=channel_k,
                     collection_name=collection,
                     entity_filter=entity_filter,
+                    allowed_source_paths=allowed_source_paths,
                 )
                 hits = _scoring.combine_hybrid(
                     vector_hits=vector_hits,
@@ -660,6 +672,7 @@ def retrieve(
                         embed_model=CONFIG.rag.default_embed_model,
                         collection_name=collection,
                         entity_filter=[_token],
+                        allowed_source_paths=allowed_source_paths,
                     )
                     for _h in _firm_hits:
                         # dedup by chunk_id (keep first/best occurrence)
@@ -675,6 +688,7 @@ def retrieve(
                     embed_model=CONFIG.rag.default_embed_model,
                     collection_name=collection,
                     entity_filter=entity_filter,
+                    allowed_source_paths=allowed_source_paths,
                 )
 
         # AIStudio_800: apply entity_filter post-filter on combined hits.
@@ -687,6 +701,16 @@ def retrieve(
                 if any(token in str(h.metadata.get("source_path", "")) for token in entity_filter)
             ]
 
+        # AIStudio_882: scope boundary backstop — AND the allowed_source_paths set across the
+        # merged hits, same rationale as the entity backstop (a vector hit can reach here
+        # without per-channel source_path filtering). entity AND scope: an out-of-scope firm
+        # that satisfied the entity clause is dropped here; empty intersection → no hits.
+        if allowed_source_paths:
+            hits = [
+                h for h in hits
+                if any(token in str(h.metadata.get("source_path", "")) for token in allowed_source_paths)
+            ]
+
         # AIStudio_778: drop BM25-floor chunks below minimum score threshold.
         # AIStudio_835: skip min_score filter when entity_filter is active.
         # Entity post-filter (above) already guarantees source relevance — the
@@ -694,7 +718,9 @@ def retrieve(
         # documents produce high cosine distances (low similarity scores) due to
         # their length and mixed-language content; applying min_score on top of
         # entity_filter wipes all hits and returns empty docs → Artifact answers.
-        if not entity_filter:
+        # AIStudio_882: an active scope is a firm-boundary too — skip min_score under it
+        # for the same iXBRL high-distance reason.
+        if not (entity_filter or allowed_source_paths):
             _threshold = min_score if min_score is not None else _MIN_HYBRID_SCORE_FALLBACK
             hits = [h for h in hits if float(h.distance) < _threshold]
 

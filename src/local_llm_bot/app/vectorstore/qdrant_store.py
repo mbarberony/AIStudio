@@ -1,5 +1,11 @@
 # src/local_llm_bot/app/vectorstore/qdrant_store.py
 # Version: 1.2.5
+# Changelog: 1.3.0 — AIStudio_882 (scope application): query()/query_bm25() accept
+#             allowed_source_paths — the scope firm-boundary. ANDed with entity_filter:
+#             vector path nests two Filter(should=...) OR-clauses inside must=[] (AND-of-ORs,
+#             the 1.2.4 idiom); BM25 path adds a second source_path post-filter after the
+#             entity one. Empty intersection → zero hits (an out-of-scope firm fails the
+#             scope clause). Both params default None = pre-1.3.0 behavior.
 # Changelog: 1.2.5 — AIStudio_800 v4: post-filter BM25 results by source_path in Python.
 #             Qdrant BM25 path (query_points with MatchText filter, no vector) does not
 #             reliably enforce additional payload filters. Fetch 4x candidates then filter
@@ -251,6 +257,7 @@ def query(
     top_k: int,
     embed_model: str,
     entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
+    allowed_source_paths: list[str] | None = None,  # AIStudio_882: scope boundary, ANDed with entity_filter
 ) -> list[QdrantHit]:
     """
     Query Qdrant using a query embedding from Ollama.
@@ -262,8 +269,17 @@ def query(
 
     q_emb = ollama_embed(model=embed_model, texts=[query_text])[0]
 
-    # AIStudio_798: build source_path OR filter if entity_filter provided
-    _query_filter = _build_entity_filter(entity_filter) if entity_filter else None
+    # AIStudio_798: per-question entity_filter (OR over source_path substrings).
+    # AIStudio_882: allowed_source_paths is the scope boundary — a second OR-clause ANDed
+    # with the entity clause (nested Filter(should=...) inside must=[] gives AND-of-ORs, the
+    # 1.2.4 idiom). entity=[BNP] AND scope=[6 firms] → BNP only; entity=[HSBC] AND scope=[6] →
+    # ∅ (HSBC matches the entity clause but no scope clause); entity=None AND scope=[6] → the 6.
+    _clauses = []
+    if entity_filter:
+        _clauses.append(_build_entity_filter(entity_filter))
+    if allowed_source_paths:
+        _clauses.append(_build_entity_filter(allowed_source_paths))
+    _query_filter = Filter(must=_clauses) if _clauses else None
 
     results = client.query_points(
         collection_name=collection_name,
@@ -295,6 +311,7 @@ def query_bm25(
     query_text: str,
     top_k: int,
     entity_filter: list[str] | None = None,  # AIStudio_798: OR filter on source_path substrings
+    allowed_source_paths: list[str] | None = None,  # AIStudio_882: scope boundary, ANDed with entity_filter
 ) -> list[QdrantHit]:
     """
     Query Qdrant using BM25 full-text search over the indexed `text` payload field.
@@ -328,7 +345,10 @@ def query_bm25(
     # enforce additional payload filters. Use simple text filter for BM25 scoring,
     # then post-filter results by source_path in Python to guarantee entity isolation.
     # Fetch 4x top_k candidates to ensure enough remain after post-filtering.
-    _bm25_fetch_k = int(top_k) * 4 if entity_filter else int(top_k)
+    # AIStudio_882: the scope boundary (allowed_source_paths) is enforced the same way —
+    # a second AND post-filter — so widen the candidate pool when EITHER firm filter is set.
+    _any_firm_filter = bool(entity_filter or allowed_source_paths)
+    _bm25_fetch_k = int(top_k) * 4 if _any_firm_filter else int(top_k)
     text_filter = Filter(
         must=[FieldCondition(key="text", match=MatchText(text=query_text))]
     )
@@ -343,6 +363,8 @@ def query_bm25(
     ).points
 
     # AIStudio_800 v4: post-filter by source_path to enforce entity isolation.
+    # AIStudio_882: then AND the scope boundary — a chunk must satisfy BOTH (entity OR-set)
+    # and (scope OR-set). An out-of-scope firm passes entity but fails scope → dropped.
     if entity_filter:
         results = [
             r for r in results
@@ -351,6 +373,15 @@ def query_bm25(
                 for token in entity_filter
             )
         ]
+    if allowed_source_paths:
+        results = [
+            r for r in results
+            if any(
+                token in str((r.payload or {}).get("source_path", ""))
+                for token in allowed_source_paths
+            )
+        ]
+    if _any_firm_filter:
         results = results[:int(top_k)]
 
     out: list[QdrantHit] = []

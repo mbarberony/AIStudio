@@ -1,4 +1,9 @@
 # Version: 1.9.6
+# Changelog: 1.10.0 — AIStudio_882 (scope application): AskRequest + RetrieveRequest gain
+#            allowed_source_paths (scope firm-boundary, OR over source_path substrings, ANDed
+#            with the resolved entity_filter). Passed through /ask and /debug/retrieve to
+#            retrieve(). Orthogonal to entity_filter_mode: scope bounds the firm-universe,
+#            entity logic narrows within it. Default None = pre-1.10.0 behavior.
 # Changelog: 1.9.6 — Fix ruff B008 in trigger_ingest: Body(default=None) in the arg default
 #            tripped "no function call in argument defaults". Switched to the Annotated form
 #            (body: Annotated[dict | None, Body()] = None). No behavior change.
@@ -544,6 +549,7 @@ class AskRequest(BaseModel):
     hybrid_alpha: float | None = None  # M2.A: per-query override; None falls back to CONFIG.rag.hybrid_alpha
     min_score: float | None = None    # AIStudio_778: per-query min score threshold override
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
+    allowed_source_paths: list[str] | None = None  # AIStudio_882: scope boundary, ANDed with entity_filter
     keywords: list[str] | None = None         # AIStudio_618: BM25 boost terms from UI KEYWORDS field
     model: str | None = None                   # Per-request model override; falls back to CONFIG.rag.default_model
     query_expansion: int = 1                    # AIStudio_875: entity-name expansion repeat count (0=off, 1=once, N=weighted)
@@ -573,6 +579,7 @@ class RetrieveRequest(BaseModel):
     hybrid_alpha: float | None = None  # M2.A: per-call hybrid weight override
     min_score: float | None = None    # AIStudio_778: per-call min score threshold override
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
+    allowed_source_paths: list[str] | None = None  # AIStudio_882: scope boundary, ANDed with entity_filter
     keywords: list[str] | None = None  # AIStudio_841: BM25 boost terms for debug retrieval
 
 
@@ -717,7 +724,7 @@ async def ask(req: AskRequest) -> AskResponse:
     _corpus_min_score = _corpus_meta.get("default_min_score")
     _MIN_SCORE_FALLBACK = 0.5
     min_score = req.min_score if req.min_score is not None else (_corpus_min_score if _corpus_min_score is not None else _MIN_SCORE_FALLBACK)
-    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=_effective_entity_filter, keywords=req.keywords or None)
+    docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=_effective_entity_filter, allowed_source_paths=req.allowed_source_paths or None, keywords=req.keywords or None)
 
     # Generate answer with citations
     result = generate_answer_with_citations(
@@ -754,6 +761,7 @@ async def debug_retrieve(req: RetrieveRequest) -> dict[str, Any]:
     docs = retrieve(
         query=retrieval_query, top_k=req.top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha,
         min_score=min_score_dbg, entity_filter=req.entity_filter or None,
+        allowed_source_paths=req.allowed_source_paths or None,
         keywords=req.keywords or None,
     )
     return {

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# Changelog: 2.4.0 — Unified-scope wiring (step 3). --scope now LOADS + validates a scope
+#              via scripts/_scope_common_ops (hard-error on a missing named scope, AIStudio_882)
+#              and exposes its firm-token universe (retrieval restriction is the paired step,
+#              pending the --scope ↔ /ask source_path mechanism). --scope no longer resolves
+#              question filenames. --lang → --lang_questions (filters question_language, not the
+#              firm filing-language; the EN/non-EN firm split is --scope's job now). Added
+#              --keywords {on,off} (keyword-channel ablation; off = old no_keyword_hint). Removed
+#              --subset + the hardcoded FIRM_SUBSETS registry (firm grouping is a scope file now).
 # Changelog: 2.0.12 — Remove --difficulty flag (redundant — difficulty is encoded
 #              in questions filename; --questions basic implies difficulty:basic).
 #              Add --scope flag. Fix stem resolution to try corpus_scope_stem,
@@ -112,11 +120,25 @@ try:
     _YAML_AVAILABLE = True
 except ImportError:
     _YAML_AVAILABLE = False
+import sys
 from datetime import datetime
 from pathlib import Path
 
+# Shared scope resolver (scripts/_scope_common_ops.py). bench lives in benchmarks/,
+# the resolver in ../scripts/ — prepend it to the path before import. Single source of
+# truth for scope load/validate + entity selection (AIStudio_882 hard-error contract).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import _scope_common_ops as _scope  # noqa: E402
+
 # Version — single source of truth for urc_deploy and runtime display.
 # Must be within first 8KB (extract_version limit). No # Version: comment.
+# Changelog: 2.5.0 — AIStudio_882 (scope application): --scope now RESTRICTS retrieval.
+#            scope_tokens ride the /ask allowed_source_paths field (server ANDs them with
+#            each question's entity logic — intersect). Closes the 2.4.0 deferred seam.
+# Changelog: 2.4.0 — Unified-scope wiring (step 3): --scope loads+validates via
+#            _scope_common_ops (hard-error 882) and exposes the firm-token universe;
+#            --lang→--lang_questions (question_language, not firm filing-language);
+#            +--keywords {on,off} (keyword ablation); −--subset/FIRM_SUBSETS.
 # Changelog: 2.3.0 — AIStudio_878: amber rating. evaluate() returns rating ∈ {GREEN,AMBER,RED}
 #            + weighted score, demoting keyword_pass from the binary verdict to a soft signal.
 #            RED = no citations / honest-empty / wrong firm (entity_coverage==0 with filter active);
@@ -138,70 +160,7 @@ from pathlib import Path
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.3.0"
-
-# ── Firm subset registry ──────────────────────────────────────────────────────
-# Hardwired firm groups for --subset filtering. Mirrors the FIRMS list in
-# scripts/download_sec_corpus.py. Used to filter questions by firm name match
-# in the question text (case-insensitive). Heuristic but works for v2.0+
-# questions which name firms explicitly.
-
-FIRM_SUBSETS: dict[str, list[str]] = {
-    "big_banks": [
-        "JPMorgan",
-        "JPMorgan Chase",
-        "Bank of America",
-        "Wells Fargo",
-        "Citigroup",
-        "Citi",
-    ],
-    "bulge_bracket": [
-        "Goldman Sachs",
-        "Goldman",
-        "Morgan Stanley",
-        "JPMorgan",
-        "JPMorgan Chase",
-        "Bank of America",
-        "Citigroup",
-        "Citi",
-    ],
-    "asset_managers": [
-        "BlackRock",
-        "T. Rowe Price",
-        "T Rowe Price",
-        "Franklin Templeton",
-        "Invesco",
-        "AllianceBernstein",
-    ],
-    "exchanges": [
-        "CME Group",
-        "CME",
-        "Intercontinental Exchange",
-        "ICE",
-        "Nasdaq",
-        "CBOE",
-        "CBOE Global Markets",
-    ],
-    "insurance": [
-        "AIG",
-        "MetLife",
-        "Prudential",
-        "Prudential Financial",
-        "Travelers",
-    ],
-    "custody": [
-        "BNY Mellon",
-        "BNY",
-        "State Street",
-        "Northern Trust",
-    ],
-    "boutiques": [
-        "Jefferies",
-        "Raymond James",
-        "Stifel",
-        "Stifel Financial",
-    ],
-}
+VERSION = "2.5.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -218,10 +177,13 @@ def parse_args() -> argparse.Namespace:
         "--scope",
         default=None,
         help=(
-            "Scope stem: filters to a language/firm subset defined in "
-            "benchmarks/<corpus>/<corpus>_<scope>_scope.yaml. "
-            "e.g. --scope lang_en. Used to resolve --questions stem: "
-            "--questions basic → <corpus>_<scope>_basic_questions.yaml."
+            "Scope stem naming a firm subset, resolved by _scope_common_ops to "
+            "data/corpora/<corpus>/scopes/<corpus>_<scope>_scope.yaml (e.g. "
+            "--scope esef_banks_lang_noen, or the bare stem 'lang_noen'). LOADED + "
+            "validated at startup — a missing named scope is a hard error (AIStudio_882), "
+            "never a silent fallback. Restricts the retrieval firm-universe to the scope's "
+            "firms; does NOT filter questions (use --questions / --question-ids / "
+            "--lang-questions for that)."
         ),
     )
     p.add_argument("--top-k", type=int, default=None, help="Top K chunks to retrieve (default: corpus metadata or 5)")
@@ -240,16 +202,6 @@ def parse_args() -> argparse.Namespace:
             "Firm name to inject into all queries (e.g. 'Wells Fargo'). "
             "Overrides any per-question 'firm' field in the YAML. Caller is "
             "responsible for spelling and firm selection."
-        ),
-    )
-    p.add_argument(
-        "--subset",
-        default=None,
-        choices=list(FIRM_SUBSETS.keys()),
-        help=(
-            "Filter questions by firm group. Available: "
-            + ", ".join(sorted(FIRM_SUBSETS.keys()))
-            + ". Heuristic match: question text must mention at least one firm in the group."
         ),
     )
     p.add_argument(
@@ -283,15 +235,28 @@ def parse_args() -> argparse.Namespace:
         help="Minimum chunk score threshold. None=corpus metadata or backend default.",
     )
     p.add_argument(
-        "--lang",
+        "--lang-questions",
+        dest="lang_questions",
         nargs="+",
         default=None,
         metavar="LANG",
         help=(
-            "Filter questions by language code (space-separated). "
-            "Example: --lang en  OR  --lang en fr. "
-            "Questions without a language field default to 'en'. "
-            "Use to exclude non-English questions from mechanical scoring."
+            "Filter questions by the language the QUESTION is phrased in "
+            "(question_language field; space-separated). Example: --lang-questions en. "
+            "NOTE: this is NOT the firm filing-language — the EN/non-EN firm split is now "
+            "done with --scope (e.g. --scope esef_banks_lang_noen). Questions without a "
+            "question_language field default to 'en'."
+        ),
+    )
+    p.add_argument(
+        "--keywords",
+        choices=["on", "off"],
+        default="on",
+        help=(
+            "Keyword (BM25) channel toggle. 'on' (default) forwards each question's keywords "
+            "to retrieval; 'off' suppresses them — the keyword-channel ablation (the old "
+            "no_keyword_hint variant). Independent of --entity-filter (the entity ablation). "
+            "no_scaffold ≡ --entity-filter none --keywords off."
         ),
     )
     p.add_argument(
@@ -432,7 +397,7 @@ DEFAULT_QUESTIONS = [
 ]
 
 
-def load_questions(path: str | None, corpus: str = "sec_10k", scope: str | None = None) -> list[dict]:
+def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
     """
     Load benchmark questions from a file or auto-detect based on corpus name.
 
@@ -442,19 +407,16 @@ def load_questions(path: str | None, corpus: str = "sec_10k", scope: str | None 
     3. Fallback: DEFAULT_QUESTIONS (sec_10k hardcoded set)
     """
     # AIStudio_618b (v2.0.11): stem expansion — try multiple filename patterns.
-    # Allows short stems: --questions basic → esef_banks_lang_en_basic_questions.yaml
+    # Allows short stems: --questions basic → esef_banks_basic_questions.yaml
     # Resolution order (first match wins):
-    #   1. {corpus}_{scope}_{stem}_questions.yaml  — scoped shorthand (future --scope support)
-    #   2. {corpus}_{stem}_questions.yaml          — corpus-prefixed shorthand
-    #   3. {stem}_questions.yaml                   — bare stem with _questions suffix
-    #   4. {stem}.yaml                             — literal (legacy, full filename stem)
+    #   1. {corpus}_{stem}_questions.yaml          — corpus-prefixed shorthand
+    #   2. {stem}_questions.yaml                   — bare stem with _questions suffix
+    #   3. {stem}.yaml                             — literal (legacy, full filename stem)
+    # (v2.4.0: dropped the scope-keyed candidate — --scope is a firm filter, not a
+    #  question-file selector.)
     if path is not None and "/" not in path and "\\" not in path and "." not in path:
         script_dir_stem = Path(__file__).parent
-        _scope = scope
-        candidates = []
-        if _scope:
-            candidates.append(script_dir_stem / corpus / f"{corpus}_{_scope}_{path}_questions.yaml")
-        candidates += [
+        candidates = [
             script_dir_stem / corpus / f"{corpus}_{path}_questions.yaml",
             script_dir_stem / corpus / f"{path}_questions.yaml",
             script_dir_stem / corpus / f"{path}.yaml",
@@ -583,6 +545,7 @@ def run_query(
     hybrid_alpha: float | None = None,
     min_score: float | None = None,
     entity_filter: list[str] | None = None,
+    allowed_source_paths: list[str] | None = None,
     keywords: list[str] | None = None,
     query_expansion: int = 1,
     entity_filter_mode: str = "auto",
@@ -607,6 +570,8 @@ def run_query(
         payload["min_score"] = min_score
     if entity_filter:
         payload["entity_filter"] = entity_filter
+    if allowed_source_paths:
+        payload["allowed_source_paths"] = allowed_source_paths  # AIStudio_882: scope firm-boundary
     if hybrid_alpha is not None:
         payload["hybrid_alpha"] = hybrid_alpha
     if keywords:
@@ -923,14 +888,15 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
 def filter_questions(
     questions: list[dict],
     *,
-    subset: str | None,
     topics: str | None,
     question_ids: str | None,
-    lang: list[str] | None,
+    lang_questions: list[str] | None,
 ) -> tuple[list[dict], list[str]]:
-    """Filter questions by subset, topics, question IDs, and/or language codes.
+    """Filter questions by topics, question IDs, and/or question-language codes.
 
     All filters compose with AND. Returns (filtered_questions, applied_filter_descriptions).
+    (v2.4.0: --subset/FIRM_SUBSETS removed — firm grouping is a --scope file now.
+     --lang→--lang_questions: filters question_language, not the firm filing-language.)
     """
     applied: list[str] = []
     filtered = list(questions)
@@ -941,14 +907,15 @@ def filter_questions(
         filtered = [q for q in filtered if q.get("id") in wanted_ids]
         applied.append(f"--question-ids ({len(wanted_ids)} IDs)")
 
-    # Filter by language codes — questions without language field default to 'en'
-    if lang:
-        wanted_langs = {lc.strip().lower() for lc in lang if lc.strip()}
+    # Filter by the language the QUESTION is phrased in (question_language; default 'en').
+    # NOT the firm filing-language — the EN/non-EN firm split is --scope's job.
+    if lang_questions:
+        wanted_langs = {lc.strip().lower() for lc in lang_questions if lc.strip()}
         filtered = [
             q for q in filtered
-            if (q.get("language") or "en").lower() in wanted_langs
+            if (q.get("question_language") or "en").lower() in wanted_langs
         ]
-        applied.append(f"--lang {' '.join(sorted(wanted_langs))}")
+        applied.append(f"--lang-questions {' '.join(sorted(wanted_langs))}")
 
     # Filter by topics
     if topics:
@@ -959,16 +926,6 @@ def filter_questions(
             or any(t in (q.get("topic", "") or q.get("notes", "")).lower() for t in wanted_topics)
         ]
         applied.append(f"--topics ({len(wanted_topics)} topics)")
-
-    # Filter by firm subset
-    if subset:
-        firms_in_subset = FIRM_SUBSETS.get(subset, [])
-        firms_lower = [f.lower() for f in firms_in_subset]
-        filtered = [
-            q for q in filtered
-            if any(firm in (q.get("query") or q.get("question") or "").lower() for firm in firms_lower)
-        ]
-        applied.append(f"--subset {subset} ({len(firms_in_subset)} firm patterns)")
 
     return filtered, applied
 
@@ -982,6 +939,29 @@ def filter_questions(
 def main() -> None:
     args = parse_args()
     print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
+
+    # ── Scope (AIStudio_882): load + validate the firm-universe up front ─────────
+    # --scope names a firm subset; the resolver hard-errors on a missing named scope
+    # (never a silent fallback). We surface the firm-token universe here. Applying it as
+    # a retrieval source_path restriction is the paired sub-step (the --scope ↔ /ask
+    # firm-allowlist mechanism, deferred per design #3). --scope does NOT filter questions.
+    scope_firms: list[str] = []
+    scope_tokens: list[str] = []
+    if args.scope:
+        _stem = args.scope
+        if _stem.startswith(args.corpus + "_"):
+            _stem = _stem[len(args.corpus) + 1:]  # tolerate a corpus-prefixed stem
+        try:
+            _rows = _scope.load_entities(args.corpus, _stem)
+        except _scope.ScopeError as e:
+            print(f"❌ --scope {args.scope!r} could not be resolved:\n{e}")
+            sys.exit(2)
+        scope_firms = [n for n in (_scope.entity_name(r) for r in _rows) if n]
+        scope_tokens = [f.replace(" ", "_") for f in scope_firms]
+        print(f"· --scope {args.scope} → {len(scope_firms)} firm(s): {', '.join(scope_firms)}")
+        # AIStudio_882 (scope application): scope_tokens ride the /ask `allowed_source_paths`
+        # field — the server ANDs them with each question's entity logic (intersect). An
+        # out-of-scope question retrieves nothing; a scope-only run retrieves across the scope.
 
     # ── Fetch corpus metadata defaults ───────────────────────────────────────
     # Apply corpus metadata defaults for params not explicitly set via CLI.
@@ -1019,19 +999,22 @@ def main() -> None:
     _model_raw = args.model or "default"
     _model_slug = _model_raw.replace(":", "-").replace("/", "-")[:20]
 
-    # Build filter suffix for filename so subset/lang runs are distinguishable
+    # Build filter suffix for filename so scope/lang/ablation runs are distinguishable
     filter_parts = []
-    if args.subset:
-        filter_parts.append(args.subset)
     if args.topics:
         first_topic = args.topics.split(",")[0].strip().lower().replace(" ", "_").replace("&", "and")[:20]
         filter_parts.append(f"topics_{first_topic}")
     if args.question_ids:
-        filter_parts.append("subset")
+        filter_parts.append("qids")
     if args.scope:
         filter_parts.append(args.scope)
-    if args.lang:
-        filter_parts.append("lang_" + "_".join(sorted(args.lang)))
+    if args.lang_questions:
+        filter_parts.append("langq_" + "_".join(sorted(args.lang_questions)))
+    # Ablation markers — keep entity/keyword-ablated runs distinguishable in report names
+    if args.entity_filter_mode != "auto":
+        filter_parts.append(f"ef-{args.entity_filter_mode}")
+    if args.keywords == "off":
+        filter_parts.append("kwoff")
     filter_suffix = ("_" + "_".join(filter_parts)) if filter_parts else ""
 
     base_name = f"benchmark_{args.corpus}_{_model_slug}_{timestamp}{filter_suffix}"
@@ -1040,7 +1023,7 @@ def main() -> None:
 
     # Preflight header printed by ais_bench.sh shell wrapper
 
-    questions = load_questions(questions_path, corpus=args.corpus, scope=args.scope)
+    questions = load_questions(questions_path, corpus=args.corpus)
     questions_label = (
         str(questions_path)
         if questions_path
@@ -1049,13 +1032,12 @@ def main() -> None:
     total_loaded = len(questions)
 
     # Apply filters
-    if args.subset or args.topics or args.question_ids or args.lang:
+    if args.topics or args.question_ids or args.lang_questions:
         questions, applied_filters = filter_questions(
             questions,
-            subset=args.subset,
             topics=args.topics,
             question_ids=args.question_ids,
-            lang=args.lang,
+            lang_questions=args.lang_questions,
         )
         if not questions:
             print(f"❌ No questions matched filters: {', '.join(applied_filters)}")
@@ -1071,9 +1053,11 @@ def main() -> None:
     model_label = args.model if args.model else "API default (llama3.1:8b)"
     _alpha_label = f"  |  Alpha: {args.alpha}" if args.alpha is not None else ""
     _min_label   = f"  |  Min Score: {args.min_score}" if args.min_score is not None else ""
+    _scope_label = f"  |  Scope: {args.scope} ({len(scope_firms)} firms)" if args.scope else ""
     print(
         f"· Corpus: {args.corpus}  |  Top K: {args.top_k}  |  Temperature: {args.temperature}"
-        f"{_alpha_label}{_min_label}  |  Model: {model_label}  |  Query-expansion: {args.query_expansion}  |  Entity-filter: {args.entity_filter_mode}"
+        f"{_alpha_label}{_min_label}  |  Model: {model_label}  |  Query-expansion: {args.query_expansion}"
+        f"  |  Entity-filter: {args.entity_filter_mode}  |  Keywords: {args.keywords}{_scope_label}"
     )
 
     # --- Firm override message
@@ -1092,10 +1076,12 @@ def main() -> None:
 
         # AIStudio_875: --query-expansion and --entity-filter map directly to server request
         # fields. --entity-filter yaml forwards the question's entity_filter; none/auto leave it
-        # to the server (auto self-populates from detected entities). Keywords always forward
-        # (independent BM25 channel). hybrid_alpha enables the hybrid path the server expansion uses.
+        # to the server (auto self-populates from detected entities). hybrid_alpha enables the
+        # hybrid path the server expansion uses.
+        # v2.4.0: --keywords off suppresses the (independent) BM25 keyword channel — the
+        # keyword-channel ablation (old no_keyword_hint).
         _q_ef = q.get("entity_filter") or None
-        _q_kw = q.get("keywords") or None
+        _q_kw = (q.get("keywords") or None) if args.keywords == "on" else None
         _mode = args.entity_filter_mode
         # yaml → hand-feed the question's entity_filter; none/auto → server decides (auto self-populates)
         _eff_ef = _q_ef if _mode == "yaml" else None
@@ -1113,6 +1099,7 @@ def main() -> None:
             hybrid_alpha=_eff_alpha,
             min_score=args.min_score,
             entity_filter=_eff_ef,
+            allowed_source_paths=scope_tokens or None,
             keywords=_q_kw,
             query_expansion=args.query_expansion,
             entity_filter_mode=_mode,
@@ -1236,7 +1223,6 @@ def main() -> None:
             print(f"  ⚠ PDF skipped: pandoc error: {r1.stderr.strip()[:80]}")
         else:
             import os
-            import sys
             import tempfile
 
             script = f"""

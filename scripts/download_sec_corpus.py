@@ -1,15 +1,37 @@
 #!/usr/bin/env python3
 """
 AIStudio — SEC 10-K Corpus Downloader
-Version 1.2.2
+Version 1.4.0
 
 Downloads 10-K annual filings from SEC EDGAR. Membership is no longer hardcoded:
-the firm set comes from a scope file (default sec_10k_US_scope.yaml), or a single
+the firm set comes from a scope file (default sec_10k_US_full_scope.yaml), or a single
 firm via --cik / --tkr. Each downloaded filing is verified at download time for the
 iXBRL entity tag the ingest pipeline relies on (dei:EntityRegistrantName), so a filing
 that cannot be auto-recognized is flagged before you waste a 30-minute ingest on it.
 
 Changelog:
+- 1.4.0 — (1) --scope now resolves a STEM via _scope_common_ops: bare 'initial_test' →
+          data/corpora/sec_10k/scopes/sec_10k_initial_test_scope.yaml; a path (contains /
+          or .) is still taken literally; no --scope → the corpus inventory (discover_full).
+          (2) Inventory write-back: after a run, every downloaded firm is upserted (by CIK)
+          into the *_full_scope inventory — label (forced label if used), cik, ticker, lei:""
+          (PRESERVED if already set — hand-corrected LEIs are never clobbered), and a stamped
+          last_updated. The subset scope passed via --scope is READ-ONLY, never written. The
+          inventory is tool-owned local data (gitignored): row data round-trips, an existing
+          header comment is preserved, GLEIF later fills lei in place.
+- 1.3.0 — Year selection split into two flags (AIStudio_882-adjacent). --latest N = the N
+          most-recent filings by filing date (bare --latest = 1; default when neither flag
+          is given = 1); --years YYYY [YYYY ...] = explicit fiscal year(s), selected by each
+          filing's reportDate (periodOfReport). Mutually exclusive. get_filings now parses
+          reportDate and supports both modes. BREAKING: --years changed meaning — it was an
+          alias for "most-recent N", now it takes fiscal years; use --latest N for the old
+          behavior (--max-results-per-firm kept as a --latest alias). A future shared
+          year/period resolver is the eventual home for this logic.
+- 1.2.3 — Unified-scope relocation (step 2b). Default scope renamed + relocated:
+          data/corpora/sec_10k/sec_10k_US_scope.yaml -> sec_10k_US_full_scope.yaml
+          (the corpus full inventory). Bring-your-own example moved to
+          data/corpora/sec_10k/scopes/sec_10k_my_firms_scope.yaml. Path constants only;
+          scope-resolver wiring is a later step.
 - 1.2.2 — Scope-not-found message de-leaked (dropped operator-command reference); civilian-clean.
 - 1.2.1 — Default scope renamed sec_10k_22_US_scope.yaml -> sec_10k_US_scope.yaml (count-less).
           Scope ships with cik|ticker|lei fields per entry (empty = fill if you have it).
@@ -37,7 +59,7 @@ Usage:
     ais_download_sec_10k                                   # default scope
     ais_download_sec_10k --tkr BNY --years 5               # single firm by ticker, verify
     ais_download_sec_10k --cik 0000886982 --years 3        # single firm by CIK
-    ais_download_sec_10k --scope my_firms.yaml             # bring your own list
+    ais_download_sec_10k --scope scopes/sec_10k_my_firms_scope.yaml   # bring your own list
     ais_download_sec_10k --tkr BNY --years 5 --force_name "The Bank of New York Mellon Corporation"
 """
 
@@ -46,10 +68,17 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 import requests
 import yaml
+
+# _scope_common_ops is a sibling in scripts/ — used for --scope stem resolution and to
+# locate the inventory (_full_scope) write-back target. scripts/ is on sys.path when run
+# directly; insert defensively for -m / odd-cwd invocations.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _scope_common_ops as _scope  # noqa: E402
 
 try:
     from bs4 import BeautifulSoup  # type: ignore
@@ -67,7 +96,7 @@ TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 
 # Default scope (the membership list the bare command consumes). Corpus-attached,
 # at the base of the corpus directory — NOT benchmarks/, NOT uploads/.
-DEFAULT_SCOPE_REL = "data/corpora/sec_10k/sec_10k_US_scope.yaml"
+DEFAULT_SCOPE_REL = "data/corpora/sec_10k/sec_10k_US_full_scope.yaml"
 
 # The single iXBRL tag the ingest pipeline's primary strategy reads to recognize a
 # filing's entity. A filing lacking it cannot be auto-recognized at ingest (the
@@ -128,7 +157,7 @@ def _load_scope(path: Path, delay: float = 0.5) -> list[dict]:
         raise SystemExit(
             f"Scope file not found: {path}\n"
             f"  Pass your own list with --scope <file.yaml> (schema: entities: [{{label, cik|ticker}}]),\n"
-            f"  or restore the default scope at data/corpora/sec_10k/sec_10k_US_scope.yaml."
+            f"  or restore the default scope at data/corpora/sec_10k/sec_10k_US_full_scope.yaml."
         )
     with open(path) as f:
         doc = yaml.safe_load(f) or {}
@@ -157,9 +186,88 @@ def _load_scope(path: Path, delay: float = 0.5) -> list[dict]:
     return resolved
 
 
+# ── Inventory write-back (the *_full_scope ledger) ──────────────────────────────
+_INVENTORY_HEADER = (
+    "# SEC 10-K corpus inventory — the running ledger of every firm downloaded.\n"
+    "# Maintained by ais_download_sec_10k: rows are upserted by CIK on each download and\n"
+    "# the `last_updated` field is stamped per touched row. Hand-edit `lei` (and labels)\n"
+    "# as needed — row data round-trips across tool writes, so corrections are preserved.\n"
+    "# This file is the default download membership and the entity source for\n"
+    "# ais_import_knowledge_base (GLEIF). Tool-owned local data (gitignored).\n"
+)
+
+
+def _inventory_path() -> Path:
+    """The single *_full_scope inventory to write firms back into.
+    Existing one (discover_full) if present; else the canonical default path (created)."""
+    try:
+        return _scope.discover_full("sec_10k")
+    except _scope.ScopeError:
+        return _repo_root() / DEFAULT_SCOPE_REL
+
+
+def _read_inventory_header(path: Path) -> str:
+    """Preserve an existing file's leading comment block (everything before `entities:`);
+    fall back to the canonical header for a fresh inventory."""
+    if path.exists():
+        head: list[str] = []
+        for ln in path.read_text().splitlines(keepends=True):
+            if ln.lstrip().startswith("entities:"):
+                break
+            head.append(ln)
+        if any(h.strip() for h in head):
+            return "".join(head)
+    return _INVENTORY_HEADER
+
+
+def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
+    """Merge downloaded firms into the inventory, keyed by CIK. Preserves every existing
+    row field (especially a hand-corrected `lei`); only sets label (when changed/forced),
+    fills an absent ticker, and stamps last_updated. Returns (path, n_added, n_touched).
+    Read-only on the subset scope — this only ever writes the *_full_scope inventory."""
+    path = _inventory_path()
+    rows: list[dict] = []
+    if path.exists():
+        doc = yaml.safe_load(path.read_text()) or {}
+        rows = doc.get("entities", []) or []
+    by_cik = {str(r.get("cik", "")).zfill(10): r for r in rows if r.get("cik")}
+    today = date.today().isoformat()
+    added = touched = 0
+    for f in learned:
+        cik = str(f["cik"]).zfill(10)
+        if cik in by_cik:
+            r = by_cik[cik]
+            if f.get("label"):
+                r["label"] = f["label"]          # honor forced/scope label on re-download
+            if f.get("ticker") and not r.get("ticker"):
+                r["ticker"] = f["ticker"]
+            r["last_updated"] = today            # lei + any enrichment preserved untouched
+            touched += 1
+        else:
+            rows.append({
+                "label": f.get("label", ""), "cik": cik,
+                "ticker": f.get("ticker", ""), "lei": "", "last_updated": today,
+            })
+            by_cik[cik] = rows[-1]
+            added += 1
+    header = _read_inventory_header(path)
+    body = yaml.safe_dump({"entities": rows}, sort_keys=False, allow_unicode=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(header + body)
+    return path, added, touched
+
+
 # ── EDGAR filing retrieval (unchanged proven logic) ─────────────────────────────
-def get_filings(cik: str, form_type: str = "10-K", max_results: int = 5, delay: float = 0.5) -> list:
-    """Fetch filing metadata from EDGAR for a given CIK (recent block, then paginate)."""
+def get_filings(cik: str, form_type: str = "10-K", *, max_results: int | None = None,
+                years: set[int] | None = None, delay: float = 0.5) -> list:
+    """Fetch 10-K filing metadata from EDGAR for a CIK (recent block, then paginate).
+
+    Exactly one selection mode:
+      - max_results=N : the N most-recent filings by filing date (the pre-1.3.0 behavior).
+      - years={YYYY,…}: every filing whose fiscal period (reportDate / periodOfReport) year
+                        is in the set. Scans until all requested years are found or the
+                        submissions history is exhausted.
+    """
     cik_padded = cik.zfill(10)
     url = SUBMISSIONS_URL.format(cik=cik_padded)
     try:
@@ -171,28 +279,49 @@ def get_filings(cik: str, form_type: str = "10-K", max_results: int = 5, delay: 
         return []
 
     results: list[dict] = []
+    _years = set(years) if years else None
+    _found_years: set[int] = set()
+
+    def _want_more() -> bool:
+        # years mode: keep scanning until every requested year is located;
+        # latest mode: stop once max_results filings are collected.
+        if _years is not None:
+            return not _years.issubset(_found_years)
+        return len(results) < (max_results or 0)
 
     def _extract(block: dict) -> None:
         forms = block.get("form", [])
         accessions = block.get("accessionNumber", [])
         dates = block.get("filingDate", [])
+        report_dates = block.get("reportDate", [])  # 1.3.0: periodOfReport (fiscal period end)
         primary_docs = block.get("primaryDocument", [])
         for i, form in enumerate(forms):
-            if form == form_type and len(results) < max_results:
-                results.append(
-                    {
-                        "accession": accessions[i].replace("-", ""),
-                        "accession_raw": accessions[i],
-                        "date": dates[i],
-                        "primary_doc": primary_docs[i],
-                        "cik": cik_padded,
-                    }
-                )
+            if form != form_type:
+                continue
+            if not _want_more():
+                break
+            rdate = report_dates[i] if i < len(report_dates) else ""
+            fdate = dates[i] if i < len(dates) else ""
+            entry = {
+                "accession": accessions[i].replace("-", ""),
+                "accession_raw": accessions[i],
+                "date": fdate,
+                "report_date": rdate,  # 1.3.0
+                "primary_doc": primary_docs[i],
+                "cik": cik_padded,
+            }
+            if _years is not None:
+                _yr = (rdate or fdate)[:4]
+                if _yr.isdigit() and int(_yr) in _years:
+                    results.append(entry)
+                    _found_years.add(int(_yr))
+            else:
+                results.append(entry)
 
     _extract(data.get("filings", {}).get("recent", {}))
-    if len(results) < max_results:
+    if _want_more():
         for entry in data.get("filings", {}).get("files", []):
-            if len(results) >= max_results:
+            if not _want_more():
                 break
             time.sleep(delay)
             try:
@@ -324,14 +453,17 @@ def _write_override(out_dir: Path, filename: str, force_name: str | None, force_
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ais_download_sec_10k",
-        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.2.2",
+        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.3.0",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  ais_download_sec_10k                                # default scope\n"
-            "  ais_download_sec_10k --tkr BNY --years 5            # single firm by ticker\n"
-            "  ais_download_sec_10k --cik 0000886982 --years 3    # single firm by CIK\n"
-            "  ais_download_sec_10k --scope my_firms.yaml         # bring your own list\n"
+            "  ais_download_sec_10k                                # default scope, latest 1\n"
+            "  ais_download_sec_10k --latest 3                     # 3 most-recent per firm\n"
+            "  ais_download_sec_10k --years 2024                   # fiscal year 2024 only\n"
+            "  ais_download_sec_10k --years 2024 2025              # FY2024 and FY2025\n"
+            "  ais_download_sec_10k --tkr BNY --latest 1          # single firm by ticker\n"
+            "  ais_download_sec_10k --cik 0000886982 --years 2024 # single firm, one FY\n"
+            "  ais_download_sec_10k --scope scopes/sec_10k_my_firms_scope.yaml   # bring your own list\n"
             "\nafter download: ais_ingest_sec_10k\n"
         ),
     )
@@ -344,15 +476,26 @@ def main() -> None:
         f"Default: {DEFAULT_SCOPE_REL}",
     )
     parser.add_argument("--out", default="~/Downloads/sec_10k", help="Output directory")
-    parser.add_argument(
+    # Year selection — exactly one of --latest / --years (default: --latest 1).
+    year_sel = parser.add_mutually_exclusive_group()
+    year_sel.add_argument(
+        "--latest", "--max-results-per-firm",
+        dest="latest", nargs="?", const=1, type=int, default=None, metavar="N",
+        help="The N most-recent 10-K filings per firm, by filing date. Bare --latest = 1. "
+             "Default when neither --latest nor --years is given: 1.",
+    )
+    year_sel.add_argument(
         "--years",
-        "--max-results-per-firm",
-        dest="years",
-        type=int,
-        default=5,
-        help="Most recent filings per firm (default: 5)",
+        dest="years", nargs="+", type=int, default=None, metavar="YYYY",
+        help="Explicit fiscal year(s), e.g. --years 2024  or  --years 2024 2025. Selects "
+             "filings by their fiscal period (reportDate). Mutually exclusive with --latest. "
+             "(Note: --years changed meaning in 1.3.0 — it used to mean 'latest N'; that is "
+             "now --latest N.)",
     )
     parser.add_argument("--delay", type=float, default=0.5, help="Request delay (min 0.1)")
+    parser.add_argument("--no-inventory", dest="no_inventory", action="store_true",
+                        help="Skip the *_full_scope inventory write-back (download files only; "
+                             "used by the test harness so throwaway runs don't touch the ledger).")
     parser.add_argument("--no-verify", action="store_true", help="Skip the download-time iXBRL tag check")
     parser.add_argument("--force_name", help="Assert entity name when the tag is absent (single-firm modes)")
     parser.add_argument("--force_year", help="Assert fiscal year when the tag is absent (single-firm modes)")
@@ -364,6 +507,16 @@ def main() -> None:
     out_dir = Path(args.out).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Year selection: explicit --years wins; otherwise --latest N (default 1).
+    if args.years:
+        sel_years: set[int] | None = set(args.years)
+        latest_n: int | None = None
+        sel_label = "fiscal year(s) " + ", ".join(str(y) for y in sorted(sel_years))
+    else:
+        sel_years = None
+        latest_n = args.latest if args.latest is not None else 1
+        sel_label = f"the {latest_n} most-recent filing(s)"
+
     # Resolve the firm set from the chosen mode.
     targets: list[dict] = []
     if args.cik:
@@ -373,24 +526,50 @@ def main() -> None:
         if hit is None:
             raise SystemExit(f"Ticker '{args.tkr}' not found in EDGAR company_tickers.json")
         cik, title = hit
-        targets = [{"label": title, "cik": cik}]
+        targets = [{"label": title, "cik": cik, "ticker": args.tkr.upper().strip()}]
     else:
-        scope_path = Path(args.scope).expanduser() if args.scope else (_repo_root() / DEFAULT_SCOPE_REL)
+        # --scope: a bare stem resolves via _scope_common_ops to
+        # scopes/sec_10k_<stem>_scope.yaml; a value containing / or . is a literal path;
+        # no --scope → the corpus inventory (discover_full). The resolved scope is READ-ONLY.
+        try:
+            if args.scope:
+                _is_stem = not any(c in args.scope for c in "/\\.")
+                scope_path = (
+                    _scope.resolve_scope_file("sec_10k", stem=args.scope) if _is_stem
+                    else _scope.resolve_scope_file("sec_10k", path=args.scope)
+                )
+            else:
+                scope_path = _scope.discover_full("sec_10k")
+        except _scope.ScopeError as e:
+            raise SystemExit(f"--scope could not be resolved:\n{e}") from e
         targets = _load_scope(scope_path, delay=args.delay)
 
     print(f"Output directory: {out_dir}")
-    print(f"Targeting {len(targets)} firm(s) × up to {args.years} filings each\n")
+    print(f"Targeting {len(targets)} firm(s) × {sel_label}\n")
 
     total_ok = total_fail = 0
+    learned: list[dict] = []   # firms with >=1 file on disk this run → upserted into inventory
     for t in targets:
         label, cik = t["label"], t["cik"]
         print(f"\n{label} (CIK: {cik})")
-        filings = get_filings(cik, max_results=args.years, delay=args.delay)
+        filings = get_filings(cik, max_results=latest_n, years=sel_years, delay=args.delay)
         if not filings:
-            print("  [warn] No 10-K filings found")
+            if sel_years:
+                print(f"  [warn] No 10-K filings found for {sel_label}")
+            else:
+                print("  [warn] No 10-K filings found")
             total_fail += 1
             continue
 
+        # years mode: flag any requested year this firm didn't file.
+        if sel_years:
+            _got = {int((f["report_date"] or f["date"])[:4]) for f in filings
+                    if (f["report_date"] or f["date"])[:4].isdigit()}
+            _missing = sorted(sel_years - _got)
+            if _missing:
+                print(f"  [warn] {label}: no 10-K for fiscal year(s) {', '.join(map(str, _missing))}")
+
+        firm_ok = False
         verify_results: list[tuple[str, bool]] = []  # (date, has_entity_tag)
         for filing in filings:
             saved = download_filing(filing, label, out_dir, delay=args.delay)
@@ -398,6 +577,7 @@ def main() -> None:
                 total_fail += 1
                 continue
             total_ok += 1
+            firm_ok = True
 
             if args.no_verify:
                 continue
@@ -415,15 +595,24 @@ def main() -> None:
                 print("         ❌ verify: no dei:EntityRegistrantName tag")
             time.sleep(args.delay)
 
+        # Record for inventory write-back: forced label wins (operator's assertion).
+        if firm_ok:
+            learned.append({
+                "label": args.force_name or label,
+                "cik": cik,
+                "ticker": t.get("ticker", ""),
+            })
+
         # Coaching: every downloaded filing for this firm lacks the entity tag, not forced.
         if verify_results and not any(has for _, has in verify_results) and not args.force_name:
             years_str = ", ".join(d[:4] for d, _ in verify_results)
             ident = f"--tkr {args.tkr}" if args.tkr else (f"--cik {cik}" if args.cik else f'--scope (entry "{label}")')
+            _yflag = ("--years " + " ".join(str(y) for y in sorted(sel_years))) if sel_years else f"--latest {latest_n}"
             print(
                 f"\n  ❌ {label}: none of the downloaded filings ({years_str}) carry an iXBRL\n"
                 f"     entity tag (dei:EntityRegistrantName), so ingest can't auto-recognize them.\n"
                 f"     You can override:\n"
-                f"       ais_download_sec_10k {ident} --years {args.years} "
+                f"       ais_download_sec_10k {ident} {_yflag} "
                 f'--force_name "<name to use>" [--force_year <YYYY>]\n'
                 f"     But it's worth finding out *why* the filing lacks the tag first — see Tutorial Annex 1."
             )
@@ -432,6 +621,18 @@ def main() -> None:
     print(f"Downloaded: {total_ok} filings")
     print(f"Failed:     {total_fail}")
     print(f"Output:     {out_dir}")
+
+    # Inventory write-back — upsert downloaded firms into the *_full_scope ledger.
+    # Read-only on any subset scope passed via --scope; preserves hand-corrected lei.
+    # --no-inventory suppresses it (throwaway / files-only runs, e.g. the test harness).
+    if learned and not args.no_inventory:
+        inv_path, n_added, n_touched = _upsert_inventory(learned)
+        try:
+            _rel = inv_path.relative_to(_repo_root())
+        except ValueError:
+            _rel = inv_path
+        print(f"Inventory:  {_rel}  (+{n_added} new, {n_touched} updated)")
+
     print("\nTo ingest these files into AIStudio, run:\n  ais_ingest_sec_10k")
 
 
