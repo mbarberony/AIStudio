@@ -1,4 +1,13 @@
-# Version: 1.9.4
+# Version: 1.9.6
+# Changelog: 1.9.6 — Fix ruff B008 in trigger_ingest: Body(default=None) in the arg default
+#            tripped "no function call in argument defaults". Switched to the Annotated form
+#            (body: Annotated[dict | None, Body()] = None). No behavior change.
+# Changelog: 1.9.5 — AIStudio: per-file selective ingest. POST /corpus/{c}/ingest now accepts
+#            optional body {"files": [...]}. When present, pre-scan + status totals reflect only
+#            those files and the ingest subprocess is launched with --files, so ONLY the selected
+#            files are (re-)embedded; all other files in uploads/ (indexed or parked) are untouched.
+#            Body absent → legacy whole-corpus pass. _run_ingest_background(only_files=...) appends
+#            --files. Enables tutorial "index one file at a time" + honest reingest-N denominators.
 # Changelog: 1.9.4 — AIStudio_876: _detect_query_entities now delegates to rag_core._detect_entities —
 #            expansion + filter share ONE GLEIF-sourced detector. api.py normalizer_entity alias map retired.
 # Changelog: 1.9.3 — AIStudio_875 fix: _detect_query_entities word-boundary match (\\b) — token
@@ -87,10 +96,10 @@ import shutil
 import time
 from datetime import datetime as _dt
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import yaml as _yaml
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -948,13 +957,16 @@ async def update_corpus_metadata(corpus_name: str, request: Request) -> dict[str
     }
 
 
-async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
+async def _run_ingest_background(corpus_name: str, uploads_dir, only_files: set[str] | None = None) -> None:
     """Run ingest as a background task after upload.
 
     Streams stderr line-by-line to parse tqdm progress output in real time.
     tqdm emits lines like:
       Process: 100%|...| 143/143 [03:46<00:00, 1.59s/file, chunks=105964, failed=0, processed=143, skipped=0]
     We parse chunks=N, processed=N, and elapsed time so the UI can show live progress.
+
+    only_files: when set, passed to the ingest CLI as --files so ONLY those files
+    are processed (and always re-embedded); all others under uploads/ are untouched.
     """
     import sys
 
@@ -967,6 +979,8 @@ async def _run_ingest_background(corpus_name: str, uploads_dir) -> None:
         "--root",
         str(uploads_dir),
     ]
+    if only_files:
+        cmd += ["--files", ",".join(sorted(only_files))]
     env = {**os.environ, "PYTHONPATH": "src", "PYTHONUNBUFFERED": "1"}
     start_time = time.time()
     # Preserve pre-scan data (file_sizes, total_bytes, files_total) from trigger_ingest.
@@ -1432,16 +1446,31 @@ async def upload_to_corpus(
 
 
 @app.post("/corpus/{corpus_name}/ingest")
-async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
+async def trigger_ingest(
+    corpus_name: str,
+    body: Annotated[dict | None, Body()] = None,
+) -> dict[str, Any]:
     """
-    Trigger a single ingest pass over all files in uploads/.
-    Call once after all files are uploaded — never per-file.
+    Trigger an ingest pass.
+
+    Body (optional): {"files": ["a.htm", "b.htm"]}
+      - present → ingest ONLY those files (always re-embedded); all other files in
+        uploads/ (indexed or parked) are left untouched. Pre-scan + denominators
+        reflect only the selected subset.
+      - absent  → whole-corpus pass over uploads/ (legacy behavior).
     Guards against concurrent runs (returns already_running if busy).
     """
     _require_corpus(corpus_name)
     repo_root = _get_repo_root()
     paths = corpus_paths(repo_root=repo_root, corpus=corpus_name)
     uploads_dir = paths["uploads"]
+
+    # Optional explicit allowlist (basenames) from request body.
+    only_files: set[str] | None = None
+    if isinstance(body, dict) and body.get("files"):
+        only_files = {str(n).strip() for n in body["files"] if str(n).strip()}
+        if not only_files:
+            only_files = None
 
     # Clear any stale status from previous run — prevents stale chunk/file counts
     # from leaking into the new run if pre-scan or tqdm stream hasn't fired yet.
@@ -1480,6 +1509,11 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
                 [(name, sz) for name, ext, sz in all_files if ext in SUPPORTED_EXTS],
                 key=lambda x: x[0],
             )
+            # Restrict pre-scan to the selected files so files_total / total_bytes /
+            # file_sizes reflect ONLY what will actually be ingested. Without this the
+            # progress bar denominator would be the whole corpus while the run does a subset.
+            if only_files is not None:
+                pre_scan = [(name, sz) for name, sz in pre_scan if name in only_files]
             print(
                 f"[ingest] pre-scan: {len(pre_scan)} supported files, total_bytes={sum(sz for _, sz in pre_scan)}",
                 flush=True,
@@ -1504,7 +1538,7 @@ async def trigger_ingest(corpus_name: str) -> dict[str, Any]:
         "message": f"0 of {files_total} file(s) being indexed. 0 / {total_bytes / (1024 * 1024):.1f} MB = 0% indexed",
     }
 
-    asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir))
+    asyncio.create_task(_run_ingest_background(corpus_name, uploads_dir, only_files))
     return {"status": "started", "message": f"Ingestion started for corpus '{corpus_name}'."}
 
 

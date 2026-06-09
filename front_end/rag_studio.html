@@ -1,6 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.6.2 -->
+<!-- Changelog: 2.6.2 — Reingest estimate now uses the same 3-tier cascade as ais_ingest_sec_10k.sh
+     1.4.0: tier 1 = each selected file's own duration_sec (data-dur); tier 2 = corpus
+     avg_seconds_per_file (data-avg-secs from /info); tier 3 = 60s/file seed. Values < 2s/file are
+     rejected as skip-contaminated (impossible for SEC XBRL) and fall through to the next tier —
+     this is what was producing the bogus "~3s for 5 files" (corpus avg was a poisoned 0.59s/file).
+     Script and UI now derive estimates from one shared logic. -->
+<!-- Version: 2.6.1 -->
+<!-- Changelog: 2.6.1 — Reingest progress UX polish (frontend only; no backend timing changes).
+     (1) Restored ⊘ Stop button on the reingest progress bar (reuses cancelIngest + /ingest-cancel),
+     auto-hidden on done/cancelled/error/timeout via _hideIngestCancel().
+     (2) Done message now prefers the backend's rich summary ("N new · M skipped · T total · time" +
+     chunks) — the ESEF-quality breakdown — instead of a generic "N file(s) indexed".
+     (3) Running text surfaces "skipping N already-indexed" when the backend reports it, and shows
+     chunks alongside MB/pct.
+     (4) Poll timeout (10min cap) no longer says the unhelpful "check Stats" — it reports the last
+     live count and notes the run continues in the background; re-open Inspect for final counts.
+     (5) Fixed a latent ReferenceError in the cancelled branch (referenced done-scoped finalChunks). -->
+<!-- Version: 2.6.0 -->
+<!-- Changelog: 2.6.0 — AIStudio: per-file selective ingest (pairs with api.py 1.9.5 / pipeline
+     1.8.28 / ingest __main__ 1.3.0). reingestSelectedFiles() now POSTs {files: [...selected]} to
+     /ingest, so the backend re-embeds ONLY the selected files and leaves all others (indexed or
+     parked in uploads/) untouched. The "N of M" denominator is now honest (M = files selected, not
+     whole corpus), and "index one file at a time" is possible — files can sit in uploads/ until the
+     user chooses to index them. Requires the matching backend; against an older backend the body is
+     ignored and it falls back to a whole-corpus pass. -->
+<!-- Version: 2.5.4 -->
+<!-- Changelog: 2.5.4 — Fix inspect-panel column layout (regression from 2.5.2). The #inspect-panel
+     was a bare .message element (display:flex) with summary set as innerHTML, so the heading,
+     selection toolbar, and file list became horizontal flex items (three columns) — pushing the
+     action bar into a floating middle column. Now the panel is created via addMessage (standard
+     .message > .bubble > .text block wrapper) and refreshed by swapping only the inner .text, so
+     content stacks vertically as before. In-place replace + panel-scoped selection (2.5.2) and the
+     reingest progress bar + estimate (2.5.3) are unchanged. -->
+<!-- Version: 2.5.3 -->
+<!-- Changelog: 2.5.3 — Fix reingest progress + time estimate.
+     (1) Progress bar: reingestSelectedFiles() now renders a live progress bar and runs the
+     pollIngestStatus() loop (the same one the Add-Files path uses) after POST /ingest. Previously
+     it only printed "Progress visible in the ingest bar" but never created a bar or started a poll
+     loop, so the UI looked frozen for minutes while the server re-embedded.
+     (2) Time estimate: estimate now sums the SELECTED files' own recorded durations (data-dur from
+     files_meta.duration_sec), with an 18s/file fallback for files lacking a recorded duration.
+     Previously it multiplied a corpus-wide avg_seconds_per_file, which reads as garbage when the
+     corpus is at 0 chunks and ignores file size — 5 large SEC XBRL files (~14–37s each) estimated
+     as "~3s" instead of the real ~70–90s. -->
+<!-- Version: 2.5.2 -->
+<!-- Changelog: 2.5.2 — Two corpus-UI state-sync fixes.
+     (A) Dropdown/active desync (was 2.5.1): setCorpus() syncs corpusSelect.value to the active
+     corpus. Programmatic callers (loadCorpora default-pick, --start_with hash, rename/create) left
+     the <select> on its first option (alphabetically first, e.g. 'chase_test') while currentCorpus
+     was 'demo'; the Delete button targets currentCorpus, so the UI showed one corpus while deleting
+     another (data-loss-class — caused an unintended 'demo' delete).
+     (B) Inspect file-list stacking + selection over-count: inspectCorpus() now renders into ONE
+     dedicated #inspect-panel and replaces it in place each call, so after delete/reingest the old
+     table disappears and the fresh one appears (was: appended a new panel each call, stacking stale
+     tables with live checkboxes). All checkbox queries (count, select-all, reingest, delete) are
+     scoped to #inspect-panel via _inspectCbs() and de-duplicated, so the action-bar count and the
+     delete/reingest set are exactly the files selected in the live table (was: document-wide queries
+     summed checks across stale panels — 5→10→15 — and fired redundant deletes reported as "failed"). -->
 <!-- Version: 2.5.0 -->
 <!-- Changelog: 2.5.0 — AIStudio_NNN: clear conversation on model change (prevents the new model echoing the previous model's in-context answer — memory carryover, surfaced 2026-06-02 gemma-echoes-mistral). AIStudio_NNN: multi-step query history — Up/Down cycle the full session query history (was one-step ArrowUp), Esc returns to live input.
      Changelog: 2.3.1 — fix: hash corpus selection guarded by option existence check; New Corpus Query Defaults fields empty with placeholder (not pre-filled); ais_start --start_with uses python3 webbrowser to handle # fragment.
@@ -1205,6 +1264,13 @@
         const prev = currentCorpus;
         currentCorpus = name;
         currentCorpusFiles = [];
+        // Keep the dropdown in lockstep with the active corpus. Programmatic callers
+        // (loadCorpora default-pick, --start_with hash, rename, create) set currentCorpus
+        // without going through the <select>; without this the select kept showing its
+        // first option (alphabetically first, e.g. 'chase_test') while currentCorpus was
+        // 'demo' — and the Delete button targets currentCorpus, so the UI showed one
+        // corpus while deleting another. Assigning .value does not refire 'change'.
+        if (name && corpusSelect && corpusSelect.value !== name) corpusSelect.value = name;
         if (name) {
             // Load file list for linkify() — async, best-effort
             fetch(`${API}/corpus/${name}/info`).then(r => r.json()).then(d => {
@@ -1720,6 +1786,7 @@
 
                     return '<div class="file-row" style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
                         + '<input type="checkbox" class="file-select-cb" data-fname="' + fname + '" '
+                        + 'data-dur="' + (fm.duration_sec != null ? fm.duration_sec : '') + '" '
                         + 'style="flex-shrink:0;width:14px;height:14px;accent-color:var(--accent);cursor:pointer;" '
                         + 'onchange="updateDeleteBar()">'
                         + '<div style="flex:1;min-width:0;">'
@@ -1772,15 +1839,74 @@
                 + '<div style="max-height:calc(100vh - 320px);overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin-top:4px;">'
                 + fileRows + '</div>';
 
-            addMessage('assistant', summary, true);
+            // Render into ONE dedicated panel and REPLACE it in place on every call
+            // (after delete/reingest, the old table disappears and the fresh one appears).
+            // Create it via addMessage so it gets the standard .message > .bubble > .text
+            // block structure; on refresh we only swap the inner .text. (Setting innerHTML
+            // directly on the #inspect-panel .message element laid heading/toolbar/list out
+            // as horizontal flex items — .message is display:flex — which is what pushed the
+            // action bar into a middle column. Keeping content inside .text stacks it.)
+            let panel = document.getElementById('inspect-panel');
+            if (!panel) {
+                panel = addMessage('assistant', summary, true);
+                panel.id = 'inspect-panel';
+            } else {
+                const textEl = panel.querySelector('.text');
+                if (textEl) textEl.innerHTML = summary;
+            }
+            panel.scrollIntoView({ block: 'nearest' });
         } catch (err) {
             addMessage('assistant', 'Error: ' + err.message, false);
         }
     }
 
+    // Scope all checkbox queries to the single live inspect panel so stale/duplicate
+    // panels (which no longer exist after Fix 1) can never be counted or acted on.
+    function _inspectCbs(checkedOnly) {
+        const panel = document.getElementById('inspect-panel');
+        if (!panel) return [];
+        return [...panel.querySelectorAll('.file-select-cb' + (checkedOnly ? ':checked' : ''))];
+    }
+
+    // Per-file reingest estimate — cascade (matches ais_ingest_sec_10k.sh logic):
+    //   tier 1: this file's own recorded duration (data-dur, from files_meta.duration_sec)
+    //   tier 2: the corpus avg_seconds_per_file (data-avg-secs on the toolbar, from /info)
+    //   tier 3: a 60s/file seed when neither is available
+    // A < 2s/file value is rejected as skip-contaminated (SEC XBRL files are 14–37s each;
+    // a sub-2s avg comes from a skip-heavy incremental run and is physically impossible),
+    // so tier 2 falls through to tier 3 in that case. The live bar self-corrects anyway —
+    // the seed only needs to be reasonable.
+    const REINGEST_SEED_SECS_PER_FILE = 60;     // tier 3
+    const REINGEST_MIN_PLAUSIBLE_SECS = 2.0;    // floor for trusting an avg
+    function _corpusAvgSecs() {
+        const tb = document.getElementById('file-select-toolbar');
+        const v = tb ? parseFloat(tb.dataset.avgSecs) : NaN;
+        return (Number.isFinite(v) && v >= REINGEST_MIN_PLAUSIBLE_SECS) ? v : null;
+    }
+    function _estimateReingestSecs(checkedCbs) {
+        if (!checkedCbs || !checkedCbs.length) return null;
+        const corpusAvg = _corpusAvgSecs();           // tier 2 source (or null)
+        let total = 0;
+        for (const cb of checkedCbs) {
+            const d = parseFloat(cb.dataset.dur);      // tier 1
+            if (Number.isFinite(d) && d >= REINGEST_MIN_PLAUSIBLE_SECS) {
+                total += d;
+            } else if (corpusAvg) {                    // tier 2
+                total += corpusAvg;
+            } else {                                   // tier 3
+                total += REINGEST_SEED_SECS_PER_FILE;
+            }
+        }
+        return Math.round(total);
+    }
+    function _fmtSecs(s) {
+        if (s == null) return '';
+        return s >= 60 ? `~${Math.floor(s/60)}m ${s%60}s` : `~${s}s`;
+    }
+
     function updateDeleteBar() {
-        const cbs = document.querySelectorAll('.file-select-cb:checked');
-        const total = document.querySelectorAll('.file-select-cb').length;
+        const cbs = _inspectCbs(true);
+        const total = _inspectCbs(false).length;
         const n = cbs.length;
         const toolbar = document.getElementById('file-select-toolbar');
         const countEl = document.getElementById('select-count');
@@ -1791,10 +1917,9 @@
         if (n > 0) {
             toolbar.style.display = 'flex';
             countEl.textContent = n + ' selected';
-            // Estimate reingest time from avg_seconds_per_file stored on toolbar
-            const avgSecs = parseFloat(toolbar.dataset.avgSecs) || null;
-            const estSecs = avgSecs ? Math.round(avgSecs * n) : null;
-            const estLabel = estSecs ? (estSecs >= 60 ? ` (~${Math.floor(estSecs/60)}m ${estSecs%60}s)` : ` (~${estSecs}s)`) : '';
+            // Estimate reingest time by summing the selected files' own durations
+            const estSecs = _estimateReingestSecs(cbs);
+            const estLabel = estSecs ? ' (' + _fmtSecs(estSecs) + ')' : '';
             if (reingestBtn) { reingestBtn.style.display = ''; reingestBtn.textContent = 'Reingest ' + n + ' file' + (n > 1 ? 's' : '') + estLabel; }
             if (deleteBtn)   { deleteBtn.style.display = '';   deleteBtn.textContent = 'Delete ' + n + ' file' + (n > 1 ? 's' : ''); }
         } else {
@@ -1807,23 +1932,19 @@
     }
 
     function toggleSelectAll(checked) {
-        document.querySelectorAll('.file-select-cb').forEach(cb => { cb.checked = checked; });
+        _inspectCbs(false).forEach(cb => { cb.checked = checked; });
         updateDeleteBar();
     }
 
     async function reingestSelectedFiles() {
-        const cbs = [...document.querySelectorAll('.file-select-cb:checked')];
-        if (cbs.length === 0) return;
-        const names = cbs.map(cb => cb.dataset.fname);
-        const toolbar = document.getElementById('file-select-toolbar');
-        const avgSecs = toolbar ? parseFloat(toolbar.dataset.avgSecs) || null : null;
-        const estSecs = avgSecs ? Math.round(avgSecs * names.length) : null;
-        const estStr = estSecs ? (estSecs >= 60
-            ? `~${Math.floor(estSecs/60)}m ${estSecs%60}s`
-            : `~${estSecs}s`) : null;
+        const checkedCbs = _inspectCbs(true);
+        const names = [...new Set(checkedCbs.map(cb => cb.dataset.fname))];
+        if (names.length === 0) return;
+        const estSecs = _estimateReingestSecs(checkedCbs);
+        const estStr = estSecs ? _fmtSecs(estSecs) : null;
 
         const estLine = estStr
-            ? `<br><br><span style="color:var(--text-mid);font-size:12px;">⏱ Estimated time: <strong>${estStr}</strong> based on previous ingest.</span>`
+            ? `<br><br><span style="color:var(--text-mid);font-size:12px;">⏱ Estimated time: <strong>${estStr}</strong> based on these files' recorded durations.</span>`
             : '';
 
         const confirmed = await showModal({
@@ -1849,24 +1970,43 @@
             addSystemMessage(`⚠ ${wipeFailed} file${wipeFailed > 1 ? 's' : ''} could not have chunks cleared. Reingest may include stale data.`);
         }
 
-        // Step 2: trigger full ingest (pipeline skips already-indexed files;
-        // wiped files will be re-embedded, others are skipped via Qdrant skip logic)
+        // Refresh the file list now (chunks wiped) so the panel is current before indexing.
+        inspectCorpus();
+
+        // Step 2: trigger ingest for ONLY the selected files (backend v1.9.5 reads the
+        // files[] body and passes --files, so exactly these are re-embedded and every
+        // other file in uploads/ — indexed or parked — is left untouched). Step 1's
+        // chunk-wipe still runs first so a re-embed yielding fewer chunks leaves no
+        // orphans. Live progress via the same pollIngestStatus loop the Add-Files path uses.
+        const reingestCorpus = currentCorpus;
+        const reUid = 're_' + Date.now();
+        const msgDiv = addMessage('assistant',
+            `<span class="ingest-header">Re-indexing ${wiped} file${wiped !== 1 ? 's' : ''} in <em>'${escapeHtml(reingestCorpus)}'</em>…${estStr ? ' · est. ' + estStr : ''}</span>`
+            + `<button id="${reUid}_cancel" onclick="cancelIngest('${reingestCorpus}','${reUid}')" style="margin-left:10px;font-size:11px;padding:2px 8px;border:1px solid var(--warning,#f59e0b);border-radius:4px;background:transparent;color:var(--warning,#f59e0b);cursor:pointer;">⊘ Stop</button>`
+            + `<div class="reingest-status" style="margin-top:4px;"></div>`,
+            true);
+        const statusEl = msgDiv ? msgDiv.querySelector('.reingest-status') : null;
         try {
-            const res = await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
-            if (!res.ok) throw new Error('Ingest trigger failed');
-            addSystemMessage(
-                `Reingest started for ${wiped} file${wiped > 1 ? 's' : ''}${estStr ? ' · est. ' + estStr : ''}. Progress visible in the ingest bar.`
-            );
+            const res = await fetch(`${API}/corpus/${reingestCorpus}/ingest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ files: names }),
+            });
+            if (!res.ok) throw new Error('Ingest trigger failed (' + res.status + ')');
+            if (statusEl) {
+                await pollIngestStatus(reingestCorpus, statusEl, estSecs);
+            }
         } catch (err) {
-            addMessage('assistant', 'Reingest trigger failed: ' + err.message, false);
+            if (statusEl) statusEl.textContent = 'Reingest trigger failed: ' + err.message;
+            else addMessage('assistant', 'Reingest trigger failed: ' + err.message, false);
         }
+        // Final in-place refresh so chunk counts reflect the completed reingest.
         inspectCorpus();
     }
 
     async function deleteSelectedFiles() {
-        const cbs = [...document.querySelectorAll('.file-select-cb:checked')];
-        if (cbs.length === 0) return;
-        const names = cbs.map(cb => cb.dataset.fname);
+        const names = [...new Set(_inspectCbs(true).map(cb => cb.dataset.fname))];
+        if (names.length === 0) return;
         const confirmed = await showModal({
             title: 'Remove ' + names.length + ' file' + (names.length > 1 ? 's' : '') + " from corpus '" + currentCorpus + "'",
             body: names.map(n => '<strong>' + escapeHtml(n) + '</strong>').join('<br>') + '<br><br>Files will be moved to trash and removed from the search index.',
@@ -2460,6 +2600,7 @@
         // Uses same rich polling logic as upload ingest bar (AIStudio_543)
         const maxPolls = 300;
         let polls = 0;
+        let _lastLiveText = '';
         const uid = 'pb_' + Date.now();
         statusEl.innerHTML = `<div style="margin-top:4px;background:var(--border);border-radius:4px;height:4px;width:100%"><div id="${uid}_bar" style="background:var(--accent);height:4px;border-radius:4px;width:0%;transition:width 0.4s ease"></div></div><span id="${uid}_txt" style="font-size:11px;color:var(--text-dim);display:block;margin-top:3px">Indexing…</span>`;
         const bar = statusEl.querySelector(`#${uid}_bar`);
@@ -2487,46 +2628,77 @@
                         const curFileSz = fp < fileSizesSrv.length ? fileSizesSrv[fp] : 0;
                         const curFileMb = curFileSz > 0 ? (curFileSz / (1024 * 1024)).toFixed(1) : null;
                         let statusText;
+                        const skipped = d.files_skipped_unchanged || 0;
+                        const skipNote = skipped > 0 ? ` · skipping ${skipped} already-indexed` : '';
                         if (ft > 0 && mbTotal && curFileMb) {
-                            statusText = `${active} of ${ft} file(s) being indexed · ${curFileMb} / ${mbTotal} MB · ${pct}% indexed`;
+                            statusText = `${active} of ${ft} file(s) being indexed · ${curFileMb} / ${mbTotal} MB · ${chunks.toLocaleString()} chunks · ${pct}%${skipNote}`;
                         } else if (ft > 0) {
-                            statusText = `${active} of ${ft} file(s) being indexed · ${chunks.toLocaleString()} chunks`;
+                            statusText = `${active} of ${ft} file(s) being indexed · ${chunks.toLocaleString()} chunks${skipNote}`;
                         } else {
                             statusText = d.message || `Indexing… ${chunks > 0 ? chunks.toLocaleString() + ' chunks' : ''}`;
                         }
                         if (txt) txt.textContent = statusText;
+                        _lastLiveText = statusText;
                     } else if (d.status === 'done') {
                         if (bar) bar.style.width = '100%';
+                        _hideIngestCancel(statusEl);
                         const finalChunks = d.chunks_written || 0;
                         const ft = d.files_total || 0;
                         const totalBytes = d.total_bytes || 0;
                         const mbFinal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : null;
-                        const doneText = mbFinal
-                            ? `${ft} file(s) indexed · ${mbFinal} MB · ${finalChunks.toLocaleString()} chunks`
-                            : `${ft} file(s) indexed · ${finalChunks.toLocaleString()} chunks`;
+                        // Prefer the backend's rich summary ("N new · M skipped · T total · time")
+                        // — it carries the new/skipped breakdown the user wants. Fall back to a
+                        // locally-built line only if the backend didn't supply one.
+                        let doneText;
+                        if (d.summary) {
+                            doneText = d.summary + (finalChunks ? ` · ${finalChunks.toLocaleString()} chunks` : '');
+                        } else if (mbFinal) {
+                            doneText = `${ft} file(s) indexed · ${mbFinal} MB · ${finalChunks.toLocaleString()} chunks`;
+                        } else {
+                            doneText = `${ft} file(s) indexed · ${finalChunks.toLocaleString()} chunks`;
+                        }
                         if (txt) txt.textContent = '✓ ' + doneText;
                         clearInterval(interval);
                         resolve('done');
                     } else if (d.status === 'cancelled') {
+                        _hideIngestCancel(statusEl);
                         const fc = d.files_completed || 0;
-                        const cc = d.chunks_written || finalChunks || 0;
+                        const cc = d.chunks_written || 0;
                         if (txt) txt.textContent = `⊘ Indexing stopped by user · ${fc} file${fc !== 1 ? 's' : ''} indexed · ${cc.toLocaleString()} chunks written · run Ingest again to complete`;
                         if (statusEl) statusEl.innerHTML = `⊘ Ingestion stopped by user for corpus <em>'${currentCorpus}'</em><br><small>${fc} file${fc !== 1 ? 's' : ''} indexed · ${cc.toLocaleString()} chunks · corpus is partially indexed</small>`;
                         clearInterval(interval);
                         resolve('cancelled');
                     } else if (d.status === 'error') {
+                        _hideIngestCancel(statusEl);
                         if (txt) txt.textContent = '✗ Ingestion failed — check server logs';
                         clearInterval(interval);
                         resolve('error');
                     }
                 } catch (_) {}
                 if (polls >= maxPolls) {
-                    if (txt) txt.textContent = 'Still indexing — check Stats when complete';
+                    // Don't give up silently — report the last known live count so the
+                    // user knows work is still happening, and point them to a quick check.
+                    _hideIngestCancel(statusEl);
+                    if (txt) {
+                        txt.textContent = _lastLiveText
+                            ? `Still indexing (long run) — last seen: ${_lastLiveText}. It will finish in the background; re-open Inspect to see final counts.`
+                            : 'Still indexing in the background — re-open Inspect to see final counts.';
+                    }
                     clearInterval(interval);
                     resolve('timeout');
                 }
             }, 2000);
         });
+    }
+
+    // Hide the ⊘ Stop/Cancel button once ingest reaches a terminal state.
+    // The button is a sibling of statusEl inside the same .text bubble.
+    function _hideIngestCancel(statusEl) {
+        try {
+            const bubble = statusEl ? statusEl.closest('.text') : null;
+            const btn = bubble ? bubble.querySelector('button[id$="_cancel"]') : null;
+            if (btn) btn.style.display = 'none';
+        } catch (_) {}
     }
 
     // ── MD5 helpers ────────────────────────────────────────────────

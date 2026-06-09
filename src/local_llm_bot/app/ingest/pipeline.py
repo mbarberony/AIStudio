@@ -1,4 +1,4 @@
-# Version: 1.8.27
+# Version: 1.8.28
 # Changelog: 1.8.27 — AIStudio_801: ingest-time alias injection into [Document:] prefix.
 #            _load_ks_alias_map() reads gleif_{corpus}_*_entities.yaml and returns
 #            canonical → [wikidata_label, wikidata_short_name, wikidata_tickers] map.
@@ -6,6 +6,13 @@
 #            prefix becomes "[Document: CANONICAL | scope_name | ticker FY year]".
 #            Format-driven (XBRL tag extraction must succeed) — not corpus-dependent.
 #            Graceful no-op when no knowledge sources exist for the corpus.
+# Changelog: 1.8.28 — AIStudio: per-file selective ingest. ingest_corpus() accepts
+#            only_files: set[str]|None. When provided, the discovered list is filtered
+#            to exactly those basenames after Phase 1 discovery, so all totals/denominators
+#            reflect only the chosen files; every other file under root (already-indexed or
+#            parked-but-unchosen) is left untouched. Selected files bypass the Qdrant skip
+#            check (only_files active ⇒ always re-embed them). chunk_id is deterministic
+#            (abs_path::page::chunk-i) so re-embed overwrites in place — no duplicates.
 # Changelog: 1.8.26 — prior version.
 # Changelog: 1.8.26 — Fix _extract_document_metadata() early-exit returns: 5-tuple
 #            → 7-tuple (None, None appended for doc_tag/doc_year_tag). Fixes
@@ -721,6 +728,12 @@ def ingest_corpus(
     overlap: int | None = None,
     embed_model: str | None = None,
     max_files: int | None = None,
+    # Explicit allowlist of filenames (basename) to ingest. When provided, ONLY
+    # these files are processed — all other files under root (already-indexed OR
+    # parked-but-not-yet-chosen) are left untouched. Selected files are always
+    # (re-)embedded regardless of whether Qdrant already has them. None => whole
+    # corpus, today's behavior. (AIStudio: per-file selective ingest.)
+    only_files: set[str] | None = None,
     # progress bar class (tqdm) passed from __main__
     tqdm_cls: Any | None = None,
 ) -> IngestResult:
@@ -814,6 +827,16 @@ def ingest_corpus(
         if p_discover is not None:
             p_discover.close()
 
+    # Selective ingest: restrict to the explicit allowlist if given. Matched by
+    # basename (the UI sends filenames, not paths). Everything not in the set —
+    # whether already indexed or parked in uploads/ awaiting a later decision —
+    # is dropped from this run entirely, so totals/denominators below reflect
+    # ONLY the chosen files. (AIStudio: per-file selective ingest.)
+    if only_files is not None:
+        _want = {Path(n).name for n in only_files}
+        discovered = [p for p in discovered if p.name in _want]
+        files_discovered = len(discovered)
+
     # -----------------------
     # Phase 2: Process + Embed + Upsert (per file)
     # -----------------------
@@ -892,7 +915,9 @@ def ingest_corpus(
 
                 # Skip decision: Qdrant already has this file — no re-ingest needed.
                 # _file_unchanged() removed: manifest.jsonl stale after corpus recreation. (AIStudio_186)
-                if not force and abs_path in qdrant_source_paths:
+                # Exception: when an explicit allowlist (only_files) is active, the user
+                # chose these files on purpose — always (re-)embed them, never skip.
+                if not force and only_files is None and abs_path in qdrant_source_paths:
                     files_skipped_unchanged += 1
                     if p_process is not None:
                         p_process.update(1)

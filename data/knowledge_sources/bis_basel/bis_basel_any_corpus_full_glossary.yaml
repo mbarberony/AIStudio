@@ -1,0 +1,217 @@
+schema_version: '1.1'
+source_id: bis_basel
+corpus: any_corpus
+scope_id: full
+generated: '2026-06-07'
+entity_count: 52
+failed_count: 0
+failed: []
+glossary:
+- term: AT1
+  full_form: Additional Tier 1
+  expansion: AT1 Additional Tier 1 capital contingent convertible CoCo
+  scope_type: corpus_wide
+- term: CET1
+  full_form: Common Equity Tier 1
+  expansion: CET1 Common Equity Tier 1 capital ratio regulatory capital
+  scope_type: corpus_wide
+- term: T1
+  full_form: Tier 1 Capital
+  expansion: Tier 1 capital ratio core capital going-concern
+  scope_type: corpus_wide
+- term: T2
+  full_form: Tier 2 Capital
+  expansion: Tier 2 capital gone-concern supplementary capital
+  scope_type: corpus_wide
+- term: RWA
+  full_form: Risk-Weighted Assets
+  expansion: RWA risk-weighted assets capital requirements standardized approach
+  scope_type: corpus_wide
+- term: SCB
+  full_form: Stress Capital Buffer
+  expansion: SCB stress capital buffer DFAST Federal Reserve capital requirement
+  scope_type: corpus_wide
+- term: CCyB
+  full_form: Countercyclical Capital Buffer
+  expansion: CCyB countercyclical capital buffer macroprudential Basel III
+  scope_type: corpus_wide
+- term: CCB
+  full_form: Capital Conservation Buffer
+  expansion: CCB capital conservation buffer 2.5% CET1 Basel III
+  scope_type: corpus_wide
+- term: TLAC
+  full_form: Total Loss-Absorbing Capacity
+  expansion: TLAC total loss-absorbing capacity resolution G-SIB bail-in
+  scope_type: corpus_wide
+- term: MREL
+  full_form: Minimum Requirement for Own Funds and Eligible Liabilities
+  expansion: MREL minimum requirement own funds eligible liabilities resolution EU
+  scope_type: corpus_wide
+- term: SLR
+  full_form: Supplementary Leverage Ratio
+  expansion: SLR supplementary leverage ratio 3% Tier 1 capital exposure
+  scope_type: corpus_wide
+- term: eSLR
+  full_form: Enhanced Supplementary Leverage Ratio
+  expansion: eSLR enhanced supplementary leverage ratio G-SIB 5% 6%
+  scope_type: corpus_wide
+- term: LR
+  full_form: Leverage Ratio
+  expansion: leverage ratio Tier 1 total exposure Basel III
+  scope_type: corpus_wide
+- term: LCR
+  full_form: Liquidity Coverage Ratio
+  expansion: LCR liquidity coverage ratio HQLA high-quality liquid assets 30-day
+  scope_type: corpus_wide
+- term: NSFR
+  full_form: Net Stable Funding Ratio
+  expansion: NSFR net stable funding ratio available required stable funding
+  scope_type: corpus_wide
+- term: HQLA
+  full_form: High-Quality Liquid Assets
+  expansion: HQLA high-quality liquid assets Level 1 Level 2 LCR liquidity
+  scope_type: corpus_wide
+- term: FRTB
+  full_form: Fundamental Review of the Trading Book
+  expansion: FRTB Fundamental Review Trading Book market risk capital IMA SA
+  scope_type: corpus_wide
+- term: IMA
+  full_form: Internal Models Approach
+  expansion: IMA internal models approach FRTB market risk VaR ES
+  scope_type: corpus_wide
+- term: SA
+  full_form: Standardized Approach
+  expansion: SA standardized approach capital market risk credit risk Basel
+  scope_type: corpus_wide
+- term: VaR
+  full_form: Value at Risk
+  expansion: VaR value at risk market risk trading book 99th percentile
+  scope_type: corpus_wide
+- term: ES
+  full_form: Expected Shortfall
+  expansion: ES expected shortfall CVaR conditional value at risk FRTB
+  scope_type: corpus_wide
+- term: CVA
+  full_form: Credit Valuation Adjustment
+  expansion: CVA credit valuation adjustment counterparty credit risk OTC derivatives
+  scope_type: corpus_wide
+- term: DVA
+  full_form: Debit Valuation Adjustment
+  expansion: DVA debit valuation adjustment own credit risk fair value
+  scope_type: corpus_wide
+- term: XVA
+  full_form: Valuation Adjustments
+  expansion: XVA valuation adjustments CVA DVA FVA MVA KVA
+  scope_type: corpus_wide
+- term: ECL
+  full_form: Expected Credit Loss
+  expansion: ECL expected credit loss IFRS 9 CECL provision allowance
+  scope_type: corpus_wide
+- term: PD
+  full_form: Probability of Default
+  expansion: PD probability of default credit risk IRB internal ratings
+  scope_type: corpus_wide
+- term: LGD
+  full_form: Loss Given Default
+  expansion: LGD loss given default recovery rate credit risk IRB
+  scope_type: corpus_wide
+- term: EAD
+  full_form: Exposure at Default
+  expansion: EAD exposure at default credit risk loan equivalent
+  scope_type: corpus_wide
+- term: IRB
+  full_form: Internal Ratings-Based Approach
+  expansion: IRB internal ratings-based approach advanced foundation credit risk
+  scope_type: corpus_wide
+- term: NPL
+  full_form: Non-Performing Loan
+  expansion: NPL non-performing loan credit quality Stage 3 impaired
+  scope_type: corpus_wide
+- term: NIM
+  full_form: Net Interest Margin
+  expansion: NIM net interest margin net interest income rate sensitivity
+  scope_type: corpus_wide
+- term: NII
+  full_form: Net Interest Income
+  expansion: NII net interest income interest rate risk banking book IRRBB
+  scope_type: corpus_wide
+- term: IRRBB
+  full_form: Interest Rate Risk in the Banking Book
+  expansion: IRRBB interest rate risk banking book NII EVE sensitivity
+  scope_type: corpus_wide
+- term: EVE
+  full_form: Economic Value of Equity
+  expansion: EVE economic value equity interest rate risk IRRBB
+  scope_type: corpus_wide
+- term: DFAST
+  full_form: Dodd-Frank Act Stress Test
+  expansion: DFAST Dodd-Frank stress test Federal Reserve annual supervisory
+  scope_type: corpus_wide
+- term: CCAR
+  full_form: Comprehensive Capital Analysis and Review
+  expansion: CCAR comprehensive capital analysis review Federal Reserve stress test
+  scope_type: corpus_wide
+- term: SREP
+  full_form: Supervisory Review and Evaluation Process
+  expansion: SREP supervisory review evaluation process ECB Pillar 2
+  scope_type: corpus_wide
+- term: BCBS
+  full_form: Basel Committee on Banking Supervision
+  expansion: BCBS Basel Committee Banking Supervision Basel III Basel IV BIS
+  scope_type: corpus_wide
+- term: FSB
+  full_form: Financial Stability Board
+  expansion: FSB Financial Stability Board G-SIB macroprudential systemic risk
+  scope_type: corpus_wide
+- term: EBA
+  full_form: European Banking Authority
+  expansion: EBA European Banking Authority CRR CRD stress test EU banking
+  scope_type: corpus_wide
+- term: ECB
+  full_form: European Central Bank
+  expansion: ECB European Central Bank SSM monetary policy EU banks
+  scope_type: corpus_wide
+- term: CRR
+  full_form: Capital Requirements Regulation
+  expansion: CRR Capital Requirements Regulation EU Basel III Pillar 1
+  scope_type: corpus_wide
+- term: CRD
+  full_form: Capital Requirements Directive
+  expansion: CRD Capital Requirements Directive EU Basel III supervisory
+  scope_type: corpus_wide
+- term: G-SIB
+  full_form: Global Systemically Important Bank
+  expansion: G-SIB global systemically important bank GSIB surcharge capital buffer
+  scope_type: corpus_wide
+- term: GSIB
+  full_form: Global Systemically Important Bank
+  expansion: GSIB G-SIB global systemically important bank surcharge FSB
+  scope_type: corpus_wide
+- term: D-SIB
+  full_form: Domestic Systemically Important Bank
+  expansion: D-SIB domestic systemically important bank national buffer
+  scope_type: corpus_wide
+- term: BRRD
+  full_form: Bank Recovery and Resolution Directive
+  expansion: BRRD Bank Recovery Resolution Directive EU bail-in MREL resolution
+  scope_type: corpus_wide
+- term: SPOE
+  full_form: Single Point of Entry
+  expansion: SPOE single point of entry resolution strategy holding company
+  scope_type: corpus_wide
+- term: IFRS9
+  full_form: IFRS 9 Financial Instruments
+  expansion: IFRS 9 IFRS9 expected credit loss ECL provision staging
+  scope_type: corpus_wide
+- term: CECL
+  full_form: Current Expected Credit Loss
+  expansion: CECL current expected credit loss US GAAP ASC 326 allowance
+  scope_type: corpus_wide
+- term: ICAAP
+  full_form: Internal Capital Adequacy Assessment Process
+  expansion: ICAAP internal capital adequacy assessment process Pillar 2
+  scope_type: corpus_wide
+- term: ILAAP
+  full_form: Internal Liquidity Adequacy Assessment Process
+  expansion: ILAAP internal liquidity adequacy assessment process Pillar 2
+  scope_type: corpus_wide

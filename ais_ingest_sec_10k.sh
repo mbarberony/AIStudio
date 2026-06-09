@@ -1,10 +1,16 @@
 #!/usr/bin/env zsh
 # ais_ingest_sec_10k.sh — Ingest the SEC 10-K corpus into AIStudio
-# Version: 1.3.4
+# Version: 1.4.0
 # Changelog:
-#   1.3.2 — AIStudio_673: Populate --- Setup section with effective config defaults.
-#           Ingest summary now shown as human-readable table (via __main__.py).
-#           Raw JSON output moved to --verbose flag in __main__.py.
+#   1.4.0 — ESEF v1.1.0 parity + selective ingest. (a) Incremental-mode awareness:
+#           Qdrant chunk-count check → "already indexed: N chunks — incremental" vs
+#           "clean ingest" vs "--force: wiping". (b) Total-bytes/MB accounting in
+#           preflight. (c) Metadata-driven time estimate: reads avg_seconds_per_file
+#           (tier 2) with a < 2s/file sanity floor that rejects skip-contaminated
+#           averages, falling back to a 60s/file seed (tier 3); shows estimate source.
+#           (d) New --files <a,b,c> passthrough → engine --files (selective ingest:
+#           only those re-embedded, others untouched). (e) --verbose passthrough.
+#           (f) Hoisted arg parsing above preflight. (g) Next-steps branches on exit code.
 #   1.3.4 — Move --- Important above --- Ingesting per STD §8.
 #   1.3.4 — Fix zsh "unmatched quote" error: use ${FORCE_FLAG:+--force} expansion.
 #   1.3.3 — STD §8 minimal compliance: wording fixes, --- Important section,
@@ -24,7 +30,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.4"
+VERSION="1.4.0"
 
 SCRIPT_NAME="ais_ingest_sec_10k"
 REPO="${0:A:h}"
@@ -34,9 +40,18 @@ _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
         awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
-        echo "$SCRIPT_NAME v$VERSION"
+        echo "$SCRIPT_NAME v$VERSION — Ingest SEC 10-K corpus into AIStudio"
         echo ""
-        echo "Usage: $SCRIPT_NAME [--help] [--version]"
+        echo "Usage: $SCRIPT_NAME [--force] [--files <a.htm,b.htm>] [--verbose] [--help] [--version]"
+        echo ""
+        echo "Options:"
+        echo "  --force            Full rebuild — wipe collection, re-ingest all files"
+        echo "                     Default (no --force): incremental — only new/changed files"
+        echo "  --files <list>     Ingest ONLY these comma-separated filenames (always re-embedded);"
+        echo "                     every other file in uploads/ (indexed or parked) is left untouched"
+        echo "  --verbose          Print full JSON result payload after summary"
+        echo "  --help             Show this help and exit"
+        echo "  --version          Print version and exit"
         echo ""
         echo "Run from: ~/Developer/AIStudio"
     fi
@@ -49,6 +64,20 @@ API="http://localhost:8000"
 UPLOADS="$REPO/data/corpora/sec_10k/uploads"
 BENCH_DIR="$REPO/benchmarks/sec_10k"
 CORPUS_DIR="$REPO/data/corpora/sec_10k"
+METADATA_FILE="$CORPUS_DIR/sec_10k_corpus_metadata.yaml"
+
+# ── Argument parsing (hoisted so preflight + estimate can see the mode) ────────
+FORCE_FLAG=""
+VERBOSE_FLAG=""
+FILES_ARG=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force)   FORCE_FLAG="--force"; shift ;;
+        --verbose) VERBOSE_FLAG="--verbose"; shift ;;
+        --files)   FILES_ARG="$2"; shift 2 ;;   # comma-separated basenames → selective ingest
+        *) echo "❌ Unknown flag: $1"; echo "· Run: $SCRIPT_NAME --help"; exit 1 ;;
+    esac
+done
 
 printf "\033[1m[ais_ingest_sec_10k v$VERSION — Ingest SEC 10-K corpus]\033[0m\n"
 
@@ -67,7 +96,15 @@ if [[ "$FILE_COUNT" -eq 0 ]]; then
     echo "· Run: ais_download_sec_10k"
     exit 1
 fi
-echo "✅ $FILE_COUNT filings ready."
+
+# Total size (macOS stat) — matches ESEF accounting
+TOTAL_BYTES=0
+while IFS= read -r f; do
+    sz=$(stat -f%z "$f" 2>/dev/null || echo 0)
+    TOTAL_BYTES=$(( TOTAL_BYTES + sz ))
+done < <(find "$UPLOADS" -maxdepth 1 -name "*.htm")
+TOTAL_MB=$(echo "scale=1; $TOTAL_BYTES / 1048576" | bc)
+echo "✅ $FILE_COUNT filings ready · ${TOTAL_MB} MB"
 
 if ! curl -sf "$API/health" > /dev/null 2>&1; then
     echo "❌ Backend not reachable at $API"
@@ -75,6 +112,26 @@ if ! curl -sf "$API/health" > /dev/null 2>&1; then
     exit 1
 fi
 echo "✅ Backend healthy."
+
+# Qdrant collection check — info only, no gate (mirrors ESEF v1.1.0)
+QDRANT="http://localhost:6333"
+COLLECTION="aistudio_sec_10k"
+QDRANT_RESPONSE=$(curl -sf "$QDRANT/collections/$COLLECTION" 2>/dev/null)
+EXISTING_CHUNKS=""
+if [[ -n "$QDRANT_RESPONSE" ]]; then
+    EXISTING_CHUNKS=$(echo "$QDRANT_RESPONSE" | python3 -c \
+        "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('points_count','?'))" \
+        2>/dev/null)
+fi
+if [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" != "?" && "$EXISTING_CHUNKS" -gt 0 ]]; then
+    if [[ "$FORCE_FLAG" == "--force" ]]; then
+        echo "⚠ --force: wiping existing collection ($EXISTING_CHUNKS chunks) and re-ingesting all files."
+    else
+        echo "ℹ Corpus 'sec_10k' already indexed: ${EXISTING_CHUNKS} chunks — incremental ingest (new/changed files only)."
+    fi
+else
+    echo "✅ No existing Qdrant collection — clean ingest."
+fi
 
 # --- Setup
 echo ""
@@ -203,24 +260,77 @@ fi
 echo "--- Important"
 echo "· This terminal can be minimized but should not be closed."
 echo "· Sleep prevention: caffeinate -i is active for the duration."
+
+# ── Metadata-driven time estimate (cascade: corpus avg → 60s floor) ───────────
+# Whole-corpus run can only use the corpus-wide avg (tier 2) or the 60s floor
+# (tier 3). Per-file durations (tier 1) apply to selective --files / UI runs.
+# IMPORTANT: avg_seconds_per_file can be contaminated by skip-heavy incremental
+# runs (duration includes scan time, files_processed counts only new files), so
+# we sanity-floor it: a value < 2s/file for SEC XBRL is physically impossible
+# (each file is 14–37s), so we reject it and fall back to the 60s seed.
+AVG_SECS_PER_FILE=""
+if [[ -f "$METADATA_FILE" ]]; then
+    AVG_SECS_PER_FILE=$(python3 -c "
+import yaml
+try:
+    d = yaml.safe_load(open('$METADATA_FILE')) or {}
+    v = d.get('avg_seconds_per_file')
+    # Reject implausible (skip-contaminated) averages for SEC XBRL.
+    print(v if (v and float(v) >= 2.0) else '')
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+fi
+
+if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
+    EST_SRC="corpus avg ${AVG_SECS_PER_FILE}s/file"
+    ESTIMATE_PRO=$(python3 -c "v=$AVG_SECS_PER_FILE*$FILE_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "v=$AVG_SECS_PER_FILE*2.5*$FILE_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
+else
+    EST_SRC="60s/file seed (no prior ingest data)"
+    ESTIMATE_PRO=$(python3 -c "v=60*$FILE_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "v=60*2.5*$FILE_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
+fi
+
+# Mode note
+if [[ -n "$FILES_ARG" ]]; then
+    INGEST_NOTE=" (selective — ${FILES_ARG//,/, } only)"
+elif [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" != "?" && "$EXISTING_CHUNKS" -gt 0 && -z "$FORCE_FLAG" ]]; then
+    INGEST_NOTE=" (incremental — unchanged files skipped)"
+else
+    INGEST_NOTE=" (full rebuild)"
+fi
+
 echo "--- Ingesting"
-echo "▶ Ingesting $FILE_COUNT filings · ~35 min on M4 Pro · ~90 min on M4 Air..."
+echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}"
+echo "· estimate from: $EST_SRC · self-corrects from live rate after file 1"
 
 # Parse --force flag
-FORCE_FLAG=""
-for arg in "$@"; do
-    [[ "$arg" == "--force" ]] && FORCE_FLAG="--force"
-done
-
 cd "$REPO"
 source .venv/bin/activate
+
+INGEST_ARGS=(--corpus sec_10k --root "$UPLOADS")
+[[ -n "$FORCE_FLAG"   ]] && INGEST_ARGS+=(--force)
+[[ -n "$VERBOSE_FLAG" ]] && INGEST_ARGS+=(--verbose)
+[[ -n "$FILES_ARG"    ]] && INGEST_ARGS+=(--files "$FILES_ARG")
+
 caffeinate -i env AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
-    python3 -m local_llm_bot.app.ingest \
-    --corpus sec_10k \
-    --root "$UPLOADS" ${FORCE_FLAG:+--force}
+    python3 -m local_llm_bot.app.ingest "${INGEST_ARGS[@]}"
+
+INGEST_EXIT=$?
 
 echo "--- Next steps"
-echo "✅ Corpus 'sec_10k' ready."
-echo "· Select 'sec_10k' in the AIStudio corpus dropdown to query."
-echo "· To benchmark : ais_bench --corpus sec_10k"
-echo "· To re-ingest : $SCRIPT_NAME --force"
+if [[ "$INGEST_EXIT" -eq 0 ]]; then
+    echo "✅ Corpus 'sec_10k' ready."
+    echo "· Select 'sec_10k' in the AIStudio corpus dropdown to query."
+    echo "· To benchmark    : ais_bench --corpus sec_10k"
+    echo "· To add files    : ais_download_sec_10k && $SCRIPT_NAME   (incremental — only new files)"
+    echo "· To ingest some  : $SCRIPT_NAME --files A.htm,B.htm   (exactly those, others untouched)"
+    echo "· To rebuild      : $SCRIPT_NAME --force"
+else
+    echo "❌ Ingest exited with error code $INGEST_EXIT."
+    echo "· Check output above for details."
+    echo "· To retry        : $SCRIPT_NAME --force"
+fi
+
+exit $INGEST_EXIT

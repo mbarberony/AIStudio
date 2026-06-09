@@ -1,7 +1,7 @@
 # FILE_GUIDE.md
 *Type: REF | Domain: AIStudio | Status: ACTIVE*
-*Version: 1.1.0*
-*Created: 2026-05-20 | Last updated: 2026-05-25 | Owner: Manuel Barbero*
+*Version: 1.2.0*
+*Created: 2026-05-20 | Last updated: 2026-06-08 | Owner: Manuel Barbero*
 ---
 
 ## How to use this guide
@@ -235,10 +235,38 @@ All commands available after running `./ais_install` from repo root.
 
 ---
 
+## §12a What files define a corpus — and where they live
+
+This is the *where* for corpora; the *how* (what builds them) is in `CODEBASE_GUIDE.md` → "How a corpus is defined, built, and used". Every corpus — the built-in ones and any you create — lives under `data/corpora/<name>/`.
+
+### What the app reads
+
+| File / dir | Purpose |
+|---|---|
+| `data/corpora/<name>/uploads/` | the actual documents (what gets searched) |
+| `data/corpora/<name>/<name>_corpus_metadata.yaml` | the corpus's description, search guidance, and default query settings; read every time you ask a question |
+| `benchmarks/<name>/<name>_questions.yaml` | *(optional)* benchmark questions for the corpus |
+| `data/knowledge_sources/gleif/<name>_entities.yaml` | *(bundled `sec_10k`/`esef_banks` only)* company-identity (GLEIF) lookups used to keep firms apart in cross-company questions — see Tutorial Annex 1 |
+
+So *what files define a corpus?* At minimum: the documents in `uploads/`, and the `<name>_corpus_metadata.yaml` that describes it. Questions and the GLEIF identity file are optional enrichment used by the bundled financial corpora.
+
+### Where YOUR files go
+
+When you create your own corpus, everything lives under `data/corpora/<your-corpus>/`:
+
+- `uploads/` — your files. Created and filled by the **Upload** button in the UI; you don't make this folder by hand.
+- `<your-corpus>_corpus_metadata.yaml` — created by the **Edit Corpus** modal when you give the corpus a description, search guidance, and default settings.
+- `benchmarks/<your-corpus>/<your-corpus>_questions.yaml` — only if you choose to add benchmark questions.
+
+To query your own portfolio — your filings, reports, decks, or PDFs — create a corpus in **Settings → New Corpus**, then drop your files in via **Upload**. The corpus is defined by what's in its `uploads/` folder plus the description you give it. That's everything you need.
+
+---
+
 ## §15 Version history
 
 | Version | Date | Changes |
 |---|---|---|
+| 1.2.0 | 2026-06-08 | Added §12a "What files define a corpus — and where they live" (corpus definition + where user portfolio files go). |
 | 1.1.0 | 2026-05-25 | Added user-created corpus type. Added benchmarks/ subsection with questions file format and pass/fail explanation. Added benchmarks row to §12. |
 | 1.0.0 | 2026-05-20 | Initial version. |
 

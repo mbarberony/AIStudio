@@ -11,6 +11,11 @@ from local_llm_bot.app.ingest.pipeline import ingest_corpus
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
+# Version: 1.3.0
+# Changelog: 1.3.0 — AIStudio: per-file selective ingest. New --files arg (comma-separated
+#            basenames) → passed to ingest_corpus(only_files=...). When present, ONLY those
+#            files are ingested and always re-embedded; all other files under --root are
+#            untouched. Enables "index one file at a time" and honest reingest-N denominators.
 # Version: 1.2.8
 # Changelog: 1.2.5 — Normalizer summary source label updated to match pipeline
 #            completion line format: "tag(s) [ns:]" not "tag (ns:)".
@@ -58,6 +63,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--overlap", type=int, default=None, help="Override overlap (chars)")
     p.add_argument("--embed-model", default=None, help="Override embedding model")
     p.add_argument("--max-files", type=int, default=None, help="Safety cap for a run")
+    p.add_argument(
+        "--files",
+        default=None,
+        help=(
+            "Comma-separated list of filenames (basenames) to ingest exclusively. "
+            "When given, ONLY these files are processed and always re-embedded; every "
+            "other file under --root (indexed or parked) is left untouched. "
+            "Omit to ingest the whole corpus."
+        ),
+    )
     p.add_argument("--verbose", action="store_true", help="Print full JSON result payload after summary")
 
     args = p.parse_args(argv)
@@ -78,6 +93,13 @@ def main(argv: list[str] | None = None) -> int:
     repo = _repo_root()
     paths = corpus_paths(repo, corpus)
 
+    # Parse --files allowlist (comma-separated basenames). Empty/blank → None (whole corpus).
+    only_files: set[str] | None = None
+    if args.files:
+        only_files = {n.strip() for n in str(args.files).split(",") if n.strip()}
+        if not only_files:
+            only_files = None
+
     t0 = time.time()
     result = ingest_corpus(
         root=root,
@@ -88,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         overlap=args.overlap,
         embed_model=args.embed_model,
         max_files=args.max_files,
+        only_files=only_files,
         tqdm_cls=tqdm,  # <-- key change: pipeline controls bars
     )
     dur = time.time() - t0

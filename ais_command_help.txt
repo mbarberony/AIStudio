@@ -214,18 +214,38 @@ Examples:
 ---
 ## ais_download_sec_10k
 
-Usage: ais_download_sec_10k [--help] [--version] [--out <dir>]
+Usage: ais_download_sec_10k [--cik <cik> | --tkr <ticker> | --scope <file.yaml>]
+                            [--years <N>] [--no-verify]
+                            [--force_name <name>] [--force_year <YYYY>]
+                            [--out <dir>] [--delay <s>] [--help]
 
-Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/.
-Downloads the most recent 10-K for each company in the default list.
+Download SEC 10-K filings from EDGAR into data/corpora/sec_10k/uploads/.
+Membership comes from a scope file (default sec_10k_US_scope.yaml), or a single
+firm via --cik / --tkr. Each filing is verified at download for the iXBRL entity
+tag ingest relies on (dei:EntityRegistrantName); a firm whose filings lack it is
+flagged before you spend an ingest on it.
+
+Input modes (mutually exclusive; default = the scope file):
+  --cik <cik>        One firm by CIK (10-digit; zero-padding optional)
+  --tkr <ticker>     One firm by ticker (resolved to CIK via EDGAR)
+  --scope <file>     Your own list — entities: [{label, cik|ticker}]
+                     (default: data/corpora/sec_10k/sec_10k_US_scope.yaml)
 
 Options:
-  --help         Show this help
-  --version      Show script version
-  --out <dir>    Output directory (default: ~/Downloads/sec_10k_corpus/)
+  --years <N>        Most recent filings per firm (default: 5)
+  --no-verify        Skip the iXBRL entity-tag check
+  --force_name <n>   Assert the entity name when the tag is absent (single-firm modes)
+  --force_year <y>   Assert the fiscal year when the tag is absent (single-firm modes)
+  --delay <s>        Request delay in seconds (min 0.1, default 0.5)
+  --help             Show this help
 
-· After downloading: ingest via the UI — select sec_10k corpus, Add files
-· Or use: ais_ingest_sec_10k
+Examples:
+  ais_download_sec_10k                          # default scope (US firm list)
+  ais_download_sec_10k --tkr BNY --years 5      # one firm by ticker
+  ais_download_sec_10k --scope my_firms.yaml    # bring your own list
+
+· After downloading: ais_ingest_sec_10k
+· Look up CIK / ticker / LEI: SEC EDGAR, company_tickers.json, GLEIF (see TUTORIAL Annex 1)
 
 ---
 

@@ -1,7 +1,7 @@
 # STD - AIStudio - Codebase Guide - 2026-04-28
 
 *Type: STD | Domain: AIStudio | Status: ACTIVE*
-*Version: 1.3.0 | Created: 2026-04-06 | Last updated: 2026-05-20 | Owner: Manuel Barbero*
+*Version: 1.4.0 | Created: 2026-04-06 | Last updated: 2026-06-08 | Owner: Manuel Barbero*
 
 ---
 
@@ -166,6 +166,53 @@ User-facing and developer documentation. All docs with a PDF companion are part 
 | `ais_help.sh` | Show user command reference |
 
 All `ais_*` commands are installed via `ais_install`, which reads the command manifest to generate `~/.zshrc` aliases — the manifest is the single source of truth for command routing and installation.
+
+---
+
+## How a corpus is defined, built, and used
+
+A *corpus* is a named, queryable collection of documents (internally, a Qdrant collection named `aistudio_<name>`). AIStudio's four built-in corpora come into existence in different ways, and the same patterns let you build your own.
+
+There are three kinds of corpus:
+
+| Kind | Examples | What you do to get it |
+|---|---|---|
+| **Ships built** | `demo`, `help` | Nothing — they're ready on first launch. |
+| **Ships with tooling** | `sec_10k`, `esef_banks` | Run the bundled downloader to fetch the source documents, then ingest. |
+| **Bring your own** | *(your corpus)* | Create it in the UI and upload your files. |
+
+### The three things every corpus has
+
+Whatever kind it is, a built corpus resolves to the same shape under `data/corpora/<name>/`:
+
+1. **The documents** — `data/corpora/<name>/uploads/` (the files that get chunked and embedded).
+2. **The corpus metadata** — `data/corpora/<name>/<name>_corpus_metadata.yaml` (its description, search guidance, and default query settings; read every time you query).
+3. **(Optional) benchmark questions** — `benchmarks/<name>/<name>_questions.yaml`.
+
+The kinds differ only in how those get populated.
+
+### Ships built (`demo`, `help`)
+
+These ship inside the repo and index themselves the first time you run `ais_start` (you'll see a one-time "indexing… background" message). After that, launching is instant and the corpus is just there to query. You don't manage their files.
+
+### Ships with tooling (`sec_10k`, `esef_banks`)
+
+These are large public-filing collections, so AIStudio ships the *tools* to fetch them rather than the files themselves. You run the bundled downloader (it knows which firms to fetch), then ingest the results through the UI. `sec_10k` pulls 10-K annual reports from SEC EDGAR; `esef_banks` pulls European bank annual reports from filings.xbrl.org. Once ingested they query like any other corpus. *(These two corpora also resolve each company's legal identity against the GLEIF registry and expand financial terminology so cross-firm questions work — the full walkthrough is in Tutorial Annex 1.)*
+
+### Bring your own (your corpus)
+
+You build a corpus the same way the built-in ones look at runtime, but through the UI:
+
+1. **Settings → New Corpus** creates `data/corpora/<your-corpus>/` and its `uploads/` folder.
+2. The **Upload** button (or drag-and-drop) puts your files into `data/corpora/<your-corpus>/uploads/` and ingests them.
+3. The **Edit Corpus** modal sets the corpus's description, search guidance, and default query settings — these are saved to `data/corpora/<your-corpus>/<your-corpus>_corpus_metadata.yaml`.
+4. *(Optional)* you can add your own benchmark questions at `benchmarks/<your-corpus>/<your-corpus>_questions.yaml`.
+
+So if you want to query your own portfolio — your filings, reports, decks, or PDFs — drop them in via Upload and the corpus is defined by what's in its `uploads/` folder plus the description you give it in the UI. Nothing else is required.
+
+### Using a corpus
+
+When you ask a question, AIStudio reads the corpus's metadata (so your search guidance shapes the answer), retrieves the most relevant chunks from that corpus, and answers with citations back to the source files. This works identically no matter which kind of corpus you're querying.
 
 ---
 
