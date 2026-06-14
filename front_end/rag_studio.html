@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.6.5 -->
+<!-- Changelog: 2.6.5 — Look/feel: (AIS_19) "no double lines" — collapse consecutive duplicate
+     lines in the model answer before markdown render, via _collapseDupLines() (fence-aware: code
+     blocks are left intact). Kills the looped-sentence / restated-paragraph artifact (Q2 loop,
+     ING/RAF restatement) at the render layer. (AIS_03) repeated references — renderFootnotes now
+     groups citations by source+page into ONE reference row showing all its numbers (e.g. [3][7]),
+     while keeping a #fn anchor for every index so all inline [N] links still resolve. No backend
+     change. Reviewed AIS_18 (latency banner already scoped to .empty-state, removed by hideEmpty —
+     no fix needed) and AIS_02 (list render already handles +/-/* and blank-line-in-list per 748). -->
+<!-- Version: 2.6.4 -->
+<!-- Changelog: 2.6.4 — Edit Corpus modal now exposes Query Defaults (Top K / Temperature / Retrieval
+     Mix α), mirroring New Corpus. Loads current default_top_k/temperature/hybrid_alpha into the fields
+     and PATCHes them back (only when set, so a blank field never wipes a stored default). Backend
+     update_corpus_metadata already accepts these keys — front-end-only change. -->
+<!-- Changelog: 2.6.3 — Rename UX. (1) Q3 — after a rename, surface the background re-index with a
+     live bar via pollIngestStatus(newName,…) and emit an explicit "✓ Re-indexing complete" signal
+     when /ingest-status flips to done (previously the UI just said "in background" and never
+     notified). (2) Rename-into-existing 409 now shows a clear "delete the existing target first
+     (recoverable via Trash), then rename again" message instead of a raw error — mirrors the
+     create-collision guidance. Frontend only. -->
 <!-- Version: 2.6.2 -->
 <!-- Changelog: 2.6.2 — Reingest estimate now uses the same 3-tier cascade as ais_ingest_sec_10k.sh
      1.4.0: tier 1 = each selected file's own duration_sec (data-dur); tier 2 = corpus
@@ -1397,7 +1417,7 @@
             // AIStudio_716 — convert markdown to HTML before paragraph splitting.
             // markdownToHtml handles escaping internally (inlineMarkdown calls escapeHtml).
             // Split on double newlines for paragraph breaks; single newlines become <br>.
-            let html = markdownToHtml(data.answer)
+            let html = markdownToHtml(_collapseDupLines(data.answer))
                 .split(/\n\n+/)
                 .map(p => p.trim())
                 .filter(p => p)
@@ -1549,7 +1569,20 @@
 
     function renderFootnotes(citations, rc) {
         if (!citations || !citations.length) return '';
-        const items = citations.map(c => {
+        // AIS_03 — collapse repeated references: group citations by source+page so the same
+        // document/page appears as ONE row (common at high top_k, where several retrieved chunks
+        // share a page). Every citation index keeps its own #fn anchor so all inline [N] links
+        // still resolve; the row shows all of its numbers, e.g. [3][7].
+        const groups = [];
+        const byKey = new Map();
+        for (const c of citations) {
+            const key = (c.source || '') + '#' + (c.page || '');
+            let g = byKey.get(key);
+            if (!g) { g = { c, indices: [] }; byKey.set(key, g); groups.push(g); }
+            g.indices.push(c.index);
+        }
+        const items = groups.map(g => {
+            const c = g.c;
             const name = c.source.split('/').pop();
             const pageLabel = c.page ? `<span class="footnote-page">p. ${c.page}</span>` : '';
             const openUrl = c.page
@@ -1562,8 +1595,12 @@
             const nameLink = isPdf
                 ? `<a href="#" class="footnote-name" title="Source Dive: ${name}" onclick="event.preventDefault();openSourceDive('${c.source.replace(/\'/g, "\\'")}',${c.page||'null'})">${name}</a>`
                 : `<a href="${openUrl}" target="_blank" class="footnote-name" title="Open ${name}">${name}</a>`;
-            return `<div class="footnote" id="fn-${rc}-${c.index}">
-                <span class="footnote-num">[${c.index}]</span>
+            // Primary index keeps the id on the .footnote div (preserves any :target styling);
+            // any further indices get zero-width anchor spans so their [N] links also land here.
+            const extraAnchors = g.indices.slice(1).map(idx => `<span id="fn-${rc}-${idx}"></span>`).join('');
+            const numLabel = g.indices.map(idx => `[${idx}]`).join('');
+            return `<div class="footnote" id="fn-${rc}-${g.indices[0]}">${extraAnchors}
+                <span class="footnote-num">${numLabel}</span>
                 ${nameLink}
                 ${pageLabel}
                 ${openLink}
@@ -1677,6 +1714,29 @@
                             style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                     </div>
 
+                    <!-- Query Defaults — editable here too (backend update_corpus_metadata accepts default_*) -->
+                    <div style="margin-bottom:20px;border-top:1px solid var(--border,#e2e8f0);padding-top:16px;">
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Query Defaults</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Top K</label>
+                                <input id="_editTopK" type="number" min="1" max="20"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Temperature</label>
+                                <input id="_editTemp" type="number" min="0" max="2" step="0.1"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Retrieval Mix (α)</label>
+                                <input id="_editAlpha" type="number" min="0" max="1" step="0.05"
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
+                    </div>
+
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
                         <button id="_editCancel" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border,#d0d5dd);background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-mid,#555);">Cancel</button>
                         <button id="_editSave" style="padding:9px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
@@ -1689,6 +1749,9 @@
             overlay.querySelector('#_editSd').value = data.short_description || '';
             overlay.querySelector('#_editDesc').value = data.description || '';
             overlay.querySelector('#_editGuidance').value = data.search_guidance || '';
+            if (data.default_top_k != null)        overlay.querySelector('#_editTopK').value  = data.default_top_k;
+            if (data.default_temperature != null)  overlay.querySelector('#_editTemp').value  = data.default_temperature;
+            if (data.default_hybrid_alpha != null) overlay.querySelector('#_editAlpha').value = parseFloat(data.default_hybrid_alpha).toFixed(2);
             overlay.querySelector('#_editSd').focus();
 
             const finish = (save) => {
@@ -1696,10 +1759,17 @@
                     const sd = overlay.querySelector('#_editSd').value.trim();
                     const desc = overlay.querySelector('#_editDesc').value.trim();
                     const guidance = overlay.querySelector('#_editGuidance').value.trim();
+                    const _tk = overlay.querySelector('#_editTopK').value.trim();
+                    const _tp = overlay.querySelector('#_editTemp').value.trim();
+                    const _al = overlay.querySelector('#_editAlpha').value.trim();
+                    const _payload = { short_description: sd, description: desc, search_guidance: guidance };
+                    if (_tk !== '') _payload.default_top_k = parseInt(_tk);
+                    if (_tp !== '') _payload.default_temperature = parseFloat(_tp);
+                    if (_al !== '') _payload.default_hybrid_alpha = parseFloat(_al);
                     fetch(`${API}/corpus/${data.name}/metadata`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ short_description: sd, description: desc, search_guidance: guidance })
+                        body: JSON.stringify(_payload)
                     }).then(r => {
                         if (!r.ok) throw new Error('HTTP ' + r.status);
                         // Update header
@@ -2436,11 +2506,12 @@
         if (!currentCorpus) return;
 
         // Fetch chunk count to estimate re-ingest time before showing modal
+        let chunks = 0;
         let reindexWarning = '';
         try {
             const infoRes = await fetch(`${API}/corpus/${currentCorpus}/info`);
             const info = await infoRes.json();
-            const chunks = info.chunk_count || 0;
+            chunks = info.chunk_count || 0;
             if (chunks > 0) {
                 // ~1000 chunks/min on Apple Silicon M4
                 const mins = Math.max(1, Math.round(chunks / 1000));
@@ -2450,20 +2521,44 @@
 
         const newName = await showNameModal(`New name for corpus "${currentCorpus}":${reindexWarning}`, 'Rename Corpus', 'Rename');
         if (!newName || newName === currentCorpus) return;
+        const oldName = currentCorpus;
         try {
-            const res = await fetch(`${API}/corpus/${currentCorpus}/rename`, {
+            const res = await fetch(`${API}/corpus/${oldName}/rename`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ new_name: newName })
             });
+            // Rename-into-existing guardrail (409): the backend blocks overwriting an
+            // existing corpus. Guide the user to delete the target first (recoverable
+            // via Trash) rather than showing a raw error — mirrors the create 409.
+            if (res.status === 409) {
+                addSystemMessage(`⚠ A corpus named <strong>${escapeHtml(newName)}</strong> already exists, so the rename was blocked. If you really want this name, delete the existing <strong>${escapeHtml(newName)}</strong> first (it's moved to Trash and is recoverable), then rename again.`);
+                return;
+            }
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
             await loadCorpora();
             corpusSelect.value = newName;
-            const oldName = currentCorpus;
             setCorpus(newName);
             addSeparator(`Renamed to ${newName}`);
-            addSystemMessage(`✓ Corpus renamed to <strong>${newName}</strong>. Re-indexing in background.`);
+
+            // Q3 — the backend spawns a background re-ingest of the renamed corpus and
+            // tracks it on /corpus/{new}/ingest-status (flips to status:done at the end).
+            // Surface it with the same live bar the re-ingest path uses, then emit an
+            // explicit completion signal so the user isn't left guessing.
+            const estSecs = Math.max(5, Math.round(chunks * 0.06));
+            const msgDiv = addMessage('assistant',
+                `<span class="ingest-header">Re-indexing <em>'${escapeHtml(newName)}'</em> after rename…</span>`
+                + `<div class="rename-status" style="margin-top:4px;"></div>`,
+                true);
+            const statusEl = msgDiv ? msgDiv.querySelector('.rename-status') : null;
+            if (statusEl) {
+                await pollIngestStatus(newName, statusEl, estSecs);
+                addSystemMessage(`✓ Re-indexing of <strong>${escapeHtml(newName)}</strong> complete.`);
+                inspectCorpus();
+            } else {
+                addSystemMessage(`✓ Corpus renamed to <strong>${escapeHtml(newName)}</strong>. Re-indexing in background.`);
+            }
         } catch (err) {
             addSystemMessage(`❌ Error renaming corpus: ${err.message}`);
         }
@@ -3007,6 +3102,26 @@
     // separate <ul> blocks; empty lines are skipped while inside a list context.
     // Must run BEFORE escapeHtml on raw LLM text (not on already-escaped HTML).
     // Citation markers [1], [2,3] are preserved as-is for parseCitations() downstream.
+    // AIS_19 — "no double lines": collapse runs of identical consecutive lines that some
+    // models emit when they loop (a repeated sentence, or a whole restated paragraph). Blank
+    // lines are preserved (and don't reset the comparison, so "para / blank / para" collapses
+    // too). Fenced code blocks are passed through untouched — duplicate code lines are legitimate.
+    function _collapseDupLines(text) {
+        const lines = (text || '').split('\n');
+        const out = [];
+        let inFence = false, prevKey = null;
+        for (const ln of lines) {
+            if (/^```/.test(ln.trim())) { inFence = !inFence; out.push(ln); prevKey = null; continue; }
+            if (inFence) { out.push(ln); continue; }
+            const key = ln.trim().toLowerCase().replace(/\s+/g, ' ');
+            if (key === '') { out.push(ln); continue; }   // keep blanks, preserve prevKey
+            if (key === prevKey) continue;                 // drop exact consecutive duplicate
+            out.push(ln);
+            prevKey = key;
+        }
+        return out.join('\n');
+    }
+
     function markdownToHtml(text) {
         if (!text) return '';
 

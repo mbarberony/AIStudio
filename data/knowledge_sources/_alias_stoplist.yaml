@@ -1,0 +1,26 @@
+# _alias_stoplist.yaml — shared, corpus-agnostic alias hygiene for the entity KB.
+#
+# Read by ais_import_entity_kb_ops (via _kb_common_ops._load_alias_sentinels) at KB-build
+# time. Tokens listed here (case-insensitive, trimmed) are dropped from a row's Wikidata
+# short-names and tickers BEFORE they enter the KB, so they never reach the [Document:]
+# chunk-prefix augmentation at ingest. Corpus-independent by design — the leading underscore
+# marks it shared (mirrors _seed / _special).
+#
+# Two filters apply at build time:
+#   1. sentinels below — exact-match (case-insensitive, trimmed). Unioned with a built-in
+#      default set in code, so enrichment still works if this file is absent.
+#   2. an in-code PREDICATE (NOT a wordlist) — drop all-digit tokens, because foreign-exchange
+#      codes (e.g. Tokyo Stock Exchange 8634 = JPMorgan, 8710 = Citigroup) arrive via Wikidata
+#      P249 tickers and are never US display aliases. To KEEP a numeric listing for a specific
+#      firm, add a per-firm allowlist field on that KB row — never relax the rule globally.
+
+sentinels:
+  - n/a
+  - "N/A"
+  - na
+  - none
+  - "null"
+  - "-"
+  - "--"
+  - tbd
+  - unknown

@@ -1,4 +1,20 @@
-# Version: 1.9.6
+# Version: 1.10.1
+# Changelog: 1.10.1 — Ingest-status freeze fix. In _stream_stderr, parse the [ingest]
+#            file_complete:/normalizer: machine signals by SUBSTRING and BEFORE the tqdm-bar
+#            (is_process_line) classification. pipeline.py renders a live tqdm bar even under
+#            this api.py pipe; its carriage-return clear()/refresh() glues onto the front of the
+#            newline-terminated structured line (no newline between bar refresh and the write),
+#            so the delivered line is "…<bar redraw>…[ingest] file_complete: …". The prior
+#            startswith("[ingest] …") checks then failed and the signal was silently dropped —
+#            files_processed/elapsed/pct/normalizer_hits never advanced, so the UI bar crawled
+#            then froze while chunks were really being written (curl-confirmed). Substring match +
+#            the existing re.search regexes match through any bar prefix; hoisting above
+#            is_process_line stops a glued line that also looks like a Process line from being
+#            swallowed by the postfix branch. Consumer-side only — no change to the ingest
+#            subprocess (operator-TTY path untouched). Cross-ref AIStudio_613 (file_complete
+#            signal), AIStudio_722 (TTY-gate that left the bar rendering in pipe mode). PIPELINE
+#            item to file at EOS. # Version reconciled 1.9.6 → 1.10.1 (changelog locus was already
+#            at 1.10.0; this corrects the stale version line per the Python versioning convention).
 # Changelog: 1.10.0 — AIStudio_882 (scope application): AskRequest + RetrieveRequest gain
 #            allowed_source_paths (scope firm-boundary, OR over source_path substrings, ANDed
 #            with the resolved entity_filter). Passed through /ask and /debug/retrieve to
@@ -1037,95 +1053,110 @@ async def _run_ingest_background(corpus_name: str, uploads_dir, only_files: set[
                 continue
             elapsed = int(time.time() - start_time)
 
-            # Only parse lines from the Process bar — must start with "Process"
-            # The Discover bar uses desc="Discover" and has no chunks= field.
-            # Filtering by prefix is more reliable than pattern-matching on % or N/N,
-            # which can match Discover lines and produce wrong file counts.
+            # AIStudio (ingest-status freeze fix) — handle the [ingest] machine signals
+            # FIRST and by SUBSTRING, before the tqdm-bar classification below.
+            # pipeline.py renders a live tqdm bar even under this pipe; its
+            # carriage-return clear()/refresh() can be glued onto the front of the
+            # newline-terminated structured line (no intervening newline), so the
+            # delivered line is "…<bar redraw>…[ingest] file_complete: …". A
+            # startswith() check then fails and the signal is silently dropped (the
+            # freeze bug — files_processed/elapsed/pct never advance). Substring match +
+            # the re.search regexes below match through any bar prefix; doing this before
+            # is_process_line stops a glued line that also looks like a Process line from
+            # being swallowed by the tqdm-postfix branch. AIStudio_613 (the file_complete
+            # signal) / AIStudio_722 (the TTY-gate that left the bar rendering in pipe mode).
+
+            # Per-file completion signal — the PRIMARY source of
+            # files_processed/bytes_processed/pct updates during ingest.
+            # Shape: "[ingest] file_complete: N/M chunks=C bytes=B file=NAME"
+            if "[ingest] file_complete:" in line:
+                m_fc = re.search(
+                    r"file_complete:\s*(\d+)/(\d+)\s+chunks=(\d+)\s+bytes=(\d+)",
+                    line,
+                )
+                if m_fc:
+                    n_done = int(m_fc.group(1))
+                    n_total = int(m_fc.group(2))
+                    c_total = int(m_fc.group(3))
+                    b_total = int(m_fc.group(4))
+                    cached_fc = _ingest_status.get(corpus_name, {})
+                    # Self-correct d_observed from the observed chunks/bytes ratio.
+                    d_obs_new = (
+                        c_total / b_total
+                        if b_total > 0
+                        else cached_fc.get("d_observed", 0)
+                    )
+                    total_bytes_fc = cached_fc.get("total_bytes", 0)
+                    pct_fc = (
+                        min(99, round(c_total / (d_obs_new * total_bytes_fc) * 100))
+                        if d_obs_new > 0 and total_bytes_fc > 0
+                        else 0
+                    )
+                    mb_done_fc = b_total / (1024 * 1024)
+                    mb_total_fc = total_bytes_fc / (1024 * 1024)
+                    _ingest_status[corpus_name] = {
+                        **cached_fc,
+                        "status": "running",
+                        "chunks_written": c_total,
+                        "files_processed": n_done,
+                        "files_total": n_total,
+                        "bytes_processed": b_total,
+                        "d_observed": d_obs_new,
+                        "pct_complete": pct_fc,
+                        "elapsed_sec": int(time.time() - start_time),
+                        "message": (
+                            f"{n_done} of {n_total} file(s) indexed. "
+                            f"{mb_done_fc:.1f} / {mb_total_fc:.1f} MB = {pct_fc}%"
+                        ),
+                    }
+                print(line, flush=True)  # operator log (API stdout)
+                continue
+
+            # AIStudio_680 — [ingest] normalizer: structured per-file line.
+            # Shape: [ingest] normalizer: file=NAME format=FMT entity="ENTITY" year=YYYY chunks=N source=tag mismatch=false
+            if "[ingest] normalizer:" in line:
+                try:
+                    _m_file = re.search(r"file=(\S+)", line)
+                    _m_fmt = re.search(r"format=(\S+)", line)
+                    _m_entity = re.search(r'entity="([^"]+)"', line)
+                    _m_year = re.search(r"year=(\S+)", line)
+                    _m_chunks = re.search(r"chunks=(\d+)", line)
+                    _m_source = re.search(r"source=(\S+)", line)
+                    _m_mismatch = re.search(r"mismatch=(\S+)", line)
+                    if _m_entity:
+                        _hit = {
+                            "file": _m_file.group(1) if _m_file else "",
+                            "format": _m_fmt.group(1) if _m_fmt else "",
+                            "entity": _m_entity.group(1),
+                            "year": _m_year.group(1) if _m_year else "",
+                            "chunks": int(_m_chunks.group(1)) if _m_chunks else 0,
+                            "source": _m_source.group(1) if _m_source else "",
+                            "mismatch": _m_mismatch.group(1) == "true" if _m_mismatch else False,
+                        }
+                        _cached_norm = _ingest_status.get(corpus_name, {})
+                        _existing_hits = list(_cached_norm.get("normalizer_hits", []))
+                        _existing_hits.append(_hit)
+                        _ingest_status[corpus_name] = {
+                            **_cached_norm,
+                            "normalizer_hits": _existing_hits,
+                        }
+                except Exception as _ne:
+                    print(f"[ingest] normalizer parse warning: {_ne}", flush=True)
+                print(line, flush=True)  # operator log (API stdout)
+                continue
+
+            # Any other [ingest] log line → API stdout, nothing to parse.
+            if "[ingest]" in line:
+                print(line, flush=True)
+                continue
+
+            # tqdm Process-bar lines — fallback progress source (best-effort; the bar's
+            # \r-updates rarely surface at this newline iterator). Must start with
+            # "Process"; the Discover bar has no chunks= field.
             is_process_line = line.startswith("Process") and (
                 "chunks=" in line or re.search(r"\|\s*\d+/\d+", line)
             )
             if not is_process_line:
-                # AIStudio_613: per-file completion signal from pipeline.py — parseable,
-                # emitted every file regardless of tqdm bar state. This is the primary
-                # source of files_processed/bytes_processed updates during ingest, since
-                # the tqdm bar's \r-updates never arrive at this iterator.
-                # Line shape: "[ingest] file_complete: N/M chunks=C bytes=B file=NAME"
-                if line.startswith("[ingest] file_complete:"):
-                    m_fc = re.search(
-                        r"file_complete:\s*(\d+)/(\d+)\s+chunks=(\d+)\s+bytes=(\d+)",
-                        line,
-                    )
-                    if m_fc:
-                        n_done = int(m_fc.group(1))
-                        n_total = int(m_fc.group(2))
-                        c_total = int(m_fc.group(3))
-                        b_total = int(m_fc.group(4))
-                        cached_fc = _ingest_status.get(corpus_name, {})
-                        # Self-correct d_observed from observed ratio. This is the
-                        # write site that bug (c) was missing — without it,
-                        # d_observed stays at D_SEED for the whole run.
-                        d_obs_new = (
-                            c_total / b_total
-                            if b_total > 0
-                            else cached_fc.get("d_observed", 0)
-                        )
-                        total_bytes_fc = cached_fc.get("total_bytes", 0)
-                        pct_fc = (
-                            min(99, round(c_total / (d_obs_new * total_bytes_fc) * 100))
-                            if d_obs_new > 0 and total_bytes_fc > 0
-                            else 0
-                        )
-                        mb_done_fc = b_total / (1024 * 1024)
-                        mb_total_fc = total_bytes_fc / (1024 * 1024)
-                        _ingest_status[corpus_name] = {
-                            **cached_fc,
-                            "status": "running",
-                            "chunks_written": c_total,
-                            "files_processed": n_done,
-                            "files_total": n_total,
-                            "bytes_processed": b_total,
-                            "d_observed": d_obs_new,
-                            "pct_complete": pct_fc,
-                            "elapsed_sec": int(time.time() - start_time),
-                            "message": (
-                                f"{n_done} of {n_total} file(s) indexed. "
-                                f"{mb_done_fc:.1f} / {mb_total_fc:.1f} MB = {pct_fc}%"
-                            ),
-                        }
-                # Print non-tqdm lines (e.g. [ingest] per-file logs) to API stdout
-                if line.startswith("[ingest]"):
-                    print(line, flush=True)
-
-                # AIStudio_680 — parse [ingest] normalizer: structured line from pipeline.py
-                # Line shape: [ingest] normalizer: file=NAME format=FMT entity="ENTITY" year=YYYY chunks=N source=tag mismatch=false
-                if line.startswith("[ingest] normalizer:"):
-                    try:
-                        _m_file = re.search(r"file=(\S+)", line)
-                        _m_fmt = re.search(r"format=(\S+)", line)
-                        _m_entity = re.search(r'entity="([^"]+)"', line)
-                        _m_year = re.search(r"year=(\S+)", line)
-                        _m_chunks = re.search(r"chunks=(\d+)", line)
-                        _m_source = re.search(r"source=(\S+)", line)
-                        _m_mismatch = re.search(r"mismatch=(\S+)", line)
-                        if _m_entity:
-                            _hit = {
-                                "file": _m_file.group(1) if _m_file else "",
-                                "format": _m_fmt.group(1) if _m_fmt else "",
-                                "entity": _m_entity.group(1),
-                                "year": _m_year.group(1) if _m_year else "",
-                                "chunks": int(_m_chunks.group(1)) if _m_chunks else 0,
-                                "source": _m_source.group(1) if _m_source else "",
-                                "mismatch": _m_mismatch.group(1) == "true" if _m_mismatch else False,
-                            }
-                            _cached_norm = _ingest_status.get(corpus_name, {})
-                            _existing_hits = list(_cached_norm.get("normalizer_hits", []))
-                            _existing_hits.append(_hit)
-                            _ingest_status[corpus_name] = {
-                                **_cached_norm,
-                                "normalizer_hits": _existing_hits,
-                            }
-                    except Exception as _ne:
-                        print(f"[ingest] normalizer parse warning: {_ne}", flush=True)
                 continue
 
             last_process_line = line

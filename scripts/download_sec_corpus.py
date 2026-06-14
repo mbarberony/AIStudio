@@ -1,24 +1,47 @@
 #!/usr/bin/env python3
 """
 AIStudio — SEC 10-K Corpus Downloader
-Version 1.4.0
+Version 1.7.0
 
 Downloads 10-K annual filings from SEC EDGAR. Membership is no longer hardcoded:
-the firm set comes from a scope file (default sec_10k_US_full_scope.yaml), or a single
+the firm set comes from a scope file (default sec_10k_full_scope.yaml), or a single
 firm via --cik / --tkr. Each downloaded filing is verified at download time for the
 iXBRL entity tag the ingest pipeline relies on (dei:EntityRegistrantName), so a filing
 that cannot be auto-recognized is flagged before you waste a 30-minute ingest on it.
 
 Changelog:
-- 1.4.0 — (1) --scope now resolves a STEM via _scope_common_ops: bare 'initial_test' →
-          data/corpora/sec_10k/scopes/sec_10k_initial_test_scope.yaml; a path (contains /
+- 1.7.0 — Output wired to the shared _cli_output_ops helper (STD CLI-Output 4-glyph
+          vocabulary). A skipped (already-on-disk) file is white-✓-on-yellow (succeeded,
+          no new download), a fresh fetch is ✅, a fetch error is white-✗-on-red, and the
+          all-filings-lack-a-tag coaching block is the yellow-✗ recoverable case. download_filing
+          now returns (path, fresh_bytes) so the new `--- Summary` reports fresh-vs-present
+          split + MB + elapsed + MB/s + MB/file. No download-logic change.
+- 1.6.0 — (1) Write-back migrated to the unified stemless resolver: _inventory_path now
+          calls _scope.discover_full (the SAME resolver the read side uses), so downloads
+          write back to the canonical stemless <corpus>_full_scope.yaml — never a stale
+          sec_10k_US_full_scope.yaml. DEFAULT_SCOPE_REL + the not-found hint corrected to the
+          stemless name. Retires the --no-inventory workaround for the read/write stem split.
+          (2) Atomic download: each filing is written to a .part temp and Path.replace()'d into
+          place, so an interrupted run leaves a .part orphan (ignored by the skip-if-exists),
+          never a truncated .htm. Re-running the exact command resumes — no flag.
+- 1.5.0 — Inventory model simplified to the row-as-identity. (1) last_updated is now a
+          date+TIME stamp (ISO seconds, e.g. 2026-06-09T17:36:42) so re-downloads are
+          distinguishable within a day. (2) Inventory rows carry a modified_lei field
+          (operator-corrected LEI; preserved across writes alongside lei). (3) REMOVED the
+          sec_10k_entity_overrides.yaml sidecar — a --force_name assertion now lands only in
+          the inventory row's `label` (the single source of entity identity). Ingest reads the
+          name from the row, not a separate file. Nothing else writes a sidecar.
+          (4) _inventory_path now enforces the one-inventory invariant on the write side:
+          zero *_full_scope → create the default; >1 → hard error (was: silently default).
+- 1.4.0 — (1) --scope now resolves a STEM via _scope_common_ops: bare 'initial_list' →
+          data/corpora/sec_10k/scopes/sec_10k_initial_list_scope.yaml; a path (contains /
           or .) is still taken literally; no --scope → the corpus inventory (discover_full).
           (2) Inventory write-back: after a run, every downloaded firm is upserted (by CIK)
-          into the *_full_scope inventory — label (forced label if used), cik, ticker, lei:""
-          (PRESERVED if already set — hand-corrected LEIs are never clobbered), and a stamped
-          last_updated. The subset scope passed via --scope is READ-ONLY, never written. The
-          inventory is tool-owned local data (gitignored): row data round-trips, an existing
-          header comment is preserved, GLEIF later fills lei in place.
+          into the *_full_scope inventory — label (forced label if used), cik, ticker, lei/
+          modified_lei (PRESERVED if already set — hand-corrections never clobbered), and a
+          stamped last_updated. The subset scope passed via --scope is READ-ONLY, never
+          written. The inventory is tool-owned local data (gitignored): row data round-trips,
+          an existing header comment is preserved, GLEIF later fills lei in place.
 - 1.3.0 — Year selection split into two flags (AIStudio_882-adjacent). --latest N = the N
           most-recent filings by filing date (bare --latest = 1; default when neither flag
           is given = 1); --years YYYY [YYYY ...] = explicit fiscal year(s), selected by each
@@ -42,7 +65,7 @@ Changelog:
           + dei:DocumentFiscalYearFocus from each filing and reports ✅/❌ per filing; on an
           all-❌ firm it prints a coaching error and the --force_name / --force_year remedy.
           --force_name / --force_year (single-firm modes) assert an identity when the tag is
-          absent and record it to a sidecar overrides file. --no-verify to skip the check.
+          absent (in 1.5.0 this is recorded in the inventory row label). --no-verify to skip.
           Membership is now scope-driven; the old hardcoded firm list is removed.
 - 1.1.8 — Robust size parsing in index.json (pre-de-wire).
 - 1.1.6 — Multi-document filing fix: pick largest HTML doc as the main 10-K body.
@@ -68,7 +91,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -78,6 +101,7 @@ import yaml
 # locate the inventory (_full_scope) write-back target. scripts/ is on sys.path when run
 # directly; insert defensively for -m / odd-cwd invocations.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _cli_output_ops as cli  # noqa: E402  shared CLI output (glyph vocabulary)
 import _scope_common_ops as _scope  # noqa: E402
 
 try:
@@ -96,7 +120,7 @@ TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 
 # Default scope (the membership list the bare command consumes). Corpus-attached,
 # at the base of the corpus directory — NOT benchmarks/, NOT uploads/.
-DEFAULT_SCOPE_REL = "data/corpora/sec_10k/sec_10k_US_full_scope.yaml"
+DEFAULT_SCOPE_REL = "data/corpora/sec_10k/sec_10k_full_scope.yaml"
 
 # The single iXBRL tag the ingest pipeline's primary strategy reads to recognize a
 # filing's entity. A filing lacking it cannot be auto-recognized at ingest (the
@@ -157,7 +181,7 @@ def _load_scope(path: Path, delay: float = 0.5) -> list[dict]:
         raise SystemExit(
             f"Scope file not found: {path}\n"
             f"  Pass your own list with --scope <file.yaml> (schema: entities: [{{label, cik|ticker}}]),\n"
-            f"  or restore the default scope at data/corpora/sec_10k/sec_10k_US_full_scope.yaml."
+            f"  or restore the default scope at data/corpora/sec_10k/sec_10k_full_scope.yaml."
         )
     with open(path) as f:
         doc = yaml.safe_load(f) or {}
@@ -198,12 +222,14 @@ _INVENTORY_HEADER = (
 
 
 def _inventory_path() -> Path:
-    """The single *_full_scope inventory to write firms back into.
-    Existing one (discover_full) if present; else the canonical default path (created)."""
+    """The single stemless <corpus>_full_scope inventory to write firms back into — resolved
+    by the SAME function the read side uses (_scope.discover_full), so read and write can never
+    diverge on the filename. Exactly one → use it; zero → the canonical stemless default,
+    created on first write. (>1 is impossible: discover_full globs the exact stemless name.)"""
     try:
         return _scope.discover_full("sec_10k")
     except _scope.ScopeError:
-        return _repo_root() / DEFAULT_SCOPE_REL
+        return _repo_root() / DEFAULT_SCOPE_REL  # zero → create the canonical default on write
 
 
 def _read_inventory_header(path: Path) -> str:
@@ -231,7 +257,7 @@ def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
         doc = yaml.safe_load(path.read_text()) or {}
         rows = doc.get("entities", []) or []
     by_cik = {str(r.get("cik", "")).zfill(10): r for r in rows if r.get("cik")}
-    today = date.today().isoformat()
+    stamp = datetime.now().isoformat(timespec="seconds")   # date+time, e.g. 2026-06-09T17:36:42
     added = touched = 0
     for f in learned:
         cik = str(f["cik"]).zfill(10)
@@ -241,12 +267,12 @@ def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
                 r["label"] = f["label"]          # honor forced/scope label on re-download
             if f.get("ticker") and not r.get("ticker"):
                 r["ticker"] = f["ticker"]
-            r["last_updated"] = today            # lei + any enrichment preserved untouched
+            r["last_updated"] = stamp            # lei/modified_lei + any enrichment preserved untouched
             touched += 1
         else:
             rows.append({
-                "label": f.get("label", ""), "cik": cik,
-                "ticker": f.get("ticker", ""), "lei": "", "last_updated": today,
+                "label": f.get("label", ""), "cik": cik, "ticker": f.get("ticker", ""),
+                "lei": "", "modified_lei": "", "last_updated": stamp,
             })
             by_cik[cik] = rows[-1]
             added += 1
@@ -368,8 +394,12 @@ def _pick_main_document(cik: str, accession: str, primary_doc: str, delay: float
     return max(html_docs, key=_safe_size).get("name", primary_doc)
 
 
-def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5) -> Path | None:
-    """Download the main 10-K document; return the saved path (or None on failure)."""
+def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5) -> tuple[Path | None, int]:
+    """Download the main 10-K document.
+
+    Returns (saved_path | None, fresh_bytes) — fresh_bytes is 0 on skip/fail, so the
+    caller can total real download volume for the summary (skips add nothing).
+    """
     acc, cik, primary_doc, date = (
         filing["accession"],
         filing["cik"],
@@ -380,19 +410,27 @@ def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5)
     base_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc}/{doc}"
     safe_name = label.replace(" ", "_").replace("/", "_")
     out_file = out_dir / f"{safe_name}_10K_{date}.htm"
+    tmp_file = out_file.with_name(out_file.name + ".part")
 
     if out_file.exists():
-        print(f"  [skip] {out_file.name} already exists")
-        return out_file
+        # Succeeded, but no new file fetched → degraded-success (white ✓ on yellow).
+        cli.partial(f"{out_file.name} — already on disk, no new download", indent=2)
+        return out_file, 0
     try:
         r = requests.get(base_url, headers=HEADERS, timeout=30)
         r.raise_for_status()
-        out_file.write_bytes(r.content)
-        print(f"  [ok]   {out_file.name} ({len(r.content) / 1024:.0f} KB)")
-        return out_file
+        # Atomic publish: write to a .part temp, then rename into place. An interrupted run
+        # leaves the .part orphan (ignored by the skip-if-exists above), never a truncated
+        # .htm — so re-running the exact command resumes with no flag.
+        tmp_file.write_bytes(r.content)
+        tmp_file.replace(out_file)
+        cli.ok(f"{out_file.name} ({len(r.content) / 1024:.0f} KB)", indent=2)
+        return out_file, len(r.content)
     except Exception as e:
-        print(f"  [fail] {label} {date}: {e}")
-        return None
+        if tmp_file.exists():
+            tmp_file.unlink()
+        cli.fail(f"{label} {date}: {e}", indent=2)
+        return None, 0
 
 
 # ── Download-time verify (predicts ingest recognition) ──────────────────────────
@@ -423,37 +461,12 @@ def _verify_filing(html_path: Path) -> tuple[str | None, str | None]:
     return (_find(ENTITY_TAG_SUFFIX), _find(YEAR_TAG_SUFFIX))
 
 
-def _write_override(out_dir: Path, filename: str, force_name: str | None, force_year: str | None) -> None:
-    """Record an operator-asserted identity to a sidecar at the corpus base.
-
-    NOTE: ingest honoring this override is the paired worksheet/ingest step (Annex 1,
-    name-extraction lever) and is NOT wired yet — this preserves the assertion so it
-    isn't lost between download and ingest.
-    """
-    corpus_base = out_dir.parent  # uploads/ -> corpus base
-    sidecar = corpus_base / "sec_10k_entity_overrides.yaml"
-    data = {}
-    if sidecar.exists():
-        with open(sidecar) as f:
-            data = yaml.safe_load(f) or {}
-    data.setdefault("overrides", {})
-    entry: dict[str, str] = {}
-    if force_name:
-        entry["force_name"] = force_name
-    if force_year:
-        entry["force_year"] = str(force_year)
-    data["overrides"][filename] = entry
-    with open(sidecar, "w") as f:
-        f.write("# sec_10k_entity_overrides.yaml — operator-asserted identities for filings\n")
-        f.write("# lacking dei:EntityRegistrantName. Consumed at ingest (paired step, AIStudio_899).\n")
-        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
-    print(f"  [override] recorded {filename} → {entry} in {sidecar.name}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ais_download_sec_10k",
-        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.3.0",
+        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.7.0",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
@@ -547,7 +560,9 @@ def main() -> None:
     print(f"Output directory: {out_dir}")
     print(f"Targeting {len(targets)} firm(s) × {sel_label}\n")
 
-    total_ok = total_fail = 0
+    total_ok = total_fail = total_fresh = 0
+    total_bytes = 0
+    t0 = time.time()
     learned: list[dict] = []   # firms with >=1 file on disk this run → upserted into inventory
     for t in targets:
         label, cik = t["label"], t["cik"]
@@ -572,11 +587,14 @@ def main() -> None:
         firm_ok = False
         verify_results: list[tuple[str, bool]] = []  # (date, has_entity_tag)
         for filing in filings:
-            saved = download_filing(filing, label, out_dir, delay=args.delay)
+            saved, nbytes = download_filing(filing, label, out_dir, delay=args.delay)
             if saved is None:
                 total_fail += 1
                 continue
             total_ok += 1
+            if nbytes:
+                total_fresh += 1
+                total_bytes += nbytes
             firm_ok = True
 
             if args.no_verify:
@@ -586,13 +604,13 @@ def main() -> None:
             verify_results.append((filing["date"], has_tag))
             if has_tag:
                 yr = year or "?"
-                print(f"         ✅ verify: entity tag present ({entity} FY{yr})")
+                cli.ok(f"verify: entity tag present ({entity} FY{yr})", indent=9)
             elif args.force_name:
-                print(f"         ⚠ forced : no entity tag — asserting '{args.force_name}'"
-                      + (f" FY{args.force_year}" if args.force_year else ""))
-                _write_override(out_dir, saved.name, args.force_name, args.force_year)
+                cli.partial(f"forced: no entity tag — asserting '{args.force_name}'"
+                            + (f" FY{args.force_year}" if args.force_year else "")
+                            + " (recorded as the inventory row label)", indent=9)
             else:
-                print("         ❌ verify: no dei:EntityRegistrantName tag")
+                cli.fail("verify: no dei:EntityRegistrantName tag", indent=9)
             time.sleep(args.delay)
 
         # Record for inventory write-back: forced label wins (operator's assertion).
@@ -604,23 +622,33 @@ def main() -> None:
             })
 
         # Coaching: every downloaded filing for this firm lacks the entity tag, not forced.
+        # This is the recoverable-failure case (yellow ✗): no automated fix, but the operator
+        # has a documented override.
         if verify_results and not any(has for _, has in verify_results) and not args.force_name:
             years_str = ", ".join(d[:4] for d, _ in verify_results)
             ident = f"--tkr {args.tkr}" if args.tkr else (f"--cik {cik}" if args.cik else f'--scope (entry "{label}")')
             _yflag = ("--years " + " ".join(str(y) for y in sorted(sel_years))) if sel_years else f"--latest {latest_n}"
-            print(
-                f"\n  ❌ {label}: none of the downloaded filings ({years_str}) carry an iXBRL\n"
-                f"     entity tag (dei:EntityRegistrantName), so ingest can't auto-recognize them.\n"
-                f"     You can override:\n"
-                f"       ais_download_sec_10k {ident} {_yflag} "
-                f'--force_name "<name to use>" [--force_year <YYYY>]\n'
-                f"     But it's worth finding out *why* the filing lacks the tag first — see Tutorial Annex 1."
-            )
+            cli.fail_recover(f"{label}: none of the downloaded filings ({years_str}) carry an "
+                             f"iXBRL entity tag (dei:EntityRegistrantName) — ingest can't "
+                             f"auto-recognize them.", indent=2)
+            print(f"        Override:  ais_download_sec_10k {ident} {_yflag} "
+                  f'--force_name "<name to use>" [--force_year <YYYY>]')
+            print("        But find out *why* the tag is missing first — see Tutorial Annex 1.")
 
+    elapsed = time.time() - t0
+    mb = total_bytes / 1_048_576
     print(f"\n{'=' * 50}")
-    print(f"Downloaded: {total_ok} filings")
-    print(f"Failed:     {total_fail}")
-    print(f"Output:     {out_dir}")
+    cli.section("Summary")
+    print(f"  On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
+          f"{total_ok - total_fresh} already present")
+    if total_fail:
+        print(f"  Failed:   {total_fail}")
+    if total_fresh and elapsed > 0:
+        print(f"  Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
+              f"{mb / total_fresh:.2f} MB/file avg")
+    else:
+        print(f"  Elapsed:  {elapsed:.0f}s (no new downloads)")
+    print(f"  Output:   {out_dir}")
 
     # Inventory write-back — upsert downloaded firms into the *_full_scope ledger.
     # Read-only on any subset scope passed via --scope; preserves hand-corrected lei.
@@ -631,7 +659,7 @@ def main() -> None:
             _rel = inv_path.relative_to(_repo_root())
         except ValueError:
             _rel = inv_path
-        print(f"Inventory:  {_rel}  (+{n_added} new, {n_touched} updated)")
+        print(f"  Inventory: {_rel}  (+{n_added} new, {n_touched} updated)")
 
     print("\nTo ingest these files into AIStudio, run:\n  ais_ingest_sec_10k")
 

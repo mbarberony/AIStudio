@@ -11,12 +11,19 @@ from local_llm_bot.app.ingest.pipeline import ingest_corpus
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
-# Version: 1.3.0
+# Version: 1.3.1
+# Changelog: 1.3.1 — AIStudio_906: reset the corpus_metadata `files`/`deleted_files` maps on a
+#            full rebuild (--force, whole corpus) before the per-file merge. The writer only
+#            added the files ingested this run and never cleared prior entries, so a --force
+#            rebuild of a 22-file corpus that previously held a contaminated 109-file set left
+#            all 109 in the map — and the UI file count / data volume / entity list read this
+#            map, showing 109 phantom files. Selective (--files A,B) runs still merge. (Item
+#            number provisional — reconcile at PIPELINE update with the 891 collision + the
+#            SESS-2026-06-09 905-912 earmarks.)
 # Changelog: 1.3.0 — AIStudio: per-file selective ingest. New --files arg (comma-separated
 #            basenames) → passed to ingest_corpus(only_files=...). When present, ONLY those
 #            files are ingested and always re-embedded; all other files under --root are
 #            untouched. Enables "index one file at a time" and honest reingest-N denominators.
-# Version: 1.2.8
 # Changelog: 1.2.5 — Normalizer summary source label updated to match pipeline
 #            completion line format: "tag(s) [ns:]" not "tag (ns:)".
 # Changelog: 1.2.4 — Write file_stats to corpus_metadata.yaml unconditionally
@@ -233,6 +240,15 @@ def main(argv: list[str] | None = None) -> int:
         if "files" not in _meta or not isinstance(_meta.get("files"), dict):
             _meta["files"] = {}
         if "deleted_files" not in _meta or not isinstance(_meta.get("deleted_files"), dict):
+            _meta["deleted_files"] = {}
+
+        # AIStudio_906: a full rebuild REPLACES the files map; incremental/selective runs MERGE.
+        # The per-file loop below only adds/overwrites the files ingested this run — it never
+        # clears stale entries. Without this reset, a `--force` whole-corpus rebuild leaves
+        # prior-run entries behind (the 109-vs-22 phantom-file bug the UI surfaced). A selective
+        # `--files A,B` run (only_files set) must still merge, so it is explicitly excluded.
+        if bool(args.force) and only_files is None:
+            _meta["files"] = {}
             _meta["deleted_files"] = {}
 
         # Per-file stats

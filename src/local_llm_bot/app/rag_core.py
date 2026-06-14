@@ -1,5 +1,16 @@
 # src/local_llm_bot/app/rag_core.py
-# Version: 1.9.5
+# Version: 1.10.1
+# Changelog: 1.10.1 — AIStudio_891: make the Python entity/scope post-filter backstops
+#             firm-aware. The Qdrant-side filter (qdrant_store._build_entity_filter) now
+#             matches the entity on the `firm` payload field (tokenized MatchText), but the
+#             in-Python backstops in retrieve() still checked only source_path with a plain
+#             substring `in` — silently dropping every firm-matched hit whose underscored
+#             token (e.g. PRICE_T_ROWE_GROUP_INC) is not a literal source_path substring,
+#             so /ask returned zero despite a correct Qdrant match. New _entity_token_matches()
+#             mirrors MatchText (all word-tokens present) over source_path OR firm. Also
+#             corrects the stale Version line (was 1.9.5; top changelog already 1.10.0).
+#             qdrant_store BM25 post-filter (372/380) has the same latent bug — fix deferred
+#             (only fires under AISTUDIO_HYBRID_UNDER_FILTER, default off).
 # Changelog: 1.10.0 — AIStudio_882 (scope application): retrieve() accepts allowed_source_paths
 #             — the scope firm-boundary — threaded into all six _store.query/query_bm25
 #             call-sites and ANDed as a post-filter backstop across channels. An active scope
@@ -505,6 +516,29 @@ def _lexical_jsonl_retrieve(*, query: str, top_k: int, corpus: str) -> list[Retr
 # ---------------------------------------------------------------------------
 
 
+def _entity_token_matches(token: str, *field_values: str) -> bool:
+    """True if every word-token of `token` is present in ANY field value's word-tokens.
+
+    Mirrors Qdrant MatchText semantics (all query tokens must appear in the field) over
+    the SAME field set the Qdrant-side filter checks — source_path OR firm. This is the
+    in-Python backstop that guarantees entity/scope isolation regardless of which channel
+    produced a hit; it must stay consistent with qdrant_store._build_entity_filter.
+
+    AIStudio_891: replaces the prior `token in source_path` plain-substring check, which
+    only worked when the token was label-shaped (e.g. T_Rowe_Price ⊂ filename) and silently
+    dropped firm-matched hits once the token became the iXBRL tag (PRICE_T_ROWE_GROUP_INC),
+    which is not a source_path substring but does match the `firm` field token-for-token.
+    Tokenizing is backward-compatible: label tokens remain a subset of their filename tokens.
+    """
+    t_toks = set(re.findall(r"[a-z0-9]+", token.lower()))
+    if not t_toks:
+        return False
+    for value in field_values:
+        if t_toks <= set(re.findall(r"[a-z0-9]+", str(value).lower())):
+            return True
+    return False
+
+
 def retrieve(
     *,
     query: str,
@@ -695,10 +729,20 @@ def retrieve(
         # This guarantees entity isolation regardless of which channel (vector/BM25)
         # provided each hit — BM25 post-filter alone is insufficient because vector
         # hits pass through combine_hybrid() without source_path filtering.
+        # AIStudio_891: match the entity on source_path OR firm, tokenized (MatchText
+        # parity). The Qdrant filter matches firm; this backstop must too, or it drops
+        # the very hits the Qdrant filter just admitted.
         if entity_filter:
             hits = [
                 h for h in hits
-                if any(token in str(h.metadata.get("source_path", "")) for token in entity_filter)
+                if any(
+                    _entity_token_matches(
+                        token,
+                        h.metadata.get("source_path", ""),
+                        h.metadata.get("firm", ""),
+                    )
+                    for token in entity_filter
+                )
             ]
 
         # AIStudio_882: scope boundary backstop — AND the allowed_source_paths set across the
@@ -708,7 +752,14 @@ def retrieve(
         if allowed_source_paths:
             hits = [
                 h for h in hits
-                if any(token in str(h.metadata.get("source_path", "")) for token in allowed_source_paths)
+                if any(
+                    _entity_token_matches(
+                        token,
+                        h.metadata.get("source_path", ""),
+                        h.metadata.get("firm", ""),
+                    )
+                    for token in allowed_source_paths
+                )
             ]
 
         # AIStudio_778: drop BM25-floor chunks below minimum score threshold.

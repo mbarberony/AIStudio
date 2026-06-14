@@ -2,49 +2,102 @@
 """
 ais_import_entity_kb_ops.py — Build the entity knowledge base for a whole corpus (OPS).
 
-Source is ALWAYS GLEIF (no --source). Operates over the WHOLE corpus (no --scope).
+Source is ALWAYS GLEIF (no --source). Operates over the WHOLE corpus (no --scope) via
+the shared scope resolver — the corpus's stemless <corpus>_full_scope.yaml IS the
+worksheet (one object for download / ingest / entity-import / bench; see
+_scope_common_ops: "the worksheet is just a scope in its in-review state").
 
-WORKSHEET ROUND-TRIP (the operator workflow):
-  1. First run on a corpus: scan every filing in data/corpora/<corpus>/uploads/,
-     extract each filing's self-reported XBRL name, take a best-guess GLEIF match
-     for each, and write a per-corpus WORKSHEET:
-         data/corpora/<corpus>/<corpus>_entity_worksheet.yaml
-     One entry per distinct xbrl_name (with all its files, name-sorted), PLUS one
-     entry per group of name-less files sharing their first 8 filename chars.
-  2. Open the worksheet beside search.gleif.org. On any row whose gleif_canonical
-     is wrong (sub / ADR / namesake) or blank, fill ONLY `lei_corrected` with the
-     real 20-char LEI. For name-less groups, author an `xbrl_name` (preferred) or at
-     least a `canonical` so the files can still be bound. Touch nothing else.
-  3. Re-run (no flags): the worksheet is detected; rows with `lei_corrected` are
-     refreshed deterministically via _fetch_gleif_by_lei (canonical/lei rewritten
-     from that record); name-search guesses are cached, not re-fetched. Worksheet is
-     rewritten with the refreshed values. Loop 2<->3 until the table is clean.
-  4. --apply: build the real KB (gleif_<corpus>_full_entities.yaml, xbrl_name-keyed)
-     from the corrected worksheet, enrich aliases, update the catalog.
+THE LOOP (the operator workflow — your 1-2-3):
+  1. Run (no --apply): load the full_scope, LINK each row to its downloaded filing(s)
+     in uploads/ (read the iXBRL dei:EntityRegistrantName → row.sec_xbrl_name),
+     RESOLVE identity against GLEIF, and write the enrichment back into full_scope in
+     place. Review the table — rows that didn't resolve are the editing surface.
+  2. Tweak the unresolved rows in full_scope: add a verified bare `lei` (the
+     reliable input — it WINS over gleif_lei), and/or hand-add `aliases`. Re-run to
+     refresh. Loop until clean.
+  3. --apply: build the entity KB (gleif_<corpus>_full_entities.yaml) from the resolved
+     rows, enrich aliases, update the catalog. That KB is what the ingest pipeline
+     consumes (chunk prefix [Document: canonical | aliases | FYyear]).
 
-  --rescan re-reads the uploads dir (new/removed files) and MERGES, preserving every
-  human edit (lei_corrected + authored xbrl_name/canonical) by xbrl_name / group key.
+RESOLUTION IS LEI-IS-INPUT (the inversion — AIStudio_896): a row carrying a verified
+LEI (the bare `lei`; legacy `lei_corrected` still honored) resolves DETERMINISTICALLY via
+_fetch_gleif_by_lei. Only a row with NO bare LEI falls back to a GLEIF name-search GUESS —
+unreliable for multinationals (subsidiary / ADR / namesake / US-jurisdiction default),
+flagged for review. The shipped corpora ship verified LEIs, so they resolve one-shot; your
+own corpus (Module 4) is the name-search-then-review path Annex 1 documents.
+
+OPEN SCHEMA (2026-06-13): bare `<data_type>` = user-authoritative (wins); `<source>_<data_type>`
+= a source's value. KB CANONICAL = bare `xbrl_name` override → else the filing's
+self-reported `sec_xbrl_name`. GLEIF's own name is kept in the row as `gleif_name` for review
+(did my LEI resolve to the right entity?) — NOT what the KB emits. Unknown bare fields ship as
+the sentinel REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE (resolver treats it as empty).
 
 Run via the wrapper (cd repo, venv) or directly:
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # scan -> worksheet
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # re-run -> consume edits
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k --apply    # write the KB
+    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # link + resolve + write back
+    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # re-run after edits
+    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k --apply    # build the KB
 
 Changelog
-  1.3.0 — Worksheet round-trip. The command now emits a per-corpus, human-editable
-          worksheet (entries grouped by entity, files multi-valued + name-sorted,
-          name-less files grouped by first-8-filename-chars) carrying the GLEIF
-          guess + a `lei_corrected` field. Re-runs consume `lei_corrected` (and
-          authored xbrl_name/canonical) and refresh deterministically by LEI. --apply
-          builds the KB from the corrected worksheet. Per-entry alias lists are copied
-          (no shared YAML anchors). Replaced the separate <corpus>_lei_hints.yaml.
-          Added --rescan (merge new files, keep edits).
-  1.2.1 — Cosmetic: ANSI clear-to-EOL on progress lines (no stray right-margin block).
-  1.2.0 — Live scan progress counter (the bs4 parse phase was silent on ESEF).
-  1.1.0 — Output conformed to STD - AIStudio - CLI Output v1.3.0 (sections + progress).
+  1.6.1 — CLI output polish (CLI Output STD v2.4.0 / _cli_output_ops v1.1.0): review status
+          glyph indented to 4 (sits directly under the firm name); the no-`--apply` footer is
+          now a `--- Next steps` section; footer guidance says "add a verified `lei`" (was the
+          retired `lei_corrected`). No resolution-logic change.
+  1.6.0 — Open/provenance schema migration (with _scope_common_ops v1.2.0). Write-back now
+          emits the open schema: bare `lei` (user-authoritative, WINS), `gleif_lei` (source),
+          `sec_xbrl_name` (filing self-report, was `xbrl_name`), `gleif_name` (was
+          `gleif_canonical`), bare `xbrl_name` (user name override, sentinel-seeded), and
+          dropped `lei_corrected`/`canonical`. Resolve INPUT is now the bare `lei`
+          (legacy `lei_corrected` honored as fallback). KB build reads the open fields
+          (scope_name = sec_xbrl_name; canonical = bare xbrl_name → sec_xbrl_name → gleif_name)
+          — KB OUTPUT schema unchanged (engine untouched). Unknown bare fields ship as the
+          sentinel REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE. Legacy scopes still resolve
+          (resolver fallbacks) until regenerated by a fresh --apply run.
+  1.5.1 — Corpus-agnostic linking (esef_banks parity). _link_files matched files on a
+          hardcoded SEC <label>_10K_ prefix, so ESEF files (<label>_ESEF_<year>.xhtml)
+          linked 0/N and every row reported "no filing." Now matches on the shared
+          <label>_ prefix (the doctype infix was over-specification), so SEC and ESEF
+          both link without corpus branching. The firm-unique full label + trailing "_"
+          guard against prefix collisions. No change to resolve/apply/write-back.
+  1.5.0 — Output wired to the shared _cli_output_ops helper (STD CLI-Output 4-glyph
+          vocabulary). New `--- Preflight` (stoplist + catalog presence). `--- Resolve`
+          now a ▶start/✅finish pair. `--- Review` prints per-firm as ▶row → canon /
+          indented status glyph (✅ by-LEI · white-✓-on-yellow name-search/no-files ·
+          white-✗-on-red no-identity · yellow-✗ unresolved-recoverable). Wrote/Catalog
+          lines name the catalog path. No resolution-logic change.
+  1.4.3 — Output schema reconciled with the engine (AIStudio_895). _write_kb now emits a
+          top-level `entities:` LIST with the fields BOTH consumers read — canonical,
+          scope_name, lei, aliases, wikidata_label, wikidata_short_name, wikidata_tickers
+          (the records _enrich_aliases already builds) — replacing the engine-unreadable
+          `xbrl_index` dict. schema_version 1.1. No engine edit needed; the old importer
+          schema simply never matched pipeline/rag_core. (Filename still gleif_<corpus>_full_
+          entities.yaml — delete the stale gleif_<corpus>_25_firms_entities.yaml so the
+          engine glob binds the new file: sorted(glob(...))[0].)
+  1.4.2 — Name-only binding (point-1): a row with an identity (xbrl_name) but no LEI now
+          BINDS — name-only, no aliases, prefix degrades to [canonical FYyear] — and is
+          reported as a ⚠ warning, not cut. Only no-identity rows are excluded. --apply
+          summary + KB header carry name_only_count. Import order to one-group third-party
+          (Beast classifies scripts/ helpers as third-party).
+  1.4.1 — Import order to ruff isort canonical (stdlib / yaml / first-party locals); no logic change.
+  1.4.0 — Wired to the shared scope resolver (_scope_common_ops). The corpus
+          <corpus>_full_scope.yaml is now the worksheet: this command reads it, links
+          each row to its uploads/ filing(s), resolves identity (LEI-is-input: verified
+          LEI → deterministic by-LEI; else name-search guess flagged for review),
+          writes the enrichment (xbrl_name, canonical, gleif_canonical, gleif_lei, files)
+          back into full_scope IN PLACE preserving the header, and on --apply builds the
+          KB from the resolved rows. Dropped the standalone <corpus>_entity_worksheet.yaml
+          and the first-run/consume gate (the link step always re-reads uploads/). --apply
+          builds from whatever resolved (reports excluded) — never silently ignored.
+          _enrich_aliases now receives the real rows (manual `aliases` + `ticker` merge in;
+          point-1 fix), with scope_entities shaped so its name-key matches xbrl_name.
+          KB filename held at gleif_<corpus>_full_entities.yaml (the gleif_ drop rides the
+          3-site engine rename — AIStudio_895 — as one atomic change).
+  1.3.0 — Worksheet round-trip (standalone <corpus>_entity_worksheet.yaml). [superseded]
+  1.2.1 — Cosmetic: ANSI clear-to-EOL on progress lines.
+  1.2.0 — Live scan progress counter.
+  1.1.0 — Output conformed to STD - AIStudio - CLI Output.
   1.0.0 — Initial split from ais_import_knowledge_base_ops.py.
 
-Version: 1.3.0
+Version: 1.6.1
 """
 
 import argparse
@@ -52,48 +105,46 @@ import re
 import sys
 from pathlib import Path
 
-import _kb_common_ops as kb  # shared library (underscore = not a command; no alias, install:none)
+import _cli_output_ops as cli  # shared CLI output (glyph vocabulary + section/step/done)
+import _kb_common_ops as kb  # shared lib (underscore = not a command; no alias)
+import _scope_common_ops as sc  # shared scope resolver (the full_scope IS the worksheet)
 import yaml
 
-VERSION = "1.3.0"
+VERSION = "1.6.1"
 SCRIPT_NAME = "ais_import_entity_kb_ops"
 
-# XBRL self-reported-name tags, in priority order (SEC, ESEF, UK GAAP).
+# iXBRL self-reported-name tags, in priority order (SEC, ESEF, UK GAAP).
 _ENTITY_TAGS = [
     "dei:EntityRegistrantName",
     "ifrs-full:NameOfReportingEntityOrOtherMeansOfIdentification",
     "uk-gaap:EntityCurrentLegalOrRegisteredName",
 ]
 _SCAN_SUFFIXES = (".htm", ".html", ".xhtml")
-_GROUP_PREFIX_LEN = 8  # name-less files are grouped by their first N filename chars
 
-_WORKSHEET_HEADER = """\
-# {corpus}_entity_worksheet.yaml — generated by ais_import_entity_kb_ops.
-#
-# HOW TO USE (edit, then re-run the command on this corpus):
-#  - Rows WITH an xbrl_name: check gleif_canonical against search.gleif.org. If it is
-#    the wrong entity (subsidiary / ADR / namesake) or blank, put the real 20-char LEI
-#    in `lei_corrected`. Touch nothing else - on re-run, lei_corrected is authoritative
-#    and rewrites gleif_canonical / gleif_lei from that record.
-#  - Rows with an EMPTY xbrl_name (name-less files, grouped by filename): give them an
-#    identity so they can still be ingested - in order of preference, author an
-#    `xbrl_name`, else at least a `canonical`. Add `lei_corrected` too if you know it.
-#  - `files` is the full, name-sorted list of filings behind each entry. Do not edit it.
-#
-# Then: ais_import_entity_kb_ops --corpus {corpus}            (re-run to refresh)
-#       ais_import_entity_kb_ops --corpus {corpus} --apply    (write the KB when clean)
-"""
+# Persisted row fields, in a stable, human-readable order for the written full_scope.
+_ROW_ORDER = [
+    "label", "cik", "ticker", "lei",
+    "xbrl_name", "sec_xbrl_name", "gleif_name", "gleif_lei",
+    "expected_xbrl_name", "aliases", "files", "last_updated",
+]
+
+# Bare (user-authoritative) fields. Unknown ones are written as the fill-me sentinel so a
+# human sees what to verify; the resolver treats the sentinel as empty (sc.clean).
+_BARE_USER_FIELDS = ("lei", "ticker", "xbrl_name")
+
+# Pre-open-schema field names purged on write-back (the resolver still READS them as
+# legacy fallbacks for un-migrated scopes, but a migrated scope should not carry them).
+_LEGACY_DROP = ("canonical", "gleif_canonical", "lei_corrected", "modified_lei")
 
 
-# -- XBRL-name extraction (own minimal reader; to be unified with pipeline later) --
+# -- iXBRL-name extraction (own minimal reader; to be unified with pipeline later) --
 def _extract_xbrl_name(path: Path) -> str | None:
-    """Return the filing's self-reported entity name from its XBRL tag, or None."""
+    """Return the filing's self-reported entity name from its iXBRL tag, or None."""
     try:
         text = path.read_text(errors="ignore")
     except Exception:
         return None
 
-    # Preferred: BeautifulSoup (same library ingest uses) — robust to nested markup.
     try:
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(text, "html.parser")
@@ -106,7 +157,6 @@ def _extract_xbrl_name(path: Path) -> str | None:
     except Exception:
         pass
 
-    # Fallback: regex (no bs4). Captures inner text of the tag carrying name="<tag>".
     for tag in _ENTITY_TAGS:
         m = re.search(
             r'name="' + re.escape(tag) + r'"[^>]*>(.*?)</',
@@ -120,229 +170,259 @@ def _extract_xbrl_name(path: Path) -> str | None:
     return None
 
 
-def _scan_corpus(corpus: str) -> tuple[dict[str, list[str]], list[str]]:
-    """Scan data/corpora/<corpus>/uploads/. Return ({xbrl_name: [filenames]}, [name-less files])."""
-    uploads = kb.REPO / "data" / "corpora" / corpus / "uploads"
+def _uploads_dir(corpus: str) -> Path:
+    return kb.REPO / "data" / "corpora" / corpus / "uploads"
+
+
+def _safe_label(label: str) -> str:
+    """Mirror the downloaders' label→filename transform (same in SEC and ESEF):
+    spaces and slashes → underscores. The doctype/date suffix differs by corpus
+    (SEC <label>_10K_<date>.htm, ESEF <label>_ESEF_<year>.xhtml); linking matches on
+    the shared <label>_ prefix, so this transform is all that needs to agree."""
+    return label.replace(" ", "_").replace("/", "_")
+
+
+# -- Link: bind each full_scope row to its downloaded filing(s) -----------------
+def _link_files(corpus: str, rows: list[dict]) -> list[str]:
+    """For each row, find its uploads/ filings by the <label>_10K_*.htm convention,
+    read the first (name-sorted) filing's iXBRL name → row.sec_xbrl_name (the filing's
+    self-reported tag; the bare `xbrl_name` is a separate user override),
+    and record row.files. Returns the list of orphan files (no matching row)."""
+    uploads = _uploads_dir(corpus)
     if not uploads.exists():
         raise FileNotFoundError(f"Corpus uploads dir not found: {uploads}")
-    by_name: dict[str, list[str]] = {}
-    no_name: list[str] = []
-    files = sorted(p for p in uploads.iterdir()
-                   if p.is_file() and p.suffix.lower() in _SCAN_SUFFIXES)
-    total = len(files)
-    for i, p in enumerate(files, 1):
-        # Live progress — parsing large iXBRL files with bs4 is the slow phase.
-        progress = f"  ▶ Scanning {i}/{total} — {p.name}"
-        print("\r" + progress[:100] + "\033[K", end="", flush=True)
-        name = _extract_xbrl_name(p)
-        if name:
-            by_name.setdefault(name, []).append(p.name)
-        else:
-            no_name.append(p.name)
-    # Clear the progress line; the caller prints the scan summary.
+    all_files = {p.name for p in uploads.iterdir()
+                 if p.is_file() and p.suffix.lower() in _SCAN_SUFFIXES}
+    bound: set[str] = set()
+
+    total = len(rows)
+    for i, r in enumerate(rows, 1):
+        label = r.get("label", "")
+        print("\r" + f"  ▶ Linking {i}/{total} — {label}"[:100] + "\033[K",
+              end="", flush=True)
+        # Corpus-agnostic: bind on the <label>_ filename prefix the downloader writes,
+        # NOT a doctype infix. SEC writes <label>_10K_<date>.<ext>; ESEF writes
+        # <label>_ESEF_<year>.xhtml — both share the <label>_ prefix and _safe_label is the
+        # same transform the downloaders use, so prefix+suffix matching links both without
+        # corpus branching. (A bare "<label>_" guards against a label that is a prefix of a
+        # longer label sharing a token: the trailing "_" + the firm-unique label prevents
+        # "ABN AMRO" matching an "ABN AMRO Bank N.V." file and vice-versa.)
+        prefix = f"{_safe_label(label)}_"
+        matches = sorted(f for f in all_files
+                         if f.startswith(prefix) and f.lower().endswith(_SCAN_SUFFIXES))
+        r["files"] = matches
+        bound.update(matches)
+        if matches:
+            # Canonical = the FIRST (earliest, name-sorted) filing's self-reported tag.
+            name = _extract_xbrl_name(uploads / matches[0])
+            if name:
+                r["sec_xbrl_name"] = name                 # filing self-report (source)
+                # bare xbrl_name is a USER override; if empty/sentinel OR it merely echoes the
+                # self-report (old-schema residue), reset to the sentinel so it isn't mistaken
+                # for a deliberate override.
+                if sc.clean(r.get("xbrl_name")) in ("", name):
+                    r["xbrl_name"] = sc.SENTINEL
     print("\r\033[K", end="", flush=True)
-    return by_name, no_name
+    return sorted(all_files - bound)
 
 
-# -- Worksheet model -----------------------------------------------------------
-def _worksheet_path(corpus: str) -> Path:
-    return kb.REPO / "data" / "corpora" / corpus / f"{corpus}_entity_worksheet.yaml"
-
-
-def _scan_to_entries(corpus: str) -> list[dict]:
-    """Build worksheet entries from a fresh scan: named entries + name-less groups."""
-    by_name, no_name = _scan_corpus(corpus)
-    entries: list[dict] = []
-    for xbrl_name in sorted(by_name):
-        entries.append({
-            "xbrl_name": xbrl_name,
-            "files": sorted(by_name[xbrl_name]),
-            "gleif_canonical": None,
-            "gleif_lei": None,
-            "lei_corrected": None,
-        })
-    groups: dict[str, list[str]] = {}
-    for f in no_name:
-        groups.setdefault(f[:_GROUP_PREFIX_LEN], []).append(f)
-    for key in sorted(groups):
-        entries.append({
-            "xbrl_name": None,           # EMPTY — author an xbrl_name (or canonical)
-            "group_key": key,
-            "canonical": None,
-            "files": sorted(groups[key]),
-            "gleif_canonical": None,
-            "gleif_lei": None,
-            "lei_corrected": None,
-        })
-    return entries
-
-
-def _entry_key(e: dict) -> str:
-    """Stable key for merging edits across rescans."""
-    return e.get("xbrl_name") or f"group:{e.get('group_key', '')}"
-
-
-def _merge_edits(fresh: list[dict], old: list[dict]) -> list[dict]:
-    """Carry human edits (lei_corrected + authored xbrl_name/canonical + cached guess)
-    from an existing worksheet onto a freshly-scanned set, keyed by entry key."""
-    old_by_key = {_entry_key(e): e for e in old}
-    for e in fresh:
-        prev = old_by_key.get(_entry_key(e))
-        if not prev:
-            continue
-        for fld in ("lei_corrected", "canonical", "gleif_canonical", "gleif_lei"):
-            if prev.get(fld):
-                e[fld] = prev[fld]
-        # A name-less group the operator already named: carry the authored name.
-        if e.get("xbrl_name") is None and prev.get("xbrl_name"):
-            e["xbrl_name"] = prev["xbrl_name"]
-    return fresh
-
-
-def _load_worksheet(path: Path) -> list[dict]:
-    with open(path) as f:
-        data = yaml.safe_load(f) or {}
-    return data.get("entries", []) or []
-
-
-def _write_worksheet(corpus: str, path: Path, entries: list[dict]) -> None:
-    # `status` is transient (recomputed every run) — keep it out of the saved file.
-    clean = [{k: v for k, v in e.items() if k != "status"} for e in entries]
-    body = {
-        "schema_version": "1.0",
-        "kind": "entity_worksheet",
-        "corpus": corpus,
-        "generated": kb.datetime.now().strftime("%Y-%m-%d"),
-        "entries": clean,
-    }
-    path.parent.mkdir(parents=True, exist_ok=True)
-    text = _WORKSHEET_HEADER.format(corpus=corpus) + yaml.dump(
-        body, allow_unicode=True, sort_keys=False, default_flow_style=False)
-    path.write_text(text)
-
-
-# -- Resolution ----------------------------------------------------------------
-def _resolve_entries(entries: list[dict], metadata: dict) -> None:
-    """Populate gleif_canonical/gleif_lei/status per entry.
-       corrected -> deterministic by-LEI; named+uncached -> name-search guess;
-       named+cached -> keep; name-less -> needs identity."""
-    total = len(entries)
-    for i, e in enumerate(entries, 1):
-        label = e.get("xbrl_name") or f"[group {e.get('group_key', '?')}]"
+# -- Resolve: LEI-is-input; verified LEI → deterministic, else name-search guess --
+def _resolve_rows(rows: list[dict], metadata: dict) -> None:
+    total = len(rows)
+    for i, r in enumerate(rows, 1):
+        label = r.get("label") or sc.clean(r.get("sec_xbrl_name")) or "?"
         print("\r" + f"  ▶ Resolving {i}/{total} — {label}"[:100] + "\033[K",
               end="", flush=True)
 
-        corrected = (e.get("lei_corrected") or "").strip()
-        if corrected:
-            rec = kb._fetch_gleif_by_lei(corrected, metadata)
+        if not r.get("files"):
+            r["_status"] = "no_files"           # anomaly — every row should have a filing
+
+        # INPUT LEI only — the BARE `lei` (user-verified), legacy `lei_corrected` fallback.
+        # NOT gleif_lei, which is a name-search GUESS and must never be promoted to verified.
+        verified = sc.clean(r.get("lei")) or (r.get("lei_corrected") or "").strip()
+        if verified:
+            rec = kb._fetch_gleif_by_lei(verified, metadata)
             if rec:
-                e["gleif_canonical"] = rec["canonical"]
-                e["gleif_lei"] = rec["lei"]
-                e["status"] = "corrected"
+                r["gleif_name"] = rec["canonical"]
+                r["gleif_lei"] = rec["lei"]
+                r["_status"] = r.get("_status") or "resolved"
             else:
-                e["status"] = "lei_corrected_invalid"
+                r["_status"] = "lei_invalid"
             continue
 
-        name = (e.get("xbrl_name") or "").strip()
+        name = (sc.clean(r.get("sec_xbrl_name")) or r.get("label") or "").strip()
         if not name:
-            e["status"] = "needs_identity"
+            r["_status"] = "no_identity"
             continue
-
-        if e.get("gleif_lei"):           # cached guess from a prior pass — don't re-fetch
-            e["status"] = e.get("status") or "guessed"
+        if r.get("gleif_lei"):                   # cached name-search guess from a prior pass
+            r["_status"] = r.get("_status") or "guessed"
             continue
 
         rec = kb._fetch_gleif_entity(name, metadata, common_name=name)
         if rec and rec.get("lei"):
-            e["gleif_canonical"] = rec["canonical"]
-            e["gleif_lei"] = rec["lei"]
-            e["status"] = "guessed"
+            r["gleif_name"] = rec["canonical"]
+            r["gleif_lei"] = rec["lei"]
+            r["_status"] = r.get("_status") or "guessed"
         else:
-            e["status"] = "unresolved"
-
-    done = sum(1 for e in entries if e.get("gleif_lei"))
-    print("\r" + f"  ✅ Resolved {done}/{total} entr(y/ies) (corrected + guessed)." + "\033[K")
+            r["_status"] = r.get("_status") or "unresolved"
 
 
 # -- Review --------------------------------------------------------------------
-def _review(entries: list[dict]) -> None:
-    print("--- Review")
-    named = [e for e in entries if e.get("xbrl_name")]
-    groups = [e for e in entries if not e.get("xbrl_name")]
+def _review(rows: list[dict], orphans: list[str]) -> None:
+    cli.section("Review")
     by_status: dict[str, list[dict]] = {}
-    for e in named:
-        by_status.setdefault(e.get("status", "guessed"), []).append(e)
+    for r in rows:
+        by_status.setdefault(r.get("_status", "unresolved"), []).append(r)
 
-    print(f"  {len(named)} named entr(y/ies), {len(groups)} name-less group(s)\n")
+    n_files = sum(1 for r in rows if r.get("files"))
+    print(f"  {len(rows)} row(s) · {n_files} linked to filings")
 
-    order = ["corrected", "guessed", "unresolved", "lei_corrected_invalid"]
-    marks = {"corrected": "✅", "guessed": "·", "unresolved": "❌",
-             "lei_corrected_invalid": "❌"}
+    order = ["resolved", "guessed", "unresolved", "lei_invalid", "no_files", "no_identity"]
+    # Map each status to the STD glyph: ✅ full (verified LEI); white-✓-on-yellow partial
+    # (name-search-derived LEI, or no filing); white-✗-on-red fail (no usable identity);
+    # yellow-✗ recoverable (no LEI but fixable via the bare `lei`).
+    glyph = {"resolved": cli.ok, "guessed": cli.partial, "no_files": cli.partial,
+             "unresolved": cli.fail_recover, "lei_invalid": cli.fail, "no_identity": cli.fail}
+    notes = {"guessed": " (name-search, not verified LEI)",
+             "lei_invalid": " — LEI not found in GLEIF",
+             "no_files": " — no filing in uploads/ for this row",
+             "no_identity": " — no sec_xbrl_name and no label",
+             "unresolved": " — no LEI; binds NAME-ONLY (weak, no aliases). Add a verified `lei`, re-run"}
     for status in order:
-        for e in by_status.get(status, []):
-            mark = marks.get(status, "·")
-            canon = e.get("gleif_canonical") or "(unresolved)"
-            lei = e.get("gleif_lei") or "—"
-            tag = "  ← lei_corrected" if status == "corrected" else ""
-            if status == "lei_corrected_invalid":
-                tag = "  ⚠ lei_corrected not found in GLEIF"
-            print(f"  {mark} {canon}{tag}")
-            print(f"      LEI {lei} · {len(e.get('files', []))} file(s) "
-                  f"· xbrl_name \"{e.get('xbrl_name')}\"")
-    if groups:
-        print(f"\n  ⚠ {len(groups)} name-less group(s) — author an xbrl_name (or canonical) "
-              f"in the worksheet so these can be ingested:")
-        for e in groups:
-            authored = " (canonical authored)" if e.get("canonical") else ""
-            files = e.get("files", [])
-            print(f"      [{e.get('group_key')}]  {len(files)} file(s)"
-                  f"{authored}: {', '.join(files[:3])}"
-                  + (" …" if len(files) > 3 else ""))
-    print()
+        for r in by_status.get(status, []):
+            canon = r.get("gleif_name") or sc.clean(r.get("sec_xbrl_name")) or r.get("label") or "(unresolved)"
+            lei = sc.entity_lei(r) or r.get("gleif_lei") or "—"
+            cli.step(f"{r.get('label', '?')} → {canon}", indent=2)
+            glyph.get(status, cli.partial)(
+                f"LEI {lei} · {len(r.get('files', []))} file(s) "
+                f"· sec_xbrl_name \"{r.get('sec_xbrl_name')}\"{notes.get(status, '')}",
+                indent=4)
+
+    if orphans:
+        cli.partial(f"{len(orphans)} file(s) in uploads/ with no matching full_scope row "
+                    f"(add a row or remove the file — not bound, not ingested):", indent=2)
+        for f in orphans[:6]:
+            print(f"        {f}")
+        if len(orphans) > 6:
+            print(f"        … and {len(orphans) - 6} more")
+
+
+# -- full_scope write-back (preserve the header comment block) ------------------
+def _write_scope(path: Path, rows: list[dict]) -> None:
+    """Round-trip the full_scope in place: keep everything above `entities:`
+    (the doc header), re-dump the entity rows. Transient `_`-prefixed keys dropped."""
+    raw = path.read_text()
+    m = re.search(r"^entities:\s*$", raw, re.MULTILINE)
+    header = raw[:m.start()] if m else ""
+    clean: list[dict] = []
+    for r in rows:
+        kept = {k: v for k, v in r.items()
+                if not k.startswith("_") and k not in _LEGACY_DROP}
+        ordered = {k: kept[k] for k in _ROW_ORDER if k in kept}
+        ordered.update({k: v for k, v in kept.items() if k not in ordered})
+        for bf in _BARE_USER_FIELDS:           # ship unknown bare fields as the fill-me sentinel
+            if not sc.clean(ordered.get(bf)):
+                ordered[bf] = sc.SENTINEL
+        clean.append(ordered)
+    body = yaml.dump({"entities": clean}, allow_unicode=True,
+                     sort_keys=False, default_flow_style=False)
+    path.write_text(header + body)
 
 
 # -- KB build (--apply) --------------------------------------------------------
-def _entries_to_kb(entries: list[dict], metadata: dict):
-    """Build the xbrl_name-keyed KB index from corrected entries.
-    Returns (index, lei_groups, unbindable)."""
+def _rows_to_kb(rows: list[dict]):
+    """Build the engine-readable entity records from resolved rows. Returns
+    (records, lei_groups, unbindable, name_only). Each record is the schema BOTH engines
+    read (pipeline._load_ks_alias_map ingest-side, rag_core._load_knowledge_sources
+    query-side): {canonical, scope_name, lei, aliases, wikidata_label, wikidata_short_name,
+    wikidata_tickers}, written under a top-level `entities:` LIST. canonical = the filing's
+    tag (must equal the ingest-time iXBRL doc_entity for the prefix lookup to hit);
+    gleif_canonical is review-only and not emitted. A row with an identity (xbrl_name) but
+    NO LEI still binds — name-only, empty aliases/wikidata (prefix degrades to
+    [canonical FYyear]) — reported as a warning, not cut. Only no-identity rows are
+    unbindable. _enrich_aliases already sets aliases + wikidata_* on each LEI record; we
+    emit those fields verbatim rather than the importer's old (engine-unreadable)
+    xbrl_index dict."""
     lei_groups: dict[str, dict] = {}
-    index: dict[str, dict] = {}
     unbindable: list[dict] = []
-    for e in entries:
-        name = (e.get("xbrl_name") or "").strip()
-        lei = (e.get("lei_corrected") or e.get("gleif_lei") or "").strip()
-        canon = e.get("gleif_canonical") or e.get("canonical")
-        if not name or not lei or not canon:
-            unbindable.append(e)
+    name_only: list[dict] = []
+    for r in rows:
+        name = sc.clean(r.get("sec_xbrl_name"))                       # filing self-report = scope_name
+        lei = (sc.entity_lei(r) or "").strip()
+        canon = (sc.clean(r.get("xbrl_name")) or name                 # bare user override wins
+                 or r.get("gleif_name") or "").strip()
+        if not name or not canon:
+            unbindable.append(r)                 # no usable identity at all
             continue
-        if lei not in lei_groups:
-            lei_groups[lei] = {"canonical": canon, "lei": lei,
-                               "scope_name": name, "aliases": [], "xbrl_names": []}
-        lei_groups[lei]["xbrl_names"].append(name)
-        index[name] = {"canonical": canon, "lei": lei, "aliases": []}
+        if lei:
+            if lei not in lei_groups:
+                lei_groups[lei] = {"canonical": canon, "lei": lei, "scope_name": name,
+                                   "aliases": [], "xbrl_names": []}
+            lei_groups[lei]["xbrl_names"].append(name)
+        else:
+            name_only.append({"canonical": canon, "scope_name": name})  # bound on name alone
 
     if lei_groups:
-        kb._enrich_aliases(list(lei_groups.values()), [])
-        lei_alias = {lei: g.get("aliases", []) for lei, g in lei_groups.items()}
-        for rec in index.values():
-            rec["aliases"] = list(lei_alias.get(rec["lei"], []))   # copy → no YAML anchors
-    return index, lei_groups, unbindable
+        # Point-1 fix: feed the real rows so manual `aliases` + `ticker` merge in.
+        # _enrich_aliases keys scope_entities by `name`; match it to scope_name (xbrl_name).
+        scope_entities = []
+        for r in rows:
+            nm = sc.clean(r.get("sec_xbrl_name"))
+            if not nm:
+                continue
+            manual = list(r.get("aliases") or [])
+            if sc.clean(r.get("ticker")):
+                manual.append(sc.clean(r["ticker"]))
+            scope_entities.append({"name": nm, "aliases": manual,
+                                   "legal_name_hint": r.get("legal_name_hint")})
+        kb._enrich_aliases(list(lei_groups.values()), scope_entities)
+
+    # Emit the engine schema: a flat `entities:` list. LEI-resolved records carry the
+    # enriched aliases + wikidata_* fields _enrich_aliases set; name-only records carry
+    # empty enrichment (the [canonical FYyear] fallback path).
+    records: list[dict] = []
+    for g in lei_groups.values():
+        records.append({
+            "canonical": g["canonical"],
+            "scope_name": g.get("scope_name", ""),
+            "lei": g.get("lei", ""),
+            "aliases": list(g.get("aliases", [])),
+            "wikidata_label": g.get("wikidata_label", ""),
+            "wikidata_short_name": g.get("wikidata_short_name", ""),
+            "wikidata_tickers": list(g.get("wikidata_tickers", [])),
+        })
+    for n in name_only:
+        records.append({
+            "canonical": n["canonical"],
+            "scope_name": n["scope_name"],
+            "lei": "",
+            "aliases": [],
+            "wikidata_label": "",
+            "wikidata_short_name": "",
+            "wikidata_tickers": [],
+        })
+    return records, lei_groups, unbindable, name_only
 
 
-def _write_kb(corpus: str, index: dict, lei_groups: dict, unbindable: list[dict]) -> Path:
+def _write_kb(corpus: str, records: list, lei_groups: dict,
+              unbindable: list, name_only: list) -> Path:
     out_dir = kb.KNOWLEDGE_SOURCES_DIR / "gleif"
     out_dir.mkdir(parents=True, exist_ok=True)
+    # gleif_ prefix held intentionally — the drop to <corpus>_full_entities.yaml rides
+    # the engine rename (filename only — schema already matches) as a later change.
     path = out_dir / f"gleif_{corpus}_full_entities.yaml"
     content = {
-        "schema_version": "2.0",
+        # schema_version 1.1 = the wikidata_* fields contract both engines read
+        # (pipeline._load_ks_alias_map, rag_core._load_knowledge_sources).
+        "schema_version": "1.1",
         "source_id": "gleif",
         "corpus": corpus,
         "scope_id": "full",
         "generated": kb.datetime.now().strftime("%Y-%m-%d"),
         "entity_count": len(lei_groups),
-        "key_count": len(index),
+        "name_only_count": len(name_only),
         "unbindable_count": len(unbindable),
-        "xbrl_index": index,
+        "entities": records,
     }
     with open(path, "w") as f:
         yaml.dump(content, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
@@ -350,75 +430,103 @@ def _write_kb(corpus: str, index: dict, lei_groups: dict, unbindable: list[dict]
 
 
 # -- Orchestration -------------------------------------------------------------
-def _build(corpus: str, apply: bool, rescan: bool) -> int:
-    wpath = _worksheet_path(corpus)
+def _build(corpus: str, apply: bool) -> int:
     metadata = kb._load_metadata("gleif")
 
-    if not wpath.exists() or rescan:
-        print("--- Scan")
-        fresh = _scan_to_entries(corpus)
-        if not fresh:
-            kb._err(f"No filings found in data/corpora/{corpus}/uploads/")
-            return 1
-        if rescan and wpath.exists():
-            fresh = _merge_edits(fresh, _load_worksheet(wpath))
-            print("  · merged — preserved lei_corrected + authored names from prior worksheet")
-        named = sum(1 for e in fresh if e.get("xbrl_name"))
-        groups = sum(1 for e in fresh if not e.get("xbrl_name"))
-        print(f"  · {corpus}: {named} named entr(y/ies), {groups} name-less group(s)")
-        print("--- Resolve")
-        _resolve_entries(fresh, metadata)
-        _write_worksheet(corpus, wpath, fresh)
-        _review(fresh)
-        if apply:
-            print("· A worksheet was just generated — review it first, then re-run with --apply.")
-        print(f"· Worksheet written → {wpath.relative_to(kb.REPO)}")
-        print("· Edit `lei_corrected` (and xbrl_name for name-less groups), then re-run.")
-        return 0
+    # 0. Preflight — declare the inputs the build depends on (nothing destructive).
+    cli.section("Preflight")
+    stoplist = kb.KNOWLEDGE_SOURCES_DIR / "_alias_stoplist.yaml"
+    if stoplist.exists():
+        cli.ok(f"stoplist present: {stoplist.relative_to(kb.REPO)}")
+    else:
+        cli.partial("stoplist absent — built-in sentinels only")
+    if kb.CATALOG_PATH.exists():
+        cli.ok(f"catalog present: {kb.CATALOG_PATH.relative_to(kb.REPO)}")
+    else:
+        cli.info("catalog absent — will be created")
 
-    # Worksheet exists → consume edits.
-    print("--- Worksheet")
-    entries = _load_worksheet(wpath)
-    print(f"  · loaded {len(entries)} entr(y/ies) from {wpath.relative_to(kb.REPO)}")
-    print("--- Resolve")
-    _resolve_entries(entries, metadata)
-    _write_worksheet(corpus, wpath, entries)   # refresh corrected canonicals
-    _review(entries)
+    # 1. Load the full_scope (the object) via the shared resolver.
+    try:
+        scope = sc.load_scope(corpus)
+    except sc.ScopeError as e:
+        kb._err(str(e))
+        return 1
+    rows = scope.get("entities", []) or []
+    scope_path = Path(scope["_path"])
+    if not rows:
+        kb._err(f"full_scope has no entities: {scope_path}")
+        return 1
+
+    # 2. Link rows ↔ uploads filings (read xbrl_name, set canonical, record files).
+    cli.section("Link")
+    cli.step(f"Linking {len(rows)} row(s) to uploads filings")
+    try:
+        orphans = _link_files(corpus, rows)
+    except FileNotFoundError as e:
+        kb._err(str(e))
+        return 1
+    linked = sum(1 for r in rows if r.get("files"))
+    _link_msg = f"{linked}/{len(rows)} row(s) linked to filings" + (
+        f" · {len(orphans)} orphan file(s)" if orphans else "")
+    (cli.ok if linked == len(rows) and not orphans else cli.partial)(_link_msg)
+
+    # 3. Resolve identity (LEI-is-input).
+    cli.section("Resolve")
+    cli.step(f"Resolving {len(rows)} row(s) (by-LEI + name-search)")
+    _resolve_rows(rows, metadata)
+    done = sum(1 for r in rows if r.get("gleif_lei") or sc.entity_lei(r))
+    (cli.ok if done == len(rows) else cli.partial)(f"Resolved {done}/{len(rows)} row(s)")
+
+    # 4. Write the enrichment back into full_scope IN PLACE.
+    _write_scope(scope_path, rows)
+
+    # 5. Review.
+    _review(rows, orphans)
 
     if not apply:
-        print("· Worksheet refreshed. Re-run with --apply to write the KB when the table is clean.")
+        cli.section("Next steps")
+        print(f"· full_scope refreshed → {scope_path.relative_to(kb.REPO)}")
+        print("· Edit unresolved rows (add a verified `lei`, or hand-add `aliases`), then re-run.")
+        print("· When the table is clean, re-run with --apply to build the KB.")
         return 0
 
-    index, lei_groups, unbindable = _entries_to_kb(entries, metadata)
-    if not index:
-        kb._err("Nothing bindable yet — every entry lacks a resolved LEI or an xbrl_name.")
+    # 6. --apply: build the KB from whatever has an identity (report exclusions — never no-op).
+    records, lei_groups, unbindable, name_only = _rows_to_kb(rows)
+    if not records:
+        kb._err("Nothing bindable — no row has an xbrl_name. "
+                "Run the link step (downloaded filings in uploads/) and re-run.")
         return 1
-    path = _write_kb(corpus, index, lei_groups, unbindable)
+    path = _write_kb(corpus, records, lei_groups, unbindable, name_only)
     kb._update_catalog("gleif", corpus, "full", len(lei_groups), path)
-    print(f"✅ Wrote {path.relative_to(kb.REPO)} — {len(index)} xbrl_name key(s) "
-          f"→ {len(lei_groups)} entit(y/ies); {len(unbindable)} still unbindable. Catalog updated.")
+    msg = (f"✅ Wrote {path.relative_to(kb.REPO)} — {len(records)} entit(y/ies) "
+           f"[{len(lei_groups)} LEI-resolved")
+    if name_only:
+        msg += (f", ⚠ {len(name_only)} name-only (no LEI — weaker isolation, "
+                f"prefix degrades to [canonical FYyear], no aliases)")
+    msg += "]"
+    if unbindable:
+        msg += f"; {len(unbindable)} excluded (no identity)"
+    print(msg + f". Catalog updated: {kb.CATALOG_PATH.relative_to(kb.REPO)}")
     return 0
 
 
 def _print_help() -> None:
     print(f"{SCRIPT_NAME} v{VERSION} — build the entity KB for a whole corpus (GLEIF)")
     print("")
-    print(f"Usage: {SCRIPT_NAME} --corpus <C> [--rescan] [--apply]")
+    print(f"Usage: {SCRIPT_NAME} --corpus <C> [--apply]")
     print("")
-    print("  --corpus <C>   corpus name (scans data/corpora/<C>/uploads/)")
-    print("  --rescan       re-read the uploads dir and merge, keeping worksheet edits")
-    print("  --apply        write the KB from the corrected worksheet (else review only)")
+    print("  --corpus <C>   corpus name (reads data/corpora/<C>/<C>_full_scope.yaml)")
+    print("  --apply        build the KB from the resolved rows (else review only)")
     print("  --list         show the import catalog")
     print("  --version / --help")
     print("")
-    print("Workflow: 1st run writes data/corpora/<C>/<C>_entity_worksheet.yaml; edit")
-    print("lei_corrected (and xbrl_name for name-less groups); re-run to refresh; --apply.")
+    print("Loop: run (no --apply) → edit unresolved rows in full_scope (add lei_corrected /")
+    print("aliases) → re-run to refresh → --apply to build the KB the ingest pipeline reads.")
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog=SCRIPT_NAME, add_help=False)
     p.add_argument("--corpus")
-    p.add_argument("--rescan", action="store_true")
     p.add_argument("--apply", action="store_true")
     p.add_argument("--list", action="store_true")
     p.add_argument("--version", action="store_true")
@@ -437,7 +545,7 @@ def main(argv=None) -> int:
         kb._err("--corpus is required")
         _print_help()
         return 2
-    return _build(args.corpus, args.apply, args.rescan)
+    return _build(args.corpus, args.apply)
 
 
 if __name__ == "__main__":

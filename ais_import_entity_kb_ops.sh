@@ -1,19 +1,18 @@
 #!/usr/bin/env zsh
-# ais_import_entity_kb_ops.sh — Operator entity-KB importer (GLEIF, whole-corpus)
-# Version: 1.3.0
-# Builds the GLEIF entity knowledge source for a corpus: scans the corpus uploads
-# for each filing's self-reported XBRL entity name, resolves it via GLEIF, and emits
-# a YAML keyed by xbrl_name → {canonical, aliases, lei}. Review-gated by default
-# (dry-run); pass --apply to write. Splits the entity half out of the deprecated
-# ais_import_knowledge_base.
-# Passthrough wrapper (§7): all flags/defaults live in scripts/ais_import_entity_kb_ops.py.
-
+# ais_import_entity_kb_ops.sh — Build the GLEIF/Wikidata entity KB for a corpus (Operator only)
+# Version: 1.1.0
+# Thin "$@" passthrough to scripts/ais_import_entity_kb_ops.py — the wrapper the v1.8.27
+# KB-importer split never created (the .py backing script shipped without it, so the command
+# never resolved on PATH). Reads the corpus full_scope (which IS the worksheet), links each
+# row to its uploads filing(s), resolves identity (LEI-is-input), and on --apply builds the
+# xbrl-keyed entity KB the ingest pipeline reads for the [Document:] alias prefix.
+# v1.1.0 — banner reads the backing engine version (STD §2); --help fallback reconciled to the
+#   1.5.0 full_scope flow (dropped the dead --rescan/--force/worksheet language).
 
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.3.0"
-
+VERSION="1.1.0"
 SCRIPT_NAME="ais_import_entity_kb_ops"
 SCRIPT_DIR="${0:A:h}"
 HELP_FILE="$SCRIPT_DIR/ais_command_help_ops.txt"
@@ -22,38 +21,42 @@ _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
         awk "/^## $SCRIPT_NAME$/,/^---$/" "$HELP_FILE" | grep -v "^---$" | grep -v "^## "
     else
-        echo "$SCRIPT_NAME v$VERSION"
+        echo "$SCRIPT_NAME v$VERSION — Build the GLEIF/Wikidata entity KB for a corpus"
         echo ""
-        echo "Usage: $SCRIPT_NAME --corpus <name> [--rescan] [--apply]"
+        echo "Usage: $SCRIPT_NAME --corpus <C> [--apply] [--list]"
+        echo ""
+        echo "  --corpus <C>   Corpus name (reads data/corpora/<C>/<C>_full_scope.yaml)"
+        echo "  --apply        Build the entity KB from the resolved rows (default: review only)"
+        echo "  --list         Show the import catalog"
+        echo "  --help         Show this help"
+        echo "  --version      Show version"
         echo ""
         echo "Run from: ~/Developer/AIStudio"
     fi
 }
 
-if [[ "$1" == "--help" ]]; then _show_help; exit 0; fi
-if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
+if [[ "${1:-}" == "--help" ]]; then _show_help; exit 0; fi
+if [[ "${1:-}" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
 
-REPO="${0:A:h}"
+REPO="$SCRIPT_DIR"
+PYTHON="$REPO/.venv/bin/python3"
+SCRIPT="$REPO/scripts/ais_import_entity_kb_ops.py"
 
-printf "\033[1m[ais_import_entity_kb_ops v$VERSION — Operator entity-KB importer]\033[0m\n"
+# Header shows the BACKING engine version (the one that changes), per STD §2.
+BACKING_VERSION=$(grep -m1 -E '^VERSION = ' "$SCRIPT" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/')
+[[ -z "$BACKING_VERSION" ]] && BACKING_VERSION="$VERSION"
+printf '\033[1m[ais_import_entity_kb_ops v%s — Build entity KB]\033[0m\n' "$BACKING_VERSION"
 
-# cd to repo so the backing script's repo-relative paths
-# (data/corpora/<corpus>/uploads, data/knowledge_sources) resolve against root.
-cd "$REPO" || { echo "❌ Could not cd to repo root: $REPO"; exit 1; }
-source .venv/bin/activate || { echo "❌ Could not activate .venv"; exit 1; }
+if [[ ! -f "$PYTHON" ]]; then
+    echo "❌ Python venv not found: $PYTHON"
+    exit 1
+fi
+if [[ ! -f "$SCRIPT" ]]; then
+    echo "❌ Script not found: $SCRIPT"
+    echo "· Run: ais_restore_scripts"
+    exit 1
+fi
 
-echo "--- Preflight"
-echo "✅ Repo: $REPO"
-echo "· Worksheet round-trip: 1st run writes the worksheet; --apply writes the KB"
-echo ""
-
-# §7 passthrough — all flags and defaults are owned by the backing argparse.
-python3 scripts/ais_import_entity_kb_ops.py "$@"
-RC=$?
-
-echo ""
-echo "--- Next step"
-echo "· Edit lei_corrected in the worksheet (and xbrl_name for name-less groups)"
-echo "· Re-run to refresh; --apply writes the KB; then re-ingest to label chunks"
-
-exit $RC
+cd "$REPO"
+source .venv/bin/activate
+exec env PYTHONPATH=src python3 "$SCRIPT" "$@"

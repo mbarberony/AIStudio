@@ -12,7 +12,12 @@ DIFFERS between the two commands does NOT live here — it stays in each command
 Lives in scripts/ (parent.parent == repo root). Imported as a sibling:
     import _kb_common_ops as kb       # when run via `python3 scripts/<cmd>.py`
 
-Version: 1.0.0
+Version: 1.2.0 (Wikidata section wired to _cli_output_ops — own `--- Fetching Wikidata
+aliases` section, per-firm ✅/partial line showing aliases + tickers, explicit enriched/
+no-match gap; collision guard → info line. 1.1.0 — alias hygiene: _is_junk_alias drops null
+sentinels [externalized to _alias_stoplist.yaml with a built-in fallback] and bare-numeric
+foreign-exchange codes before they enter short_names/tickers; fixes n/a + TSE codes like
+8634/8710 leaking into KB rows and the [Document:] chunk prefix)
 """
 
 import json
@@ -27,6 +32,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+import _cli_output_ops as cli  # shared CLI output (glyph vocabulary + section/step/done)
 import yaml
 
 try:
@@ -348,6 +354,41 @@ def _derive_aliases(canonical: str, scope_name: str, hint: str | None = None) ->
     return {a for a in aliases if a and len(a) > 1}
 
 
+# ── Alias hygiene ───────────────────────────────────────────────────────────────
+# Two filters keep junk out of the KB (and therefore out of the [Document:] chunk prefix):
+#   1. null sentinels — DATA, externalized to data/knowledge_sources/_alias_stoplist.yaml
+#      (tunable, corpus-agnostic), unioned with a built-in fallback so enrichment never
+#      depends on the file being deployed.
+#   2. bare-numeric tokens — a PREDICATE kept in code: foreign-exchange codes (e.g. Tokyo
+#      8634 / 8710) arrive via Wikidata P249 tickers and are never US display aliases.
+_BUILTIN_ALIAS_SENTINELS = {"n/a", "na", "none", "null", "-", "--", "tbd", "unknown", ""}
+
+
+def _load_alias_sentinels() -> set[str]:
+    """Null-sentinel tokens to drop from aliases — built-in defaults unioned with the shared
+    stoplist file if present. scripts/ is parent.parent == repo root (see module docstring)."""
+    sentinels = set(_BUILTIN_ALIAS_SENTINELS)
+    path = Path(__file__).resolve().parent.parent / "data" / "knowledge_sources" / "_alias_stoplist.yaml"
+    try:
+        if path.exists():
+            doc = yaml.safe_load(path.read_text()) or {}
+            for s in (doc.get("sentinels") or []):
+                sentinels.add(str(s).strip().lower())
+    except Exception:
+        pass
+    return sentinels
+
+
+_ALIAS_SENTINELS = _load_alias_sentinels()
+
+
+def _is_junk_alias(token: str) -> bool:
+    """True for tokens that must never become an alias: a null sentinel (n/a, none, …) or a
+    bare-numeric code (foreign-exchange ticker like TSE 8634/8710 — never a US display alias)."""
+    t = (token or "").strip()
+    return (not t) or (t.lower() in _ALIAS_SENTINELS) or t.isdigit()
+
+
 def _fetch_wikidata_aliases(records: list[dict]) -> dict[str, dict]:
     """
     Batch Wikidata SPARQL lookup by LEI code (P1278).
@@ -393,10 +434,10 @@ SELECT ?lei ?itemLabel ?shortName ?ticker WHERE {{
         if label:
             result[lei]["label"] = label
         short = row.get("shortName", {}).get("value", "")
-        if short:
+        if short and not _is_junk_alias(short):
             result[lei]["short_names"].add(short)
         ticker = row.get("ticker", {}).get("value", "")
-        if ticker:
+        if ticker and not _is_junk_alias(ticker):
             result[lei]["tickers"].add(ticker)
 
     return result
@@ -413,12 +454,11 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
     # Build scope lookup: scope_name → scope entity dict
     scope_map = {e["name"]: e for e in scope_entities}
 
-    print("  ▶ Fetching Wikidata aliases...", flush=True)
+    cli.section("Fetching Wikidata aliases")
+    cli.step(f"Querying Wikidata (batch) for {len(records)} entit(y/ies)")
     wikidata = _fetch_wikidata_aliases(records)
-    if wikidata:
-        print(f"  ✅ Wikidata: {len(wikidata)} entities enriched")
-    else:
-        print("  ⚠ Wikidata: no data returned")
+    n_hit = len(wikidata)
+    n_miss = len(records) - n_hit
 
     for rec in records:
         lei = rec.get("lei", "")
@@ -460,6 +500,21 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
         rec["wikidata_tickers"] = wd_tickers
         rec["aliases"] = sorted(alias_set)
 
+        # Per-firm result: ✅ when Wikidata had a hit, white-✓-on-yellow (partial) when it
+        # didn't (the row still binds on mechanical aliases — degraded, not failed).
+        _preview = ", ".join(rec["aliases"][:5]) + ("…" if len(rec["aliases"]) > 5 else "")
+        _line = f"{scope_name or canonical} → [{_preview}]"
+        if wd_tickers:
+            _line += f" · tickers {wd_tickers}"
+        if wd:
+            cli.ok(_line, indent=4)
+        else:
+            cli.partial(_line + " · no Wikidata match (mechanical aliases only)", indent=4)
+
+    (cli.ok if n_miss == 0 else cli.partial)(
+        f"Wikidata: {n_hit}/{len(records)} entit(y/ies) enriched"
+        + (f" · {n_miss} no match" if n_miss else ""))
+
     # AIStudio_876 — cross-firm collision removal (the distinctiveness guard).
     # A single-token or any alias shared by two or more firms in this scope is
     # ambiguous and must not drive recognition/filtering for either. Count each
@@ -475,8 +530,8 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
             kept = [a for a in rec["aliases"] if a.lower() not in _ambiguous]
             dropped_total += len(rec["aliases"]) - len(kept)
             rec["aliases"] = kept
-        print(f"  ▶ Collision guard: dropped {dropped_total} ambiguous alias(es) "
-              f"shared across firms ({len(_ambiguous)} distinct token(s))")
+        cli.info(f"Collision guard: dropped {dropped_total} ambiguous alias(es) "
+                 f"shared across firms ({len(_ambiguous)} distinct token(s))")
 
     return records
 

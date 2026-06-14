@@ -28,7 +28,7 @@ def _write(p: Path, body: str) -> Path:
 
 ROWS = [
     {"label": "Bank of New York", "ticker": "BK", "cik": "0001390777",
-     "lei": "AAA", "gleif_lei": "BBB",
+     "gleif_lei": "BBB",   # no bare lei → genuinely exercises the gleif fallback (v1.2.0 bare-wins)
      "xbrl_name": "THE BANK OF NEW YORK MELLON CORPORATION"},
     {"label": "Goldman Sachs", "ticker": "GS", "cik": "0000886982",
      "canonical": "THE GOLDMAN SACHS GROUP, INC.",
@@ -43,9 +43,16 @@ def test_entity_lei_prefers_corrected():
 
 
 def test_entity_lei_falls_to_gleif_then_seed():
-    assert sc.entity_lei(ROWS[0]) == "BBB"                    # gleif_lei (no corrected)
+    assert sc.entity_lei(ROWS[0]) == "BBB"                    # gleif_lei (no bare lei, no corrected)
     assert sc.entity_lei({"lei": "ZZZ"}) == "ZZZ"            # bare seed lei
     assert sc.entity_lei({}) is None
+
+
+def test_entity_lei_bare_wins_and_sentinel_skips():
+    # v1.2.0 open-schema contract: a bare `lei` WINS over its provenance twin …
+    assert sc.entity_lei({"lei": "AAA", "gleif_lei": "BBB"}) == "AAA"
+    # … but an unverified sentinel bare field is treated as empty → falls to gleif.
+    assert sc.entity_lei({"lei": sc.SENTINEL, "gleif_lei": "BBB"}) == "BBB"
 
 
 def test_entity_name_prefers_canonical_then_falls_through():
@@ -137,8 +144,8 @@ def test_load_scope_malformed_yaml_errors(repo):
 
 
 def test_discover_full_single(repo):
-    _write(repo / "data/corpora/sec_10k/sec_10k_entity_full_scope.yaml", _scope_yaml())
-    assert sc.discover_full("sec_10k").name == "sec_10k_entity_full_scope.yaml"
+    _write(repo / "data/corpora/sec_10k/sec_10k_full_scope.yaml", _scope_yaml())
+    assert sc.discover_full("sec_10k").name == "sec_10k_full_scope.yaml"
     # no stem + no path → loads the full inventory
     assert sc.load_entities("sec_10k")[0]["label"] == "GS"
 
@@ -149,11 +156,14 @@ def test_discover_full_none_errors(repo):
         sc.discover_full("sec_10k")
 
 
-def test_discover_full_ambiguous_errors(repo):
-    _write(repo / "data/corpora/sec_10k/sec_10k_a_full_scope.yaml", _scope_yaml())
-    _write(repo / "data/corpora/sec_10k/sec_10k_b_full_scope.yaml", _scope_yaml())
-    with pytest.raises(sc.ScopeError, match="Ambiguous full inventory"):
-        sc.discover_full("sec_10k")
+def test_discover_full_ignores_stale_stem(repo):
+    # v1.2.0 narrowed discover_full to the EXACT stemless name (glob "<corpus>_full_scope.yaml").
+    # A stale differently-stemmed full_scope left over from a migration is therefore ignored,
+    # not loaded. (The old "Ambiguous full inventory" branch is now unreachable via an exact-name
+    # glob — tracked as a cleanup item to drop the dead branch.)
+    _write(repo / "data/corpora/sec_10k/sec_10k_entity_full_scope.yaml", _scope_yaml())  # stale
+    _write(repo / "data/corpora/sec_10k/sec_10k_full_scope.yaml", _scope_yaml())          # canonical
+    assert sc.discover_full("sec_10k").name == "sec_10k_full_scope.yaml"
 
 
 def test_explicit_path_override(repo, tmp_path):

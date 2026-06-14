@@ -1,5 +1,10 @@
 # src/local_llm_bot/app/vectorstore/qdrant_store.py
-# Version: 1.2.5
+# Version: 1.3.1
+# Changelog: 1.3.1 — AIStudio_891: index `firm` payload field (TEXT) in _ensure_text_index
+#             so _build_entity_filter's firm-match clause works — corpus-agnostic entity
+#             isolation keyed on the chunk's own entity, not source_path/filename. Pairs
+#             with pipeline.py v1.8.29 (stamps firm at ingest). Re-ingest required. Also
+#             corrects the stale Version line (was 1.2.5; top changelog already 1.3.0).
 # Changelog: 1.3.0 — AIStudio_882 (scope application): query()/query_bm25() accept
 #             allowed_source_paths — the scope firm-boundary. ANDed with entity_filter:
 #             vector path nests two Filter(should=...) OR-clauses inside must=[] (AND-of-ORs,
@@ -127,6 +132,17 @@ def _ensure_text_index(client: QdrantClient, collection_name: str) -> None:
         client.create_payload_index(
             collection_name=collection_name,
             field_name="source_path",
+            field_schema=PayloadSchemaType.TEXT,
+        )
+    # AIStudio_891: text index on `firm` — the intended entity-match field for
+    # _build_entity_filter (firm == entity, corpus-agnostic, no source_path/filename
+    # dependency). MatchText requires a text index; pipeline.py v1.8.29 stamps firm at
+    # ingest. Idempotent — indexes existing payload on creation. Re-ingest required for
+    # chunks predating the firm field (they carry no firm to index).
+    with contextlib.suppress(Exception):
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name="firm",
             field_schema=PayloadSchemaType.TEXT,
         )
 

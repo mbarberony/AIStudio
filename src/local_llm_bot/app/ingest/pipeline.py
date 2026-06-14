@@ -1,4 +1,35 @@
-# Version: 1.8.28
+# Version: 1.8.31
+# Changelog: 1.8.31 — Ingest-status freeze fix (source side). Gate the live tqdm Process bar
+#            on _sys.stderr.isatty() (line ~894) so it renders ONLY in an operator TTY, not
+#            under api.py's pipe. __main__.py passes tqdm_cls unconditionally ("pipeline
+#            controls bars") but pipeline never applied the TTY gate, so the bar was created in
+#            pipe mode; routing the [ingest] file_complete:/normalizer: machine signals through
+#            pbar.write() while that bar was live did NOT reliably flush them to the pipe, so
+#            api.py's _stream_stderr received no per-file progress — files_processed/elapsed
+#            stayed 0 and the UI bar crawled (endpoint Qdrant-overlay only) then froze. With no
+#            bar in pipe mode, _tqdm_write falls to plain print(file=_sys.stderr): newline-
+#            terminated and (PYTHONUNBUFFERED=1) flushed immediately → the signals arrive and the
+#            api.py 1.10.1 parser updates progress live. p_process=None is the existing else
+#            path (917), already handled throughout. Cross-ref AIStudio_613 (file_complete
+#            signal), AIStudio_722 (TTY-noise gate this completes). PIPELINE item to file at EOS
+#            (provisional — reconcile with the 891 / SESS-2026-06-09 905-912 number collision).
+# Changelog: 1.8.30 — AIStudio_907 (display-only): two progress/log aesthetics. (1) Intra-file
+#            interpolation-thread ETA collapsed to ~00:00 mid-file — it computed
+#            `t_remaining_est - _el + …` where `_el = now - t0` is total-elapsed-since-INGEST
+#            (not within-file) subtracted from a file-start duration, going negative → max(0)=0.
+#            Now driven off the bar's true global fraction (the % is correct) × observed overall
+#            rate, matching the per-file-completion formula; can't pin to 0 while progress<total.
+#            `t_remaining_est` param now vestigial. (2) `_prefix_label` in the completion line
+#            omitted the alias suffix, so the log understated the stored prefix; now mirrors the
+#            stored `[Document: <entity> | <aliases> FY<year>]` (also visually confirms the
+#            AIStudio_895 enrichment binding is live). Provisional item number — reconcile at
+#            PIPELINE update.
+# Changelog: 1.8.29 — AIStudio_891: stamp `firm` = doc_entity (the normalizer entity, same
+#             value used in the [Document:] prefix) into every chunk's Qdrant payload, so
+#             _build_entity_filter's intended firm-match clause fires — corpus-agnostic entity
+#             isolation keyed on the chunk's own entity, not source_path/filename. Pairs with
+#             qdrant_store.py v1.3.1 (firm TEXT index). Requires re-ingest (payload written at
+#             ingest; pre-existing chunks carry no firm).
 # Changelog: 1.8.27 — AIStudio_801: ingest-time alias injection into [Document:] prefix.
 #            _load_ks_alias_map() reads gleif_{corpus}_*_entities.yaml and returns
 #            canonical → [wikidata_label, wikidata_short_name, wikidata_tickers] map.
@@ -874,7 +905,15 @@ def ingest_corpus(
     # Self-corrects to actual observed rate after each file completes.
     _chunks_per_sec = 45.0
 
-    if tqdm_cls is not None:
+    # AIStudio (ingest-status freeze fix) — render the live tqdm Process bar ONLY in an
+    # operator TTY. Under api.py's pipe there is no human to display it to, and routing the
+    # [ingest] machine signals through pbar.write() while the bar is live did not reliably
+    # flush them to the pipe, so api.py's _stream_stderr never received per-file progress
+    # (files_processed/elapsed stayed 0; the UI bar crawled then froze). With no bar in pipe
+    # mode, _tqdm_write falls to plain print(..., file=_sys.stderr) — newline-terminated and,
+    # with PYTHONUNBUFFERED=1, flushed at once — so the signals arrive. This is the
+    # "pipeline controls bars" gate __main__.py delegated. Cross-ref AIStudio_722 / AIStudio_613.
+    if tqdm_cls is not None and _sys.stderr.isatty():
         # STD §8 Phase 2 — plain tqdm, no subclass, full label control via bar_format.
         # bar_format is mutated per-file update (p_process.bar_format = ...) to inject
         # the current "N of T" file counter directly into the format string.
@@ -1000,6 +1039,7 @@ def ingest_corpus(
                             "text": clean_text,
                             "page": page_num,
                             "md5": file_md5,
+                            "firm": doc_entity or "",
                         }
                     )
 
@@ -1014,6 +1054,7 @@ def ingest_corpus(
                             "doc_id": str(r["doc_id"]),
                             "page": r["page"],
                             "md5": str(r["md5"]),
+                            "firm": str(r.get("firm", "")),
                         }
                         for r in file_rows
                     ]
@@ -1051,9 +1092,18 @@ def ingest_corpus(
                             if now - last_bar_update >= bar_update_interval:
                                 last_bar_update = now
                                 _el = now - t_start
-                                _frac = sent / n_chunks if n_chunks > 0 else 0
-                                _file_remaining = (n_chunks - sent) / cps if cps > 0 else 0
-                                _total_remaining = max(0.0, t_remaining_est - _el + (n_chunks - sent) / cps)
+                                # AIStudio_907: ETA from the bar's true global fraction (the %
+                                # is correct) × observed overall rate (elapsed ÷ progress) —
+                                # self-corrects each tick, never pins to 00:00 while progress <
+                                # total. The prior form subtracted total-elapsed-since-ingest
+                                # (_el = now − t0) from a file-start duration (t_remaining_est),
+                                # going negative → max(0, …) → 00:00 mid-file.
+                                _bar_total = getattr(pbar, "total", 0) or 0
+                                _total_remaining = (
+                                    _el * (_bar_total - pbar.n) / pbar.n
+                                    if getattr(pbar, "n", 0) > 0 and _bar_total > pbar.n
+                                    else 0.0
+                                )
                                 _avg = f"{1000/cps:.0f}ms/chunk"
                                 _n_str = str(n_file).rjust(n_w)
                                 pbar.bar_format = (
@@ -1165,11 +1215,17 @@ def ingest_corpus(
                         file_stats[file_path.name]["normalizer_mismatch"] = doc_mismatch
 
                         _fmt_label = doc_fmt or "unknown"
-                        # Human-readable prefix label — STD §8 uses [brackets] not "quotes"
+                        # Human-readable prefix label — STD §8 uses [brackets] not "quotes".
+                        # AIStudio_907: mirror the STORED prefix exactly — include the Wikidata
+                        # alias suffix (same computation as the chunk-text prefix above), so the
+                        # log no longer understates what was embedded. Also surfaces the
+                        # AIStudio_895 enrichment binding for visual confirmation at ingest.
+                        _label_aliases = _ks_alias_map.get(doc_entity, []) if doc_entity else []
+                        _label_suffix = (" | " + " | ".join(_label_aliases)) if _label_aliases else ""
                         _prefix_label = (
-                            f"[{doc_entity} FY{doc_year}]"
+                            f"[{doc_entity}{_label_suffix} FY{doc_year}]"
                             if doc_year
-                            else f"[{doc_entity}]"
+                            else f"[{doc_entity}{_label_suffix}]"
                         )
 
                         # STD §8 completion line — scrolls in terminal, stays in history
