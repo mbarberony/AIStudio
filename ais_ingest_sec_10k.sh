@@ -1,7 +1,34 @@
 #!/usr/bin/env zsh
 # ais_ingest_sec_10k.sh — Ingest the SEC 10-K corpus into AIStudio
-# Version: 1.4.0
+# Version: 1.4.5
 # Changelog:
+#   1.4.5 — AIS_17 (backend-kill observability, 2026-06-14): preflight now records the PID serving
+#           the API port (lsof -nP -iTCP:<port> -sTCP:LISTEN), so a backend that dies mid-ingest
+#           isn't silent — you can see what held the port and confirm a restart's new PID. Pairs
+#           with the api.py shutdown-log handler (v1.10.2).
+#   1.4.4 — AIStudio_908 (Manuel, 2026-06-14): removed the brittle firm count. The Setup banner
+#           is now just "· Corpus : sec_10k" (was "(25 firms × 5 filings target)"), and the heredoc
+#           corpus_metadata short_description/description/content_summary drop the hardcoded
+#           "125 filings / 25 firms" (the count is on-demand-variable — 20 base + adds). NOTE: the
+#           LIVE data/corpora/sec_10k/corpus_metadata.yaml still carries the old count until
+#           regenerated or hand-edited — fix there too (the stale content_summary, MD_3).
+#   1.4.3 — AIStudio_912 (Manuel CLI signature change, 2026-06-14): --files now documents
+#           OR-matched substring/regex patterns (matching in engine pipeline.py v1.8.32). Updated
+#           usage line, --files option help, the parse comment, and the "To ingest some" footer
+#           hint. No shell-side behavior change — the pattern string still passes through to the
+#           engine's --files.
+#   1.4.2 — AIStudio_909 (Manuel flag A, 2026-06-14): selective-mode count fix. The
+#           "▶ Ingesting N filings" line and the time estimate now use INGEST_COUNT — the
+#           number of files in --files when selective, else the whole corpus — instead of the
+#           full-corpus $FILE_COUNT. (Preflight "✅ N filings ready" still counts all on disk.)
+#           Fixes "Ingesting 101 filings · ~27 min" when only 1 file was selected.
+#   1.4.1 — CLI-output polish (Manuel flags, 2026-06-13): (a) the "already indexed"
+#           incremental-mode line now uses a `·` bullet, not `ℹ` (CLI Output STD v2.4.0:
+#           ℹ retired → ·). (b) Dropped the unconditional blank line before "--- Setup" so
+#           that line butts directly against the section (STD: no leading blank before a
+#           --- header). (c) Removed the stale hardcoded "(pipeline.py v1.7.0)" from the
+#           Normalizer banner — a shell echo can't track the engine's real version, so the
+#           parenthetical is gone rather than re-hardcoded (AIStudio_909c).
 #   1.4.0 — ESEF v1.1.0 parity + selective ingest. (a) Incremental-mode awareness:
 #           Qdrant chunk-count check → "already indexed: N chunks — incremental" vs
 #           "clean ingest" vs "--force: wiping". (b) Total-bytes/MB accounting in
@@ -30,7 +57,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.4.0"
+VERSION="1.4.5"
 
 SCRIPT_NAME="ais_ingest_sec_10k"
 REPO="${0:A:h}"
@@ -42,13 +69,16 @@ _show_help() {
     else
         echo "$SCRIPT_NAME v$VERSION — Ingest SEC 10-K corpus into AIStudio"
         echo ""
-        echo "Usage: $SCRIPT_NAME [--force] [--files <a.htm,b.htm>] [--verbose] [--help] [--version]"
+        echo "Usage: $SCRIPT_NAME [--force] [--files <pat1,pat2,...>] [--verbose] [--help] [--version]"
         echo ""
         echo "Options:"
         echo "  --force            Full rebuild — wipe collection, re-ingest all files"
         echo "                     Default (no --force): incremental — only new/changed files"
-        echo "  --files <list>     Ingest ONLY these comma-separated filenames (always re-embedded);"
-        echo "                     every other file in uploads/ (indexed or parked) is left untouched"
+        echo "  --files <list>     Ingest ONLY files matching these comma-separated patterns (always"
+        echo "                     re-embedded). Each pattern is OR-matched against the filename,"
+        echo "                     case-insensitively: a literal substring, or a regex if it contains"
+        echo "                     regex metacharacters. e.g. --files BlackRock  or  --files 'JPM.*2025,Citi'."
+        echo "                     Every non-matching file in uploads/ (indexed or parked) is left untouched"
         echo "  --verbose          Print full JSON result payload after summary"
         echo "  --help             Show this help and exit"
         echo "  --version          Print version and exit"
@@ -74,7 +104,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --force)   FORCE_FLAG="--force"; shift ;;
         --verbose) VERBOSE_FLAG="--verbose"; shift ;;
-        --files)   FILES_ARG="$2"; shift 2 ;;   # comma-separated basenames → selective ingest
+        --files)   FILES_ARG="$2"; shift 2 ;;   # comma-separated patterns (substring/regex, OR) → selective ingest
         *) echo "❌ Unknown flag: $1"; echo "· Run: $SCRIPT_NAME --help"; exit 1 ;;
     esac
 done
@@ -112,6 +142,12 @@ if ! curl -sf "$API/health" > /dev/null 2>&1; then
     exit 1
 fi
 echo "✅ Backend healthy."
+# AIS_17 — backend-kill observability: record which PID is serving the API port now, so if the
+# backend dies during a long ingest you can see (in scrollback) what was here and confirm a
+# restart brought up a different PID. lsof: -n no DNS, -P numeric ports, -sTCP:LISTEN listener only, -t PID-only.
+_PORT="${API##*:}"; _PORT="${_PORT%%/*}"
+_HOLDER=$(lsof -nP -iTCP:"${_PORT}" -sTCP:LISTEN -t 2>/dev/null | head -1)
+echo "· Backend PID on :${_PORT}: ${_HOLDER:-unknown (health OK but no listener PID found)}"
 
 # Qdrant collection check — info only, no gate (mirrors ESEF v1.1.0)
 QDRANT="http://localhost:6333"
@@ -127,19 +163,18 @@ if [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" != "?" && "$EXISTING_CHUNKS" -
     if [[ "$FORCE_FLAG" == "--force" ]]; then
         echo "⚠ --force: wiping existing collection ($EXISTING_CHUNKS chunks) and re-ingesting all files."
     else
-        echo "ℹ Corpus 'sec_10k' already indexed: ${EXISTING_CHUNKS} chunks — incremental ingest (new/changed files only)."
+        echo "· Corpus 'sec_10k' already indexed: ${EXISTING_CHUNKS} chunks — incremental ingest (new/changed files only)."
     fi
 else
     echo "✅ No existing Qdrant collection — clean ingest."
 fi
 
 # --- Setup
-echo ""
 echo "--- Setup"
-echo "· Corpus     : sec_10k (25 firms × 5 filings target)"
+echo "· Corpus     : sec_10k"
 echo "· Chunk size : 1200 chars · Overlap: 200 chars"
 echo "· Embed model: nomic-embed-text"
-echo "· Normalizer : Document-Head Extraction + Temporal Context Injection (pipeline.py v1.7.0)"
+echo "· Normalizer : Document-Head Extraction + Temporal Context Injection"
 echo "· Source     : $UPLOADS"
 
 # Create benchmarks/sec_10k/ on first run
@@ -226,14 +261,14 @@ if [[ ! -f "$METADATA_FILE" ]]; then
 
 schema_version: "1.0"
 corpus_name: sec_10k
-short_description: "Up to 125 SEC 10-K filings — 25 major financial services firms"
+short_description: "SEC 10-K filings from major financial services firms"
 description: >-
-  Annual report (10-K) filings from 25 major financial services firms downloaded
+  Annual report (10-K) filings from major financial services firms downloaded
   from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and
   custody banks. Filings span multiple years — use the Year filter to restrict
   retrieval to a specific filing period.
 content_summary: >-
-  Filings from 25 firms: bulge-bracket banks (Goldman Sachs, JPMorgan Chase,
+  Filings from major financial services firms: bulge-bracket banks (Goldman Sachs, JPMorgan Chase,
   Morgan Stanley, Bank of America, Citigroup, Wells Fargo), asset managers
   (BlackRock, T. Rowe Price, Franklin Templeton, Invesco, AllianceBernstein),
   exchanges (CME Group, ICE, Nasdaq, CBOE), insurance (AIG, MetLife, Prudential,
@@ -282,14 +317,22 @@ except Exception:
 " 2>/dev/null || echo "")
 fi
 
+# Effective count for the time estimate + the ▶ Ingesting line: the SELECTED file count in
+# --files mode, else the whole corpus. (Preflight "✅ N filings ready" still counts all on disk.)
+if [[ -n "$FILES_ARG" ]]; then
+    INGEST_COUNT=$(echo "$FILES_ARG" | tr ',' '\n' | grep -c .)
+else
+    INGEST_COUNT=$FILE_COUNT
+fi
+
 if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
     EST_SRC="corpus avg ${AVG_SECS_PER_FILE}s/file"
-    ESTIMATE_PRO=$(python3 -c "v=$AVG_SECS_PER_FILE*$FILE_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
-    ESTIMATE_AIR=$(python3 -c "v=$AVG_SECS_PER_FILE*2.5*$FILE_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
+    ESTIMATE_PRO=$(python3 -c "v=$AVG_SECS_PER_FILE*$INGEST_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "v=$AVG_SECS_PER_FILE*2.5*$INGEST_COUNT; print(f'{v/60:.0f}' if v>=60 else '< 1')" 2>/dev/null || echo "?")
 else
     EST_SRC="60s/file seed (no prior ingest data)"
-    ESTIMATE_PRO=$(python3 -c "v=60*$FILE_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
-    ESTIMATE_AIR=$(python3 -c "v=60*2.5*$FILE_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
+    ESTIMATE_PRO=$(python3 -c "v=60*$INGEST_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "v=60*2.5*$INGEST_COUNT; print(f'{v/60:.0f}')" 2>/dev/null || echo "?")
 fi
 
 # Mode note
@@ -302,7 +345,7 @@ else
 fi
 
 echo "--- Ingesting"
-echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}"
+echo "▶ Ingesting $INGEST_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}"
 echo "· estimate from: $EST_SRC · self-corrects from live rate after file 1"
 
 # Parse --force flag
@@ -325,7 +368,7 @@ if [[ "$INGEST_EXIT" -eq 0 ]]; then
     echo "· Select 'sec_10k' in the AIStudio corpus dropdown to query."
     echo "· To benchmark    : ais_bench --corpus sec_10k"
     echo "· To add files    : ais_download_sec_10k && $SCRIPT_NAME   (incremental — only new files)"
-    echo "· To ingest some  : $SCRIPT_NAME --files A.htm,B.htm   (exactly those, others untouched)"
+    echo "· To ingest some  : $SCRIPT_NAME --files BlackRock,Citi   (substring/regex match, OR; others untouched)"
     echo "· To rebuild      : $SCRIPT_NAME --force"
 else
     echo "❌ Ingest exited with error code $INGEST_EXIT."

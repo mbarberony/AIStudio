@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: 1.2.0 | Updated: 2026-05-25*
+*Version: 1.2.2 | Updated: 2026-06-14*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -431,7 +431,7 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 | Top K | 5 | Chunks retrieved per query. Higher = more context, slightly slower. **Use 10 for the demo corpus and the SEC 10-K corpus** — the demo has small documents (as few as 20 chunks) that only surface reliably at K=10; the SEC corpus needs K=10 for cross-firm multi-source queries. |
 | Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
 | Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (finds related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
-| Score Threshold | 0.3–0.5 | Filters out retrieved chunks that scored too low to be useful. Low-score chunks cause hedged or incorrect answers ("I don't have information about…"). Set lower (0.3) for corpora with small documents; higher (0.5) for large uniform corpora like SEC 10-K. Configured per-corpus — the demo uses 0.3, sec_10k uses 0.5. |
+| Score Threshold | 0.2–0.5 | Filters out retrieved chunks that scored too low to be useful. Set it too high and you starve genuinely relevant chunks — especially dense financial-filing text, which the indexing model under-scores — so answers turn hedged ("I don't have information about…"). Configured per-corpus — the demo uses 0.3; sec_10k uses 0.2 (the lower floor keeps the dense 10-K tables from being filtered out). |
 
 > For more on query settings, see [HOWTO.md](HOWTO.md).
 

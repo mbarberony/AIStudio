@@ -40,7 +40,7 @@ ChromaDB was the original choice and was replaced in production.
 
 **Why the switch:**
 ChromaDB crashed at 32,285 chunks during the SEC 10-K corpus ingest. Not a
-configuration issue — a hard failure at scale. Qdrant was stable at 105,964
+configuration issue — a hard failure at scale. Qdrant was stable at 100,659
 chunks with zero failures across multiple full re-ingests.
 
 **Why Qdrant specifically:**
@@ -238,7 +238,9 @@ install: user            # user | operator | none
 
 **Tradeoff:** Adding a new command now requires a manifest update before deployment. This is by design — the manifest is the deployment contract, not an afterthought.
 
-**Governed by:** `STD - AIStudio - Command Development and Management`
+## Production Hardening (cross-cutting)
+
+What the system would need before any network exposure:
 
 - **Authentication:** The API has no auth. Fine for localhost; needs API key
   validation before any network exposure.

@@ -42,7 +42,7 @@ Resolution (open schema — the BARE user value wins):
 Missing-scope policy (AIStudio_882): an explicitly-named scope that does not exist
 is a HARD ERROR (ScopeError) — never a silent fallback to corpus defaults.
 
-Version: 1.1.0
+Version: 1.2.1
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ from pathlib import Path
 
 import yaml
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 SCHEMA_VERSION = "2.0"
 REPO = Path(__file__).parent.parent
 SCOPES_SUBDIR = "scopes"
@@ -119,11 +119,8 @@ def discover_full(corpus: str) -> Path:
             f"(expected {_rel(_corpus_dir(corpus))}/{corpus}_full_scope.yaml).\n"
             f"· Build it from the seed (see the corpus build command)."
         )
-    if len(hits) > 1:
-        raise ScopeError(
-            f"Ambiguous full inventory for '{corpus}' — {len(hits)} match "
-            f"{corpus}_full_scope.yaml: {', '.join(h.name for h in hits)}."
-        )
+    # glob() on an exact filename (no wildcards) matches at most one file; the former
+    # len(hits) > 1 "ambiguous" branch was unreachable and is removed (907a, v1.2.1).
     return hits[0]
 
 

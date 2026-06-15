@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-05-23*
+*Version: Beta | Updated: 2026-06-15*
 
 # AIStudio
 
@@ -10,7 +10,7 @@ AIStudio is what you use when you want to query your own documents with AI. It i
 
 > *AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled systems behave under real operational constraints — retrieval quality, vocabulary mismatch, metadata filtering, observability, and deployment trade-offs — before those issues get hidden behind abstractions.*
 >
-> **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (v3.0) · AWS ECS (v3.0)
+> **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · gemma3 · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (future) · AWS ECS (future)
 >
 > The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md). For a guide to how the codebase is organized, see [docs/CODEBASE_GUIDE.md](docs/CODEBASE_GUIDE.md).
 
@@ -48,9 +48,71 @@ A reviewer who asks *"What is the relationship between business strategy and tec
 
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average). Once loaded into unified memory, model size stops being a latency variable. See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
 
-The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — exploring 144 annual filings from 25 financial services firms (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 105,964 chunks, ingested in 34 minutes at 54 chunks/sec on an M4 MacBook Pro. Due to their size, the files for this corpus are not shipped with the app but need to be downloaded from the SEC first. More importantly, ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus.
+The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — **exploring 101 annual filings from 21 financial services firms** (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 100,659 chunks **from over 900 MB of source filings**, ingested in roughly half an hour at ~54 chunks/sec on an M4 MacBook Pro. Due to their size, **the files for this corpus are not shipped with the app but need to be downloaded from the SEC first (utilities are provided)**. More importantly, **ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus**.
+
+**ESEF corpus — European banks, the harder cousin:** AIStudio also builds a second at-scale corpus from European banks' **ESEF** filings (retrieved from filings.xbrl.org by LEI — the same download → entities → glossary → ingest machinery as SEC, only the access key and endpoint change). The two corpora are deliberately complementary learning vehicles: together they surface the problems that actually bite in production — resolving the **many names one firm files under** (handled with a GLEIF/LEI entity knowledge base), **multilingual retrieval** (an English question against a filing that says *fonds propres de base de catégorie 1* rather than *Common Equity Tier 1* retrieves worse), and **pulling numbers out of dense, multi-column tables** without severing a cell from the year that gives it meaning. The [Tutorial](TUTORIAL.md) — Modules 2 and 3, plus Annexes 3 and 5 — walks through all of it end to end.
+
+**Models & benchmarking:** AIStudio runs **any Ollama model** — `llama3.1`, `mistral`, `gemma3`, and whatever else you pull; the names here are defaults, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [HARNESS.md](HARNESS.md).
 
 ---
+
+## Why this is hard (and how it's tested)
+
+Nothing AIStudio does is rocket science these days — it's the table stakes of the job. You could assemble most of it on any cloud platform tomorrow. **What you can't do is point it at your *whole* corpus and freely mix your own files with outside sources.** A CISO might sign off on dropping one file into Copilot; the whole corpus, blended with external feeds, is another matter — and in financial services that's the normal case, not the edge case.
+
+AIStudio does what any retrieval system worth its salt must: **it verifies its own faithfulness at the level of the cited passage**, so a confident-sounding answer can be checked against the exact text it rests on.
+
+**The honest test bed.** The system was audited claim-by-claim against the source chunks across a corpus of US and European bank filings. English is the clean regime, and retrieval fidelity degrades predictably with language — near-perfect on English, partial on French, weak on the Nordic/Italian/Dutch tail — so the results below are drawn from the English corpus. It handles three kinds of work:
+
+- **Qualitative synthesis** — comparative questions across firms and years (how a set of banks describe cyber risk, climate exposure, regulatory burden, and how that shifts over successive filings), every claim tied back to its source passage. In the chunk-verified audit — ten questions, every claim checked, and a harness re-run rather than a one-off — it produced **zero fabricated figures**, abstaining where a fact wasn't retrievable rather than inventing one. One of the ten over-claimed against its own citation: a ratio label pulled from a genuinely complex table (the fix — a LlamaParse-class table extractor — is queued for the next build).
+- **Numerical retrieval** — single-firm figures pulled from HTML/iXBRL tables, with a purpose-built extraction layer that binds each value to its column header and reporting year; audited figures verified exact to the reported precision.
+- **Temporal evolution** — multi-year qualitative trends, with the system openly substituting the nearest available year rather than papering over a gap.
+
+*The (current) honest boundary, stated up front: qualitative synthesis across firms is established; the quantitative equivalent — assembling many firms' numbers into one correct comparison — is the open frontier. On the English corpus, where retrieval lands the right data cleanly, the failure root-causes to value-to-label binding at generation time — the model attaches a retrieved number to the wrong year or the wrong ratio type — which is downstream of retrieval and distinct from the language-driven retrieval gaps above.*
+
+---
+
+## AIStudio in numbers
+
+**Scale**
+
+- **Codebase** — ~28,400 lines of code across 95 files
+- **SEC 10-K corpus** — 101 filings · 21 firms · 901 MB of source filings · 100,659 chunks
+- **ESEF corpus** — European bank annual reports, multilingual, retrieved by LEI
+- **Demo corpus** — 9 original documents spanning 2003–2026
+- **In-app help** — 15 reference documents
+
+**Performance** *(MacBook Pro M4 Pro, 128 GB unified memory)*
+
+- **Ingest** — ~54 chunks/sec · 100,659 chunks in ~31 min · 0 failures
+- **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
+- **SEC 10-K synthesis** — ~58 s avg (gemma3:27b, multi-firm)
+- **Retrieval** — ~0.3–0.5 s even at 100,659 chunks
+- **Benchmark** — demo 14/14 · SEC 10-K 10/10 mechanical, 9/10 audited
+
+---
+
+## Documentation
+
+AIStudio ships ~15 reference documents (about 80 pages). Start wherever fits what you're doing:
+
+| Document | What it covers | Read it when… |
+|---|---|---|
+| **README** | Product overview, point of view, architecture, benchmarks | You're deciding what AIStudio is |
+| **about** | One-page overview shown in the UI About panel | You clicked About or want the gist |
+| **QUICKSTART** | Install + first run in under 30 min | You're setting it up |
+| **HOWTO** | Corpora, upload, filters, query settings, troubleshooting | You're using it day to day |
+| **TUTORIAL** | Guided walkthroughs + SEC 10-K at-scale + benchmarking | You want to go deep |
+| **architecture_elements** | How the pieces fit + data flow (the mental model) | You want the "under the hood" picture |
+| **architecture_decisions** | Why Qdrant / CrossEncoder / chunking | You're weighing the technical choices |
+| **api_introduction** | The local HTTP API — retrieve vs ask, firm isolation | You're building an integration |
+| **CODEBASE_GUIDE** | Directory layout, files, the ingest/query pipeline | You're reading or extending the code |
+| **FILE_GUIDE** | Commands, files, services reference | You need to look up a command or file |
+| **DEMO_CORPUS** | What ships in the demo + suggested questions | You're exploring the demo |
+| **HARNESS** | Running benchmarks, CLI flags, reading reports | You're measuring quality |
+| **QA_TESTING_LESSONS_LEARNED** | Install friction + QA findings | You hit a snag or want the honest record |
+| **dependencies** | Python + system dependency versions | You're troubleshooting the environment |
+| **PRODUCT_ROADMAP** | What works now and the direction beyond Beta | You want to know what's next |
 
 ## Quickstart
 
@@ -76,64 +138,6 @@ open front_end/rag_studio.html
 
 ---
 
-## Current Status
-
-Core RAG loop working end-to-end on a 106K-chunk production corpus. Qdrant vector store (Rust-based) replaced ChromaDB after ChromaDB crashed at 32K chunks. Metadata filtering (firm, year) implemented end-to-end — backend, API, and UI. CI/CD pipeline green on every push.
-
-### Working today
-
-- Document ingestion: PDF, Word, PowerPoint, Excel, Markdown, HTML
-- Vector search via Qdrant 1.17.0 with cosine similarity
-- Metadata filtering — firm and year filters at the vector layer
-- RAG query with inline citations and source references
-- Browser UI — corpus management (create, rename, delete, stats, inspect), file upload with progress, chat with citations
-- Corpus rename — renames directory, cascades corpus_metadata.yaml, triggers background re-index
-- Stats panel — per-file KB sizes, last ingestion time and duration from corpus_metadata.yaml
-- Auto-linkify — URLs and corpus filenames in responses rendered as clickable links
-- FastAPI backend — `/ask`, `/health`, `/corpus/*` (create, rename, delete, info, upload, ingest), `/source`, `/prewarm`
-- Auto-launch script — `ais_start` starts all three services (Qdrant, Ollama, FastAPI backend)
-- Benchmark harness — `benchmarks/bench.py` with CLI flags, auto-generates findings
-- CI/CD — GitHub Actions: lint + unit + integration tests on every push
-- Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
-
-### Recently completed (Beta)
-
-- CrossEncoder reranker (ms-marco-MiniLM) — fixes vocabulary mismatch ✅
-- Page-aware PDF chunking via pdfplumber — page numbers in citations ✅
-- `Open ↗` links — click any citation reference to open the source file directly in your browser ✅
-- Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
-- `--force` ingest flag — atomic wipe + clean re-index ✅
-- YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 14/14 questions pass, 8.6s avg latency at α=0.5 hybrid retrieval, K=10 (M4 Pro) ✅
-- Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
-- Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
-- Manifest-driven `ais_install` — adds any new command alias in one step ✅
-- Help corpus search guidance — per-document routing rules injected into system prompt ✅
-
-### In progress
-
-- Relevance threshold — discard low-scoring chunks
-- XBRL noise stripping in HTML ingestion
-
----
-
-## Roadmap in a Nutshell
-
-| Beta (now) | v2.1 | v3.0 |
-|------------|------|------|
-| ✅ CrossEncoder reranker | Source Dive — click citation → exact page | Docker + AWS ECS Fargate |
-| ✅ Page-aware PDF chunking | One-click installer (.dmg) | Multi-user + shared corpora |
-| ✅ `Open ↗` source file links | Published API documentation | GPU inference (Inferentia2) |
-| ✅ Hybrid retrieval slider (M2.A) | MacBook Air clean install ✅ | Compiled installer (.dmg) |
-| ✅ `--force` atomic ingest | Benchmark comparison tooling | urCrew integration |
-| Relevance threshold | | |
-
-See [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) for the full phased plan. Releases go Beta → v2.1 → v3.0.
-
-> AIStudio is intentionally in a state of permanent Beta. Not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning exists to mark milestones, not to signal completion.
-
----
-
 ## Architecture — Local (Current)
 
 ```mermaid
@@ -153,14 +157,14 @@ flowchart TD
     API -->|generate + embed| OL
 
     subgraph QD["Qdrant · :6333 (Rust)"]
-        QC["aistudio_sec_10k\n105,964 chunks"]
+        QC["aistudio_sec_10k\n100,659 chunks"]
         QF["Metadata filter\nfirm · year · FieldCondition"]
         QH["HNSW index\ncosine similarity · 768-dim"]
     end
 
     subgraph OL["Ollama · :11434"]
         OE["nomic-embed-text\n768-dim embeddings"]
-        OM["llama3.1:8b / 70b / mistral:7b\nlocal inference\nno external API"]
+        OM["llama3.1:8b / mistral:7b / gemma3:27b\nlocal inference\nno external API"]
     end
 
     subgraph ING["Ingestion Pipeline"]
@@ -181,7 +185,7 @@ flowchart TD
 
 | | ChromaDB | Qdrant |
 |--|---------|--------|
-| Stability at scale | Crashed at 32K chunks | Stable at 106K chunks |
+| Stability at scale | Crashed at 32K chunks | Stable at 100K+ chunks |
 | Language | Python | Rust |
 | Metadata filtering | Limited | Native Filter/FieldCondition |
 | Memory model | Python GC | Rust ownership, near-zero overhead |
@@ -190,7 +194,7 @@ flowchart TD
 
 ---
 
-## Architecture — Cloud (v3.0 Roadmap)
+## Architecture — Cloud (Future)
 
 The local four-process pattern maps directly to a containerized cloud deployment. Each process becomes a container; Qdrant and Ollama have official Docker images.
 
@@ -241,7 +245,7 @@ flowchart TD
     style ALB fill:#2e1a0a,stroke:#d97b4a,color:#e0e0e0
 ```
 
-**Local → cloud (Release 2.0) is a container boundary, not an architecture change.** Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in Docker and deployed to ECS Fargate. No code changes required.
+**Local → cloud (a future release) is a container boundary, not an architecture change.** Same FastAPI app, same Qdrant queries, same Ollama interface — wrapped in Docker and deployed to ECS Fargate. No code changes required.
 
 ---
 
@@ -251,9 +255,10 @@ Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
 - **14/14 pass rate** on demo corpus benchmark (M4 Pro, 128GB unified memory, α=0.5 hybrid retrieval)
-- **7/8 (88%)** on SEC 10-K corpus benchmark (8 questions across 25 firms, 105,964 chunks)
+- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100,659 chunks) — precise table-cell extraction is the known frontier; see the audited reports under `benchmarks/sec_10k/reports/`
+- **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
-- **Retrieval adds ~0.3–0.5s** even at 105,964 chunks — inference, not retrieval, is the bottleneck
+- **Retrieval adds ~0.3–0.5s** even at 100,659 chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
 
 All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base. Demo corpus results use hybrid retrieval (α=0.5, K=10); pure vector retrieval (default) achieves 13/14.
@@ -265,16 +270,62 @@ All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean in
 ## Benchmark
 
 ```
-Corpus:     144 SEC 10-K filings, 25 financial services firms
-Chunks:     105,964
-Ingest:     34 min, 54 chunks/sec, 0 failures
-Latency:    ~6s warm (8b and 70b identical on Apple Silicon, M4 Pro 128GB)
-Benchmark:  7/8 (88%) on SEC 10-K, 14/14 (100%) on demo corpus (α=0.5 hybrid retrieval, K=10)
+Corpus:     101 SEC 10-K filings, 21 financial services firms
+Chunks:     100,659
+Ingest:     ~31 min, ~54 chunks/sec, 0 failures
+Model:      gemma3:27b (SEC 10-K benchmark) · llama3.1 / mistral (demo)
+Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
+            ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
+Benchmark:  SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b, 10 questions);
+            demo 14/14 (α=0.5 hybrid retrieval, K=10)
+Frontier:   precise table-cell extraction — see benchmarks/sec_10k/reports/ (audited)
 ChromaDB:   crashed at 32,285 chunks
-Qdrant:     stable at 105,964 chunks
+Qdrant:     stable at 100,659 chunks
 ```
 
 See [benchmarks/](benchmarks/) for the full benchmark harness, timestamped reports, and question sets.
+
+---
+
+## Current Status
+
+Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vector store (Rust-based) replaced ChromaDB after ChromaDB crashed at 32K chunks. Metadata filtering (firm, year) implemented end-to-end — backend, API, and UI. CI/CD pipeline green on every push.
+
+### Working today
+
+- Document ingestion: PDF, Word, PowerPoint, Excel, Markdown, HTML
+- Vector search via Qdrant 1.17.0 with cosine similarity
+- Metadata filtering — firm and year filters at the vector layer
+- RAG query with inline citations and source references
+- Browser UI — corpus management (create, rename, delete, stats, inspect), file upload with progress, chat with citations
+- Corpus rename — renames directory, cascades corpus_metadata.yaml, triggers background re-index
+- Stats panel — per-file KB sizes, last ingestion time and duration from corpus_metadata.yaml
+- Auto-linkify — URLs and corpus filenames in responses rendered as clickable links
+- FastAPI backend — `/ask`, `/health`, `/corpus/*` (create, rename, delete, info, upload, ingest), `/source`, `/prewarm`
+- Auto-launch script — `ais_start` starts all three services (Qdrant, Ollama, FastAPI backend)
+- Benchmark harness — `benchmarks/bench.py` with CLI flags, auto-generates findings
+- CI/CD — GitHub Actions: lint + unit + integration tests on every push
+- Developer tooling — Makefile (`make check`, `make coverage`), pre-commit hooks
+
+### Recently completed (Beta)
+
+- CrossEncoder reranker (ms-marco-MiniLM) — fixes vocabulary mismatch ✅
+- Page-aware PDF chunking via pdfplumber — page numbers in citations ✅
+- `Open ↗` links — click any citation reference to open the source file directly in your browser ✅
+- Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
+- `--force` ingest flag — atomic wipe + clean re-index ✅
+- YAML benchmark question files with corpus auto-detection ✅
+- Demo corpus benchmark: 14/14 questions pass, 8.6s avg latency at α=0.5 hybrid retrieval, K=10 (M4 Pro) ✅
+- Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
+- Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
+- Manifest-driven `ais_install` — adds any new command alias in one step ✅
+- Help corpus search guidance — per-document routing rules injected into system prompt ✅
+- Relevance threshold — low-scoring chunks discarded at the vector layer ✅
+- XBRL noise stripping in HTML ingestion ✅
+
+**What's next:** the Post-Beta and Future phases — Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).
+
+> AIStudio is intentionally in a state of permanent Beta — not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning marks milestones, not completion.
 
 ---
 

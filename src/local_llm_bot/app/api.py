@@ -1,4 +1,43 @@
-# Version: 1.10.1
+# Version: 1.10.9
+# Changelog: 1.10.9 — AIS_02: scope the removed-bracket whitespace tidy to [ \t]+ (spaces/tabs)
+#            so it never collapses newlines / paragraph breaks before punctuation.
+# Changelog: 1.10.8 — AIS_31 (cont.): _remap now DROPS tokens not in appearance_order
+#            (out-of-range / model-invented indices, e.g. "[5,6]" at top_k=5) instead of
+#            keeping them verbatim, and removes a bracket that loses all tokens. Kills the
+#            dangling-marker-with-no-REFERENCES-row desync; trailing-space tidy after removal.
+# Changelog: 1.10.7 — lint (UP037): drop forward-ref quotes on _remap's re.Match[str] annotation.
+# Changelog: 1.10.6 — AIS_31 (orphan/desynced citations on multi-cite, 2026-06-14): renumber
+#            pass now parses every bracket's indices one-by-one (single AND multi like [1,2])
+#            and remaps via a replacement callback. The prior single-bracket regex skipped
+#            multi-cites → an index seen only inside a multi-cite was orphaned (REFERENCES row
+#            with no marker) and the stale multi-cite mis-attributed. Predicate-based, no
+#            placeholder-swap. Reproduced + fixed against the curl temp-0.9 case.
+# Changelog: 1.10.5 — AIS_26 (path leak in answer prose, 2026-06-14): label LLM-context
+#            sources by basename, not absolute path. The model echoes the source label it's
+#            shown; the full path leaked raw filesystem roots (incl. the foreign ingest-time
+#            /Users/<other>/...) into answer text. Citation metadata keeps full doc.source for
+#            Source Dive. Pairs with 1.10.3's serve-time rebase (same root-portability theme).
+# Changelog: 1.10.4 — AIS_25 (dangling page-bearing citations, 2026-06-14): normalize
+#            "[N, p. X]" / "[N, page X]" / "[N, pp. X-Y]" → "[N]" before citation extraction.
+#            Small models fold the page into the marker imitating the page-labeled context;
+#            the pure-numeric extractor then dropped them, leaving dead markers in the text
+#            and incomplete REFERENCES (one source cited at 3 pages rendered as 1 row). The
+#            authoritative page comes from the (source,page) dedup (768), so the embedded
+#            page is redundant. Multi-cite [2,3] untouched (no p./page token). Each distinct
+#            (source,page) now renders its own row.
+# Changelog: 1.10.3 — AIS_01 (citation Open ↗ 404, 2026-06-14): /source now rebases a
+#            foreign/stale absolute source path onto the local repo. Citation `source`
+#            paths are captured at ingest time and can carry another machine/user root
+#            (seed corpora were ingested under /Users/janebarbero/...), so the raw path
+#            failed .exists() → 404, and would also fail the repo/data security check.
+#            Fix: if the raw path doesn't resolve, find its "data/corpora/..." tail and
+#            re-root on _get_repo_root(). No frontend change, no re-ingest; fixes all
+#            corpora's existing payloads. Falls through to the original 404 if no tail.
+# Changelog: 1.10.2 — AIS_17 (backend-kill observability, 2026-06-14): added an @app.on_event
+#            ("shutdown") handler that logs "[backend] shutdown — server stopping" to stderr, so a
+#            backend stopped/killed (graceful SIGTERM) during a long ingest leaves a trace instead
+#            of vanishing silently. Pairs with the lsof preflight in ais_ingest_*.sh. SIGKILL can't
+#            be caught (won't fire). Note: on_event is deprecated — migrate to lifespan later.
 # Changelog: 1.10.1 — Ingest-status freeze fix. In _stream_stderr, parse the [ingest]
 #            file_complete:/normalizer: machine signals by SUBSTRING and BEFORE the tqdm-bar
 #            (is_process_line) classification. pipeline.py renders a live tqdm bar even under
@@ -409,7 +448,13 @@ def generate_answer_with_citations(
     for (src, page), idx in seen_source_pages.items():
         combined = "\n\n".join(source_chunks[idx])
         page_label = f" (p. {page})" if page is not None else ""
-        context_parts.append(f"[{idx}] {src}{page_label}\n{combined}")
+        # AIS_26 — label sources by BASENAME, not the absolute path. The LLM echoes whatever
+        # source label it's shown; with the full path it leaked raw filesystem paths (incl.
+        # the foreign ingest-time root /Users/<other>/...) into answer prose. The basename is
+        # sufficient source context and renders cleanly if echoed. Citation metadata still
+        # carries the full doc.source for Source Dive (unchanged below).
+        src_name = Path(str(src).split("#")[0]).name
+        context_parts.append(f"[{idx}] {src_name}{page_label}\n{combined}")
 
     context = "\n\n".join(context_parts)
 
@@ -484,6 +529,18 @@ def generate_answer_with_citations(
 
     # Normalize [Source N] -> [N] before extracting
     answer = re.sub(r"\[Source\s+(\d+)\]", r"[\1]", answer, flags=re.IGNORECASE)
+    # AIS_25 — Normalize page-bearing markers the LLM emits despite instructions, e.g.
+    # "[3, p. 10]" / "[4, page 45]" / "[2, pp. 5-7]" → "[3]" / "[4]" / "[2]". Small models
+    # imitate the page-labeled context ("[N] <src> (p. X)") by folding the page INTO the
+    # marker; the pure-numeric extractor below ([N]/[N,M]) then fails to match them, so they
+    # were silently dropped — leaving dangling unresolved markers in the text and missing rows
+    # in REFERENCES. The page is recovered authoritatively from the (source, page) dedup
+    # (AIStudio_768), so the embedded page is redundant (and model page-claims can be wrong);
+    # stripping it is safe and correct. Multi-cite [2,3] is NOT matched (no p./page token).
+    answer = re.sub(
+        r"\[(\d+)\s*,\s*(?:p{1,2}\.?|pages?|pg\.?)\s*\d+(?:\s*[-–]\s*\d+)?\s*\]",
+        r"[\1]", answer, flags=re.IGNORECASE,
+    )
     # Find all citation patterns: [1], [2,3], [1][2], etc.
     citation_patterns = re.findall(r"\[(\d+(?:\s*,\s*\d+)*)\]", answer)
 
@@ -508,28 +565,49 @@ def generate_answer_with_citations(
     # Sort citations by index
     citations.sort(key=lambda c: c["index"])
 
-    # Renumber citations by first appearance in answer text — AIStudio_480
-    # Ensures [1] always appears before [2] in the response regardless of retrieval order.
-    # Two-pass approach avoids swap collisions (e.g. [2]→[1] and [1]→[2] in same answer).
+    # Renumber citations by first appearance in answer text — AIStudio_480 / AIS_31
+    # Ensures [1] appears before [2] regardless of retrieval order, AND keeps multi-cites
+    # in sync. AIS_31: the old pass scanned/rewrote only single brackets (\[\d+\]), so a
+    # multi-cite like [1,2] was neither scanned for appearance nor renumbered — an index that
+    # appeared ONLY inside a multi-cite got pushed to the end and orphaned (a REFERENCES row
+    # with no visible marker), and the stale [1,2] then pointed at the wrong sources. Fix:
+    # parse every bracket's indices one-by-one (single AND multi) and remap via a replacement
+    # callback — no clever placeholder-swap, just explicit per-token logic.
     if citations:
         cited_set = {c["index"] for c in citations}
-        # Pass 0: build appearance-order map by scanning answer text left-to-right
+        _grp = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+
+        # Pass 0 — walk every citation group left-to-right; first time a cited index is
+        # seen (in a single OR multi bracket), assign it the next appearance number.
         appearance_order: dict[int, int] = {}
-        for m in re.finditer(r"\[(\d+)\]", answer):
-            orig = int(m.group(1))
-            if orig not in appearance_order and orig in cited_set:
-                appearance_order[orig] = len(appearance_order) + 1
-        # Edge case: cited index not found in text — append at end
+        for m in _grp.finditer(answer):
+            for tok in m.group(1).split(","):
+                old = int(tok.strip())
+                if old in cited_set and old not in appearance_order:
+                    appearance_order[old] = len(appearance_order) + 1
+        # Any cited index never found in text (shouldn't happen post-fix) → append at end.
         for c in citations:
             if c["index"] not in appearance_order:
                 appearance_order[c["index"]] = len(appearance_order) + 1
-        # Pass 1: replace [old] → [__old__] to avoid collision during swap
-        for old_idx in appearance_order:
-            answer = re.sub(rf"\[{old_idx}\]", f"[__{old_idx}__]", answer)
-        # Pass 2: replace [__old__] → [new]
-        for old_idx, new_idx in appearance_order.items():
-            answer = re.sub(rf"\[__{old_idx}__\]", f"[{new_idx}]", answer)
-        # Update citation dicts and re-sort by new index
+
+        # Pass 1 — rewrite every bracket (single or multi) by remapping each index in place.
+        def _remap(m: re.Match[str]) -> str:
+            # AIS_31 (2nd pass, 1.10.8): keep ONLY tokens that became real citations
+            # (present in appearance_order). Drop out-of-range / uncited indices the model
+            # invents — e.g. top_k=5 but it writes "[5,6]"; index 6 has no retrieved source,
+            # so the extractor (idx <= len(docs) guard) never added it as a citation. The old
+            # `.get(t, t)` default KEPT such a token verbatim → a dangling marker with no
+            # REFERENCES row (markers/references desync). Now we drop it; if a bracket loses
+            # every token, the whole bracket is removed.
+            mapped = [str(appearance_order[int(t.strip())])
+                      for t in m.group(1).split(",")
+                      if int(t.strip()) in appearance_order]
+            return "[" + ",".join(mapped) + "]" if mapped else ""
+        answer = _grp.sub(_remap, answer)
+        # Tidy any space left where a fully-invalid bracket was removed ("text [6]." → "text .").
+        answer = re.sub(r"[ \t]+([.,;:])", r"\1", answer)
+
+        # Update citation dicts and re-sort by new index.
         for c in citations:
             c["index"] = appearance_order[c["index"]]
         citations.sort(key=lambda c: c["index"])
@@ -538,6 +616,18 @@ def generate_answer_with_citations(
 
 
 app = FastAPI(title="AIStudio Local LLM Bot")
+
+
+@app.on_event("shutdown")
+def _log_backend_shutdown() -> None:
+    # AIS_17 — backend-kill observability: leave a trace in the log when the server stops.
+    # uvicorn fires this on a graceful SIGTERM (e.g. a long ingest interrupted by a stop/restart),
+    # so a vanished backend is no longer silent. A hard SIGKILL (kill -9) can't be caught and won't
+    # fire this — the ingest-side lsof preflight (ais_ingest_*.sh) covers detecting a replaced/
+    # missing listener. (on_event is deprecated in newer FastAPI; migrate to a lifespan handler
+    # when convenient — kept minimal here to avoid restructuring app startup.)
+    import sys
+    print("[backend] shutdown — server stopping (SIGTERM / graceful stop)", file=sys.stderr, flush=True)
 
 # In-memory ingest status keyed by corpus name
 _ingest_status: dict[str, dict] = {}
@@ -2409,6 +2499,21 @@ async def serve_source(path: str, page: int | None = None) -> FileResponse:
     response header so the browser can scroll to the cited page.
     """
     file_path = Path(path)
+
+    # AIS_01 — cross-machine path rebase. A citation's `source` is the absolute
+    # path captured at INGEST time, which may carry a different machine/user root
+    # (e.g. a seed corpus ingested under /Users/<other>/.../data/corpora/...). If the
+    # raw path doesn't resolve on THIS machine, re-root its "data/corpora/..." tail
+    # onto the local repo. Fixes every existing payload with no re-ingest.
+    if not (file_path.exists() and file_path.is_file()):
+        _norm = path.replace("\\", "/")
+        _marker = "data/corpora/"
+        _idx = _norm.find(_marker)
+        if _idx != -1:
+            _rebased = _get_repo_root() / _norm[_idx:]
+            if _rebased.exists() and _rebased.is_file():
+                file_path = _rebased
+
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"Source file not found: {path}")
 

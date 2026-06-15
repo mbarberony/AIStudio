@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Changelog: 2.6.0 — add --timeout flag (default 120s); threaded through run_query to the
+#            per-question urlopen. Slow large models (gemma3:27b) need --timeout 300 on heavy
+#            multi-firm questions that otherwise hit the 120s wall with 0 citations.
 # Changelog: 2.4.0 — Unified-scope wiring (step 3). --scope now LOADS + validates a scope
 #              via scripts/_scope_common_ops (hard-error on a missing named scope, AIStudio_882)
 #              and exposes its firm-token universe (retrieval restriction is the paired step,
@@ -88,6 +91,7 @@ Flags:
     --model         Model to use (default: from API config)
     --questions     Path to YAML question file (auto-detected from corpus name if omitted)
     --api           API base URL (default: http://localhost:8000)
+    --timeout       Per-question HTTP timeout in seconds (default: 120; raise for slow large models)
     --no-markdown   Skip writing .md report
     --full          Include full answers in report (default: first 4 paragraphs)
     --firm          Inject firm filter into all queries (overrides YAML firm fields)
@@ -160,7 +164,7 @@ import _scope_common_ops as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.5.0"
+VERSION = "2.6.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -193,6 +197,8 @@ def parse_args() -> argparse.Namespace:
                     help="Path to questions YAML file, or bare stem (e.g. sec_10k_questions_no_filter). "
                          "Stem auto-expands to benchmarks/<corpus>/<stem>.yaml.")
     p.add_argument("--api", default="http://localhost:8000", help="API base URL")
+    p.add_argument("--timeout", type=int, default=120,
+                   help="Per-question HTTP timeout in seconds (default: 120; raise for slow large models, e.g. gemma3:27b)")
     p.add_argument("--no-markdown", action="store_true", help="Skip writing .md report")
     p.add_argument("--full", action="store_true", help="Include full answers in report")
     p.add_argument(
@@ -549,6 +555,7 @@ def run_query(
     keywords: list[str] | None = None,
     query_expansion: int = 1,
     entity_filter_mode: str = "auto",
+    timeout: int = 120,
 ) -> dict:
     import urllib.request
 
@@ -587,7 +594,7 @@ def run_query(
 
     t0 = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             elapsed = time.perf_counter() - t0
             data = json.loads(resp.read())
             return {"ok": True, "elapsed_sec": round(elapsed, 2), "data": data}
@@ -1103,6 +1110,7 @@ def main() -> None:
             keywords=_q_kw,
             query_expansion=args.query_expansion,
             entity_filter_mode=_mode,
+            timeout=args.timeout,
         )
 
         ev = evaluate(result, q.get("expected_keywords", []) or q.get("keywords", []),

@@ -91,6 +91,7 @@ Reports are written to `benchmarks/my_corpus/reports/`.
 ### Compare models
 
 ```bash
+ais_bench --model gemma3:27b   # the SEC 10-K benchmark model
 ais_bench --model llama3.1:8b
 ais_bench --model llama3.1:70b
 ```
@@ -139,31 +140,19 @@ The first query in a cold session is slow (20–50s) while the LLM loads into me
 
 ## SEC 10-K Corpus
 
-To benchmark against the full 143-filing SEC corpus:
+To benchmark against the full 101-filing SEC corpus (21 firms):
 
 ```bash
-# Download and ingest first (one-time, ~35 min total)
+# Download first (one-time, ~5 min); then ingest via the UI Upload button
 ais_download_sec_10k
-ais_ingest_sec_10k
 
 # Then benchmark
 ais_bench --corpus sec_10k --top-k 10
 ```
 
-Question file is auto-generated at `benchmarks/sec_10k/sec_10k_questions.yaml` on first `ais_ingest_sec_10k` run.
+Question file ships at `benchmarks/sec_10k/sec_10k_questions.yaml`.
 
 Reports are written to `benchmarks/sec_10k/reports/`.
-
----
-
-## Benchmark Data in Demo Corpus (Operator)
-
-Running `ais_bench_ops` (operator command) automatically:
-- Runs the benchmark
-- Copies the latest PDF report as `AIStudio - Benchmark Data.pdf` to `data/corpora/demo/uploads/`
-- Triggers a demo corpus re-ingest
-
-This means users querying the demo corpus can ask questions about benchmark results without any manual steps. Running `ais_bench_ops` is the canonical way to keep benchmark data current.
 
 ---
 

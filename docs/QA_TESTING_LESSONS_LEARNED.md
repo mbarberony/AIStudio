@@ -1,6 +1,6 @@
 # QA Testing — Lessons Learned
 
-*Version: 1.0.0 | Updated: 2026-04-30*
+*Version: 1.1.0 | Updated: 2026-04-30*
 *Mac Air OBE Clean Install — March 17, 2026*
 *Tester: Manuel Barbero | Platform: MacBook Air M4, 16GB, macOS Sequoia 15.6*
 
@@ -169,7 +169,7 @@ Dock tip added.
 
 ### 13. Progress Bar Interleaved with Qdrant Log Messages
 **Root cause category:** [UX] — Qdrant and ingest run in parallel, logs mix.
-**TODO:** `--quiet` flag for start.sh (v2.0).
+**TODO:** `--quiet` flag for start.sh (post-Beta).
 
 ### 14. Brew Version Said 4.x, Got 5.x
 **Root cause category:** [DOC] — stale version number.
@@ -213,24 +213,34 @@ OBE on a truly clean machine should be run after every significant release.
 
 ---
 
-## Recommended Demo Questions (Mac Air Validated)
+## Recommended Demo Questions
 
-Questions that produced strong answers on both llama3.1:8b and mistral:7b:
+The validated demo benchmark set — all 14 retrieve and answer cleanly from the nine demo
+documents. Run `ais_bench` to execute them (source: `benchmarks/demo/demo_questions.yaml`).
 
-1. "Explain the concept of plateau and its use in the context of planning"
-2. "Why should you not spend too much time on intermediary plateaus?"
-3. "How should a CTO prioritize a three-year technology strategy?"
-4. "What are the key principles for modernizing legacy applications?"
+**Architecture Methodology**
+1. What is QFD and how does it apply to technology architecture?
+2. How do you design an IT organization around architectural principles?
+3. How do architecture concepts help design organizations?
 
-**Notes on these questions:**
-- Question 1 is best overall — grounded in the 2006 FS Journal article
-- Question 2 is a great follow-up to question 1
-- Question 3 produces a strong multi-source answer
-- Question 4 takes ~22s but good results on both models
+**IT Strategy & Leadership**
+4. How should a CTO prioritize a three-year technology strategy?
+5. What does a good technology target state look like?
+6. How do you organize a large-scale IT transformation program?
+7. What is the relationship between business strategy and technology strategy?
 
-**Avoid as demo questions:**
-- Questions about CMDB — retrieves IT Infrastructure doc first, less relevant
-- Open-ended AI limitation questions — may not have strong demo corpus grounding
+**Modern Technology**
+8. What are the key considerations for cloud migration and technology modernization?
+9. What are the key principles for modernizing legacy applications?
+
+**Financial Services**
+10. How do Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms?
+11. How has digitization changed financial services technology?
+12. What is the role of architecture in managing technology risk in financial services?
+
+**Agentic AI**
+13. What are the key opportunities and limitations of agentic AI in financial services?
+14. How should organizations embed AI into their knowledge productivity ecosystem?
 
 ---
 
@@ -243,7 +253,7 @@ Questions that produced strong answers on both llama3.1:8b and mistral:7b:
 | llama3.1:8b query | ✅ 22s first query | Cold load |
 | mistral:7b query | ✅ 18s, strong answer | Often better than 8b |
 | Page numbers in citations | ✅ Correct | p.20, p.16, p.5 etc. |
-| Open ↗ links | ✅ Opens correct document | Page scroll is v2.0 |
+| Open ↗ links | ✅ Opens correct document | Page scroll is post-Beta |
 | git pull → instant fix | ✅ Confirmed | Key workflow validated |
 | Python 3.14 compatibility | ✅ Confirmed | Not officially tested before |
 
@@ -253,13 +263,13 @@ Questions that produced strong answers on both llama3.1:8b and mistral:7b:
 
 | Item | Priority | Owner | Target |
 |------|----------|-------|--------|
-| preflight check script (`scripts/check_env.sh`) | 🟡 | Dev | v1.1 |
-| start.sh: check llama3.1:8b available | 🟡 | Dev | v1.1 |
-| start.sh: port 8000 conflict handling | 🟡 | Dev | v1.1 |
-| start.sh: `--quiet` flag | 🟢 | Dev | v2.0 |
+| preflight check script (`scripts/check_env.sh`) | 🟡 | Dev | Beta |
+| start.sh: check llama3.1:8b available | 🟡 | Dev | Beta |
+| start.sh: port 8000 conflict handling | 🟡 | Dev | Beta |
+| start.sh: `--quiet` flag | 🟢 | Dev | Post-Beta |
 | Ship QUICKSTART.pdf with GitHub watermark | 🟢 | Doc | Next release |
 | Repo-wide path grep on corpus moves | 🟢 | Process | Ongoing |
-| UI loading indicator for cold model load | 🟢 | Dev | v2.0 |
+| UI loading indicator for cold model load | 🟢 | Dev | Post-Beta |
 
 ---
 *Generated: March 17, 2026 | OBE Session — Mac Air M4 Fresh Install*

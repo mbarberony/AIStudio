@@ -49,7 +49,7 @@ uploading files. Required for the corpus file upload endpoint.
 ### `qdrant-client>=1.7.0`
 Client for the Qdrant vector database running locally on port 6333.
 Qdrant replaced ChromaDB after ChromaDB crashed at 32,285 chunks. Qdrant
-is stable at 105,964 chunks with native metadata filtering, Rust-based
+is stable at 100,659 chunks with native metadata filtering, Rust-based
 memory model (near-zero GC overhead), and a production upgrade path
 (sharding, replication, quantization, gRPC).
 

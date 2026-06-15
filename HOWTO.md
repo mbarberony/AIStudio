@@ -59,7 +59,6 @@ If a command is not found, run `source ~/.zshrc` first.
 | `ais_bench` | Run a benchmark on the demo corpus |
 | `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
 | `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
-| `ais_ingest_sec_10k` | Ingest SEC 10-K corpus into AIStudio (~30 min, backend must be running) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:
@@ -94,9 +93,7 @@ No. Your corpus data lives in `~/qdrant_storage/` on disk — completely separat
 
 **When would I need to re-ingest after an upgrade?**
 Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, run:
-```bash
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest   --corpus <name> --root data/corpora/<name>/uploads --force
-```
+re-ingest from the UI: open the corpus, **Delete Corpus**, recreate it with the same name, and re-upload your files with **Add** — AIStudio rebuilds it cleanly in one pass.
 The `--force` flag wipes and rebuilds the corpus cleanly.
 
 **The demo corpus re-ingests automatically** on first `ais_start` after an upgrade if needed.
@@ -126,9 +123,7 @@ ls ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/
 mv ~/Developer/AIStudio/data/corpora/<name>/uploads/trash/<filename> \
    ~/Developer/AIStudio/data/corpora/<name>/uploads/
 
-# Re-ingest to restore it
-AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src python3 -m local_llm_bot.app.ingest \
-  --corpus <name> --root data/corpora/<name>/uploads --force
+# Then re-upload the file via the UI Add button to restore it
 ```
 
 ***What happens when I delete an entire corpus — is it gone forever?***
@@ -172,7 +167,7 @@ from `~/Downloads/sec_10k/` using the **Upload** button. This is the same
 process as ingesting any corpus you build yourself — the download step is
 what's special.
 
-Allow ~34 minutes for ingestion to complete.
+Allow ~30 minutes for ingestion to complete.
 
 > **Why ~/Downloads?** You own the downloaded files — ~2 GB of SEC filings
 > you may want to reuse, inspect, or build a different subset from.
@@ -192,6 +187,8 @@ ollama list
 ollama pull llama3.1:8b       # ~5GB — recommended default, fast
 ollama pull llama3.1:70b      # ~42GB — best quality, requires ~64GB RAM
 ollama pull mistral:7b        # ~4.4GB — alternative option
+ollama pull gemma3:4b         # ~3.3GB — small and fast
+ollama pull gemma3:27b        # ~17GB — best quality-for-size; the benchmark model
 ```
 Once pulled, the model appears automatically in the **Model** dropdown in the UI.
 No restart required.
@@ -200,6 +197,8 @@ No restart required.
 On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 (~6–7s) once warm. Choose based on available RAM:
 - `llama3.1:8b` — 8GB RAM minimum, recommended for most users
+- `gemma3:4b` — 8GB+ RAM, small and fast
+- `gemma3:27b` — 32GB+ RAM, best quality-for-size; the model AIStudio benchmarks on
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 

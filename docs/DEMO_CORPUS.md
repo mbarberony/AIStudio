@@ -1,9 +1,9 @@
 # Demo Corpus
 
-*Version: 1.1.0 | Updated: 2026-05-01*
+*Version: 1.2.0 | Updated: 2026-06-15*
 
 > A curated collection of architecture and strategy documents spanning  
-> 20+ years of work in financial services technology — from 2003 to 2021.
+> 20+ years of work in financial services technology — from 2003 to 2026.
 
 This corpus ships with AIStudio as a ready-to-query demonstration dataset.
 It lets you experience the system immediately after install, without needing
@@ -16,128 +16,76 @@ dense documents on complex topics, not toy data.
 
 ## What's Here
 
-### IT Strategy & Architecture
-Long-form strategy documents covering IT target state design, CTO planning,
-and the "Air Traffic Controller" model for making things happen in large
-technology organizations. Originally produced for a major wealth management
-firm (2010).
-
-- `01 - WMA IT Target State Strategy and Architecture - 2010.pdf` (30pp)
-- `02 - WMA CTO Activity Plan.pdf` (18pp)
-- `03 - WMA IT Strategy and Architecture - Making Things Happen - The Air Traffic Controller Model.pdf` (15pp)
-- `WMA - IT Target State Post Trade ES-20100922.ppt`
+Nine original documents spanning 2003–2026 — architecture methodology, financial-services
+technology strategy, and the evolution toward AI-enabled systems.
 
 ### Architecture Methodology
-Foundational thinking on enterprise architecture — how to use architecture
-concepts to design organizations, how Quality Function Deployment (QFD)
-applies to technology architecture, and how to structure an IT organization
-around architectural principles.
+Foundational thinking on enterprise architecture and how Quality Function Deployment (QFD)
+applies to technology architecture.
 
-- `Architecture Concepts and How To Use Them To Design an Organizations.pdf` (48pp)
-- `Architecture and QFD.pdf` (9pp)
-- `BOEI - Architecture and QFD - 2003.pdf` (9pp)
-- `Architecting the IT Organization.pdf` (32pp)
-
-### AI & Modern Technology
-A reference architecture for enterprise AI systems, a technology
-modernization and cloud migration framework, and a data strategy document.
-These reflect the evolution from traditional IT architecture toward
-AI-enabled systems.
-
-- `AI-Reference-Architecture.pptx`
-- `Barbero - 2020 - Technology Modernization and Cloud Migration - 2020-02-11.pdf` (17pp) *(sanitized)*
-- `Data Strategy - 2021-01-08a.pdf` (15pp)
-
-### DevOps & Organizational Design
-A DevOps and IT operations review covering organizational roadmap design
-for a mid-size financial services firm (2018).
-
-- `CMK DevOps and IT Operations Review and Org Design - Org Roadmap - 2018-02-27a.pptx`
-
-### GTIS Three Year Strategy
-A full three-year technology strategy document with speaker notes, covering
-infrastructure modernization, platform strategy, and organizational
-transformation at scale.
-
-- `GTIS STRATEGY - MAIN - Three Year Strategy - Final (with speaker notes).ppt`
+- `Erder | Pureur - 2003 - Architecture and QFD.pdf` (454 KB)
+- `Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf` (1.1 MB)
 
 ### Financial Services Journal Series
-Four volumes of an edited journal covering technology strategy and
-architecture in financial services — each 36-61 pages. Topics span
-strategy and architecture concepts, digitization, IT infrastructure,
-and risk/compliance and security. Edited by Manuel Barbero (2005-2006).
+Volumes of an edited journal on technology strategy and architecture in financial services —
+strategy/architecture concepts, digitization, IT infrastructure, and risk/compliance/security.
+Edited by Manuel Barbero (2005–2006).
 
-- `FS Journal, Edited by M-1. Barbero - Strategy and Architecture Concepts and Techniques - 2006.pdf` (61pp)
-- `FS Journal, Edited by M. Barbero - Digitization.pdf` (36pp)
-- `FS Journal, Edited by M. Barbero - IT Infrastructure.pdf` (52pp)
-- `FS Journal, Edited by M. Barbero - RiskCompliance and Security - 2005.pdf` (60pp)
+- `Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf` (2.7 MB)
+- `Barbero et al. - 2005 - FS Journal - Digitization.pdf` (1.8 MB)
+- `Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf` (1.1 MB)
+- `Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf` (872 KB)
+
+### Modern Technology, Data & AI
+The evolution from traditional IT architecture toward cloud, data, and AI-enabled systems.
+
+- `Barbero - 2020 - Technology Modernization and Cloud Migration.pdf` (1.4 MB)
+- `Barbero | Hunt - 2021 - Data Strategy.pdf` (2.3 MB)
+- `Barbero - 2026 - Agentic AI in Financial Services.pdf` (97 KB)
 
 ---
 
 ## Suggested Demo Questions
 
-These questions are designed to showcase both retrieval quality and the
-depth of the corpus. They work well for demonstrating AIStudio to
-technical reviewers or potential users.
-
-The complete machine-readable question set lives in `benchmarks/demo/demo_questions.yaml`
-(14 questions across 4 topics, all validated against the corpus). Run `ais_bench`
-to execute them as a benchmark.
-
-**Mac Air OBE-validated questions** (strongest answers, both llama3.1:8b and mistral:7b):
-1. "Explain the concept of plateau and its use in the context of planning"
-2. "Why should you not spend too much time on intermediary plateaus?"
-3. "How should a CTO prioritize a three-year technology strategy?"
-4. "What are the key principles for modernizing legacy applications?"
-
-See `docs/QA_TESTING_LESSONS_LEARNED.md` for the full clean install validation report.
-
-**Strategy & Leadership**
-- What is the Air Traffic Controller model and how does it apply to IT strategy?
-- How should a CTO prioritize a three-year technology strategy?
-- What are the key principles of IT target state architecture?
+These are the questions AIStudio's demo benchmark runs against the corpus — all 14 are
+validated to retrieve and answer cleanly from the nine documents. Run `ais_bench` to
+execute them; the machine-readable set lives in `benchmarks/demo/demo_questions.yaml`.
 
 **Architecture Methodology**
 - What is QFD and how does it apply to technology architecture?
-- How do you design an IT organization around architecture principles?
-- What are the core concepts of enterprise architecture?
+- How do you design an IT organization around architectural principles?
+- How do architecture concepts help design organizations?
+
+**IT Strategy & Leadership**
+- How should a CTO prioritize a three-year technology strategy?
+- What does a good technology target state look like?
+- How do you organize a large-scale IT transformation program?
+- What is the relationship between business strategy and technology strategy?
 
 **Modern Technology**
-- What does a reference architecture for enterprise AI look like?
 - What are the key considerations for cloud migration and technology modernization?
-- What is the role of data strategy in digital transformation?
-- How does DevOps change IT operations and organizational design?
+- What are the key principles for modernizing legacy applications?
 
 **Financial Services**
-- What are the key risk and compliance considerations for financial services IT?
+- How do Sarbanes-Oxley and Basel II requirements shape IT governance and security architecture in financial services firms?
 - How has digitization changed financial services technology?
-- What are the infrastructure considerations specific to financial services?
+- What is the role of architecture in managing technology risk in financial services?
 
----
+**Agentic AI**
+- What are the key opportunities and limitations of agentic AI in financial services?
+- How should organizations embed AI into their knowledge productivity ecosystem?
 
 ## Corpus Statistics
 
 | Metric | Value |
 |---|---|
-| Total documents | 11 |
-| Total pages (PDF/PPT) | ~530pp |
-| Date range | 2003 — 2021 |
-| Formats | PDF, PPTX, PPT |
+| Total documents | 9 |
+| Date range | 2003 — 2026 |
+| Formats | PDF |
 | Domain | Financial services technology architecture |
 
 ---
 
 ## Ingesting the Demo Corpus
 
-From the repo root with your virtual environment active:
-
-```bash
-PYTHONPATH=src python -m local_llm_bot.app.ingest \
-  --corpus demo \
-  --root data/corpora/demo/uploads
-```
-
-This indexes all documents in `data/demo/` into a corpus named `demo`.
-Select it from the corpus dropdown in the UI and start querying.
-
-Re-run this command any time new documents are added to `data/demo/`.
+You don't need to. The demo corpus ships pre-ingested and indexes itself on the first `ais_start` — select **demo** from the corpus dropdown and start querying. (To rebuild it from scratch, delete it in the UI and re-add the files via **Upload**.)

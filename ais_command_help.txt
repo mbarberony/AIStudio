@@ -90,7 +90,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--query-expansion <N>] [--entity-filter <mode>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang <list>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--query-expansion <N>] [--entity-filter <mode>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang-questions <list>] [--keywords on|off] [--firm <name>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -100,7 +100,7 @@ Options:
   --version              Show script version
   --corpus <name>        Corpus to benchmark (default: demo)
   --scope <stem>         Scope stem: filters to a language/firm subset.
-                         Reads benchmarks/<corpus>/<corpus>_<stem>_scope.yaml.
+                         Reads data/corpora/<corpus>/scopes/<corpus>_<stem>_scope.yaml.
                          Used to resolve --questions stem.
                          Example: --scope lang_en
   --questions <stem>     Question set stem. With --scope, resolves to
@@ -112,9 +112,12 @@ Options:
   --model <name>         LLM model to use (default: from API config)
   --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
   --min-score <f>        Minimum chunk retrieval score threshold (default: from corpus metadata)
-  --lang <list>          Filter questions by language code (space-separated, e.g. --lang en fr)
+  --lang-questions <list> Filter questions by the language they are PHRASED in (question_language
+                         field; space-separated, e.g. --lang-questions en fr). NOT the firm
+                         filing-language — that split is done with --scope. Default: all.
+  --keywords on|off      BM25 keyword-channel toggle (default on). 'off' = keyword ablation,
+                         independent of --entity-filter.
   --firm <name>          Inject firm filter into all queries (overrides YAML firm fields)
-  --subset <group>       Run only questions whose firm is in the named subset
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
   --api <url>            API base URL (default: http://localhost:8000)
@@ -136,16 +139,16 @@ Options:
 Usage patterns:
   ais_bench --corpus esef_banks --model gemma3:27b
   ais_bench --corpus esef_banks --scope lang_en --questions basic --verbose
-  ais_bench --corpus sec_10k --subset big_banks --topics "Capital & Financial Position"
+  ais_bench --corpus sec_10k --scope big_banks --topics "Capital & Financial Position"
   ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
 
 Question subset filtering (sec_10k):
-  ais_bench --corpus sec_10k --subset big_banks
+  ais_bench --corpus sec_10k --scope big_banks
   ais_bench --corpus sec_10k --topics "AI Risk Evolution,Cybersecurity"
-  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --subset big_banks
+  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
 
-· Subsets compose with --topics, --question-ids, and --lang using AND
-· Available subsets: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
+· --scope composes with --topics, --question-ids, and --lang-questions using AND
+· Available scopes: data/corpora/<corpus>/scopes/<corpus>_<stem>_scope.yaml (e.g. sec_10k: big_banks, challenges)
 · Requires: ais_start must be running
 · Questions: benchmarks/<corpus>/<corpus>_questions.yaml (default) or scope/stem resolution
 · Reports:   benchmarks/<corpus>/reports/ (filename includes scope + filter suffix when active)
@@ -220,7 +223,7 @@ Usage: ais_download_sec_10k [--cik <cik> | --tkr <ticker> | --scope <file.yaml>]
                             [--out <dir>] [--delay <s>] [--help]
 
 Download SEC 10-K filings from EDGAR into data/corpora/sec_10k/uploads/.
-Membership comes from a scope file (default sec_10k_US_full_scope.yaml), or a single
+Membership comes from a scope file (default sec_10k_full_scope.yaml), or a single
 firm via --cik / --tkr. Each filing is verified at download for the iXBRL entity
 tag ingest relies on (dei:EntityRegistrantName); a firm whose filings lack it is
 flagged before you spend an ingest on it.
@@ -229,7 +232,7 @@ Input modes (mutually exclusive; default = the scope file):
   --cik <cik>        One firm by CIK (10-digit; zero-padding optional)
   --tkr <ticker>     One firm by ticker (resolved to CIK via EDGAR)
   --scope <file>     Your own list — entities: [{label, cik|ticker}]
-                     (default: data/corpora/sec_10k/sec_10k_US_full_scope.yaml)
+                     (default: data/corpora/sec_10k/sec_10k_full_scope.yaml)
 
 Year selection (mutually exclusive; default = --latest 1):
   --latest [N]       The N most-recent filings per firm, by filing date.

@@ -1,7 +1,6 @@
-# STD - AIStudio - Codebase Guide - 2026-04-28
+# AIStudio — Codebase Guide
 
-*Type: STD | Domain: AIStudio | Status: ACTIVE*
-*Version: 1.4.0 | Created: 2026-04-06 | Last updated: 2026-06-08 | Owner: Manuel Barbero*
+*Version: Beta | Updated: 2026-06-15*
 
 ---
 
@@ -27,7 +26,7 @@ AIStudio follows conventional Python project structure with deliberate disciplin
 - A single HTML file (`front_end/rag_studio.html`) is the entire frontend — no build step, no node_modules, no bundler. All JS and CSS are inline. AIStudio runs fully offline and the UI must be self-contained.
 - `data/corpora/` is partially tracked — the shipped `demo/` corpus is tracked in git. The `help/` corpus config file (`help_corpus_metadata.yaml`) is tracked; its PDFs are regenerated at startup. User-generated corpora are gitignored.
 - No ORM, no database — the application uses Qdrant (vector store) and flat JSONL files for corpus metadata. The data model is intentionally simple for a local, single-user application.
-- `ais_install` is manifest-driven — `bundle_manifest.yaml` is the single source of truth for command paths and installation type. Adding a new command requires a manifest entry; `ais_install [cmd]` then installs it without touching other aliases.
+- `ais_install` is manifest-driven — `ais_user_commands_manifest.yaml` (repo root) is the source of truth for command paths and installation type. Adding a new command requires a manifest entry; `ais_install [cmd]` then installs it without touching other aliases.
 
 ---
 
@@ -240,4 +239,4 @@ AIStudio commands come in two tiers.
 
 ---
 
-★★★  ★★★
+<div align="center" style="text-align: center">★★★&nbsp;&nbsp;&nbsp;&nbsp;★★★</div>

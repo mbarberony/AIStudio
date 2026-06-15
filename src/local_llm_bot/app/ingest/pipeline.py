@@ -1,3 +1,20 @@
+# Version: 1.8.34
+# Changelog: 1.8.34 — AIS_12 follow-up: capped bar at {bar:20} so timing (elapsed/remaining/avg) sits right after the bar, not pushed to the far-right edge of a wide terminal by the unsized {bar}. Prior step:
+#            created with fixed ncols=130 + {bar:40}; the rendered line (label + long filename +
+#            bar:40 + elapsed/remaining/avg) ran ~130-135 cols, so on a narrower terminal it
+#            WRAPPED and tqdm's \r could only clear the current visual row — leaving every prior
+#            frame behind (the "wall of repeated lines", and 0%-looking partial frames). 1.8.33 switched
+#            to dynamic_ncols=True (auto-fit terminal, re-detect on resize — matching the existing
+#            comment) and {bar:20} (tqdm sizes the bar to remaining width) in all bar_format strings,
+#            so the line never exceeds terminal width and \r overwrites cleanly. Render-only; no
+#            change to n/total/timing math. NEEDS LIVE VERIFY (tqdm rendering is untestable in CI).
+# Version: 1.8.32
+# Changelog: 1.8.32 — AIStudio_912 (Manuel CLI signature change, 2026-06-14): --files tokens are
+#            now OR-matched against basenames — each token is a literal substring, or a regex if it
+#            contains regex metacharacters (* + ? [ ] ( ) | ^ $ { } \). New _selective_match() helper;
+#            the only_files filter at discovery no longer requires an exact basename match. Covers
+#            every ais_ingest_<corpus> (shared engine). Backward compatible: an exact filename still
+#            matches as its own literal substring.
 # Version: 1.8.31
 # Changelog: 1.8.31 — Ingest-status freeze fix (source side). Gate the live tqdm Process bar
 #            on _sys.stderr.isatty() (line ~894) so it renders ONLY in an operator TTY, not
@@ -50,7 +67,7 @@
 #            ValueError unpacking for all non-markup files (PDF, DOCX, MD, etc.).
 #            AIStudio_736.
 # Changelog: 1.8.8 — Plain tqdm, no subclass. bar_format mutated per-file via
-#            p_process.bar_format = f"  {n} of {T} · {pct}|{bar}| {elapsed}<{remaining}"
+#            p_process.bar_format = f"  {n} of {T} · {pct}|{bar:20}| {elapsed}<{remaining}"
 #            tqdm native {elapsed}/{remaining} supply timing. Chunk-based total.
 #            dynamic_ncols=True auto-detects terminal width (no parasitic box).
 #            No {desc} in bar_format — eliminates ": " desc_pad artifact.
@@ -413,6 +430,38 @@ def _tqdm_write(pbar: Any | None, msg: str) -> None:
         pbar.refresh()  # redraw bar below the written line
     else:
         print(msg, file=_sys.stderr)
+
+
+# Chars that signal a token is meant as a regex. `.` and `-` are deliberately EXCLUDED —
+# they appear in nearly every filename and are almost always meant literally; a token with
+# only those is matched as a literal substring (where `.` still matches itself anyway).
+_FILES_REGEX_META = _re.compile(r"[*+?\[\]()|^${}\\]")
+
+
+def _selective_match(name: str, patterns: Iterable[str]) -> bool:
+    """AIStudio_912 — match a basename against the --files token set, OR semantics.
+
+    Each token is matched case-insensitively. A token containing regex metacharacters
+    (* + ? [ ] ( ) | ^ $ { } \\) is compiled as a regex and `re.search`ed against the
+    name; any other token is treated as a literal substring. A malformed regex falls back
+    to a literal-substring test so a stray metacharacter never aborts a run. `name` matches
+    if ANY token matches (so `--files BlackRock` selects BlackRock_10K_*.htm, and
+    `--files 'JPM.*2025,Citi'` selects either).
+    """
+    low = name.lower()
+    for pat in patterns:
+        if not pat:
+            continue
+        if _FILES_REGEX_META.search(pat):
+            try:
+                if _re.search(pat, name, _re.IGNORECASE):
+                    return True
+                continue
+            except _re.error:
+                pass  # malformed regex → fall through to literal-substring test
+        if pat.lower() in low:
+            return True
+    return False
 
 
 def _extract_document_head(
@@ -858,14 +907,14 @@ def ingest_corpus(
         if p_discover is not None:
             p_discover.close()
 
-    # Selective ingest: restrict to the explicit allowlist if given. Matched by
-    # basename (the UI sends filenames, not paths). Everything not in the set —
-    # whether already indexed or parked in uploads/ awaiting a later decision —
-    # is dropped from this run entirely, so totals/denominators below reflect
-    # ONLY the chosen files. (AIStudio: per-file selective ingest.)
+    # Selective ingest: restrict to the explicit allowlist if given. AIStudio_912 — each
+    # --files token is OR-matched against the basename: a literal substring, or a regex if it
+    # contains regex metacharacters. (The UI still sends exact filenames, which match as their
+    # own literal substring.) Everything not matched — whether already indexed or parked in
+    # uploads/ awaiting a later decision — is dropped from this run entirely, so totals/
+    # denominators below reflect ONLY the chosen files.
     if only_files is not None:
-        _want = {Path(n).name for n in only_files}
-        discovered = [p for p in discovered if p.name in _want]
+        discovered = [p for p in discovered if _selective_match(p.name, only_files)]
         files_discovered = len(discovered)
 
     # -----------------------
@@ -925,13 +974,13 @@ def ingest_corpus(
         _bar_n_str = "0".rjust(_n_width)
         _bar_fmt_base = (
             f"  {_bar_n_str} of {_total_supported} · "
-            "{percentage:.0f}%|{bar:40}| elapsed: -- · remaining: -- · avg: --"
+            "{percentage:.0f}%|{bar:20}| elapsed: -- · remaining: -- · avg: --"
         )
         p_process = tqdm_cls(
             total=_est_total_chunks_bar,
             desc="",
             unit="chunk",
-            ncols=130,  # wide enough for label + bar:40 + timing without parasitic artifact
+            dynamic_ncols=True,  # auto-fit terminal width (re-detects on resize) so the bar never wraps → \r overwrites cleanly (AIS_12)
             bar_format=_bar_fmt_base,
             leave=True,
         )
@@ -972,7 +1021,7 @@ def ingest_corpus(
                     _n_str = str(files_supported).rjust(_n_width)
                     p_process.bar_format = (
                         f"  {_n_str} of {_total_supported} · {file_path.name} · "
-                        "{percentage:.0f}%|{bar:16}| elapsed: -- · remaining: -- · avg: --"
+                        "{percentage:.0f}%|{bar:20}| elapsed: -- · remaining: -- · avg: --"
                     )
                     p_process.refresh()
                 doc = load_document(file_path)
@@ -1108,7 +1157,7 @@ def ingest_corpus(
                                 _n_str = str(n_file).rjust(n_w)
                                 pbar.bar_format = (
                                     f"  {_n_str} of {n_total} · {fname} · "
-                                    f"{{percentage:.0f}}%|{{bar:40}}| "
+                                    f"{{percentage:.0f}}%|{{bar:20}}| "
                                     f"elapsed: {_fmt_s(_el)} · "
                                     f"remaining: ~{_fmt_s(_total_remaining)} · "
                                     f"avg: {_avg}"
@@ -1333,7 +1382,7 @@ def ingest_corpus(
                     _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
                     p_process.bar_format = (
                         f"  {_n_done} of {_total_supported} · {file_path.name} · "
-                        f"{{percentage:.0f}}%|{{bar:40}}| "
+                        f"{{percentage:.0f}}%|{{bar:20}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
                         f"avg: {_avg_ms}"
@@ -1388,7 +1437,7 @@ def ingest_corpus(
                     _avg_ms = f"{1000/_chunks_per_sec:.0f}ms/chunk" if _chunks_per_sec > 0 else "--ms/chunk"
                     p_process.bar_format = (
                         f"  {_n_done} of {_total_supported} · {file_path.name} · "
-                        f"{{percentage:.0f}}%|{{bar:40}}| "
+                        f"{{percentage:.0f}}%|{{bar:20}}| "
                         f"elapsed: {_fmt_sec(_elapsed)} · "
                         f"remaining: ~{_fmt_sec(_remaining)} · "
                         f"avg: {_avg_ms}"

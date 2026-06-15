@@ -1,7 +1,13 @@
 #!/usr/bin/env zsh
 # ais_ingest_esef.sh — Ingest an ESEF iXBRL corpus into AIStudio
-# Version: 1.1.0
+# Version: 1.2.0
 # Changelog:
+#   1.2.0 — AIStudio_912: --files <pat1,pat2,...> passthrough → engine --files (selective
+#           ingest). Each comma-separated token is OR-matched case-insensitively against the
+#           basename — a literal substring, or a regex if it contains regex metacharacters
+#           (matched by pipeline._selective_match, shared with sec_10k). Mirrors
+#           ais_ingest_sec_10k.sh v1.4.5: the ▶ Ingesting line + time estimate use the SELECTED
+#           count when --files is set (preflight "✅ N filings ready" still counts all on disk).
 #   1.1.0 — Incremental ingest by default. Remove Qdrant guard that blocked
 #           without --force. Python ingest engine already skips unchanged files
 #           via manifest (files_skipped_unchanged). --force now means explicit
@@ -20,7 +26,7 @@
 # ── Source guard ─────────────────────────────────────────────────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 SCRIPT_NAME="ais_ingest_esef"
 REPO="${0:A:h}"
 HELP_FILE="$REPO/ais_command_help.txt"
@@ -32,12 +38,16 @@ _show_help() {
     else
         echo "$SCRIPT_NAME v$VERSION — Ingest ESEF iXBRL corpus into AIStudio"
         echo ""
-        echo "Usage: $SCRIPT_NAME [--corpus <name>] [--force] [--verbose] [--help] [--version]"
+        echo "Usage: $SCRIPT_NAME [--corpus <name>] [--force] [--files <pat1,pat2,...>] [--verbose] [--help] [--version]"
         echo ""
         echo "Options:"
         echo "  --corpus <name>   Corpus name (default: esef_banks)"
         echo "  --force           Full rebuild — wipe collection and re-ingest all files"
         echo "                    Default (no --force): incremental — only new/changed files"
+        echo "  --files <list>    Ingest ONLY files matching these comma-separated patterns (others"
+        echo "                    untouched). Each token is OR-matched case-insensitively against the"
+        echo "                    basename — a literal substring, or a regex if it contains regex"
+        echo "                    metacharacters. e.g. --files Nordea  or  --files 'BNP.*2025,ING'."
         echo "  --verbose         Print full JSON result payload after summary"
         echo "  --help            Show this help and exit"
         echo "  --version         Print version and exit"
@@ -54,6 +64,7 @@ if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
 CORPUS="esef_banks"
 FORCE=0
 VERBOSE=0
+FILES=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -64,6 +75,10 @@ while [[ $# -gt 0 ]]; do
         --force)
             FORCE=1
             shift
+            ;;
+        --files)
+            FILES="$2"   # comma-separated patterns (substring/regex, OR) → selective ingest
+            shift 2
             ;;
         --verbose)
             VERBOSE=1
@@ -182,16 +197,26 @@ except: print('')
 " 2>/dev/null || echo "")
 fi
 
-if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
-    ESTIMATE_PRO=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
-    ESTIMATE_AIR=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * 2.5 * $FILE_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
+# Effective count for the time estimate + the ▶ Ingesting line: the SELECTED file count in
+# --files mode, else the whole corpus. (Preflight "✅ N filings ready" still counts all on disk.)
+if [[ -n "$FILES" ]]; then
+    INGEST_COUNT=$(echo "$FILES" | tr ',' '\n' | grep -c .)
 else
-    ESTIMATE_PRO=$(( FILE_COUNT * 130 / 60 ))
-    ESTIMATE_AIR=$(( FILE_COUNT * 320 / 60 ))
+    INGEST_COUNT=$FILE_COUNT
+fi
+
+if [[ -n "$AVG_SECS_PER_FILE" && "$AVG_SECS_PER_FILE" != "None" ]]; then
+    ESTIMATE_PRO=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * $INGEST_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
+    ESTIMATE_AIR=$(python3 -c "import math; v=$AVG_SECS_PER_FILE * 2.5 * $INGEST_COUNT; print(f'{v/60:.0f}' if v >= 60 else '< 1')" 2>/dev/null || echo "?")
+else
+    ESTIMATE_PRO=$(( INGEST_COUNT * 130 / 60 ))
+    ESTIMATE_AIR=$(( INGEST_COUNT * 320 / 60 ))
 fi
 
 # For incremental runs, note that unchanged files will be skipped
-if [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" -gt 0 && "$FORCE" -eq 0 ]]; then
+if [[ -n "$FILES" ]]; then
+    INGEST_NOTE=" (selective — ${FILES//,/, } only)"
+elif [[ -n "$EXISTING_CHUNKS" && "$EXISTING_CHUNKS" -gt 0 && "$FORCE" -eq 0 ]]; then
     INGEST_NOTE=" (incremental — unchanged files skipped)"
 else
     INGEST_NOTE=" (full rebuild)"
@@ -199,7 +224,7 @@ fi
 
 echo "--- Ingesting"
 # STD §1+§8: ▶ action line with · separators between fields, trailing ...
-echo "▶ Ingesting $FILE_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}..."
+echo "▶ Ingesting $INGEST_COUNT filings · ~${ESTIMATE_PRO} min on M4 Pro · ~${ESTIMATE_AIR} min on M4 Air${INGEST_NOTE}..."
 
 # ── Ingest ────────────────────────────────────────────────────────────────────
 cd "$REPO"
@@ -211,6 +236,7 @@ INGEST_ARGS=(
 )
 [[ "$FORCE" -eq 1 ]] && INGEST_ARGS+=(--force)
 [[ "$VERBOSE" -eq 1 ]] && INGEST_ARGS+=(--verbose)
+[[ -n "$FILES" ]] && INGEST_ARGS+=(--files "$FILES")
 
 caffeinate -i env AISTUDIO_VECTORSTORE=qdrant PYTHONPATH=src \
     python3 -m local_llm_bot.app.ingest "${INGEST_ARGS[@]}"
@@ -224,6 +250,7 @@ if [[ "$INGEST_EXIT" -eq 0 ]]; then
     echo "· Select '$CORPUS' in the AIStudio corpus dropdown to query."
     echo "· To benchmark : ais_bench --corpus $CORPUS"
     echo "· To add files : ais_download_esef --scope <scope> && $SCRIPT_NAME --corpus $CORPUS"
+    echo "· To ingest some : $SCRIPT_NAME --files Nordea,ING   (substring/regex match, OR; others untouched)"
     echo "· To rebuild   : $SCRIPT_NAME --corpus $CORPUS --force"
 else
     echo "❌ Ingest exited with error code $INGEST_EXIT."

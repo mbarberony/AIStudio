@@ -1,38 +1,11 @@
-# FILE_GUIDE.md
-*Type: REF | Domain: AIStudio | Status: ACTIVE*
-*Version: 1.2.0*
+# AIStudio — File Guide
+*Version: Beta | Updated: 2026-06-15*
 *Created: 2026-05-20 | Last updated: 2026-06-08 | Owner: Manuel Barbero*
 ---
 
 ## How to use this guide
 
 This is a **functional/relational** file guide — answers "what does each file do, what does it consume, what does it produce, what depends on it" rather than just "where does it live."
-
----
-
-## §1 The naming convention contract
-
-All AIStudio files follow a consistent naming convention. Quick reference:
-
-| TYPE | Class | What this file IS | When you produce one | What reads it |
-|---|---|---|---|---|
-| **STD** | B | Codified standard. Authoritative on its scope. | Codifying a rule that's been validated. | Reference when in doubt. |
-| **REF** | B | Reference material. Cheat sheets, FILE_GUIDE itself. | Producing a navigational/onramp doc. | Ad hoc lookup. |
-| **WIP** | B or A | Work-in-progress. Plan, audit, draft. | Capturing a multi-session investigation. | Future sessions; promoted to NOTES or absorbed into STD. |
-| **NOTES** | A or B | Session-bound or topical observations. Empirical record. | Capturing what was learned, not what was decided. | Cross-session continuity; promoted to STD if pattern emerges. |
-| **CONCEPT** | B | Foundational explanation. "Why this exists." | Defining a primitive or initiative. | Onboarding. |
-| **SESS** | A | Permanent session archive. | End of session, summarizes outcomes. | Cross-session memory. |
-| **PIPELINE** | D | Living work tracker. No date in filename. | Continuously updated each session. | Every session at start (planning pass). |
-| **TMPL** | B | Reusable template (Word, PowerPoint, etc.). | Codifying a document format. | Document creation. |
-| **RES** | B | Resume variant. JOB domain. | Tailoring resume for an application. | Application submission. |
-
-**Filename pattern** (universal): `TYPE - DOMAIN - TOPIC - DATE[ - HHMM][.ext]`
-**Domains**: General, AIStudio, JOB, urc
-
-**Class A** (operational, multiple per day) → DATE + HHMM required
-**Class B** (standards, daily revision max) → DATE only, letter suffix for same-day
-**Class C** (code/SDLC) → no date in filename; version inside file
-**Class D** (living docs) → no date in filename; date in `*Last Updated*` field
 
 ---
 
@@ -107,7 +80,7 @@ Each corpus is a self-contained folder:
 | `manifest.jsonl` | Per-file ingest record: chunks count, last_ingested_at | Ingest pipeline |
 | `trash/` | Soft-deleted files (recoverable) | UI delete |
 
-**Demo corpus** ships with the repo. **Help corpus** is built from `docs/` + key root markdown. **SEC 10-K corpus** is downloaded from SEC EDGAR via `ais_download_sec_10k` and ingested via `ais_ingest_sec_10k`. **User corpora** are created via the UI New button — private, gitignored, no special setup required.
+**Demo corpus** ships with the repo. **Help corpus** is built from `docs/` + key root markdown. **SEC 10-K corpus** is downloaded from SEC EDGAR via `ais_download_sec_10k` and ingested through the UI (Upload button), like any corpus. **User corpora** are created via the UI New button — private, gitignored, no special setup required.
 
 ### `benchmarks/<corpus>/` — Benchmark questions and reports
 
@@ -163,22 +136,9 @@ All commands available after running `./ais_install` from repo root.
 | `ais_log` | Tails the live backend log | Debugging; watching queries | service logs / stdout |
 | `ais_bench` | Runs benchmark suite against a corpus | Validating retrieval quality | `benchmarks/<corpus>/<corpus>_questions.yaml` / benchmark report |
 | `ais_download_sec_10k` | Downloads SEC 10-K filings from EDGAR | Setting up SEC corpus (optional) | EDGAR / `data/corpora/sec_10k/uploads/` |
-| `ais_ingest_sec_10k` | Ingests SEC filings into AIStudio | After downloading SEC | uploads/ / index.jsonl + Qdrant |
 | `ais_help` | Shows command reference | Forgot a command | `ais_command_help.txt` / stdout |
 | `ais_install` | Installs/updates user commands | Fresh install; new command | `ais_user_commands_manifest.yaml` / shell aliases in `~/.zshrc` |
 | `ais_create_shortcut` | Creates AIStudio Dock/Desktop icon (macOS) | Optional post-install | / `~/Desktop/AIStudio.app` |
-
----
-
-## §5 The session lifecycle — what files flow when
-
-### During session
-
-| What's happening | Files you read | Files produced |
-|---|---|---|
-| Routine work | docs/, README, HOWTO | — |
-| Producing a versioned doc | Existing version | New version with bumped front-matter version |
-| Deploying files | File in `~/Downloads/` | File at canonical path |
 
 ---
 
@@ -207,17 +167,6 @@ All commands available after running `./ais_install` from repo root.
 | `docs/` | User documentation + help corpus sources | Ingested into help corpus |
 | `benchmarks/` | Benchmark harness + question files + reports | Run by `ais_bench` |
 | `data/` | Corpus data (demo + help tracked; user corpora gitignored) | Read by `rag_core.py` |
-
----
-
-## §11 Cross-cutting workflows
-
-### Workflow B: Producing a tailored resume
-
-1. Read the Resume Development standard (template system + Canonical Timeline)
-2. Read closest existing resume variant for proof points reuse
-3. Produce `RES - Manuel Barbero - <Firm> - <Role> - <date>[<letter>].docx`
-4. Update master tracker
 
 ---
 
@@ -264,6 +213,8 @@ To query your own portfolio — your filings, reports, decks, or PDFs — create
 
 ## §15 Version history
 
+| Beta | 2026-06-15 | Trimmed to the AIStudio file, command, and corpus reference; SEC ingest is UI-only. |
+
 | Version | Date | Changes |
 |---|---|---|
 | 1.2.0 | 2026-06-08 | Added §12a "What files define a corpus — and where they live" (corpus definition + where user portfolio files go). |
@@ -272,4 +223,4 @@ To query your own portfolio — your filings, reports, decks, or PDFs — create
 
 ---
 
-★★★  ★★★
+<div align="center" style="text-align: center">★★★&nbsp;&nbsp;&nbsp;&nbsp;★★★</div>

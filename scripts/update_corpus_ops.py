@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # update_corpus_ops.py — AIStudio Corpus Updater (Operator only)
-# Version: 1.2.1
+# Version: 1.3.1
+# 1.3.1: surgical re-ingest uses the chunks-only DELETE endpoint (.../file/<f>/chunks)
+#        so the file is retained for re-embed; the bare endpoint trashed it (AIStudio_379).
+# 1.3.0: --corpus is now a REQUIRED named flag (was positional). Subject resolution
+#        is case/extension-insensitive against seed sources[]; unknown --subject now
+#        FAILS LOUDLY with the valid list (was a silent full re-ingest). Dropped the
+#        dead _<corpus>_manifest.yaml lookup in run_surgical_ingest (AIStudio_612).
 # Unified script for updating any AIStudio corpus from seed files.
 # Called by ais_update_corpus_ops.sh wrapper.
 #
@@ -84,6 +90,46 @@ def _md5(path: Path) -> str:
         for block in iter(lambda: f.read(65536), b""):
             h.update(block)
     return h.hexdigest()
+
+
+# ── Subject resolution (case/extension-insensitive) ───────────────────────────
+def _resolve_subject(sources: list[dict], user_input: str) -> tuple[str | None, str | None]:
+    """Resolve a user-supplied document name (e.g. 'FILE_GUIDE', 'file_guide',
+    'FILE_GUIDE.pdf') to its canonical (subject, pdf_filename) from the seed
+    sources[]. Case-insensitive; trailing .pdf/.md ignored. (None, None) if no match."""
+    want = user_input.strip().lower()
+    for ext in (".pdf", ".md"):
+        if want.endswith(ext):
+            want = want[: -len(ext)]
+    for s in sources:
+        cands: set[str] = set()
+        subj = s.get("subject")
+        if subj:
+            cands.add(subj.lower())
+        fn = s.get("filename")
+        if fn:
+            cands.add(fn.lower())
+            cands.add(Path(fn).stem.lower())
+        spath = s.get("source_path")
+        if spath:
+            cands.add(Path(spath).name.lower())
+            cands.add(Path(spath).stem.lower())
+        if want in cands:
+            pdf = Path(fn).name if fn else (Path(spath).with_suffix(".pdf").name if spath else None)
+            canon = subj or (Path(fn).stem if fn else want)
+            return canon, pdf
+    return None, None
+
+
+def _valid_subjects(sources: list[dict]) -> list[str]:
+    """Human-facing list of accepted subject names (for error messages)."""
+    out = []
+    for s in sources:
+        if s.get("filename"):
+            out.append(Path(s["filename"]).stem)
+        elif s.get("subject"):
+            out.append(s["subject"])
+    return out
 
 
 # ── Corpus type detection ─────────────────────────────────────────────────────
@@ -403,15 +449,14 @@ def step1_seeded(repo: Path, corpus: str, seed: dict, rebuild: bool) -> tuple[in
 
 # ── Surgical ingest (generated corpora only) ──────────────────────────────────
 def run_surgical_ingest(repo: Path, corpus: str, api: str, subject: str, verbose: bool) -> None:
-    manifest_path = repo / f"meta/_special_corpus_seed_info/{corpus}/_{corpus}_manifest.yaml"
+    # Resolve the subject's PDF from the metadata seed sources[] — single source of
+    # truth (the legacy _<corpus>_manifest.yaml was dropped in AIStudio_612).
+    seed_info = repo / f"meta/_special_corpus_seed_info/{corpus}/_{corpus}_metadata_seed_ops.yaml"
     subject_pdf = None
-    if manifest_path.exists():
-        with open(manifest_path) as f:
-            manifest = yaml.safe_load(f)
-        for s in manifest.get("subjects", []):
-            if s.get("subject") == subject:
-                subject_pdf = Path(s.get("corpus_path", s.get("pdf", ""))).name
-                break
+    if seed_info.exists():
+        with open(seed_info) as f:
+            _seed = yaml.safe_load(f) or {}
+        _, subject_pdf = _resolve_subject(_seed.get("sources", []), subject)
 
     if not subject_pdf:
         _warn(f"Could not resolve PDF for subject '{subject}' — falling back to full ingest.")
@@ -423,7 +468,10 @@ def run_surgical_ingest(repo: Path, corpus: str, api: str, subject: str, verbose
     try:
         from urllib.parse import quote
 
-        r = requests.delete(f"{api}/corpus/{corpus}/file/{quote(subject_pdf)}", timeout=30)
+        # Chunks-only delete (non-destructive): clears Qdrant chunks + metadata ingest
+        # fields but KEEPS the file in uploads/ for re-ingest. The bare endpoint
+        # (without /chunks) trashes the file — which broke the copy below (AIStudio_379).
+        r = requests.delete(f"{api}/corpus/{corpus}/file/{quote(subject_pdf)}/chunks", timeout=30)
         if r.status_code in (200, 404):
             _ok("Existing chunks removed (or file not yet indexed).")
         else:
@@ -443,7 +491,7 @@ def run_surgical_ingest(repo: Path, corpus: str, api: str, subject: str, verbose
 def main() -> None:
     import sys
 
-    _VERSION = "1.1.1"
+    _VERSION = "1.3.1"
     if "--version" in sys.argv:
         print(f"update_corpus_ops v{_VERSION}")
         sys.exit(0)
@@ -451,7 +499,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         prog="update_corpus_ops", description="Update any AIStudio corpus from seed files"
     )
-    ap.add_argument("corpus", help="Corpus name (e.g. help, demo)")
+    ap.add_argument(
+        "--corpus",
+        required=True,
+        help="REQUIRED. Corpus name: help, demo, or any future corpus",
+    )
     ap.add_argument(
         "--meta-only",
         action="store_true",
@@ -470,7 +522,11 @@ def main() -> None:
     ap.add_argument(
         "--subject",
         default=None,
-        help="Regenerate + surgical re-ingest one subject only (generated corpora)",
+        help=(
+            "Regenerate + surgical re-ingest ONE document (generated corpora only). "
+            "Give the document name; case-insensitive, .pdf/.md optional "
+            "(e.g. --subject FILE_GUIDE)."
+        ),
     )
     ap.add_argument("--repo-root", default=None)
     args = ap.parse_args()
@@ -492,6 +548,22 @@ def main() -> None:
     corpus_type = detect_corpus_type(repo, corpus, _seed_data)
 
     print(f"\n{DIM}corpus: {corpus}  |  type: {corpus_type}{RESET}")
+
+    # ── Resolve --subject against the seed (case/extension-insensitive) ────────
+    if args.subject:
+        if corpus_type != "generated":
+            _fail(f"--subject applies to generated corpora only; '{corpus}' is {corpus_type}.")
+        _canon, _pdf = _resolve_subject(_seed_data.get("sources", []), args.subject)
+        if not _canon:
+            _valid = ", ".join(sorted(_valid_subjects(_seed_data.get("sources", [])))) or "(none)"
+            _fail(
+                f"Unknown --subject '{args.subject}' for corpus '{corpus}'.\n"
+                f"\u00b7 Valid: {_valid}\n"
+                f"\u00b7 Case-insensitive; .pdf/.md optional (e.g. FILE_GUIDE)."
+            )
+        if _canon != args.subject:
+            _info(f"Subject '{args.subject}' \u2192 '{_canon}' ({_pdf}).")
+        args.subject = _canon
 
     # ── --meta-only ───────────────────────────────────────────────────────────
     if args.meta_only:

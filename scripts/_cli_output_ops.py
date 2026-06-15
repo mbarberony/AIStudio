@@ -25,13 +25,22 @@ v1.1.0 (2026-06-13): partial glyph → yellow ✓, no block (was white-✓-on-ye
     info() bullet → `·` (was `ℹ`), unifying passive info + auto-resolution. Tracks CLI
     Output STD v2.4.0.
 
+v1.2.0 (2026-06-14): added list_item()/numbered_list()/bullet_list() — aligned sub-item
+    rosters per CLI Output STD §9 (right-aligned marker field, stable text column across
+    digit-widths, ordered/unordered sibling lists share a column). Tracks STD v2.5.0.
+
+v1.2.1 (2026-06-14): added the VERSION code constant (911c) — urc_deploy's new no-VERSION
+    warn (deploy_ops v3.4.0) surfaced that this versionless module printed no [v] on deploy.
+
 NOT a command (underscore-prefixed, no alias) per Naming STD §14.
-Version: 1.1.0
+Version: 1.2.1
 """
 
 from __future__ import annotations
 
 import sys
+
+VERSION = "1.2.1"  # single source of truth for urc_deploy's [v] tag (AIStudio_911c)
 
 # ── ANSI ────────────────────────────────────────────────────────────────────────
 # Colour only when stdout is a TTY; otherwise emit plain glyphs so piped/captured
@@ -87,3 +96,32 @@ def fail(msg: str, *, indent: int = 2) -> None:
 
 def fail_recover(msg: str, *, indent: int = 2) -> None:
     done(GLYPH_FAIL_RECOVER, msg, indent=indent)
+
+
+# ── Sub-item lists (STD - AIStudio - CLI Output §9) ─────────────────────────────
+def list_item(text: str, *, index: int | None = None, total: int | None = None,
+              indent: int = 2) -> None:
+    """Render one aligned list line (STD §9). Ordered when `index` is given (renders
+    "N."), unordered otherwise (renders "*"). The marker is right-aligned in a field
+    sized by `total` (the largest index in the list), so the text column stays put as
+    the count grows into multiple digits and ordered/unordered sibling lists share a
+    text column. Pass `total` even for bullets so they align with a same-length
+    numbered list."""
+    width = len(str(total)) if total else 1            # digit-width of the largest index
+    marker = f"{index:>{width}}." if index is not None else f"{'*':>{width + 1}}"
+    print(f"{' ' * indent}{marker} {text}")
+
+
+def numbered_list(items: list[str], *, indent: int = 2) -> None:
+    """Render an ordered list with right-aligned numbers (STD §9)."""
+    total = len(items)
+    for i, text in enumerate(items, 1):
+        list_item(text, index=i, total=total, indent=indent)
+
+
+def bullet_list(items: list[str], *, indent: int = 2) -> None:
+    """Render an unordered list whose text column aligns with a same-length numbered
+    list (STD §9)."""
+    total = len(items)
+    for text in items:
+        list_item(text, total=total, indent=indent)

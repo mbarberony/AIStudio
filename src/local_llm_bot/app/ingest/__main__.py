@@ -11,6 +11,23 @@ from local_llm_bot.app.ingest.pipeline import ingest_corpus
 from local_llm_bot.app.utils.corpus_paths import corpus_paths
 from local_llm_bot.app.utils.repo_root import find_repo_root
 
+# Version: 1.3.5
+# Changelog: 1.3.5 — AIStudio_912 (Manuel CLI signature change, 2026-06-14): --files help text
+#            updated to describe OR-matched literal-substring / regex patterns (matching logic
+#            lives in pipeline.py v1.8.32 _selective_match). No parse change here — still one
+#            comma-separated string → only_files set; pipeline does the matching.
+#            1.3.4 — AIStudio_909 (Manuel CLI-output flag C): entities and File Ingested rosters
+#            right-aligned in a field sized to the largest index (numbers stay right-aligned,
+#            the `*` shares the field), so the text column is stable and the two sibling lists
+#            align. Was: entities at "  {i:>2}." and files at 4-space "    *" (text aligned but
+#            markers/indent inconsistent).
+#            1.3.3 — AIStudio_909 (flag #5): the ingest summary now ends with a "· File Ingested:"
+#            files written this run as indented `* <basename>` bullets (no path, no "source:"
+#            prefix, no trailing comma). Replaces eyeballing /debug/retrieve for "what landed."
+#            1.3.2 — AIStudio_909 (Manuel CLI-output flag #3): dropped the manual print("")
+#            blank-line separator before the "✅ N files ingested" summary. pipeline.py closes the
+#            Process bar with p_process.clear() (v1.8.31), already leaving the cursor on a fresh
+#            line, so the separator only produced a gratuitous blank line. NEEDS LIVE VERIFY.
 # Version: 1.3.1
 # Changelog: 1.3.1 — AIStudio_906: reset the corpus_metadata `files`/`deleted_files` maps on a
 #            full rebuild (--force, whole corpus) before the per-file merge. The writer only
@@ -74,10 +91,13 @@ def main(argv: list[str] | None = None) -> int:
         "--files",
         default=None,
         help=(
-            "Comma-separated list of filenames (basenames) to ingest exclusively. "
-            "When given, ONLY these files are processed and always re-embedded; every "
-            "other file under --root (indexed or parked) is left untouched. "
-            "Omit to ingest the whole corpus."
+            "Comma-separated list of patterns selecting which files to ingest exclusively. "
+            "Each pattern is OR-matched against the basename, case-insensitively: a literal "
+            "substring, or a regex if it contains regex metacharacters (* + ? [ ] ( ) | ^ $ "
+            "{ } \\). So '--files BlackRock' selects BlackRock_10K_*.htm, and "
+            "'--files JPM.*2025,Citi' selects either. When given, ONLY matched files are "
+            "processed and always re-embedded; every other file under --root (indexed or "
+            "parked) is left untouched. Omit to ingest the whole corpus."
         ),
     )
     p.add_argument("--verbose", action="store_true", help="Print full JSON result payload after summary")
@@ -147,15 +167,27 @@ def main(argv: list[str] | None = None) -> int:
     failures = result.files_failed or 0
     failure_line = f"· ⚠ failures : {failures}" if failures else "· failures   : 0"
 
-    # STD §8: ✅ echoes the ▶ action line subject — no section header needed
-    # Ensure we start on a fresh line after tqdm bar closes
-    print("", file=_sys.stderr)  # newline separator after bar
+    # STD §8: ✅ echoes the ▶ action line subject — no section header needed.
+    # No manual blank-line separator: pipeline.py closes the Process bar with p_process.clear()
+    # (v1.8.31), which already leaves the cursor at column 0 of a fresh line, so the summary
+    # prints directly under the last per-file completion line. The prior print("") here injected
+    # a gratuitous blank line between them (Manuel flag #3, AIStudio_909). In pipe mode the
+    # completion line is already newline-terminated, so dropping the separator is safe there too.
     print(f"✅ {result.files_processed} files ingested · {result.chunks_written:,} chunks · {dur_str}", file=_sys.stderr)
     print(f"· config     : chunk size: {result.chunk_size:,} · overlap: {result.overlap} · model: {result.embed_model}", file=_sys.stderr)
     print(f"· avg        : {avg_chunks:,.0f} chunks/file · {avg_secs:.1f}s/file · {avg_ms_chunk:.0f}ms/chunk", file=_sys.stderr)
     if size_line:
         print(size_line, file=_sys.stderr)
     print(failure_line, file=_sys.stderr)
+    # File Ingested roster (Manuel flag #5 / AIStudio_909): a clean, de-duplicated list of the
+    # files written THIS run — basenames only, indented `*` bullets, no "source:" prefix and no
+    # trailing comma (replaces eyeballing /debug/retrieve). file_stats keys are this run's files.
+    if file_stats:
+        print("· File Ingested:", file=_sys.stderr)
+        _files = sorted(file_stats)
+        _fw = len(str(len(_files)))  # STD §9: marker field sized to the largest index
+        for _fname in _files:
+            print(f"  {'*':>{_fw + 1}} {_fname}", file=_sys.stderr)
 
     # ── Normalizer summary → stderr ──────────────────────────────────────────
     _n_hits = getattr(result, "normalizer_hits", 0)
@@ -206,8 +238,9 @@ def main(argv: list[str] | None = None) -> int:
                     _seen.add(_e.lower())
                     _unique_entities.append(_e)
             print("· entities   :", file=_sys.stderr)
+            _ew = len(str(len(_unique_entities)))  # STD §9: marker field sized to the largest index
             for _i, _ent in enumerate(_unique_entities, 1):
-                print(f"  {_i:>2}. {_ent}", file=_sys.stderr)
+                print(f"  {_i:>{_ew}}. {_ent}", file=_sys.stderr)
         if _n_mm > 0:
             print(f"· ⚠ {_n_mm} entity mismatch warning{'s' if _n_mm > 1 else ''} — entity did not match filename stem", file=_sys.stderr)
 

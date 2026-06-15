@@ -1,4 +1,10 @@
-# Version: 1.0.6
+# Version: 1.1.0
+# Changelog: 1.1.0 — STD CLI Output v2.4.0 §2 conformance: collapse the 7 section labels
+#            to the 4 canonical bundles (Cleanup / Ecosystem / Processing / Reporting).
+#            Backend folds into Ecosystem; Frontend + References + Next commands fold into
+#            Reporting; "Default corpora" → "Processing"; Reporting · lines flush-left.
+#            Glyphs unchanged — §2 endorses ✅ for "already running" (§8 yellow-✓ is
+#            processing-loop-scoped, N/A to discrete service checks).
 # Changelog: 1.0.6 — noqa SIM115 on ExitStack.enter_context(open(...)); remove duplicate
 #            running message; add --start_with tip on plain start; corpus name in ✅ line.
 #            weights, takes ~20s); add waiting message with 10s progress ticks; add
@@ -28,7 +34,7 @@ import webbrowser
 from pathlib import Path
 
 SCRIPT_NAME = "ais_start"
-VERSION = "1.0.6"
+VERSION = "1.1.0"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 BOLD   = "\033[1m"
@@ -155,8 +161,7 @@ def main() -> int:
             return 1
         print("✅ Ollama started.")
 
-    # ── Backend ───────────────────────────────────────────────────────────────
-    _sep("Backend", separator)
+    # ── Backend (continues the Ecosystem bundle — no separator per STD §2) ────
     print("▶ Starting AIStudio backend...")
 
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -209,12 +214,12 @@ def main() -> int:
         print("· To retry: ais_start")
         return 1
 
-    # ── Default corpora ───────────────────────────────────────────────────────
+    # ── Processing ────────────────────────────────────────────────────────────
     # demo and help ship with the repo (tracked in git, data/corpora/).
     # On first run their Qdrant collections are empty — trigger ingest via
     # the backend API (fire-and-forget; UI shows live progress).
     # Subsequent starts: collections already populated, just report count.
-    _sep("Default corpora", separator)
+    _sep("Processing", separator)
 
     for corpus in ("demo", "help"):
         count = _qdrant_collection_count(f"aistudio_{corpus}")
@@ -234,8 +239,8 @@ def main() -> int:
             except Exception as e:
                 print(f"  ⚠ Could not trigger {corpus} ingest: {e}")
 
-    # ── Frontend ──────────────────────────────────────────────────────────────
-    _sep("Frontend", separator)
+    # ── Reporting ─────────────────────────────────────────────────────────────
+    _sep("Reporting", separator)
     if args.start_with:
         print(f"▶ Opening frontend with corpus: {args.start_with}...")
     else:
@@ -251,18 +256,16 @@ def main() -> int:
         print(f"✅ AIStudio is running — corpus: {args.start_with}.")
     else:
         print("✅ AIStudio is running.")
-        print("  · Tip: use --start_with <corpus> to open on a specific corpus.")
+        print("· Tip: use --start_with <corpus> to open on a specific corpus.")
 
-    # ── References ────────────────────────────────────────────────────────────
-    _sep("References", separator)
+    # ── (References — part of Reporting bundle, no separator) ─────────────────
     print(f"· Frontend : {frontend}")
     print(f"· Backend  : {api}")
     print("· Qdrant   : http://localhost:6333")
     print("· Ollama   : http://localhost:11434")
     print("· Logs     : ais_log")
 
-    # ── Next commands ─────────────────────────────────────────────────────────
-    _sep("Next commands", separator)
+    # ── (Next commands — part of Reporting bundle, no separator) ──────────────
     print("· To stop  : ais_stop")
     print("· To restart: ais_start")
     if args.verbose:
