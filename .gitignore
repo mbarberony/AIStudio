@@ -27,28 +27,21 @@ src/*.egg-info/
 meta/
 
 # AIStudio — operator scripts (gitignored, travels via BUNDLE)
+# All operator tooling uses the _ops suffix → ignore by pattern (current + future).
+*_ops.sh
+*_ops.py
+*_ops
 scripts/deploy_files.sh
 scripts/generate_packet.sh
 scripts/bundle_session.sh
 scripts/fix_zshrc.py
 scripts/.deploy_map
 scripts/ais_backup.sh
+scripts/ais_restore.sh
 scripts/ais_commit.sh
 scripts/ais_publish.sh
 scripts/restore_scripts.sh
 scripts/update_help_corpus.py
-scripts/update_help_corpus_ops.py
-scripts/update_corpus_ops.py
-scripts/update_demo_corpus_ops.py
-ais_update_help_ops.sh
-ais_ingest_help_ops.sh
-ais_bench_ops.sh
-ais_help_ops.sh
-ais_ingest_test_ops.sh
-# operator test harnesses (downloader, corpus lifecycle, future) — deployed locally, travel via BUNDLE
-ais_test_*_ops.sh
-ais_update_demo_ops.sh
-ais_bench_sec_10k_ops
 
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/*
@@ -86,11 +79,6 @@ DEMO_SCRIPT.md
 HOWTO_OPS.md
 
 # AIStudio — operator install artifacts
-ais_install_ops
-install_ops
-install_ops.sh
-ais_build_ops_kit_ops.sh
-ais_clean_install_ops.sh
 ais_clean_install.sh
 
 # Legacy artifacts
@@ -107,7 +95,6 @@ PIPELINE.md
 meta/job_hunting/Thought Leadership and References/
 ais_command_help_ops.txt
 
-ais_update_corpus_ops.sh
 scripts/urc/
 data/corpora/help/ingest_failures.jsonl
 benchmarks/esef_banks/
@@ -118,11 +105,3 @@ data/knowledge_sources/gleif/gleif_metadata.yaml
 scripts/ais_enrich_qdrant.py
 scripts/ais_import_knowledge_base.py
 ais_import_knowledge_base.sh
-scripts/urc_url_sweep_ops.sh
-_ais_create_shortcut_ops.sh
-ais_download_sec_10k_ops.sh
-ais_clean_lib_ops.sh
-ais_import_entity_kb_ops.sh
-ais_import_glossary_kb_ops.sh
-ais_test_downloader_ops.sh
-ais_test_ops.sh

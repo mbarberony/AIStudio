@@ -1,6 +1,6 @@
 version: 1.0.0
 regenerated_from: meta/bundle_manifest.yaml
-regenerated_at: '2026-06-15T19:11:17'
+regenerated_at: '2026-06-16T01:21:56'
 commands:
 - alias: ais_bench
   path: ais_bench.sh
