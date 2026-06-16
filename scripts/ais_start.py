@@ -1,4 +1,8 @@
-# Version: 1.1.0
+# Version: 1.2.0
+# Changelog: 1.2.0 — PARK-20/21: guard the Qdrant launch. Pre-check shutil.which("qdrant")
+#            and, if absent, print the QUICKSTART §5 install recipe + ais_restore note and
+#            exit 1 (was: raw FileNotFoundError traceback from subprocess.Popen). Post-check
+#            health after launch and fail with actionable hints if it never comes up.
 # Changelog: 1.1.0 — STD CLI Output v2.4.0 §2 conformance: collapse the 7 section labels
 #            to the 4 canonical bundles (Cleanup / Ecosystem / Processing / Reporting).
 #            Backend folds into Ecosystem; Frontend + References + Next commands fold into
@@ -26,6 +30,7 @@ import argparse
 import contextlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -34,7 +39,7 @@ import webbrowser
 from pathlib import Path
 
 SCRIPT_NAME = "ais_start"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 BOLD   = "\033[1m"
@@ -129,6 +134,19 @@ def main() -> int:
         print("✅ Qdrant already running.")
     else:
         print("▶ Starting Qdrant...")
+        # PARK-20/21: the Qdrant binary is NOT in any backup and is not Homebrew —
+        # it's a GitHub release binary (QUICKSTART §5). A missing binary used to crash
+        # here with a raw FileNotFoundError; fail with actionable guidance instead.
+        if shutil.which("qdrant") is None:
+            print("❌ Qdrant binary not found on PATH.")
+            print("· Qdrant isn't a Homebrew package — it's a GitHub release binary (QUICKSTART §5).")
+            print("· Install (Apple Silicon):")
+            print("    mkdir -p ~/bin && cd ~/bin \\")
+            print("      && curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz \\")
+            print("      && chmod +x ~/bin/qdrant")
+            print("· Then ensure ~/bin is on PATH (source ~/.zshrc) and re-run: ais_start")
+            print("· (ais_restore auto-installs the binary if you're recovering from a backup.)")
+            return 1
         qdrant_storage.mkdir(parents=True, exist_ok=True)
         qdrant_env = {**os.environ, "QDRANT__STORAGE__STORAGE_PATH": str(qdrant_storage)}
         popen_kwargs: dict = dict(cwd=str(qdrant_storage), env=qdrant_env)
@@ -139,6 +157,11 @@ def main() -> int:
             time.sleep(1)
             if _health("http://localhost:6333/healthz"):
                 break
+        if not _health("http://localhost:6333/healthz"):
+            print("❌ Qdrant binary launched but did not become healthy after 10s.")
+            print("· Check it runs: ~/bin/qdrant --version")
+            print("· Check the storage dir isn't locked: ls ~/qdrant_storage")
+            return 1
         print("✅ Qdrant started.")
 
     # Ollama
