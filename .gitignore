@@ -119,3 +119,10 @@ scripts/ais_enrich_qdrant.py
 scripts/ais_import_knowledge_base.py
 ais_import_knowledge_base.sh
 scripts/urc_url_sweep_ops.sh
+_ais_create_shortcut_ops.sh
+ais_download_sec_10k_ops.sh
+ais_clean_lib_ops.sh
+ais_import_entity_kb_ops.sh
+ais_import_glossary_kb_ops.sh
+ais_test_downloader_ops.sh
+ais_test_ops.sh
