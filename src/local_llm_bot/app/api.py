@@ -1,4 +1,7 @@
-# Version: 1.10.9
+# Version: 1.10.10
+# Changelog: 1.10.10 — AIS_27 (2026-06-15): migrated the deprecated @app.on_event("shutdown")
+#            to a FastAPI lifespan context manager (FastAPI(lifespan=...)). Kills the two
+#            on_event DeprecationWarnings; shutdown-trace behavior unchanged.
 # Changelog: 1.10.9 — AIS_02: scope the removed-bracket whitespace tidy to [ \t]+ (spaces/tabs)
 #            so it never collapses newlines / paragraph breaks before punctuation.
 # Changelog: 1.10.8 — AIS_31 (cont.): _remap now DROPS tokens not in appearance_order
@@ -154,6 +157,7 @@ import os
 import re
 import shutil
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime as _dt
 from pathlib import Path
 from typing import Annotated, Any
@@ -615,19 +619,20 @@ def generate_answer_with_citations(
     return {"answer": answer, "citations": citations, "has_citations": len(citations) > 0}
 
 
-app = FastAPI(title="AIStudio Local LLM Bot")
-
-
-@app.on_event("shutdown")
-def _log_backend_shutdown() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # AIS_27 — lifespan replaces the deprecated @app.on_event handlers.
+    # Startup: nothing to set up. Shutdown trace runs after `yield`.
+    yield
     # AIS_17 — backend-kill observability: leave a trace in the log when the server stops.
     # uvicorn fires this on a graceful SIGTERM (e.g. a long ingest interrupted by a stop/restart),
     # so a vanished backend is no longer silent. A hard SIGKILL (kill -9) can't be caught and won't
-    # fire this — the ingest-side lsof preflight (ais_ingest_*.sh) covers detecting a replaced/
-    # missing listener. (on_event is deprecated in newer FastAPI; migrate to a lifespan handler
-    # when convenient — kept minimal here to avoid restructuring app startup.)
+    # fire this — the ingest-side lsof preflight (ais_ingest_*.sh) covers a replaced/missing listener.
     import sys
     print("[backend] shutdown — server stopping (SIGTERM / graceful stop)", file=sys.stderr, flush=True)
+
+
+app = FastAPI(title="AIStudio Local LLM Bot", lifespan=lifespan)
 
 # In-memory ingest status keyed by corpus name
 _ingest_status: dict[str, dict] = {}
