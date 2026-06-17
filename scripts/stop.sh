@@ -9,12 +9,13 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.4.3"
+VERSION="1.4.4"
 ITALIC=$'\e[3m'
 RESET=$'\e[0m'
 DIM=$'\e[2m'
 
-printf '\033[1m[stop.sh v%s — Stop AIStudio services (internal)]\033[0m\n' "$VERSION"
+# Internal script — banner suppressed per wrapper-backed STD (the calling ais_stop.sh
+# wrapper owns the single version display). F-004 fix: removed the printf banner line.
 
 # ── Parse flags ───────────────────────────────────────────────────
 SILENT=0
@@ -54,7 +55,7 @@ _sep() {
 _out() { [[ "$SILENT" -eq 0 ]] && echo "$@"; }
 _err() { echo "$@"; }  # errors always print
 
-[[ "$SILENT" -eq 0 ]] && echo "ais_stop v$VERSION — Stop AIStudio services"
+# Version line suppressed — wrapper (ais_stop.sh) owns the single banner (F-004).
 
 # ── Cleanup ───────────────────────────────────────────────────────
 _sep "Cleanup"

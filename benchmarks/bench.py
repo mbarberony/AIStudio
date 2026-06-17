@@ -480,6 +480,40 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
             print("   pyyaml not installed — pip install pyyaml")
             return DEFAULT_QUESTIONS
         raw = _yaml.safe_load(content_str)
+        # ── Schema validation guard ──────────────────────────────────────────────
+        # Expected: list of topic-blocks, each: {topic: str, questions: [...]}
+        # Common mistake: flat list of question dicts (topic as a field, not a wrapper).
+        _schema_ok = (
+            isinstance(raw, list)
+            and len(raw) > 0
+            and isinstance(raw[0], dict)
+            and "questions" in raw[0]
+        )
+        if not _schema_ok:
+            _hint = ""
+            if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], dict) and "question" in raw[0]:
+                _hint = (
+                    "\n   Hint: your file looks like a flat list of question dicts. "
+                    "Wrap them in topic blocks:\n"
+                    "     - topic: \"My Topic\"\n"
+                    "       questions:\n"
+                    "         - id: my_q\n"
+                    "           question: \"...\"\n"
+                    "           keywords: [kw1, kw2]"
+                )
+            _ref = "benchmarks/sec_10k/sec_10k_June_2026_questions.yaml"
+            print(
+                f"\n❌  Questions file schema error: {p}\n"
+                f"    Expected a list of topic-blocks:\n"
+                f"      - topic: \"Topic Name\"\n"
+                f"        questions:\n"
+                f"          - id: question_id\n"
+                f"            question: \"Your question text?\"\n"
+                f"            keywords: [kw1, kw2]\n"
+                f"    Reference: {_ref}{_hint}\n"
+            )
+            return DEFAULT_QUESTIONS
+        # ────────────────────────────────────────────────────────────────────────
         for topic_block in raw:
             topic = topic_block.get("topic", "General")
             for q in topic_block.get("questions", []):

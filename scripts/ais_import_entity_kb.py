@@ -38,6 +38,8 @@ Run via the wrapper (cd repo, venv) or directly:
     python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k --apply    # build the KB
 
 Changelog
+  1.6.3 — F-021/F-030: scope_name in _write_kb now prefers bare xbrl_name (user correction) over
+           sec_xbrl_name. Makes KB source_path token match corrected filename prefix.
   1.6.2 — F-014: truncate sec_xbrl_name display at 100 chars in review output (prevents line-wrap on narrow terminals). Long names get …-suffix.
   1.6.1 — CLI output polish (CLI Output STD v2.4.0 / _cli_output_ops v1.1.0): review status
           glyph indented to 4 (sits directly under the firm name); the no-`--apply` footer is
@@ -98,7 +100,7 @@ Changelog
   1.1.0 — Output conformed to STD - AIStudio - CLI Output.
   1.0.0 — Initial split from ais_import_knowledge_base_ops.py.
 
-Version: 1.6.2
+Version: 1.6.3
 """
 
 import argparse
@@ -350,7 +352,8 @@ def _rows_to_kb(rows: list[dict]):
     unbindable: list[dict] = []
     name_only: list[dict] = []
     for r in rows:
-        name = sc.clean(r.get("sec_xbrl_name"))                       # filing self-report = scope_name
+        name = (sc.clean(r.get("xbrl_name"))                          # bare user override → filing self-report
+                 or sc.clean(r.get("sec_xbrl_name")) or "")  # scope_name = rag_core source_path token
         lei = (sc.entity_lei(r) or "").strip()
         canon = (sc.clean(r.get("xbrl_name")) or name                 # bare user override wins
                  or r.get("gleif_name") or "").strip()

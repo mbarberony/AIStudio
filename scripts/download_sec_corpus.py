@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 AIStudio — SEC 10-K Corpus Downloader
-Version 1.7.0
+Version 1.7.1
+
+VERSION = "1.7.1"  # authoritative version — read by deploy_ops extract_version
 
 Downloads 10-K annual filings from SEC EDGAR. Membership is no longer hardcoded:
 the firm set comes from a scope file (default sec_10k_full_scope.yaml), or a single
@@ -10,6 +12,12 @@ iXBRL entity tag the ingest pipeline relies on (dei:EntityRegistrantName), so a 
 that cannot be auto-recognized is flagged before you waste a 30-minute ingest on it.
 
 Changelog:
+- 1.7.1 — F-011: --cik mode now uses --force_name as the label (filename slug) when provided,
+          falling back to CIK_<padded> only when no --force_name given. Prevents confusing
+          CIK_0000886982_10K filenames when the firm is known. F-019: --years guard added —
+          values < 1900 are rejected with a clear error ("did you mean --latest N?") since they
+          almost certainly represent a count, not a fiscal year. Both fixes in main() argument
+          handling.
 - 1.7.0 — Output wired to the shared _cli_output_ops helper (STD CLI-Output 4-glyph
           vocabulary). A skipped (already-on-disk) file is white-✓-on-yellow (succeeded,
           no new download), a fresh fetch is ✅, a fetch error is white-✗-on-red, and the
@@ -466,7 +474,7 @@ def _verify_filing(html_path: Path) -> tuple[str | None, str | None]:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ais_download_sec_10k",
-        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.7.0",
+        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.7.1",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
@@ -522,6 +530,16 @@ def main() -> None:
 
     # Year selection: explicit --years wins; otherwise --latest N (default 1).
     if args.years:
+        # F-019 guard: --years expects 4-digit fiscal years (e.g. 2024 2023).
+        # A value < 1900 almost certainly means the user intended --latest N.
+        _bad = [y for y in args.years if y < 1900]
+        if _bad:
+            bad_str = ", ".join(str(y) for y in _bad)
+            raise SystemExit(
+                f"❌  --years value(s) look like a count, not a fiscal year: {bad_str}\n"
+                f"   --years expects 4-digit years: --years 2024  or  --years 2024 2023\n"
+                f"   For the N most-recent filings use: --latest {_bad[0]}"
+            )
         sel_years: set[int] | None = set(args.years)
         latest_n: int | None = None
         sel_label = "fiscal year(s) " + ", ".join(str(y) for y in sorted(sel_years))
@@ -533,7 +551,11 @@ def main() -> None:
     # Resolve the firm set from the chosen mode.
     targets: list[dict] = []
     if args.cik:
-        targets = [{"label": f"CIK_{args.cik.zfill(10)}", "cik": args.cik.zfill(10)}]
+        # F-011: prefer --force_name label > CIK_ fallback.
+        # CIK_ slug was confusing (e.g. CIK_0000886982 instead of Goldman_Sachs).
+        _cik_label = (args.force_name.strip() if getattr(args, "force_name", None)
+                      else f"CIK_{args.cik.zfill(10)}")
+        targets = [{"label": _cik_label, "cik": args.cik.zfill(10)}]
     elif args.tkr:
         hit = _resolve_ticker(args.tkr, delay=args.delay)
         if hit is None:

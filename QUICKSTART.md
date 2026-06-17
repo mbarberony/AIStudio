@@ -439,6 +439,8 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 ## Troubleshooting
 
+**⌘K clears the terminal** — when the terminal fills up with output, press **Command + K** to clear the screen. Your session and commands stay active. Useful after long ingests or benchmark runs.
+
 **Close and reopen Terminal** if something unexpected happens. Press **⌘ Space** (Command key + Space bar), type **Terminal**, press **Enter**. Re-run the last command you were on and continue from there. A fresh terminal always starts with a clean environment.
 
 **`brew --version` returns `command not found`** — Homebrew not installed. Run the installer in Step 1.
@@ -456,6 +458,17 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 **Stats show 0 chunks** — corpus not yet ingested. Use the UI to add and ingest documents.
 
 **Qdrant not found** — `~/bin` not in PATH. Run `source ~/.zshrc`.
+
+**Commands suddenly vanish (`zsh: command not found`) mid-session** — your terminal's working directory was deleted or renamed while the shell was open (you'll also see `getcwd: cannot access parent directories`). Fix:
+
+```bash
+cd ~/Developer/AIStudio
+source ~/.zshrc
+```
+
+This resets the working directory and reloads all aliases. Run `ais_start --version` to confirm.
+
+**`ais_*` command not found after install** — run `source ~/.zshrc` to reload your aliases. **Important:** run it as a standalone command on its own line — do not chain it with `&&` or paste it together with other commands in the same block. A `source` inside a pasted sequence runs in a subshell and the aliases do not persist. After sourcing, verify with `ais_start --version`.
 
 ---
 

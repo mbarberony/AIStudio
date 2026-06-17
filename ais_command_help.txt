@@ -171,7 +171,8 @@ Options:
   --help            Show this help
   --version         Show script version
   --scope STEM      Scope stem: download only firms in esef_banks_<STEM>_scope.yaml
-                    e.g. --scope lang_en downloads 12 EN-primary firms only.
+                    e.g. --scope lang_en downloads the 9 EN-primary firms (ING, Barclays, HSBC, StanChart, BBVA, Nordea, SEB, Erste, KBC);
+                      bare ais_download_esef downloads all 12 (9 EN + BNP Paribas, Société Générale, UniCredit).
                     Absence downloads the full seed list (default behavior).
   --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)
   --period-start    Earliest filing period end date (default: 2022-01-01)
@@ -213,6 +214,57 @@ Examples:
 · Catalog:      data/knowledge_sources/catalog.yaml (registry of all imports)
 · Sources implemented: gleif
 · Sources planned:     sec_edgar, bis_basel, nist_ai_rmf, esrs
+
+---
+## ais_import_entity_kb
+ais_import_entity_kb — Build the GLEIF/Wikidata entity knowledge source for a corpus
+
+Reads the corpus full_scope (data/corpora/<C>/<C>_full_scope.yaml), links each row to its
+uploads filing(s), resolves identity (the LEI you supply is authoritative), and on --apply
+builds the xbrl-keyed entity KB the ingest pipeline reads for the [Document:] alias prefix
+that drives per-firm isolation at query time.
+
+Usage: ais_import_entity_kb --corpus <C> [--apply] [--list]
+
+Options:
+  --corpus <C>   Corpus name (e.g. sec_10k, esef_banks)
+  --apply        Build the entity KB from the resolved rows (default: REVIEW ONLY — nothing written)
+  --list         Show the import catalog
+  --help         Show this help
+  --version      Show version
+
+Examples:
+  ais_import_entity_kb --corpus sec_10k            # review only — shows resolved rows, writes nothing
+  ais_import_entity_kb --corpus sec_10k --apply    # builds/updates the entity KB
+
+· Review-gate: without --apply nothing is written. Run the review pass first, confirm the
+  resolved rows, then re-run with --apply.
+· Run after adding a firm on demand (e.g. ais_download_sec_10k --tkr BLK) so the new firm is
+  recognized and isolates correctly.
+
+---
+## ais_import_glossary_kb
+ais_import_glossary_kb — Build a term-to-expansion glossary knowledge source for a corpus
+
+Loads a static curated seed and writes a glossary YAML that rag_core binds at QUERY time
+(acronym → BM25 expansion). bis_basel is live (52 Basel III/IV terms); nist_ai_rmf and esrs
+are registered but not yet implemented. Deterministic — writes in one pass, no review gate.
+
+Usage: ais_import_glossary_kb --source <name> [--corpus <c>] [--scope <s>] [--list]
+
+Options:
+  --source <name>   Glossary source to import (required; bis_basel)
+  --corpus <c>      Corpus scope label (default: any_corpus — corpus-wide)
+  --scope <s>       Scope id (default: full)
+  --list            List importable knowledge sources and exit
+  --help            Show this help
+  --version         Show version
+
+Examples:
+  ais_import_glossary_kb --source bis_basel              # corpus-wide glossary
+  ais_import_glossary_kb --source bis_basel --corpus sec_10k
+
+· Glossary binds at QUERY time — restart the backend (ais_stop && ais_start) to load it.
 
 ---
 ## ais_download_sec_10k
@@ -261,36 +313,47 @@ Examples:
 
 ## ais_ingest_sec_10k
 
-Usage: ais_ingest_sec_10k [--help] [--version] [--force]
+Usage: ais_ingest_sec_10k [--force] [--files <patterns>] [--verbose] [--help] [--version]
 
-Ingest SEC 10-K filings into AIStudio from ~/Downloads/sec_10k_corpus/.
-Creates the sec_10k corpus if it does not exist.
-This is the real-scale test corpus — 100+ filings, ~30 min first run.
+Ingest SEC 10-K filings into AIStudio from data/corpora/sec_10k/uploads/.
+Incremental by default — skips files already indexed in Qdrant (unchanged files).
+~30 min first run on M4 Pro; subsequent incremental runs are fast.
 
 Options:
-  --help      Show this help
-  --version   Show script version
-  --force     Re-ingest all files regardless of hash
+  --force              Full rebuild — wipe collection, re-ingest all files
+  --files <patterns>   Ingest ONLY files matching these comma-separated patterns (always
+                       re-embedded). Each pattern is OR-matched against the filename
+                       case-insensitively: literal substring or regex. Always re-embeds
+                       matched files regardless of whether they are already indexed.
+                       e.g. --files Goldman_Sachs  or  --files 'JPM.*2025,Citi'
+  --verbose            Print full JSON result payload after summary
+  --help               Show this help
+  --version            Show script version
 
 · Run after: ais_download_sec_10k
 · Requires: ais_start must be running
+· To benchmark: ais_bench --corpus sec_10k
 
 ---
 
 ## ais_ingest_esef
 
-Usage: ais_ingest_esef [--corpus <name>] [--force] [--verbose] [--help] [--version]
+Usage: ais_ingest_esef [--corpus <name>] [--force] [--files <patterns>] [--verbose] [--help] [--version]
 
 Ingest ESEF iXBRL annual reports into AIStudio.
+Incremental by default — skips files already indexed in Qdrant.
 Requires corpus metadata file to exist before running.
 Reference implementation for user corpus ingest — see AIStudio Tutorial §3.
 
 Options:
-  --corpus <name>   Corpus name (default: esef_banks)
-  --force           Re-ingest even if corpus already indexed in Qdrant
-  --verbose         Print full JSON result payload after summary
-  --help            Show this help
-  --version         Show script version
+  --corpus <name>    Corpus name (default: esef_banks)
+  --force            Full rebuild — wipe collection, re-ingest all files
+  --files <patterns> Ingest ONLY files matching these comma-separated patterns (always
+                     re-embedded). OR-matched case-insensitively: literal substring or regex.
+                     e.g. --files Nordea  or  --files 'BNP.*2025,ING'
+  --verbose          Print full JSON result payload after summary
+  --help             Show this help
+  --version          Show script version
 
 · Run after: ais_download_esef
 · Requires: ais_start · corpus metadata file (create via UI or REST POST /corpus/create)

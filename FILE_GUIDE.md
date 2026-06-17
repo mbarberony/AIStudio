@@ -137,6 +137,10 @@ All commands available after running `./ais_install` from repo root.
 | `ais_bench` | Runs benchmark suite against a corpus | Validating retrieval quality | `benchmarks/<corpus>/<corpus>_questions.yaml` / benchmark report |
 | `ais_download_sec_10k` | Downloads SEC 10-K filings from EDGAR | Setting up SEC corpus (optional) | EDGAR / `data/corpora/sec_10k/uploads/` |
 | `ais_help` | Shows command reference | Forgot a command | `ais_command_help.txt` / stdout |
+| `ais_download_esef` | Downloads ESEF iXBRL annual reports from filings.xbrl.org | Setting up ESEF corpus | `esef_banks_full_scope.yaml` / `data/corpora/esef_banks/uploads/` |
+| `ais_ingest_esef` | Ingests ESEF filings into AIStudio | After downloading ESEF | uploads/ / Qdrant |
+| `ais_import_entity_kb` | Builds entity KB for a corpus (GLEIF/Wikidata identity + aliases) | After ingest; after adding a firm | `<corpus>_full_scope.yaml` / `gleif_<corpus>_full_entities.yaml` |
+| `ais_import_glossary_kb` | Builds glossary KB (BIS Basel acronym expansion for BM25) | After ingest; corpus-wide | static seed / `bis_basel_any_corpus_full_glossary.yaml` |
 | `ais_install` | Installs/updates user commands | Fresh install; new command | `ais_user_commands_manifest.yaml` / shell aliases in `~/.zshrc` |
 | `ais_create_shortcut` | Creates AIStudio Dock/Desktop icon (macOS) | Optional post-install | / `~/Desktop/AIStudio.app` |
 

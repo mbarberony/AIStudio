@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_download_esef.sh — Download ESEF iXBRL annual reports from filings.xbrl.org
-# Version: 1.1.0
+# Version: 1.5.1
 # v1.1.0 (2026-06-10): Ported to the download_esef_corpus.py 1.5.0 architecture. Added a
 #   dynamic backing-version banner (greps the .py `Version:` line, mirrors the SEC wrapper)
 #   + a --version const + the source guard. Flag surface is now resolver-driven: the script
@@ -13,7 +13,7 @@
 SCRIPT_DIR="${0:A:h}"
 HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
 SCRIPT_NAME="ais_download_esef"
-VERSION="1.1.0"
+VERSION="1.5.1"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then

@@ -1,4 +1,7 @@
-# Version: 1.8.34
+# Version: 1.8.35
+# Changelog: 1.8.35 — F-025: truncate _prefix_label display to 80 chars with … in the
+#            STD §8 completion line. Prevents mid-token terminal wrap on wide ESEF canonical
+#            names (e.g. Banco Bilbao Vizcaya Argentaria). Full prefix written to chunks unchanged.
 # Changelog: 1.8.34 — AIS_12 follow-up: capped bar at {bar:20} so timing (elapsed/remaining/avg) sits right after the bar, not pushed to the far-right edge of a wide terminal by the unsized {bar}. Prior step:
 #            created with fixed ncols=130 + {bar:40}; the rendered line (label + long filename +
 #            bar:40 + elapsed/remaining/avg) ran ~130-135 cols, so on a narrower terminal it
@@ -1277,11 +1280,13 @@ def ingest_corpus(
                             else f"[{doc_entity}{_label_suffix}]"
                         )
 
+                        # F-025: truncate prefix display to 80 chars — prevents mid-token terminal wrap.
+                        _prefix_display = (_prefix_label[:77] + "…") if len(_prefix_label) > 80 else _prefix_label
                         # STD §8 completion line — scrolls in terminal, stays in history
                         _completion = (
                             f"  {_n_str} of {_t_str} · {file_path.name} · "
                             f"size: {_file_size:,} · chunks: {_file_chunks:,} · "
-                            f"format: {_fmt_label} · chunk prefix aug.: {_prefix_label} · source: {_source}"
+                            f"format: {_fmt_label} · chunk prefix aug.: {_prefix_display} · source: {_source}"
                         )
                         if doc_mismatch:
                             _completion += f" · \u26a0 entity mismatch: filename={file_path.stem[:30]}"

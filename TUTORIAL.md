@@ -199,6 +199,21 @@ You don't have to rebuild the whole corpus to add one company. The flow is **dow
 ais_download_sec_10k --tkr BLK --latest
 ```
 
+> **BlackRock dual-CIK.** BlackRock reorganized in 2024 and received a new EDGAR CIK (`0002012383`). The ticker `BLK` resolves to this new CIK, which only carries FY2024–FY2025. To build a full 5-year history, supplement with the legacy CIK:
+>
+> ```bash
+> # FY2024–FY2025 (new CIK 0002012383)
+> ais_download_sec_10k --tkr BLK --latest
+>
+> # FY2021–FY2023 (legacy CIK 0000014272)
+> ais_download_sec_10k --cik 0000014272 --force_name "BlackRock" --latest 3
+>
+> # Ingest both
+> ais_ingest_sec_10k --files BlackRock
+> ```
+>
+> This pattern applies to any firm whose EDGAR CIK changed through a reorganization.
+
 **2. Re-ingest only that file.** `ais_ingest_sec_10k` is incremental by default (it skips unchanged files), so a plain run already picks up the new filing. But you can also name exactly what to ingest with `--files`:
 
 ```bash
@@ -225,6 +240,8 @@ ais_download_esef
 ```
 
 This reads the corpus's scope file (`esef_banks_full_scope.yaml`) — one row per bank, keyed by LEI — and queries filings.xbrl.org by LEI for each bank's ESEF annual reports, into `data/corpora/esef_banks/uploads/`.
+
+> **Filing years may differ across firms.** `ais_download_esef` fetches the *latest available* filing for each firm — but "latest available" is not always the same fiscal year for every firm. Some banks file months after the calendar year end; others have not yet published. In a corpus built in mid-2026, BBVA and SEB were at FY2024 while the other EN-primary firms were at FY2025. Check the download summary and each firm's year in the `--- Downloading` output before running cross-firm year-over-year queries.
 
 > **Why LEI here and CIK for SEC?** Each regulator exposes a different access key — EDGAR indexes by CIK, filings.xbrl.org filters by LEI. AIStudio keeps the *source specifics* (endpoint, access key) as data, not code, so adding a regulator is a configuration change, not a rewrite. The **LEI is still the identity** in both — see Annex 1.
 
@@ -403,6 +420,33 @@ Every row the scan can't resolve falls into one of four cases. Each has one fix 
 4. **Wrong/missing entity at ingest → the `expected_xbrl_name` guard.** A filing whose self-reported entity doesn't match the target's `expected_xbrl_name` is **skipped unless `--force`** — so a mis-mapped filing can't silently ingest under the wrong firm. *Example: the CBOE filings that were actually Larimar Therapeutics' 10-K under a wrong CIK — a clean ingest of the wrong company, caught only by this guard.*
 
 The first time through, you fill `lei` for the failures, re-run, and the table goes clean. From then on the edits persist across re-runs — you review once.
+
+### A1.4b — The scope's open/provenance field convention — and why LEI is the shared key
+
+The `full_scope` file is the single source of truth for corpus membership. Each entry is keyed by `label`; every other field encodes two dimensions:
+
+```
+<provenance>_<data_type>   — a source's reported value (sec, gleif, wikidata, esef, ais)
+<data_type>                — bare = the user/by-hand value, which is AUTHORITATIVE and wins
+```
+
+The **bare field IS the canonical** — there is no separate `canonical` field. A source's guess lands in its prefixed field; you fill the bare field only to override a bad guess. **Resolution rule:** bare (user) → golden source(s) → empty.
+
+| data_type | bare (user, wins) | source field(s) |
+|---|---|---|
+| `lei` | `lei` — operator-typed LEI; **the shared key, used thereafter** | `gleif_lei` |
+| name | `xbrl_name` — user-authored name | `sec_xbrl_name` / `esef_xbrl_name`, `gleif_name` |
+| `cik` / `ticker` | `cik` / `ticker` | `sec_cik` / `sec_ticker` |
+| `jurisdiction` / `filing_language` | bare | `sec_*` / `esef_*` |
+| `aliases` | `aliases` | `gleif_aliases` ∪ `wikidata_aliases` → `combined_aliases` |
+| `expected_xbrl_name` | seed — download-verify guard (fetched filing must match) | — |
+| files / last_updated | tool-managed | `ais_files` / `ais_last_updated` |
+
+For LEI specifically: `gleif_lei` holds what GLEIF confirmed; if you find a better one, fill the bare `lei` and it wins. There is **no `lei_corrected`** — vestigial, replaced by this convention.
+
+This is why the 2026-06-16 ESEF build succeeded despite five firms filing under names we didn't expect — Nordeakoncernen, Erste Group BankAG, Barclays Bank PLC, StandardChartered Bank, Skandinaviska Enskilda Banken AB (publ). The LEI resolved each identity correctly regardless of what the filer typed. For European entities, **supply the LEI — the rest resolves from there.**
+
+> **Implementation status.** This open/provenance convention is the decided target, ratified on the documentation side. It is **not yet wired**: the live resolver (`_scope_common_ops.py`) still uses the old cascade (`lei_corrected → gleif_lei → lei`, `canonical → gleif_canonical → xbrl_name → label`), and on-disk rows carry old names. The resolver rewire + one-time file migration are parked for PIPELINE.
 
 ### A1.5 — Correcting a LEI: a worked example
 

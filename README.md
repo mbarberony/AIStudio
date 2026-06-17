@@ -88,7 +88,7 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 - **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
 - **SEC 10-K synthesis** — ~58 s avg (gemma3:27b, multi-firm)
 - **Retrieval** — ~0.3–0.5 s even at 100,659 chunks
-- **Benchmark** — demo 14/14 · SEC 10-K 10/10 mechanical, 9/10 audited
+- **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5 default) · SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
 
 ---
 
@@ -254,8 +254,8 @@ flowchart TD
 Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
-- **14/14 pass rate** on demo corpus benchmark (M4 Pro, 128GB unified memory, α=0.5 hybrid retrieval)
-- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100,659 chunks) — precise table-cell extraction is the known frontier; see the audited reports under `benchmarks/sec_10k/reports/`
+- **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With the default `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
+- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 101,406 chunks). With the default `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see audited reports under `benchmarks/sec_10k/reports/`
 - **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 100,659 chunks — inference, not retrieval, is the bottleneck
@@ -276,8 +276,8 @@ Ingest:     ~31 min, ~54 chunks/sec, 0 failures
 Model:      gemma3:27b (SEC 10-K benchmark) · llama3.1 / mistral (demo)
 Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
             ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
-Benchmark:  SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b, 10 questions);
-            demo 14/14 (α=0.5 hybrid retrieval, K=10)
+Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b default)
+            demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5 default)
 Frontier:   precise table-cell extraction — see benchmarks/sec_10k/reports/ (audited)
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 100,659 chunks
@@ -315,7 +315,7 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 14/14 questions pass, 8.6s avg latency at α=0.5 hybrid retrieval, K=10 (M4 Pro) ✅
+- Demo corpus benchmark: 14/14 questions pass at α=0.5 hybrid retrieval, K=10, gemma3:27b (M4 Pro) ✅ · 12/14 with default llama3.1:8b at K=5
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
 - Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅

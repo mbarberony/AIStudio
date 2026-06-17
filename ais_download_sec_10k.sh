@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_download_sec_10k.sh — Download SEC 10-K corpus from EDGAR
-# Version: 1.1.7
+# Version: 1.7.1
 # Thin "$@" passthrough to scripts/download_sec_corpus.py. Firm set and year selection
 # (--latest N / --years YYYY ...) are owned by the backing argparse. Default run (no args)
 # = the scope's firms × latest 1. Output → data/corpora/sec_10k/uploads/ by default.
@@ -16,7 +16,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.1.7"
+VERSION="1.7.1"
 
 SCRIPT_NAME="ais_download_sec_10k"
 SCRIPT_DIR="${0:A:h}"

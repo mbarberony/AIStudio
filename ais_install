@@ -8,7 +8,15 @@
 #   ais_install --list               # show all installable user commands
 #   ais_install --verify             # check which commands are active in .zshrc
 #
-# Version: 2.4.8
+# Version: 2.4.12
+# Changelog: 2.4.12 — Dynamic terminal-width-aware --list: reads $COLUMNS via tput cols,
+#             computes desc_width = cols - 32, truncates with … if description exceeds it.
+#             Floor: 40 chars. Adapts to any terminal width.
+# Changelog: 2.4.11 — Sort --list output alphabetically (pipe through sort). Truncation 100→88 chars (fits 120-wide terminal: 2+28+1+88=119).
+# Changelog: 2.4.10 — F-001: bumped --list truncation from 72 to 100 chars (72 was too short).
+# Changelog: 2.4.9 — F-001: Python heredoc forces UTF-8 stdout (sys.stdout.reconfigure)
+#             so em-dash and non-ASCII chars render correctly in --list (not \u2014).
+#             VERSION constant aligned to header (was 2.4.7, header said 2.4.8).
 # Changelog: 2.4.8 — DYLD_LINE uses ${DYLD_LIBRARY_PATH:-} (set -u safe); fixes .venv/bin/activate unbound-variable crash that silently zeroed retrieval (PARK-19).
 # Changelog: 2.4.7 — Add DYLD_LIBRARY_PATH="/opt/homebrew/lib" to ~/.zshrc and .venv/bin/activate
 #             at install time. Required for weasyprint/pango PDF generation on macOS. Without this,
@@ -22,7 +30,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.4.7"
+VERSION="2.4.12"
 
 SCRIPT_NAME="ais_install"
 SCRIPT_DIR="${0:A:h}"
@@ -61,9 +69,12 @@ _parse_manifest() {
     # Works before venv activation, on any Python 3.6+
     python3 - "$USER_MANIFEST" "$REPO" << 'PYEOF'
 import sys, re
+# F-001: force UTF-8 stdout so em-dash in descriptions renders correctly
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 manifest_path, repo = sys.argv[1], sys.argv[2]
 commands, current = [], {}
-with open(manifest_path) as f:
+with open(manifest_path, encoding="utf-8") as f:
     for line in f:
         line = line.rstrip()
         if re.match(r"\s*- alias:", line):
@@ -110,7 +121,13 @@ _write_alias() {
 # ── --list ────────────────────────────────────────────────────────────────────
 if [[ "$1" == "--list" ]]; then
     _sep "User Commands"
-    _parse_manifest | while IFS='|' read -r alias_name script_path desc; do
+    local _cols=$(tput cols 2>/dev/null || echo 120)
+    local _desc_width=$(( _cols - 32 ))   # 2(·space) + 28(alias) + 1(space) + 1(margin) = 32
+    [[ $_desc_width -lt 40 ]] && _desc_width=40
+    _parse_manifest | sort | while IFS='|' read -r alias_name script_path desc; do
+        if (( ${#desc} > _desc_width )); then
+            desc="${desc:0:$(( _desc_width - 1 ))}…"
+        fi
         printf "· %-28s %s\n" "$alias_name" "$desc"
     done
     exit 0
