@@ -327,9 +327,9 @@ accumulated conventions — can be resumed with full fidelity. The protocol is
 also self-referential: the PACKET contains the rules for generating the next
 PACKET.
 
-**Pattern:** `ais_packet` → structured PACKET.md → reviewed in session →
-`ais_bundle` → zip with supporting docs → attached to next thread → full
-context restored in under two minutes.
+**Pattern:** a structured PACKET.md is generated, reviewed in session, then
+bundled with supporting docs and attached to the next thread — full context
+restored in under two minutes.
 
 **Broader relevance:** This pattern is a prototype for the urCrew personal
 operating system concept — where structured state packets manage continuity
