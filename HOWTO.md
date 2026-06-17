@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-05-27*
+*Version: Beta | Updated: 2026-06-17*
 
 ---
 
@@ -12,11 +12,13 @@ you need to do something specific or something isn't working as expected.
 
 - [Shell & Terminal](#shell--terminal)
 - [Using AIStudio](#using-aistudio)
+- [Upgrading AIStudio](#upgrading-aistudio)
 - [Corpus Management](#corpus-management)
 - [Installing and Managing LLMs](#installing-and-managing-llms)
 - [Query Settings](#query-settings)
 - [Understanding Citations](#understanding-citations)
 - [Benchmark & Corpus Testing](#benchmark--corpus-testing)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -246,20 +248,24 @@ Adjust using the **Temperature** input field in the sidebar.
 **Retrieval Mix** — *Balance between literal and conceptual search*
 Controls how the system finds relevant passages in your corpus.
 
-- **Literal** (slider left, value 1.0) — prioritizes exact word and phrase matching (BM25). Use when you know the specific term, entity name, or abbreviation that appears in your documents. Example: searching for "CET1" by exact term.
-- **Conceptual** (slider right, value 0.0) — prioritizes semantic meaning. Finds passages related to your query even when the document uses different phrasing. Example: asking about "capital strength" returns passages about CET1, Tier 1 capital, and capital ratios.
+- **Literal** (slider left, value 0.0) — prioritizes exact word and phrase matching (BM25). Use when you know the specific term, entity name, or abbreviation that appears in your documents. Example: searching for "CET1" by exact term.
+- **Conceptual** (slider right, value 1.0) — prioritizes semantic meaning. Finds passages related to your query even when the document uses different phrasing. Example: asking about "capital strength" returns passages about CET1, Tier 1 capital, and capital ratios.
 - **Default 0.5** — blends both. Works well for most queries.
 
 **Choosing by query type:**
 
 | Query type | Recommended setting | Why |
 |---|---|---|
-| Named entity, ticker, exact term | Literal (0.7–1.0) | BM25 matches the token directly |
-| Thematic or conceptual question | Conceptual (0.0–0.3) | Semantic search handles paraphrase |
+| Named entity, ticker, exact term | Literal (0.0–0.3) | BM25 matches the token directly |
+| Thematic or conceptual question | Conceptual (0.7–1.0) | Semantic search handles paraphrase |
 | Multi-firm comparison | Center (0.4–0.6) | Entity names + topic meaning both matter |
-| Single firm, multiple years | Conceptual (0.0–0.2) | Year context is in documents; meaning guides retrieval |
+| Single firm, multiple years | Conceptual (0.8–1.0) | Year context is in documents; meaning guides retrieval |
 
 Adjust using the **Retrieval Mix** slider in the Query Settings sidebar.
+
+**Score Threshold** — *Relevance floor (per-corpus default)*
+Chunks scoring below this are dropped before the model ever sees them. Default `0.50`. Lower it (≈`0.2–0.3`) if good answers come back empty or hedged; raise it to cut noise.
+Unlike the three settings above, Score Threshold is a **per-corpus default**, not a per-query control — set it in **Edit → Query Defaults** for the selected corpus, where it applies whenever that corpus is queried.
 
 ---
 
