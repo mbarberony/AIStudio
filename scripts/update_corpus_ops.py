@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # update_corpus_ops.py — AIStudio Corpus Updater (Operator only)
-# Version: 1.3.1
+# Version: 1.3.2
 # 1.3.1: surgical re-ingest uses the chunks-only DELETE endpoint (.../file/<f>/chunks)
 #        so the file is retained for re-embed; the bare endpoint trashed it (AIStudio_379).
 # 1.3.0: --corpus is now a REQUIRED named flag (was positional). Subject resolution
@@ -359,7 +359,7 @@ def step1_generated(repo: Path, corpus: str, python: Path, seed: dict, subject: 
     Resolves: default_source_path / source_path → WeasyPrint → uploads/"""
     pdf_script = repo / "scripts/update_help_corpus_ops.py"
     if not pdf_script.exists():
-        _fail(f"PDF generation script not found: {pdf_script}\n· Run: ais_restore_scripts")
+        _fail(f"PDF generation script not found: {pdf_script}\n· Run: ais_restore")
 
     # Pass subject if specified — update_help_corpus_ops.py handles per-subject generation
     cmd = [str(python), str(pdf_script), "--repo-root", str(repo)]

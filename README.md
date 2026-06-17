@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-06-15*
+*Version: Beta | Updated: 2026-06-17*
 
 # AIStudio
 
@@ -48,7 +48,7 @@ A reviewer who asks *"What is the relationship between business strategy and tec
 
 **On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average). Once loaded into unified memory, model size stops being a latency variable. See [benchmarks/](benchmarks/) for the full benchmark harness and timestamped reports.
 
-The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — **exploring 101 annual filings from 21 financial services firms** (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 100,659 chunks **from over 900 MB of source filings**, ingested in roughly half an hour at ~54 chunks/sec on an M4 MacBook Pro. Due to their size, **the files for this corpus are not shipped with the app but need to be downloaded from the SEC first (utilities are provided)**. More importantly, **ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus**.
+The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — **exploring 100+ annual filings from 21 financial services firms** (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others), 100K+ chunks **from over 900 MB of source filings**, ingested in roughly half an hour at ~54 chunks/sec on an M4 MacBook Pro. Due to their size, **the files for this corpus are not shipped with the app but need to be downloaded from the SEC first (utilities are provided)**. More importantly, **ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus**.
 
 **ESEF corpus — European banks, the harder cousin:** AIStudio also builds a second at-scale corpus from European banks' **ESEF** filings (retrieved from filings.xbrl.org by LEI — the same download → entities → glossary → ingest machinery as SEC, only the access key and endpoint change). The two corpora are deliberately complementary learning vehicles: together they surface the problems that actually bite in production — resolving the **many names one firm files under** (handled with a GLEIF/LEI entity knowledge base), **multilingual retrieval** (an English question against a filing that says *fonds propres de base de catégorie 1* rather than *Common Equity Tier 1* retrieves worse), and **pulling numbers out of dense, multi-column tables** without severing a cell from the year that gives it meaning. The [Tutorial](TUTORIAL.md) — Modules 2 and 3, plus Annexes 3 and 5 — walks through all of it end to end.
 
@@ -77,17 +77,17 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 **Scale**
 
 - **Codebase** — ~28,400 lines of code across 95 files
-- **SEC 10-K corpus** — 101 filings · 21 firms · 901 MB of source filings · 100,659 chunks
+- **SEC 10-K corpus** — 100+ filings · 21 firms · 901 MB of source filings · 100K+ chunks
 - **ESEF corpus** — European bank annual reports, multilingual, retrieved by LEI
 - **Demo corpus** — 9 original documents spanning 2003–2026
 - **In-app help** — 15 reference documents
 
 **Performance** *(MacBook Pro M4 Pro, 128 GB unified memory)*
 
-- **Ingest** — ~54 chunks/sec · 100,659 chunks in ~31 min · 0 failures
+- **Ingest** — ~54 chunks/sec · 100K+ chunks in ~31 min · 0 failures
 - **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
 - **SEC 10-K synthesis** — ~58 s avg (gemma3:27b, multi-firm)
-- **Retrieval** — ~0.3–0.5 s even at 100,659 chunks
+- **Retrieval** — ~0.3–0.5 s even at 100K+ chunks
 - **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5 default) · SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
 
 ---
@@ -157,7 +157,7 @@ flowchart TD
     API -->|generate + embed| OL
 
     subgraph QD["Qdrant · :6333 (Rust)"]
-        QC["aistudio_sec_10k\n100,659 chunks"]
+        QC["aistudio_sec_10k\n100K+ chunks"]
         QF["Metadata filter\nfirm · year · FieldCondition"]
         QH["HNSW index\ncosine similarity · 768-dim"]
     end
@@ -255,10 +255,10 @@ Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
 - **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With the default `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
-- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 101,406 chunks). With the default `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see audited reports under `benchmarks/sec_10k/reports/`
+- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With the default `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see audited reports under `benchmarks/sec_10k/reports/`
 - **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
-- **Retrieval adds ~0.3–0.5s** even at 100,659 chunks — inference, not retrieval, is the bottleneck
+- **Retrieval adds ~0.3–0.5s** even at 100K+ chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
 
 All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base. Demo corpus results use hybrid retrieval (α=0.5, K=10); pure vector retrieval (default) achieves 13/14.
@@ -270,8 +270,8 @@ All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean in
 ## Benchmark
 
 ```
-Corpus:     101 SEC 10-K filings, 21 financial services firms
-Chunks:     100,659
+Corpus:     100+ SEC 10-K filings, 21 financial services firms
+Chunks:     100K+
 Ingest:     ~31 min, ~54 chunks/sec, 0 failures
 Model:      gemma3:27b (SEC 10-K benchmark) · llama3.1 / mistral (demo)
 Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
@@ -280,7 +280,7 @@ Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 
             demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5 default)
 Frontier:   precise table-cell extraction — see benchmarks/sec_10k/reports/ (audited)
 ChromaDB:   crashed at 32,285 chunks
-Qdrant:     stable at 100,659 chunks
+Qdrant:     stable at 100K+ chunks
 ```
 
 See [benchmarks/](benchmarks/) for the full benchmark harness, timestamped reports, and question sets.

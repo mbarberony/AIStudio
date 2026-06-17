@@ -173,7 +173,7 @@ def test_script_file_exists(entry: dict) -> None:
     if not script_path.exists() and install == "operator":
         pytest.skip(
             f"Operator script {entry['path']} not on disk — "
-            f"restore from BUNDLE: ais_restore_scripts"
+            f"restore from BUNDLE: ais_restore"
         )
     assert script_path.exists(), (
         f"Script not found: {script_path}. Deploy it: ais_deploy {entry['path']}"
