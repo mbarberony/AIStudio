@@ -33,9 +33,9 @@ self-reported `sec_xbrl_name`. GLEIF's own name is kept in the row as `gleif_nam
 the sentinel REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE (resolver treats it as empty).
 
 Run via the wrapper (cd repo, venv) or directly:
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # link + resolve + write back
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k            # re-run after edits
-    python3 scripts/ais_import_entity_kb_ops.py --corpus sec_10k --apply    # build the KB
+    python3 scripts/ais_import_entity_kb.py --corpus sec_10k            # link + resolve + write back
+    python3 scripts/ais_import_entity_kb.py --corpus sec_10k            # re-run after edits
+    python3 scripts/ais_import_entity_kb.py --corpus sec_10k --apply    # build the KB
 
 Changelog
   1.6.3 — F-021/F-030: scope_name in _write_kb now prefers bare xbrl_name (user correction) over
@@ -108,13 +108,13 @@ import re
 import sys
 from pathlib import Path
 
-import _cli_output_ops as cli  # shared CLI output (glyph vocabulary + section/step/done)
-import _kb_common_ops as kb  # shared lib (underscore = not a command; no alias)
-import _scope_common_ops as sc  # shared scope resolver (the full_scope IS the worksheet)
+import _cli_output as cli  # shared CLI output (glyph vocabulary + section/step/done)
+import _kb_common as kb  # shared lib (underscore = not a command; no alias)
+import _scope_common as sc  # shared scope resolver (the full_scope IS the worksheet)
 import yaml
 
 VERSION = "1.6.2"
-SCRIPT_NAME = "ais_import_entity_kb_ops"
+SCRIPT_NAME = "ais_import_entity_kb"
 
 # iXBRL self-reported-name tags, in priority order (SEC, ESEF, UK GAAP).
 _ENTITY_TAGS = [

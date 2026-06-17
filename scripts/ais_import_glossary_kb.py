@@ -38,7 +38,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import _kb_common_ops as kb  # shared library (underscore = not a command; no alias, install:none)
+import _kb_common as kb  # shared library (underscore = not a command; no alias, install:none)
 import yaml
 
 SCRIPT_NAME = "ais_import_glossary_kb"  # F-024: use civilian name (not _ops) in user-visible output

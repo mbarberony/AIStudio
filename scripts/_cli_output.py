@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-_cli_output_ops.py — Shared CLI output primitives for AIStudio operator commands.
+_cli_output.py — Shared CLI output primitives for AIStudio operator commands.
 
 The single source of the STD - AIStudio - CLI Output glyph vocabulary and the
 processing-loop format. Imported as a sibling by the ops commands (download, entity/
 glossary import, …) so download / enrich / ingest render identically:
 
-    import _cli_output_ops as cli   # when run via `python3 scripts/<cmd>.py`
+    import _cli_output as cli   # when run via `python3 scripts/<cmd>.py`
 
 Glyph vocabulary (foreground glyph on the default background; block only for hard fail):
     ok(...)           ✅              success, full / verified

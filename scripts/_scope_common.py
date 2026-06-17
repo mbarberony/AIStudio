@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-_scope_common_ops.py — Shared corpus-scope resolver (OPS, library; not a command).
+_scope_common.py — Shared corpus-scope resolver (OPS, library; not a command).
 
 ONE scope concept for download / ingest / entity-import / bench. A *scope* is a
 named, yaml-defined subset (or full inventory) of a corpus, living under

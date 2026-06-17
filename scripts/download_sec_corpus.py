@@ -109,8 +109,8 @@ import yaml
 # locate the inventory (_full_scope) write-back target. scripts/ is on sys.path when run
 # directly; insert defensively for -m / odd-cwd invocations.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _cli_output_ops as cli  # noqa: E402  shared CLI output (glyph vocabulary)
-import _scope_common_ops as _scope  # noqa: E402
+import _cli_output as cli  # noqa: E402  shared CLI output (glyph vocabulary)
+import _scope_common as _scope  # noqa: E402
 
 try:
     from bs4 import BeautifulSoup  # type: ignore

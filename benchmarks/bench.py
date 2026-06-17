@@ -132,7 +132,7 @@ from pathlib import Path
 # the resolver in ../scripts/ — prepend it to the path before import. Single source of
 # truth for scope load/validate + entity selection (AIStudio_882 hard-error contract).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import _scope_common_ops as _scope  # noqa: E402
+import _scope_common as _scope  # noqa: E402
 
 # Version — single source of truth for urc_deploy and runtime display.
 # Must be within first 8KB (extract_version limit). No # Version: comment.

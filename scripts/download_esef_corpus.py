@@ -86,8 +86,8 @@ import yaml
 # _scope_common_ops + _cli_output_ops are siblings in scripts/ — scripts/ is on sys.path
 # when run directly; insert defensively for -m / odd-cwd invocations (mirrors the SEC path).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import _cli_output_ops as cli  # noqa: E402  shared CLI output (glyph vocabulary)
-import _scope_common_ops as _scope  # noqa: E402
+import _cli_output as cli  # noqa: E402  shared CLI output (glyph vocabulary)
+import _scope_common as _scope  # noqa: E402
 
 try:
     import certifi

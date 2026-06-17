@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-_kb_common_ops.py — Shared helpers for the OPS knowledge-base importers.
+_kb_common.py — Shared helpers for the OPS knowledge-base importers.
 
 Carved verbatim from ais_import_knowledge_base.py v1.1.0 so the entity importer
 (ais_import_entity_kb_ops) and the glossary importer (ais_import_glossary_kb_ops)
@@ -10,7 +10,7 @@ catalog writing, and catalog listing. Schema/keying/binding-time logic that
 DIFFERS between the two commands does NOT live here — it stays in each command.
 
 Lives in scripts/ (parent.parent == repo root). Imported as a sibling:
-    import _kb_common_ops as kb       # when run via `python3 scripts/<cmd>.py`
+    import _kb_common as kb       # when run via `python3 scripts/<cmd>.py`
 
 Version: 1.2.0 (Wikidata section wired to _cli_output_ops — own `--- Fetching Wikidata
 aliases` section, per-firm ✅/partial line showing aliases + tickers, explicit enriched/
@@ -32,7 +32,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-import _cli_output_ops as cli  # shared CLI output (glyph vocabulary + section/step/done)
+import _cli_output as cli  # shared CLI output (glyph vocabulary + section/step/done)
 import yaml
 
 try:

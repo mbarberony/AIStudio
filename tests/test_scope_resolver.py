@@ -16,7 +16,7 @@ import pytest
 _REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO / "scripts"))
 
-import _scope_common_ops as sc  # noqa: E402
+import _scope_common as sc  # noqa: E402
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
