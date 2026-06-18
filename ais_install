@@ -4,11 +4,15 @@
 #
 # Usage:
 #   ./ais_install                    # full install — venv, deps, all user commands
-#   ais_install ais_log              # install or update a single user command
-#   ais_install --list               # show all installable user commands
-#   ais_install --verify             # check which commands are active in .zshrc
+#   ./ais_install ais_log            # install or update a single user command
+#   ./ais_install --list             # show all installable user commands
+#   ./ais_install --verify           # check which commands are active in .zshrc
 #
-# Version: 2.4.12
+# Version: 2.4.13
+# Changelog: 2.4.13 — By-path consistency: ais_install is run as ./ais_install (not an installed
+#             alias), so every user-facing instruction now shows the ./ form — the install-summary
+#             banner ("./ais_install --verify"), the usage header block, and the not-found "--list"
+#             hint. Bare forms failed with command-not-found in a fresh shell. --verify behavior unchanged.
 # Changelog: 2.4.12 — Dynamic terminal-width-aware --list: reads $COLUMNS via tput cols,
 #             computes desc_width = cols - 32, truncates with … if description exceeds it.
 #             Floor: 40 chars. Adapts to any terminal width.
@@ -30,7 +34,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.4.12"
+VERSION="2.4.13"
 
 SCRIPT_NAME="ais_install"
 SCRIPT_DIR="${0:A:h}"
@@ -164,7 +168,7 @@ if [[ -n "$1" ]]; then
         exit 0
     done
     echo "❌ Command '$TARGET' not found."
-    echo "· Run: ais_install --list"
+    echo "· Run: ./ais_install --list"
     exit 1
 fi
 
@@ -227,5 +231,5 @@ source "$ZSHRC"
 _sep "Summary"
 echo "✅ AIStudio installed."
 echo "· Run: source ~/.zshrc"
-echo "· Run: ais_install --verify"
+echo "· Run: ./ais_install --verify   (from the repo — confirms all aliases are active)"
 echo "· Run: ais_start  to launch AIStudio"

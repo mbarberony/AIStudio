@@ -34,25 +34,21 @@ Options:
 
 ## ais_start
 
-Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open] [--start_with <corpus>]
+Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open]
 
 Start all AIStudio services and open the UI.
 Stops any running services first — safe to run even if already running.
 Services: Qdrant (vector store), Ollama (LLM host), FastAPI backend.
-On first run, automatically indexes the demo and help corpora (tracked in git;
-Qdrant collections are empty until indexed). Backend health is polled every second for up to
-30s — browser only opens once the backend is confirmed healthy.
+On first run, automatically indexes the demo and help corpora.
 
 Options:
-  --help               Show this help
-  --version            Show script version
-  --verbose            Show full service output (Qdrant, uvicorn logs)
-  --show-log           Open new iTerm2 tab with live backend log after start
-  --show-splash        Show splash dialog on startup (useful when launching from Terminal)
-  --no-separator       Use blank lines between sections instead of --- labels
-  --no-open            Skip opening the browser (used by ais_create_shortcut desktop app)
-  --start_with <name>  Open UI with the named corpus pre-selected
-                       Example: ais_start --start_with sec_10k
+  --help          Show this help
+  --version       Show script version
+  --verbose       Show full service output (Qdrant, uvicorn logs)
+  --show-log      Open new iTerm2 tab with live backend log after start
+  --show-splash   Show splash dialog on startup (useful when launching from Terminal)
+  --no-separator  Use blank lines between sections instead of --- labels
+  --no-open       Skip opening the browser (used by ais_create_shortcut desktop app)
 
 · To stop:    ais_stop
 · Logs:       ais_log
@@ -90,7 +86,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--scope <stem>] [--questions <stem>] [--query-expansion <N>] [--entity-filter <mode>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--min-score <f>] [--lang-questions <list>] [--keywords on|off] [--firm <name>] [--topics <list>] [--question-ids <list>] [--api <url>] [--no-markdown] [--full] [--verbose] [--super-verbose]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -99,261 +95,105 @@ Options:
   --help                 Show this help
   --version              Show script version
   --corpus <name>        Corpus to benchmark (default: demo)
-  --scope <stem>         Scope stem: filters to a language/firm subset.
-                         Reads data/corpora/<corpus>/scopes/<corpus>_<stem>_scope.yaml.
-                         Used to resolve --questions stem.
-                         Example: --scope lang_en
-  --questions <stem>     Question set stem. With --scope, resolves to
-                         benchmarks/<corpus>/<corpus>_<scope>_<stem>_questions.yaml.
-                         Without --scope, tries <corpus>_<stem>_questions.yaml.
-                         Example: --questions basic
-  --top-k <n>            Number of chunks to retrieve (default: from corpus metadata or 10)
+  --top-k <n>            Number of chunks to retrieve (default: 5)
   --temperature <t>      LLM temperature (default: 0.3)
   --model <name>         LLM model to use (default: from API config)
-  --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
-  --min-score <f>        Minimum chunk retrieval score threshold (default: from corpus metadata)
-  --lang-questions <list> Filter questions by the language they are PHRASED in (question_language
-                         field; space-separated, e.g. --lang-questions en fr). NOT the firm
-                         filing-language — that split is done with --scope. Default: all.
-  --keywords on|off      BM25 keyword-channel toggle (default on). 'off' = keyword ablation,
-                         independent of --entity-filter.
   --firm <name>          Inject firm filter into all queries (overrides YAML firm fields)
+  --subset <group>       Run only questions whose firm is in the named subset
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
+  --questions <path>     Path to YAML question file (default: auto-detect from corpus name)
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
-  --verbose (-v)         Per-question: show chunks_retrieved, entity_filter, first_source,
-                         difficulty, answer_location
-  --super-verbose (-vv)  Everything in --verbose plus: retrieval query, entity tokens,
-                         keywords sent, model used, and full answer preview
-  --query-expansion <N>  Entity-name expansion repeat count. 0 = off (raw query);
-                         1 = recognized entity's canonical name appended once (DEFAULT);
-                         N>1 = appended N times to weight BM25. Retrieval query only,
-                         never the query sent to the LLM.
-  --entity-filter <mode> Source of the retrieval filter. One of:
-                         none = no filter (all firms eligible);
-                         yaml = use the question file's entity_filter field;
-                         auto = detect entities from the query and filter to them (DEFAULT).
-
-Usage patterns:
-  ais_bench --corpus esef_banks --model gemma3:27b
-  ais_bench --corpus esef_banks --scope lang_en --questions basic --verbose
-  ais_bench --corpus sec_10k --scope big_banks --topics "Capital & Financial Position"
-  ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
 
 Question subset filtering (sec_10k):
-  ais_bench --corpus sec_10k --scope big_banks
+  ais_bench --corpus sec_10k --subset big_banks
   ais_bench --corpus sec_10k --topics "AI Risk Evolution,Cybersecurity"
-  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
+  ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
+  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --subset big_banks
 
-· --scope composes with --topics, --question-ids, and --lang-questions using AND
-· Available scopes: data/corpora/<corpus>/scopes/<corpus>_<stem>_scope.yaml (e.g. sec_10k: big_banks, challenges)
+· Subsets compose with --topics and --question-ids using AND
+· Available subsets: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
 · Requires: ais_start must be running
-· Questions: benchmarks/<corpus>/<corpus>_questions.yaml (default) or scope/stem resolution
-· Reports:   benchmarks/<corpus>/reports/ (filename includes scope + filter suffix when active)
-· Bundle:    ~/Downloads/benchmark_<corpus>_<scope>_<date>_<time>.zip — upload and say
-             "audit that report" for qualitative review (T2.47)
+· Questions: benchmarks/<corpus>/<corpus>_questions.yaml
+· Reports:   benchmarks/<corpus>/reports/ (filename includes filter suffix when active)
 
 ---
 
 ## ais_download_esef
-ais_download_esef v1.4.1 — Download ESEF iXBRL annual reports from filings.xbrl.org
+ais_download_esef v1.0.0 — Download ESEF iXBRL annual reports from filings.xbrl.org
 
-Downloads XHTML annual reports for European financial institutions
+Downloads XHTML annual reports for 10 major European financial institutions
 from the XBRL International public filing repository (filings.xbrl.org).
-Default: all firms in the operator seed file (17 firms as of 2026-05-29).
-With --scope: only firms in the named scope subset.
+Covers: ING Group, BNP Paribas, Deutsche Bank, Santander, Société Générale,
+UniCredit, ABN AMRO, KBC Group, Crédit Agricole, Nordea.
 
 Usage: ais_download_esef [options]
 
 Options:
   --help            Show this help
   --version         Show script version
-  --scope STEM      Scope stem: download only firms in esef_banks_<STEM>_scope.yaml
-                    e.g. --scope lang_en downloads the 9 EN-primary firms (ING, Barclays, HSBC, StanChart, BBVA, Nordea, SEB, Erste, KBC);
-                      bare ais_download_esef downloads all 12 (9 EN + BNP Paribas, Société Générale, UniCredit).
-                    Absence downloads the full seed list (default behavior).
   --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)
   --period-start    Earliest filing period end date (default: 2022-01-01)
   --period-end      Latest filing period end date (default: 2025-12-31)
 
-· Skips files already present in output directory
+· Downloads ~10 ESEF XHTML filings (~50-200MB total)
 · Source: filings.xbrl.org (XBRL International, 24,800+ filings)
 · Files named: <Entity>_ESEF_<year>.xhtml
-· Next step: ingest new files via AIStudio UI Upload button
-
----
-## ais_import_knowledge_base
-ais_import_knowledge_base v1.0.0 — Import external knowledge source data for a corpus scope
-
-Fetches entity or glossary data from an external knowledge source (K) for a specific
-corpus (C) and scope (S), and writes the enriched output to data/knowledge_sources/<K>/.
-Updates catalog.yaml with import metadata (date, count, file path).
-
-Usage: ais_import_knowledge_base --source <K> --corpus <C> --scope <S> [options]
-       ais_import_knowledge_base --list
-
-Options:
-  --source <K>      Knowledge source: gleif | sec_edgar | bis_basel | nist_ai_rmf | esrs
-  --corpus <C>      Corpus name (e.g. sec_10k, esef_banks, any_corpus)
-  --scope <S>       Scope ID matching a <C>_<S>_scope.yaml file (e.g. 25_firms, full)
-  --force           Overwrite existing output file
-  --list            Show all imported knowledge sources from catalog.yaml
-  --help            Show this help
-  --version         Show version
-
-Examples:
-  ais_import_knowledge_base --source gleif --corpus sec_10k --scope 25_firms
-  ais_import_knowledge_base --source bis_basel --corpus any_corpus --scope full
-  ais_import_knowledge_base --list
-
-· Scope file:   benchmarks/<C>/<C>_<S>_scope.yaml (flat list of entity/term names)
-· Metadata:     data/knowledge_sources/<K>/<K>_metadata.yaml (API config, license)
-· Output:       data/knowledge_sources/<K>/<K>_<C>_<S>_<A>.yaml (A = entities|glossary|companies)
-· Catalog:      data/knowledge_sources/catalog.yaml (registry of all imports)
-· Sources implemented: gleif
-· Sources planned:     sec_edgar, bis_basel, nist_ai_rmf, esrs
-
----
-## ais_import_entity_kb
-ais_import_entity_kb — Build the GLEIF/Wikidata entity knowledge source for a corpus
-
-Reads the corpus full_scope (data/corpora/<C>/<C>_full_scope.yaml), links each row to its
-uploads filing(s), resolves identity (the LEI you supply is authoritative), and on --apply
-builds the xbrl-keyed entity KB the ingest pipeline reads for the [Document:] alias prefix
-that drives per-firm isolation at query time.
-
-Usage: ais_import_entity_kb --corpus <C> [--apply] [--list]
-
-Options:
-  --corpus <C>   Corpus name (e.g. sec_10k, esef_banks)
-  --apply        Build the entity KB from the resolved rows (default: REVIEW ONLY — nothing written)
-  --list         Show the import catalog
-  --help         Show this help
-  --version      Show version
-
-Examples:
-  ais_import_entity_kb --corpus sec_10k            # review only — shows resolved rows, writes nothing
-  ais_import_entity_kb --corpus sec_10k --apply    # builds/updates the entity KB
-
-· Review-gate: without --apply nothing is written. Run the review pass first, confirm the
-  resolved rows, then re-run with --apply.
-· Run after adding a firm on demand (e.g. ais_download_sec_10k --tkr BLK) so the new firm is
-  recognized and isolates correctly.
-
----
-## ais_import_glossary_kb
-ais_import_glossary_kb — Build a term-to-expansion glossary knowledge source for a corpus
-
-Loads a static curated seed and writes a glossary YAML that rag_core binds at QUERY time
-(acronym → BM25 expansion). bis_basel is live (52 Basel III/IV terms); nist_ai_rmf and esrs
-are registered but not yet implemented. Deterministic — writes in one pass, no review gate.
-
-Usage: ais_import_glossary_kb --source <name> [--corpus <c>] [--scope <s>] [--list]
-
-Options:
-  --source <name>   Glossary source to import (required; bis_basel)
-  --corpus <c>      Corpus scope label (default: any_corpus — corpus-wide)
-  --scope <s>       Scope id (default: full)
-  --list            List importable knowledge sources and exit
-  --help            Show this help
-  --version         Show version
-
-Examples:
-  ais_import_glossary_kb --source bis_basel              # corpus-wide glossary
-  ais_import_glossary_kb --source bis_basel --corpus sec_10k
-
-· Glossary binds at QUERY time — restart the backend (ais_stop && ais_start) to load it.
+· Next step: create corpus 'esef_banks' in AIStudio UI, then ingest
 
 ---
 ## ais_download_sec_10k
 
-Usage: ais_download_sec_10k [--cik <cik> | --tkr <ticker> | --scope <file.yaml>]
-                            [--latest [N] | --years <YYYY> [<YYYY> ...]] [--no-verify]
-                            [--force_name <name>] [--force_year <YYYY>]
-                            [--out <dir>] [--delay <s>] [--help]
+Usage: ais_download_sec_10k [--help] [--version] [--limit <n>] [--out <dir>]
 
-Download SEC 10-K filings from EDGAR into data/corpora/sec_10k/uploads/.
-Membership comes from a scope file (default sec_10k_full_scope.yaml), or a single
-firm via --cik / --tkr. Each filing is verified at download for the iXBRL entity
-tag ingest relies on (dei:EntityRegistrantName); a firm whose filings lack it is
-flagged before you spend an ingest on it.
-
-Input modes (mutually exclusive; default = the scope file):
-  --cik <cik>        One firm by CIK (10-digit; zero-padding optional)
-  --tkr <ticker>     One firm by ticker (resolved to CIK via EDGAR)
-  --scope <file>     Your own list — entities: [{label, cik|ticker}]
-                     (default: data/corpora/sec_10k/sec_10k_full_scope.yaml)
-
-Year selection (mutually exclusive; default = --latest 1):
-  --latest [N]       The N most-recent filings per firm, by filing date.
-                     Bare --latest = 1. (This was --years <N> before v1.3.0.)
-  --years <YYYY>...  Explicit fiscal year(s): --years 2024  or  --years 2024 2025.
-                     Selects filings by fiscal period (reportDate), not filing date.
+Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/.
+Downloads the most recent 10-K for each company in the default list.
 
 Options:
-  --no-verify        Skip the iXBRL entity-tag check
-  --force_name <n>   Assert the entity name when the tag is absent (single-firm modes)
-  --force_year <y>   Assert the fiscal year when the tag is absent (single-firm modes)
-  --delay <s>        Request delay in seconds (min 0.1, default 0.5)
-  --help             Show this help
+  --help         Show this help
+  --version      Show script version
+  --limit <n>    Maximum number of filings to download (default: all)
+  --out <dir>    Output directory (default: ~/Downloads/sec_10k_corpus/)
 
-Examples:
-  ais_download_sec_10k                          # default scope, latest 1
-  ais_download_sec_10k --years 2024             # every firm, fiscal year 2024
-  ais_download_sec_10k --years 2024 2025        # FY2024 and FY2025
-  ais_download_sec_10k --latest 3               # 3 most-recent per firm
-  ais_download_sec_10k --tkr BNY --latest 1     # one firm by ticker
-  ais_download_sec_10k --scope scopes/sec_10k_my_firms_scope.yaml   # bring your own list
+· After downloading: ingest via the UI — select sec_10k corpus, Add files
+· Or use: ais_ingest_sec_10k
 
-· After downloading: ais_ingest_sec_10k
-· Look up CIK / ticker / LEI: SEC EDGAR, company_tickers.json, GLEIF (see TUTORIAL Annex 1)
 ---
 
 ## ais_ingest_sec_10k
 
-Usage: ais_ingest_sec_10k [--force] [--files <patterns>] [--verbose] [--help] [--version]
+Usage: ais_ingest_sec_10k [--help] [--version] [--force]
 
-Ingest SEC 10-K filings into AIStudio from data/corpora/sec_10k/uploads/.
-Incremental by default — skips files already indexed in Qdrant (unchanged files).
-~30 min first run on M4 Pro; subsequent incremental runs are fast.
+Ingest SEC 10-K filings into AIStudio from ~/Downloads/sec_10k_corpus/.
+Creates the sec_10k corpus if it does not exist.
+This is the real-scale test corpus — 100+ filings, ~30 min first run.
 
 Options:
-  --force              Full rebuild — wipe collection, re-ingest all files
-  --files <patterns>   Ingest ONLY files matching these comma-separated patterns (always
-                       re-embedded). Each pattern is OR-matched against the filename
-                       case-insensitively: literal substring or regex. Always re-embeds
-                       matched files regardless of whether they are already indexed.
-                       e.g. --files Goldman_Sachs  or  --files 'JPM.*2025,Citi'
-  --verbose            Print full JSON result payload after summary
-  --help               Show this help
-  --version            Show script version
+  --help      Show this help
+  --version   Show script version
+  --force     Re-ingest all files regardless of hash
 
 · Run after: ais_download_sec_10k
 · Requires: ais_start must be running
-· To benchmark: ais_bench --corpus sec_10k
 
 ---
 
 ## ais_ingest_esef
 
-Usage: ais_ingest_esef [--corpus <name>] [--force] [--files <patterns>] [--verbose] [--help] [--version]
+Usage: ais_ingest_esef [--corpus <name>] [--force] [--verbose] [--help] [--version]
 
 Ingest ESEF iXBRL annual reports into AIStudio.
-Incremental by default — skips files already indexed in Qdrant.
 Requires corpus metadata file to exist before running.
 Reference implementation for user corpus ingest — see AIStudio Tutorial §3.
 
 Options:
-  --corpus <name>    Corpus name (default: esef_banks)
-  --force            Full rebuild — wipe collection, re-ingest all files
-  --files <patterns> Ingest ONLY files matching these comma-separated patterns (always
-                     re-embedded). OR-matched case-insensitively: literal substring or regex.
-                     e.g. --files Nordea  or  --files 'BNP.*2025,ING'
-  --verbose          Print full JSON result payload after summary
-  --help             Show this help
-  --version          Show script version
+  --corpus <name>   Corpus name (default: esef_banks)
+  --force           Re-ingest even if corpus already indexed in Qdrant
+  --verbose         Print full JSON result payload after summary
+  --help            Show this help
+  --version         Show script version
 
 · Run after: ais_download_esef
 · Requires: ais_start · corpus metadata file (create via UI or REST POST /corpus/create)
