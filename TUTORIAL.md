@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.0.0 · Updated 2026-06-14*
+*Version: 1.0.1 · Updated 2026-06-18*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -86,7 +86,7 @@ EDGAR serves filings by **CIK** — the *Central Index Key*, the unique number t
 
 > **What is SEC EDGAR?** The SEC requires public companies to file annual reports (10-K); EDGAR is the public database where they live. AIStudio's downloader handles the access protocol — you get the files, it handles the plumbing.
 
-> **Firms included:** Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, BNY Mellon, Citigroup, and others — bulge-bracket banks, asset managers, exchanges, custody banks.
+> **Firms included:** Goldman Sachs, JPMorgan Chase, Morgan Stanley, BNY Mellon, Citigroup, and others — bulge-bracket banks, asset managers, exchanges, custody banks.
 
 ### *Going deeper* — Why these filings need more than raw text
 *(skippable)*
