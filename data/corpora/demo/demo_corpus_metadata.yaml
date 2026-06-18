@@ -1,7 +1,4 @@
-# demo_corpus_metadata.yaml
-# Corpus metadata — loaded by api.py at query time
-
-avg_seconds_per_file: 6.33
+avg_seconds_per_file: 4.33
 content_summary: '9 documents covering: enterprise architecture methodology and toolset
   (Barbero 2006), QFD and architecture toolset (Erder|Pureur 2003), FS Journal volumes
   edited by Barbero et al. — Strategy and Architecture (2006), IT Infrastructure (2005),
@@ -10,6 +7,10 @@ content_summary: '9 documents covering: enterprise architecture methodology and 
   in financial services (Barbero 2026).'
 corpus_name: demo
 corpus_type: seeded
+default_hybrid_alpha: 0.5
+default_min_score: 0.3
+default_temperature: 0.3
+default_top_k: 10
 deleted_files: {}
 description: A curated corpus of original thought leadership documents spanning 2003–2026,
   produced by Manuel Barbero and collaborators across senior technology roles at major
@@ -19,58 +20,99 @@ description: A curated corpus of original thought leadership documents spanning 
 files:
   Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf:
     chunks: 127
-    duration_sec: 8.536
-    ingested_at: '2026-04-30T19:02:13+00:00'
+    duration_sec: 5.77
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:29+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 1086427
   Barbero - 2020 - Technology Modernization and Cloud Migration.pdf:
     chunks: 63
-    duration_sec: 3.666
-    ingested_at: '2026-04-30T19:02:17+00:00'
+    duration_sec: 2.338
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:31+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 1383620
   Barbero - 2026 - Agentic AI in Financial Services.pdf:
     chunks: 20
-    duration_sec: 1.129
-    ingested_at: '2026-04-30T19:02:18+00:00'
+    duration_sec: 0.771
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:32+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 96823
   Barbero et al. - 2005 - FS Journal - Digitization.pdf:
     chunks: 130
-    duration_sec: 6.028
-    ingested_at: '2026-04-30T19:02:24+00:00'
+    duration_sec: 3.992
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:36+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 1769420
   Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf:
     chunks: 212
-    duration_sec: 10.768
-    ingested_at: '2026-04-30T19:02:35+00:00'
+    duration_sec: 7.498
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:44+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 1111130
   Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf:
     chunks: 226
-    duration_sec: 11.659
-    ingested_at: '2026-04-30T19:02:47+00:00'
+    duration_sec: 7.782
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:52+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 871554
   Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf:
     chunks: 236
-    duration_sec: 11.588
-    ingested_at: '2026-04-30T19:02:58+00:00'
+    duration_sec: 7.732
+    file_type: PDF
+    ingested_at: '2026-06-18T04:40:59+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 2693215
   Barbero | Hunt - 2021 - Data Strategy.pdf:
     chunks: 22
-    duration_sec: 1.238
-    ingested_at: '2026-04-30T19:02:59+00:00'
+    duration_sec: 0.95
+    file_type: PDF
+    ingested_at: '2026-06-18T04:41:00+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 2337736
   Erder | Pureur - 2003 - Architecture and QFD.pdf:
     chunks: 34
-    duration_sec: 1.814
-    ingested_at: '2026-04-30T19:03:01+00:00'
+    duration_sec: 1.276
+    file_type: PDF
+    ingested_at: '2026-06-18T04:41:01+00:00'
+    normalizer_entity: ''
+    normalizer_mismatch: false
+    normalizer_source: ''
+    normalizer_year: ''
     size_bytes: 453563
-ingest_duration_seconds: 57
+ingest_duration_seconds: 39
 last_ingest_chunks: 1070
 last_ingest_files: 9
-last_ingested_at: '2026-04-30T15:03:02'
-last_updated: '2026-06-14'
-default_top_k: 5
-default_temperature: 0.3
-default_hybrid_alpha: 0.5
-default_min_score: 0.3
+last_ingested_at: '2026-06-18T00:41:02'
+last_updated: '2026-06-18'
 schema_version: '2.0'
 search_guidance: 'Route questions to the most relevant document based on intent:
 
