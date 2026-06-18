@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.8.2 -->
+<!-- Changelog: 2.8.2 — Removed the last user-facing _ops leak: the suggested help question
+     naming ais_test_ops (operator-only, not in the public build) replaced with a public
+     conceptual question (literal vs conceptual retrieval). -->
 <!-- Version: 2.8.1 -->
 <!-- Changelog: 2.8.1 — Tooltips now also on the control LABELS (Model, Top K, Temperature,
      Retrieval Mix, Keywords, Score Threshold), not just the inputs — hovering the visible
@@ -2427,7 +2431,7 @@
         "How do I add documents to an existing corpus?",
         "What file types can I ingest into AIStudio?",
         "How do I run a lifecycle test on a corpus?",
-        "What is the difference between ais_bench and ais_test_ops?",
+        "What's the difference between literal and conceptual retrieval?",
     ];
 
     function _pickRandom(arr, n) {
