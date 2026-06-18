@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 AIStudio — SEC 10-K Corpus Downloader
-Version 1.7.1
+Version 1.7.2
 
-VERSION = "1.7.1"  # authoritative version — read by deploy_ops extract_version
+VERSION = "1.7.2"  # authoritative version — read by deploy_ops extract_version
 
 Downloads 10-K annual filings from SEC EDGAR. Membership is no longer hardcoded:
 the firm set comes from a scope file (default sec_10k_full_scope.yaml), or a single
@@ -12,6 +12,9 @@ iXBRL entity tag the ingest pipeline relies on (dei:EntityRegistrantName), so a 
 that cannot be auto-recognized is flagged before you waste a 30-minute ingest on it.
 
 Changelog:
+- 1.7.2 — CLI-Output pass (Manuel): per-firm header gains a ▶ marker; per-file + verify
+          lines unified to a 3-space indent; inter-firm blank lines removed; the 50-char
+          ==== rule dropped and the --- Summary lines bulleted (·). Output-only, no logic change.
 - 1.7.1 — F-011: --cik mode now uses --force_name as the label (filename slug) when provided,
           falling back to CIK_<padded> only when no --force_name given. Prevents confusing
           CIK_0000886982_10K filenames when the firm is known. F-019: --years guard added —
@@ -422,7 +425,7 @@ def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5)
 
     if out_file.exists():
         # Succeeded, but no new file fetched → degraded-success (white ✓ on yellow).
-        cli.partial(f"{out_file.name} — already on disk, no new download", indent=2)
+        cli.partial(f"{out_file.name} — already on disk, no new download", indent=3)
         return out_file, 0
     try:
         r = requests.get(base_url, headers=HEADERS, timeout=30)
@@ -432,12 +435,12 @@ def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5)
         # .htm — so re-running the exact command resumes with no flag.
         tmp_file.write_bytes(r.content)
         tmp_file.replace(out_file)
-        cli.ok(f"{out_file.name} ({len(r.content) / 1024:.0f} KB)", indent=2)
+        cli.ok(f"{out_file.name} ({len(r.content) / 1024:.0f} KB)", indent=3)
         return out_file, len(r.content)
     except Exception as e:
         if tmp_file.exists():
             tmp_file.unlink()
-        cli.fail(f"{label} {date}: {e}", indent=2)
+        cli.fail(f"{label} {date}: {e}", indent=3)
         return None, 0
 
 
@@ -474,7 +477,7 @@ def _verify_filing(html_path: Path) -> tuple[str | None, str | None]:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ais_download_sec_10k",
-        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.7.1",
+        description="AIStudio — SEC 10-K Corpus Downloader | Version 1.7.2",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
@@ -580,7 +583,7 @@ def main() -> None:
         targets = _load_scope(scope_path, delay=args.delay)
 
     print(f"Output directory: {out_dir}")
-    print(f"Targeting {len(targets)} firm(s) × {sel_label}\n")
+    print(f"Targeting {len(targets)} firm(s) × {sel_label}")
 
     total_ok = total_fail = total_fresh = 0
     total_bytes = 0
@@ -588,13 +591,13 @@ def main() -> None:
     learned: list[dict] = []   # firms with >=1 file on disk this run → upserted into inventory
     for t in targets:
         label, cik = t["label"], t["cik"]
-        print(f"\n{label} (CIK: {cik})")
+        print(f"▶ {label} (CIK: {cik})")
         filings = get_filings(cik, max_results=latest_n, years=sel_years, delay=args.delay)
         if not filings:
             if sel_years:
-                print(f"  [warn] No 10-K filings found for {sel_label}")
+                print(f"   [warn] No 10-K filings found for {sel_label}")
             else:
-                print("  [warn] No 10-K filings found")
+                print("   [warn] No 10-K filings found")
             total_fail += 1
             continue
 
@@ -604,7 +607,7 @@ def main() -> None:
                     if (f["report_date"] or f["date"])[:4].isdigit()}
             _missing = sorted(sel_years - _got)
             if _missing:
-                print(f"  [warn] {label}: no 10-K for fiscal year(s) {', '.join(map(str, _missing))}")
+                print(f"   [warn] {label}: no 10-K for fiscal year(s) {', '.join(map(str, _missing))}")
 
         firm_ok = False
         verify_results: list[tuple[str, bool]] = []  # (date, has_entity_tag)
@@ -626,13 +629,13 @@ def main() -> None:
             verify_results.append((filing["date"], has_tag))
             if has_tag:
                 yr = year or "?"
-                cli.ok(f"verify: entity tag present ({entity} FY{yr})", indent=9)
+                cli.ok(f"verify: entity tag present ({entity} FY{yr})", indent=3)
             elif args.force_name:
                 cli.partial(f"forced: no entity tag — asserting '{args.force_name}'"
                             + (f" FY{args.force_year}" if args.force_year else "")
-                            + " (recorded as the inventory row label)", indent=9)
+                            + " (recorded as the inventory row label)", indent=3)
             else:
-                cli.fail("verify: no dei:EntityRegistrantName tag", indent=9)
+                cli.fail("verify: no dei:EntityRegistrantName tag", indent=3)
             time.sleep(args.delay)
 
         # Record for inventory write-back: forced label wins (operator's assertion).
@@ -652,25 +655,25 @@ def main() -> None:
             _yflag = ("--years " + " ".join(str(y) for y in sorted(sel_years))) if sel_years else f"--latest {latest_n}"
             cli.fail_recover(f"{label}: none of the downloaded filings ({years_str}) carry an "
                              f"iXBRL entity tag (dei:EntityRegistrantName) — ingest can't "
-                             f"auto-recognize them.", indent=2)
-            print(f"        Override:  ais_download_sec_10k {ident} {_yflag} "
+                             f"auto-recognize them.", indent=3)
+            print(f"      Override:  ais_download_sec_10k {ident} {_yflag} "
                   f'--force_name "<name to use>" [--force_year <YYYY>]')
-            print("        But find out *why* the tag is missing first — see Tutorial Annex 1.")
+            print("      But find out *why* the tag is missing first — see Tutorial Annex 1.")
 
     elapsed = time.time() - t0
     mb = total_bytes / 1_048_576
-    print(f"\n{'=' * 50}")
+    print()
     cli.section("Summary")
-    print(f"  On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
+    print(f"   · On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
           f"{total_ok - total_fresh} already present")
     if total_fail:
-        print(f"  Failed:   {total_fail}")
+        print(f"   · Failed:   {total_fail}")
     if total_fresh and elapsed > 0:
-        print(f"  Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
+        print(f"   · Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
               f"{mb / total_fresh:.2f} MB/file avg")
     else:
-        print(f"  Elapsed:  {elapsed:.0f}s (no new downloads)")
-    print(f"  Output:   {out_dir}")
+        print(f"   · Elapsed:  {elapsed:.0f}s (no new downloads)")
+    print(f"   · Output:   {out_dir}")
 
     # Inventory write-back — upsert downloaded firms into the *_full_scope ledger.
     # Read-only on any subset scope passed via --scope; preserves hand-corrected lei.
@@ -681,9 +684,9 @@ def main() -> None:
             _rel = inv_path.relative_to(_repo_root())
         except ValueError:
             _rel = inv_path
-        print(f"  Inventory: {_rel}  (+{n_added} new, {n_touched} updated)")
+        print(f"   · Inventory: {_rel}  (+{n_added} new, {n_touched} updated)")
 
-    print("\nTo ingest these files into AIStudio, run:\n  ais_ingest_sec_10k")
+    print("\nTo ingest these files into AIStudio, run:\n   ais_ingest_sec_10k")
 
 
 if __name__ == "__main__":
