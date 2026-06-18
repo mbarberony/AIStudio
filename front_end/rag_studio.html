@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.7.0 -->
+<!-- Changelog: 2.7.0 — (a) Default model now prefers Google Gemma (smallest available Gemma)
+     rather than merely the smallest model overall — ships Gemma-first. (b) Top K default 5 → 10
+     across the UI (initial input + send fallback + new-corpus dialog), matching the demo/sec
+     corpus tuning guidance. -->
+<!-- Version: 2.6.9 -->
+<!-- Changelog: 2.6.9 — (AIS_22/AIS_23) Edit Corpus modal: Retrieval Mix is now the literal↔
+     conceptual slider (matches the main window, inverted to hybrid_alpha at save), and a new
+     Score Threshold (min_score) slider writes default_min_score to corpus metadata — the backend
+     already resolves per-request → corpus default → fallback, so lowering a corpus's floor now
+     works from the UI. (Defaults-screen parity is the next step.) -->
 <!-- Version: 2.6.8 -->
 <!-- Changelog: 2.6.8 — (AIS_02) answer spacing. Renderer no longer depends on the model's
      \n vs \n\n discipline: _wrapParagraphs gives every prose line its own <p>, and a single
@@ -969,7 +980,7 @@
                 <div class="section-label">Query Settings</div>
                 <div class="param-row">
                     <span class="param-label">Top K</span>
-                    <input type="number" id="topK" min="1" max="20" value="5">
+                    <input type="number" id="topK" min="1" max="20" value="10">
                 </div>
                 <div class="param-row">
                     <span class="param-label">Temperature</span>
@@ -1279,7 +1290,9 @@
             modelSelect.innerHTML = chatModels
                 .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
                 .join('');
-            const first = chatModels.find(m => m.available);
+            // Prefer Google's Gemma as the default; fall back to the smallest available model
+            const gemmaDefault = chatModels.find(m => m.available && /gemma/i.test(m.id));
+            const first = gemmaDefault || chatModels.find(m => m.available);
             if (first) modelSelect.value = first.id;
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';
@@ -1411,7 +1424,7 @@
             const body = {
                 query,
                 corpus: currentCorpus,
-                top_k: parseInt(topKInput.value) || 5,
+                top_k: parseInt(topKInput.value) || 10,
                 temperature: parseFloat(tempInput.value) || 0.3,
                 hybrid_alpha: 1 - parseFloat(alphaInput.value),
                 query_expansion: 1,
@@ -1749,7 +1762,7 @@
                     <!-- Query Defaults — editable here too (backend update_corpus_metadata accepts default_*) -->
                     <div style="margin-bottom:20px;border-top:1px solid var(--border,#e2e8f0);padding-top:16px;">
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Query Defaults</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
                             <div>
                                 <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Top K</label>
                                 <input id="_editTopK" type="number" min="1" max="20"
@@ -1760,13 +1773,32 @@
                                 <input id="_editTemp" type="number" min="0" max="2" step="0.1"
                                     style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
                             </div>
-                            <div>
-                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Retrieval Mix (α)</label>
-                                <input id="_editAlpha" type="number" min="0" max="1" step="0.05"
-                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                        </div>
+                        <div style="margin-top:14px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                                <label style="font-size:11px;color:var(--text-mid);">Retrieval Mix</label>
+                                <span id="_editAlphaVal" style="font-size:11px;color:var(--accent);font-weight:600;">0.50</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">Literal matches exact words. Conceptual finds related meaning.</div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:11px;color:var(--text-mid);">Literal</span>
+                                <input id="_editAlpha" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+                                <span style="font-size:11px;color:var(--text-mid);">Conceptual</span>
                             </div>
                         </div>
-                        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
+                        <div style="margin-top:14px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                                <label style="font-size:11px;color:var(--text-mid);">Score Threshold</label>
+                                <span id="_editMinScoreVal" style="font-size:11px;color:var(--accent);font-weight:600;">0.50</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">Relevance floor — chunks scoring below this are dropped before the model sees them. Lower it (≈0.2–0.3) if good answers come back empty or hedged.</div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:11px;color:var(--text-mid);">0.0</span>
+                                <input id="_editMinScore" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+                                <span style="font-size:11px;color:var(--text-mid);">1.0</span>
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:10px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
                     </div>
 
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -1783,7 +1815,15 @@
             overlay.querySelector('#_editGuidance').value = data.search_guidance || '';
             if (data.default_top_k != null)        overlay.querySelector('#_editTopK').value  = data.default_top_k;
             if (data.default_temperature != null)  overlay.querySelector('#_editTemp').value  = data.default_temperature;
-            if (data.default_hybrid_alpha != null) overlay.querySelector('#_editAlpha').value = parseFloat(data.default_hybrid_alpha).toFixed(2);
+            // Retrieval Mix slider shows literalness (1 - hybrid_alpha), matching the main window.
+            const _eAlpha = overlay.querySelector('#_editAlpha'), _eAlphaVal = overlay.querySelector('#_editAlphaVal');
+            const _eMin = overlay.querySelector('#_editMinScore'), _eMinVal = overlay.querySelector('#_editMinScoreVal');
+            const _aLit = data.default_hybrid_alpha != null ? (1 - parseFloat(data.default_hybrid_alpha)) : 0.5;
+            _eAlpha.value = _aLit; _eAlphaVal.textContent = _aLit.toFixed(2);
+            const _ms = data.default_min_score != null ? parseFloat(data.default_min_score) : 0.5;
+            _eMin.value = _ms; _eMinVal.textContent = _ms.toFixed(2);
+            _eAlpha.addEventListener('input', () => { _eAlphaVal.textContent = parseFloat(_eAlpha.value).toFixed(2); });
+            _eMin.addEventListener('input', () => { _eMinVal.textContent = parseFloat(_eMin.value).toFixed(2); });
             overlay.querySelector('#_editSd').focus();
 
             const finish = (save) => {
@@ -1793,11 +1833,12 @@
                     const guidance = overlay.querySelector('#_editGuidance').value.trim();
                     const _tk = overlay.querySelector('#_editTopK').value.trim();
                     const _tp = overlay.querySelector('#_editTemp').value.trim();
-                    const _al = overlay.querySelector('#_editAlpha').value.trim();
                     const _payload = { short_description: sd, description: desc, search_guidance: guidance };
                     if (_tk !== '') _payload.default_top_k = parseInt(_tk);
                     if (_tp !== '') _payload.default_temperature = parseFloat(_tp);
-                    if (_al !== '') _payload.default_hybrid_alpha = parseFloat(_al);
+                    // sliders are always present → always save; invert literalness back to hybrid_alpha
+                    _payload.default_hybrid_alpha = 1 - parseFloat(overlay.querySelector('#_editAlpha').value);
+                    _payload.default_min_score = parseFloat(overlay.querySelector('#_editMinScore').value);
                     fetch(`${API}/corpus/${data.name}/metadata`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
@@ -2310,11 +2351,11 @@
             // Pre-populate Query Defaults from localStorage
             try {
                 const _sd = JSON.parse(localStorage.getItem('ais_defaults') || '{}');
-                overlay.querySelector('#_ccTopK').placeholder  = _sd.topK  ?? 5;
+                overlay.querySelector('#_ccTopK').placeholder  = _sd.topK  ?? 10;
                 overlay.querySelector('#_ccTemp').placeholder  = _sd.temp  ?? 0.3;
                 overlay.querySelector('#_ccAlpha').placeholder = parseFloat(_sd.alpha ?? 0.5).toFixed(2);
             } catch(_) {
-                overlay.querySelector('#_ccTopK').placeholder  = 5;
+                overlay.querySelector('#_ccTopK').placeholder  = 10;
                 overlay.querySelector('#_ccTemp').placeholder  = 0.3;
                 overlay.querySelector('#_ccAlpha').placeholder = '0.50';
             }
@@ -2343,7 +2384,7 @@
                     description: overlay.querySelector('#_ccDesc').value.trim(),
                     content_summary: '',
                     search_guidance: overlay.querySelector('#_ccGuidance').value.trim(),
-                    default_top_k: parseInt(overlay.querySelector('#_ccTopK').value || overlay.querySelector('#_ccTopK').placeholder) || 5,
+                    default_top_k: parseInt(overlay.querySelector('#_ccTopK').value || overlay.querySelector('#_ccTopK').placeholder) || 10,
                     default_temperature: parseFloat(overlay.querySelector('#_ccTemp').value || overlay.querySelector('#_ccTemp').placeholder) || 0.3,
                     default_hybrid_alpha: parseFloat(overlay.querySelector('#_ccAlpha').value || overlay.querySelector('#_ccAlpha').placeholder) || 0.5,
                 });
