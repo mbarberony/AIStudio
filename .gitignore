@@ -31,6 +31,9 @@ meta/
 *_ops.sh
 *_ops.py
 *_ops
+# Any _ops file regardless of extension (.yaml/.txt/...) — §23 intent: operator-only, never tracked.
+# Closes the ingest_test_ops.yaml leak the .sh/.py/bare rules missed (KRR_064).
+*_ops.*
 scripts/deploy_files.sh
 scripts/generate_packet.sh
 scripts/bundle_session.sh
