@@ -59,6 +59,9 @@ data/corpora/demo/doc_chunk_map.json
 
 # AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
 data/corpora/sec_10k/*
+!data/corpora/sec_10k/
+!data/corpora/sec_10k/sec_10k_full_scope.yaml
+!data/corpora/sec_10k/sec_10k_corpus_metadata.yaml
 
 # AIStudio — help corpus (PDFs shipped, runtime files excluded)
 !data/corpora/help/

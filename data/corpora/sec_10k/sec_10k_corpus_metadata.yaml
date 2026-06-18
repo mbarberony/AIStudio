@@ -1,0 +1,22 @@
+# sec_10k_corpus_metadata.yaml
+avg_seconds_per_file: 0.0
+content_summary: 'Filings from major financial services firms: bulge-bracket banks (Goldman Sachs, JPMorgan Chase, Morgan Stanley, Bank of America, Citigroup), asset managers (T. Rowe Price, Franklin Templeton, Invesco), exchanges (CME Group, ICE, Nasdaq, CBOE), insurance (AIG, MetLife, Prudential, Travelers), custody (State Street, Northern Trust), and boutiques (Jefferies, Raymond James).'
+corpus_name: sec_10k
+default_hybrid_alpha: 0.5
+default_min_score: 0.5
+default_temperature: 0.3
+default_top_k: 10
+deleted_files: {}
+description: 'Annual report (10-K) filings from major financial services firms covering financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024, 2025. Downloaded from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and custody banks.'
+file_count_after_change: 0
+files: {}
+ingest_duration_seconds: 0.0
+last_file_change: ''
+last_file_change_at: ''
+last_ingest_chunks: 0
+last_ingest_files: 0
+last_ingested_at: ''
+last_updated: ''
+schema_version: '1.0'
+search_guidance: "Annual report (10-K) filings from major financial services firms covering financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024, 2025. Downloaded from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and custody banks. \n\nRoute questions to the most relevant firm and filing year:\nTopic routing:\n- AI risk, AI governance, artificial intelligence regulation, EU AI Act → JPMorgan Chase, Bank of America, Citigroup, Goldman Sachs, Morgan Stanley. AI risk language appears primarily in FY2023-2026 filings — do NOT expect it in FY2021/2022 filings. If absent in early years, say so explicitly rather than saying \"no information.\"\n- Cybersecurity risk management, information security, CISO, cyberattack → JPMorgan Chase, Bank of America, Citigroup. Describe what each filing says; if comparing years, note what changed or stayed the same.\n- Model risk governance → Morgan Stanley, Goldman Sachs\n- Climate risk, ESG, Net Zero, transition risk → Bank of America, Citigroup\n- CET1, capital ratios, total revenues, financials → use entity_filter with firm names for precision. Financial data is in tables — cite the filing and year even if exact numbers are hard to extract.\n- Digital banking, technology investment, fintech → JPMorgan Chase, Bank of America, Citigroup\n- Regulatory capital, Basel III, GSIB surcharge → JPMorgan Chase, Citigroup\n\nWhen a question asks about evolution or changes over time: retrieve multiple years for the same firm and compare what the filings say. If a topic appears in later filings but not earlier ones, that IS the answer — state it explicitly.\n\nAnswer directly from what the sources contain. Never say \"no information\" if the sources contain related content — synthesize what IS there and note what is absent."
+short_description: SEC 10-K filings from major financial services firms

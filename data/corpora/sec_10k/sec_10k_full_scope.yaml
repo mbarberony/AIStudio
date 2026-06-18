@@ -1,0 +1,181 @@
+entities:
+- label: Goldman Sachs
+  cik: 0000886982
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: The Goldman Sachs Group, Inc.
+  gleif_lei: 784F5XWPLTWKTBV3E584
+  files: []
+  last_updated: ''
+- label: Morgan Stanley
+  cik: 0000895421
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: MORGAN STANLEY
+  gleif_lei: IGJSJL3JD5P30I6NJZ34
+  files: []
+  last_updated: ''
+- label: JPMorgan Chase
+  cik: 0000019617
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: JPMorgan Chase & Co
+  gleif_lei: 8I5DZWZKVSZI1NUHU748
+  files: []
+  last_updated: ''
+- label: Citigroup
+  cik: 0000831001
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Citigroup Inc
+  gleif_lei: 6SHGI4ZSSLCXXQSBB395
+  files: []
+  last_updated: ''
+- label: Bank of America
+  cik: 0000070858
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Bank of America Corporation
+  gleif_lei: 9DJT3UXIJIZJI4WXO774
+  files: []
+  last_updated: ''
+- label: T Rowe Price
+  cik: 0001113169
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: PRICE T ROWE GROUP INC
+  gleif_lei: 549300SIV6FPS9Y7IH33
+  files: []
+  last_updated: ''
+- label: Franklin Templeton
+  cik: 0000038777
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: FRANKLIN RESOURCES, INC.
+  gleif_lei: RIFQSET379FOGTEFKS80
+  files: []
+  last_updated: ''
+- label: Invesco
+  cik: 0000914208
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Invesco Ltd.
+  gleif_lei: ECPGFXU8A2SHKVVGJI15
+  files: []
+  last_updated: ''
+- label: CME Group
+  cik: '0001156375'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: CME GROUP INC.
+  gleif_lei: LCZ7XYGSLJUHFXXNXD88
+  files: []
+  last_updated: ''
+- label: Intercontinental Exchange
+  cik: 0001571949
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: INTERCONTINENTAL EXCHANGE, INC.
+  gleif_lei: 5493000F4ZO33MV32P92
+  files: []
+  last_updated: ''
+- label: Nasdaq
+  cik: 0001120193
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Nasdaq, Inc.
+  gleif_lei: 549300L8X1Q78ERXFD06
+  files: []
+  last_updated: ''
+- label: Cboe Global Markets
+  cik: '0001374310'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Cboe Global Markets, Inc.
+  gleif_lei: 529900RLNSGA90UPEH54
+  files: []
+  last_updated: ''
+- label: AIG
+  cik: '0000005272'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: American International Group, Inc.
+  gleif_lei: ODVCVCQG2BP6VHV36M30
+  files: []
+  last_updated: ''
+- label: MetLife
+  cik: 0001099219
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: MetLife, Inc.
+  gleif_lei: C4BXATY60WC6XEOZDX54
+  files: []
+  last_updated: ''
+- label: Prudential Financial
+  cik: '0001137774'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Prudential Financial, Inc.
+  gleif_lei: 5PRBRS5FEH7NREC8OR45
+  files: []
+  last_updated: ''
+- label: Travelers
+  cik: 0000086312
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Travelers Companies, Inc.
+  gleif_lei: 549300Y650407RU8B149
+  files: []
+  last_updated: ''
+- label: State Street
+  cik: 0000093751
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: STATE STREET CORPORATION
+  gleif_lei: 549300ZFEEJ2IP5VME73
+  files: []
+  last_updated: ''
+- label: Northern Trust
+  cik: '0000073124'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: NORTHERN TRUST CORPORATION
+  gleif_lei: 549300GLF98S992BC502
+  files: []
+  last_updated: ''
+- label: Jefferies
+  cik: 0000096223
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: JEFFERIES FINANCIAL GROUP INC.
+  gleif_lei: 549300HOF34RGOJ5YL07
+  files: []
+  last_updated: ''
+- label: Raymond James
+  cik: '0000720005'
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: RAYMOND JAMES FINANCIAL, INC.
+  gleif_lei: RGUZHJ05YTITL6D76949
+  files: []
+  last_updated: ''
