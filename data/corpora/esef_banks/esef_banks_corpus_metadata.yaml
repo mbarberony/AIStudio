@@ -1,0 +1,49 @@
+# esef_banks_corpus_metadata.yaml — per-corpus CONFIG (query defaults + guidance).
+# Pristine ship copy: files:{} / no telemetry — populated at ingest. Curated fields (description,
+# search_guidance, query defaults) are the Edit-Corpus-modal content injected at query time.
+corpus_name: esef_banks
+schema_version: '2.0'
+corpus_type: ixbrl
+knowledge_sources:
+- type: entity_synonyms
+  source: gleif
+  scope: full
+- type: term_expansion
+  source: bis_basel
+  scope: full
+- type: term_expansion
+  source: esrs
+  scope: full
+default_top_k: 10
+default_temperature: 0.3
+default_hybrid_alpha: 0.5
+default_min_score: 0.5
+short_description: ESEF iXBRL annual reports — 12 major European banks (9 EN-primary + 3 non-EN)
+description: 'Annual financial reports for 12 major European banks, downloaded from filings.xbrl.org (XBRL International''s public ESEF repository) and filed under the EU''s European Single Electronic Format (ESEF) mandate — iXBRL-tagged XHTML covering consolidated financials, risk disclosures, governance, and regulatory capital. EN-primary (9): ING Group, Barclays, HSBC, Standard Chartered, BBVA, Nordea, SEB, Erste Group, KBC Group. Non-EN (3, Annex 3 language-ceiling cases): BNP Paribas, UniCredit, Société Générale. Filings span FY2024–FY2025 (most recent available per firm; BBVA and SEB at FY2024). Use --scope lang_en for the EN-primary subset, --scope lang_noen for the non-EN trio.'
+search_guidance: 'Route questions to the most relevant firm and filing year:
+
+  - Firm-specific: add the firm name to the KEYWORDS field (e.g. "ING Group", "Barclays").
+
+  - Year-specific: add the year to KEYWORDS (e.g. "2024").
+
+  - Cross-firm comparisons: leave KEYWORDS blank, ask broadly.
+
+
+  Topic routing:
+
+  - CET1, capital/leverage ratios, RWA, Basel/CRR/CRD → all firms; KEYWORDS for precision.
+
+  - Climate risk, net zero, ESG, ESRS → BBVA, Standard Chartered, ING, Nordea.
+
+  - Net interest income / interest-rate risk → KBC Group, Nordea.
+
+  - Digital / technology / IT modernization → ING Group, Nordea.
+
+  - Holding-company vs subsidiary structure → Barclays (Annex 1 holdco/sub case).
+
+
+  ESEF filings use IFRS terminology and the European regulatory framework (CRD/CRR). The CrossEncoder reranker improves precision — a firm name in KEYWORDS helps materially. Note non-EN firms (BNP Paribas, Société Générale, UniCredit) may have no ingested data in an EN-only build — the system abstains rather than guessing (Annex 3).'
+content_summary: ''
+sources: []
+files: {}
+deleted_files: {}

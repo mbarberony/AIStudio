@@ -1,0 +1,48 @@
+# esef_banks non-EN scope (3 firms: BNP Paribas FR, Société Générale FR, UniCredit IT) — Annex 3 language ceiling.
+# bench: ais_bench --corpus esef_banks --scope lang_noen. Open/provenance schema; read-only.
+schema_version: '2.0'
+kind: scope
+corpus: esef_banks
+entities:
+- label: BNP Paribas
+  cik: ''
+  ticker: ''
+  lei: R0MUWSFPU8MPRO8K5P83
+  gleif_lei: R0MUWSFPU8MPRO8K5P83
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: ''
+  gleif_name: BNP PARIBAS
+  expected_xbrl_name: BNP PARIBAS
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: FR
+  filing_language: fr
+- label: UniCredit
+  cik: ''
+  ticker: ''
+  lei: 549300TRUWO2CD2G5692
+  gleif_lei: 549300TRUWO2CD2G5692
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: ''
+  gleif_name: UNICREDIT, SOCIETA' PER AZIONI
+  expected_xbrl_name: UNICREDIT, SOCIETA' PER AZIONI
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: IT
+  filing_language: it
+- label: Société Générale
+  cik: ''
+  ticker: ''
+  lei: O2RNE8IBXP4R0TD8PU41
+  gleif_lei: O2RNE8IBXP4R0TD8PU41
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: ''
+  gleif_name: SOCIETE GENERALE
+  expected_xbrl_name: SOCIETE GENERALE
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: FR
+  filing_language: fr

@@ -1,0 +1,132 @@
+# esef_banks EN-primary scope (9 firms) — bench: ais_bench --corpus esef_banks --scope lang_en
+# Open/provenance schema (see _scope_common.py). Read-only subset of the full inventory.
+schema_version: '2.0'
+kind: scope
+corpus: esef_banks
+entities:
+- label: ING Group
+  cik: ''
+  ticker: ''
+  lei: 549300NYKK9MWM7GGW15
+  gleif_lei: 549300NYKK9MWM7GGW15
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: ING Groep N.V.
+  gleif_name: ING GROEP N.V.
+  expected_xbrl_name: ING Groep N.V.
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: NL
+  filing_language: en
+- label: Barclays
+  cik: ''
+  ticker: ''
+  lei: G5GSEF7VJP5I7OUK5573
+  gleif_lei: G5GSEF7VJP5I7OUK5573
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Barclays Bank PLC
+  gleif_name: BARCLAYS BANK PLC
+  expected_xbrl_name: Barclays PLC
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: GB
+  filing_language: en
+- label: HSBC
+  cik: ''
+  ticker: ''
+  lei: MLU0ZO3ML4LN2LL2TL39
+  gleif_lei: MLU0ZO3ML4LN2LL2TL39
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: HSBC Holdings plc
+  gleif_name: HSBC HOLDINGS PLC
+  expected_xbrl_name: HSBC Holdings plc
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: GB
+  filing_language: en
+- label: Standard Chartered
+  cik: ''
+  ticker: ''
+  lei: RILFO74KP1CM8P6PCT96
+  gleif_lei: RILFO74KP1CM8P6PCT96
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: StandardChartered Bank
+  gleif_name: STANDARD CHARTERED BANK
+  expected_xbrl_name: Standard Chartered PLC
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: GB
+  filing_language: en
+- label: BBVA
+  cik: ''
+  ticker: ''
+  lei: K8MS7FD7N5Z2WQ51AZ71
+  gleif_lei: K8MS7FD7N5Z2WQ51AZ71
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Banco Bilbao Vizcaya Argentaria, S.A.
+  gleif_name: BANCO BILBAO VIZCAYA ARGENTARIA SOCIEDAD ANONIMA
+  expected_xbrl_name: Banco Bilbao Vizcaya Argentaria, S.A.
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: ES
+  filing_language: en
+- label: Nordea
+  cik: ''
+  ticker: ''
+  lei: 529900ODI3047E2LIV03
+  gleif_lei: 529900ODI3047E2LIV03
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Nordeakoncernen
+  gleif_name: Nordea Bank Abp
+  expected_xbrl_name: Nordea Bank Abp
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: FI
+  filing_language: en
+- label: SEB
+  cik: ''
+  ticker: ''
+  lei: F3JS33DEI6XQ4ZBPTN86
+  gleif_lei: F3JS33DEI6XQ4ZBPTN86
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Skandinaviska Enskilda Banken AB (publ)
+  gleif_name: Skandinaviska Enskilda Banken AB
+  expected_xbrl_name: Skandinaviska Enskilda Banken AB
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: SE
+  filing_language: en
+- label: Erste Group
+  cik: ''
+  ticker: ''
+  lei: PQOH26KWDF7CG10L6792
+  gleif_lei: PQOH26KWDF7CG10L6792
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Erste Group BankAG
+  gleif_name: ERSTE GROUP BANK AG
+  expected_xbrl_name: Erste Group Bank AG
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: AT
+  filing_language: en
+- label: KBC Group
+  cik: ''
+  ticker: ''
+  lei: 213800X3Q9LSAKRUWY91
+  gleif_lei: 213800X3Q9LSAKRUWY91
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: KBC Groep NV
+  gleif_name: KBC GROEP
+  expected_xbrl_name: KBC GROEP
+  aliases: []
+  files: []
+  last_updated: ''
+  jurisdiction: BE
+  filing_language: en
