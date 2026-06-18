@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.8.1 -->
+<!-- Changelog: 2.8.1 — Tooltips now also on the control LABELS (Model, Top K, Temperature,
+     Retrieval Mix, Keywords, Score Threshold), not just the inputs — hovering the visible
+     label text shows the tip. (v2.8.0 had title= on inputs only.) -->
+<!-- Version: 2.8.0 -->
+<!-- Changelog: 2.8.0 — Added native title= tooltips to the query-setting controls (Model, Top K,
+     Temperature, Retrieval Mix, Keywords, and the Edit-corpus Score Threshold). Wording consistent
+     with QUICKSTART Annex 3; same hover pattern as the Inspect button. -->
 <!-- Version: 2.7.0 -->
 <!-- Changelog: 2.7.0 — (a) Default model now prefers Google Gemma (smallest available Gemma)
      rather than merely the smallest model overall — ships Gemma-first. (b) Top K default 5 → 10
@@ -933,8 +941,8 @@
 
             <!-- Model -->
             <div class="section">
-                <div class="section-label">Model</div>
-                <select id="modelSelect"><option value="">Loading…</option></select>
+                <div class="section-label" title="The language model that writes answers. Small &amp; fast (gemma3:4b) for the demo; switch to gemma3:27b for the SEC 10-K corpus.">Model</div>
+                <select id="modelSelect" title="The language model that writes answers. Small &amp; fast (gemma3:4b) for the demo; switch to gemma3:27b for the SEC 10-K corpus."><option value="">Loading…</option></select>
             </div>
 
             <!-- Corpus -->
@@ -979,22 +987,22 @@
             <div class="section">
                 <div class="section-label">Query Settings</div>
                 <div class="param-row">
-                    <span class="param-label">Top K</span>
-                    <input type="number" id="topK" min="1" max="20" value="10">
+                    <span class="param-label" title="How many document chunks to retrieve per query. Higher = more context, slightly slower. 10 suits the demo and multi-firm financial corpora.">Top K</span>
+                    <input type="number" id="topK" min="1" max="20" value="10" title="How many document chunks to retrieve per query. Higher = more context, slightly slower. 10 suits the demo and multi-firm financial corpora.">
                 </div>
                 <div class="param-row">
-                    <span class="param-label">Temperature</span>
-                    <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3">
+                    <span class="param-label" title="Model creativity. Lower = more factual. Keep at 0.3 for document Q&amp;A.">Temperature</span>
+                    <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3" title="Model creativity. Lower = more factual. Keep at 0.3 for document Q&amp;A.">
                 </div>
                 <div class="slider-row">
                     <div class="slider-row-header">
-                        <span class="slider-label">Retrieval Mix</span>
+                        <span class="slider-label" title="Blends keyword (Literal) and semantic (Conceptual) retrieval. Center (0.5) suits most queries; Conceptual for themes, Literal for exact terms or names.">Retrieval Mix</span>
                         <span class="slider-value" id="alphaDisplay">0.50</span>
                     </div>
                     <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;line-height:1.4;">Literal matches exact words. Conceptual finds related meaning.</div>
                     <div class="slider-track">
                         <span class="slider-end">Literal</span>
-                        <input type="range" id="hybridAlpha" min="0" max="1" step="0.05" value="0.5">
+                        <input type="range" id="hybridAlpha" min="0" max="1" step="0.05" value="0.5" title="Blends keyword (Literal) and semantic (Conceptual) retrieval. Center (0.5) suits most queries; Conceptual for themes, Literal for exact terms or names.">
                         <span class="slider-end">Conceptual</span>
                     </div>
                 </div>
@@ -1002,9 +1010,9 @@
 
             <!-- Keywords — AIStudio_618: wired 2026-05-27 -->
             <div class="section">
-                <div class="section-label">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
+                <div class="section-label" title="Optional terms to bias retrieval toward specific words. Leave blank for normal queries.">Keywords <span style="font-weight:400;font-size:11px;color:var(--text-dim);text-transform:none;">(optional)</span></div>
                 <div class="param-row">
-                    <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
+                    <input type="text" id="filterKeywords" placeholder="e.g. architecture, performance, risk" title="Optional terms to bias retrieval toward specific words. Leave blank for normal queries." style="width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);box-sizing:border-box;">
                 </div>
             </div>
 
@@ -1788,13 +1796,13 @@
                         </div>
                         <div style="margin-top:14px;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                                <label style="font-size:11px;color:var(--text-mid);">Score Threshold</label>
+                                <label style="font-size:11px;color:var(--text-mid);" title="Relevance floor — chunks scoring below it are dropped before the model sees them. Lower (~0.3) for small-doc corpora, higher (0.5) for large uniform ones.">Score Threshold</label>
                                 <span id="_editMinScoreVal" style="font-size:11px;color:var(--accent);font-weight:600;">0.50</span>
                             </div>
                             <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">Relevance floor — chunks scoring below this are dropped before the model sees them. Lower it (≈0.2–0.3) if good answers come back empty or hedged.</div>
                             <div style="display:flex;align-items:center;gap:8px;">
                                 <span style="font-size:11px;color:var(--text-mid);">0.0</span>
-                                <input id="_editMinScore" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+                                <input id="_editMinScore" type="range" min="0" max="1" step="0.05" value="0.5" title="Relevance floor — chunks scoring below it are dropped before the model sees them. Lower (~0.3) for small-doc corpora, higher (0.5) for large uniform ones." style="flex:1;">
                                 <span style="font-size:11px;color:var(--text-mid);">1.0</span>
                             </div>
                         </div>
