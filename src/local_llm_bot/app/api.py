@@ -1,4 +1,8 @@
-# Version: 1.10.10
+# Version: 1.10.11
+# Changelog: 1.10.11 — AIS (2026-06-18): metadata-writer durability — the post-ingest (≈1470)
+#            and delete-file (≈2253) writers now emit the `# <corpus>_corpus_metadata.yaml`
+#            header + sort_keys=False, matching the upload/edit/reingest writers. Stops key
+#            re-alphabetization + header loss on every ingest/delete (no curated-field churn).
 # Changelog: 1.10.10 — AIS_27 (2026-06-15): migrated the deprecated @app.on_event("shutdown")
 #            to a FastAPI lifespan context manager (FastAPI(lifespan=...)). Kills the two
 #            on_event DeprecationWarnings; shutdown-trace behavior unchanged.
@@ -1467,7 +1471,8 @@ async def _run_ingest_background(corpus_name: str, uploads_dir, only_files: set[
             except Exception as _fe:
                 print(f"[ingest] warning: could not parse file_stats: {_fe}")
             with open(_meta_path, "w") as _f:
-                _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
+                _f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
+                _yaml.dump(_meta, _f, allow_unicode=True, default_flow_style=False, sort_keys=False)
         except Exception as _e:
             print(
                 f"[ingest] warning: could not write ingest metadata to corpus_metadata.yaml: {_e}"
@@ -2250,7 +2255,8 @@ async def delete_file_from_corpus(corpus_name: str, filename: str) -> dict[str, 
         _meta["file_count_after_change"] = _file_count
         _meta["last_updated"] = _dt.now().date().isoformat()
         with open(_meta_path, "w") as _f:
-            _yaml.dump(_meta, _f, default_flow_style=False, allow_unicode=True)
+            _f.write(f"# {corpus_name}_corpus_metadata.yaml\n")
+            _yaml.dump(_meta, _f, allow_unicode=True, default_flow_style=False, sort_keys=False)
     except Exception as _e:
         print(f"[delete_file] warning: could not update corpus_metadata.yaml: {_e}")
 
