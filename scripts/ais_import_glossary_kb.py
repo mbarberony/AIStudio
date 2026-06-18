@@ -23,6 +23,9 @@ sibling library scripts/_kb_common_ops.py (underscore = not a command; no alias,
 install:none — exempt from help-conformance by construction).
 
 Changelog
+  1.0.2 — CLI-output pass: added `--- Preflight` (source recognized + catalog presence)
+          and `--- Import` sections; removed the blank-line skips; the version banner is
+          now wrapper-only (dropped from runtime output per Manuel).
   1.0.0 — Initial split from ais_import_knowledge_base_ops.py v1.1.0. Lifts
           _import_bis_basel (52-term Basel III/IV static seed) verbatim. Glossary
           write schema (schema_version 1.1, attr key "glossary") preserved exactly
@@ -39,10 +42,11 @@ from datetime import datetime
 from pathlib import Path
 
 import _kb_common as kb  # shared library (underscore = not a command; no alias, install:none)
+import _cli_output as cli  # shared CLI-output glyph/section vocabulary (the --- / ✅ / · style)
 import yaml
 
 SCRIPT_NAME = "ais_import_glossary_kb"  # F-024: use civilian name (not _ops) in user-visible output
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 # Glossary sources this command knows how to build. bis_basel is live; the other
 # two are registered in the shared SOURCE_ATTRIBUTE_TYPE map but have no handler yet.
@@ -230,31 +234,33 @@ def _write_output(path: Path, source: str, corpus: str, scope: str,
 
 
 def _cmd_import(source: str, corpus: str, scope: str) -> int:
-    print(kb._bold(f"\n  {SCRIPT_NAME} — glossary import"))
-    print(f"  · Source  : {source}")
-    print(f"  · Corpus  : {corpus}")
-    print(f"  · Scope   : {scope}\n")
-
+    # ── Preflight: source recognized + catalog presence ──
+    cli.section("Preflight")
     if source in PLANNED_SOURCES:
-        kb._err(f"Source '{source}' is registered but not yet implemented (no handler).")
+        cli.fail(f"source '{source}' is registered but not yet implemented (no handler).")
         return 1
     if source not in SOURCE_HANDLERS:
         supported = ", ".join(sorted(SOURCE_HANDLERS))
-        kb._err(f"Unknown glossary source '{source}'. Available: {supported}")
+        cli.fail(f"unknown glossary source '{source}'. Available: {supported}")
         return 1
+    cli.ok(f"source recognized: {source}")
+    if kb.CATALOG_PATH.exists():
+        cli.ok(f"catalog present: {kb.CATALOG_PATH.relative_to(kb.REPO)}")
+    else:
+        cli.info("catalog absent — will be created")
 
+    # ── Import: load the static seed, write the glossary, update the catalog ──
+    cli.section("Import")
+    print(f"  · {source} · corpus {corpus} · scope {scope}")
     records, failed = SOURCE_HANDLERS[source]()
     if not records:
-        kb._err("No records produced — nothing written.")
+        cli.fail("no records produced — nothing written.")
         return 1
-
     out = _output_path(source, corpus, scope)
     _write_output(out, source, corpus, scope, records, failed)
     kb._update_catalog(source, corpus, scope, len(records), out)
-
-    rel = out.relative_to(kb.REPO)
-    print(f"\n  ✅ Wrote {len(records)} terms → {rel}")
-    print(f"  ✅ Catalog updated → {kb.CATALOG_PATH.relative_to(kb.REPO)}\n")
+    cli.ok(f"wrote {len(records)} terms → {out.relative_to(kb.REPO)}")
+    cli.ok(f"catalog updated → {kb.CATALOG_PATH.relative_to(kb.REPO)}")
     return 0
 
 
