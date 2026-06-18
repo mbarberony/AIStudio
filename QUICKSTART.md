@@ -1,24 +1,26 @@
 # Quickstart
 
-*Version: 1.2.2 | Updated: 2026-06-14*
+*Version: 2.0.0 | Updated: 2026-06-18*
 
 Get a running AIStudio instance in under 30 minutes.
 
 AIStudio runs entirely on your Mac — no cloud account, no API keys, no data leaving your machine. You'll have a local AI search engine over your own documents, accessible from your browser.
 
-> **This guide is intentionally detailed** — it explains what each tool does and why it is needed. This is deliberate: AIStudio has several components, and understanding what you are installing makes you a much more effective user. If you simply want to get running as fast as possible, a streamlined install script is coming in a future release — but you will miss understanding how a RAG system is built.
+> **This guide is intentionally detailed** — it explains what each tool does and why it is needed. This is deliberate: AIStudio has several components, and understanding what you are installing makes you a much more effective user. **In a hurry, and already have the developer tools?** Experienced users who already run Homebrew, Python, Ollama, and git can skip to the **[TL;DR — Fast Install](#tldr--fast-install)** at the end and be running in minutes — but you'll miss the explanations of how a RAG system is built (the fun part).
 
 ---
 
 ## A Note on the Tools Used in This Guide
 
-Installing AIStudio requires two external tools that work in a similar way — both are places where software is stored and from which your Mac can download and install it automatically:
+Installing AIStudio requires a few external tools — package managers, a model runtime, a vector database, and a code host. Each is introduced where it is first needed; for a one-glance summary of all of them with links, see **[Annex 1 — Tools Used in This Guide](#annex-1--tools-used-in-this-guide)**.
+
+The two you'll lean on most are both places software is stored and downloaded from automatically:
 
 **Homebrew** ([https://brew.sh](https://brew.sh)) is a package manager for macOS. Think of it as an App Store for developer tools — instead of clicking buttons in a GUI, you type `brew install <something>` and Homebrew finds it, downloads it, and installs it for you. We use it to install Python and Ollama.
 
 **GitHub** ([https://github.com](https://github.com)) is where AIStudio's code lives. Think of it as a library where software is stored and versioned. We use a tool called `git` to download ("clone") AIStudio from GitHub directly onto your Mac. AIStudio is a public repository — no account or access key required to download it.
 
-Both tools do the heavy lifting of finding, downloading, and installing software so you don't have to do it manually.
+> If a command ever does something unexpected, see **[Annex 2 — Troubleshooting](#annex-2--troubleshooting)** at the end — its entries follow the same order as the steps below.
 
 ---
 
@@ -32,7 +34,7 @@ yourusername@Mac ~ %
 ```
 The prompt text varies by machine and depends on your name — don't worry about it.
 
-AIStudio setup uses the shell to get installed and also to perform tasks the AIStudio User Interface (UI), which runs in your browser, doesn't cover. The commands all start with `ais_` — like `ais_start`, `ais_stop`, `ais_bench`. These are presented in Step 7.
+AIStudio setup uses the shell to get installed and also to perform tasks the AIStudio User Interface (UI), which runs in your browser, doesn't cover. The commands all start with `ais_` — like `ais_start`, `ais_stop`, `ais_bench`. These are presented in Step 8.
 
 > **What is a shell?** Terminal gives you access to the shell — a text interface for running commands on your Mac.
 
@@ -71,7 +73,7 @@ When installation completes you will see `==> Installation successful!` Modern M
 brew --version
 ```
 
-If you see a version number — you are all set. On older Macs, if you see `command not found`, run these three lines:
+If you see a version number — you are all set. On older Macs, if you still see `command not found`, run these three lines (and see [Annex 2 — Troubleshooting](#annex-2--troubleshooting) if it persists):
 ```bash
 echo >> ~/.zprofile
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
@@ -156,58 +158,57 @@ ollama list
 
 If you see the column headers (NAME, ID, SIZE, MODIFIED) — Ollama is running correctly. The list may be empty — that is normal. You will download models next.
 
-If you see an error:
+If you see an error, see [Annex 2 — Troubleshooting](#annex-2--troubleshooting), or start Ollama manually in a separate terminal tab:
 ```bash
 ollama serve
 ```
-Run this in a separate terminal tab to start Ollama manually.
 
 ---
 
 ## 4. Pull Required Models
 
-AIStudio uses two types of models that do completely different jobs.
+AIStudio uses two kinds of model that do completely different jobs.
 
-**nomic-embed-text** is the indexing model. When you upload a document, this model reads it and converts every passage into a set of numbers that capture its meaning — called an "embedding." When you ask a question, it finds the passages whose meaning is closest to your question. It is small (274 MB), fast, and runs invisibly. You will never interact with it directly. Everyone needs this model.
+**nomic-embed-text** is the indexing model. When you upload a document, this model reads it and converts every passage into a set of numbers that capture its meaning — called an "embedding." When you ask a question, it finds the passages whose meaning is closest to your question. It is small (274 MB), fast, and runs invisibly. You will never interact with it directly. **Everyone needs this model.**
 
-The **language model** — Llama or Mistral — reads the relevant passages found by the indexing model and writes a human-language answer with citations. This is what most people think of as "AI."
+**The language model** reads the relevant passages found by the indexing model and writes a human-language answer with citations. This is what most people think of as "AI." AIStudio supports three open model families, each in a small (fast) and a large (highest-quality) size:
 
-AIStudio works with two excellent language models: **Llama** (by Meta) and **Mistral** (by Mistral AI). Both produce high-quality answers. Llama tends to be more thorough; Mistral more concise. If you have space on your drive, download both and try them side by side — you can switch between them in the AIStudio UI at any time.
+| Family | Small — fast, the default | Large — best quality |
+|--------|---------------------------|----------------------|
+| **Google Gemma** ⭐ | `gemma3:4b` | `gemma3:27b` |
+| Meta Llama | `llama3.1:8b` | `llama3.1:70b` |
+| Mistral AI | `mistral:7b` | `mixtral:8x7b` |
 
-**Which model to download — based on your Mac's memory:**
+**The default is `gemma3:4b`** — Google's Gemma. It loads in seconds and answers the demo corpus fast, which makes for the best first run; Gemma also tops the AIStudio benchmark on the SEC corpus. You can switch models at any time in the UI.
 
-To check your memory: click the Apple menu (on the top left part of the screen) → **About This Mac** → look for "Memory."
+**Which to download — based on your Mac's memory** (Apple menu → **About This Mac** → "Memory"):
 
-- **8 GB** — download `mistral:7b`. `llama3.1:8b` may be slow.
-- **16 GB** — download `llama3.1:8b` and `mistral:7b`. Try both.
-- **32 GB or more** — download both. Consider `llama3.1:70b` only if you have 64 GB.
-- **64 GB** — download `llama3.1:70b` for the best answer quality.
+- **8–16 GB** — `gemma3:4b` (the default). Plenty for the demo corpus.
+- **32 GB** — also pull `gemma3:27b` for top-quality answers on heavier corpora.
+- **64 GB or more** — `gemma3:27b` is excellent; pull `llama3.1:70b` or `mixtral:8x7b` only if you want the largest Meta / Mistral options.
 
-> **Do not download `llama3.1:70b` with less than 64 GB RAM** — the download will work but the model will not fit in memory and your Mac will become unresponsive when you try to use it.
+> **Don't run a "large" model on too little memory.** `gemma3:27b` and `mixtral:8x7b` want 32 GB+; **never** pull `llama3.1:70b` under 64 GB — it will download but won't fit in memory, and your Mac will become unresponsive when you try to use it.
 
 **Step 1 — Download the indexing model (required for everyone):**
 ```bash
 ollama pull nomic-embed-text
 ```
 
-**Step 2 — Download a language model.** Run one or both depending on your RAM:
-
-For 16 GB RAM (recommended default):
+**Step 2 — Download your language model.** Start with the default:
 ```bash
-ollama pull llama3.1:8b
+ollama pull gemma3:4b
 ```
 
-Alternative — slightly more concise answers, good on constrained hardware:
+Optional — the larger Gemma for heavier corpora (32 GB+):
 ```bash
-ollama pull mistral:7b
+ollama pull gemma3:27b
 ```
 
-For 64 GB RAM only — highest answer quality:
-```bash
-ollama pull llama3.1:70b
-```
+Prefer Meta or Mistral? Small: `ollama pull llama3.1:8b` or `ollama pull mistral:7b`. Large: `ollama pull llama3.1:70b` or `ollama pull mixtral:8x7b`.
 
-> **Download times** depend on your internet speed. To check yours, go to [fast.com](https://fast.com). On a 100 Mbps connection, expect about 6 minutes for `llama3.1:8b` and 5 minutes for `mistral:7b`. The time estimate shown during download may fluctuate — starting at hours, then dropping to minutes. The actual time depends on your connection speed.
+> **You'll switch to `gemma3:27b` later — on purpose.** The demo corpus runs beautifully on `gemma3:4b`. When you reach the SEC 10-K corpus in the [Tutorial](TUTORIAL.md), it prompts you to switch to `gemma3:27b` in the model dropdown — the heavier corpus rewards the larger model (it's the model behind AIStudio's top benchmark). Fast first impression now; full power when it counts.
+
+> **Download times** depend on your internet speed (check yours at [fast.com](https://fast.com)). On a 100 Mbps connection, expect about 2 minutes for `gemma3:4b` and 10 minutes for `gemma3:27b`. The estimate shown during download may fluctuate — starting at hours, then dropping to minutes.
 
 > **Note:** If your models show a modified date of several weeks ago — that's fine. They don't expire.
 
@@ -226,28 +227,24 @@ qdrant --version
 
 If you see a version number — **→ Skip to Step 6.**
 
-If not installed, create a home for Qdrant's data:
+If you see `zsh: command not found: qdrant`, Qdrant isn't installed yet — first create a home for its data:
 ```bash
 mkdir -p ~/qdrant_storage
 ```
 
 This command returns no output — silence means success.
 
-Download and install the binary:
+Download and install the binary, put it on your PATH, and verify:
 ```bash
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
-```
-
-Then move it into place, add it to your PATH, and verify:
-```bash
 mkdir -p ~/bin
 mv qdrant ~/bin/qdrant
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+grep -q 'export PATH="$HOME/bin' ~/.zshrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 qdrant --version
 ```
 
-These five commands run in sequence — you can run them one at a time or paste them all at once. They are safe to re-run.
+> **Why the `grep` before the `echo`?** `~/bin` is where Qdrant now lives, and your PATH is the list of places your Mac searches when you type a command — so `~/bin` has to be on it for `qdrant` to be found. The part before the `||` quietly checks whether that line is already in your `~/.zshrc`; the line is added **only if it's missing**. If you've set AIStudio up before, it's probably already there — so this leaves it alone instead of writing a second identical copy. That's what makes these commands genuinely safe to re-run.
 
 Expected: `qdrant 1.17.0` (or newer). You will also see:
 ```
@@ -257,27 +254,25 @@ This warning is harmless — ignore it.
 
 ---
 
-## 6. Clone AIStudio
+## 6. Check You Have git
 
-AIStudio is a public repository — no GitHub account, SSH key, or access token required. You can download it directly with a single command.
+`git` is the tool that downloads ("clones") AIStudio from GitHub. It usually ships with macOS developer tools.
 
-**First — check if git is installed; in the Terminal, type:**
+Check; in the Terminal, type:
 ```bash
 git --version
 ```
 
-If you see `git version 2.x.x` or newer — **→ proceed to the clone below.**
+If you see `git version 2.x.x` or newer — **→ skip to Step 7, Clone AIStudio.**
 
 If you see `command not found`, or macOS shows a dialog asking to install developer tools — run:
 ```bash
 xcode-select --install
 ```
 
-**A dialog will appear** saying "The xcode-select command requires the command line developer tools. Would you like to install the tools now?" — click **Install**.
+**A dialog will appear** saying "The xcode-select command requires the command line developer tools. Would you like to install the tools now?" — click **Install**. A **License Agreement** appears — click **Agree**.
 
-A **License Agreement** will appear — click **Agree** to continue.
-
-A progress dialog will appear. The time estimate may start very high — even showing hours — then drop to minutes within seconds. Ignore the initial estimate. On a 100 Mbps connection expect about 8-10 minutes. The estimate will fluctuate during the download.
+A progress dialog appears. The time estimate may start very high — even hours — then drop to minutes within seconds. Ignore the initial estimate; on a 100 Mbps connection expect about 8–10 minutes.
 
 When done, verify:
 ```bash
@@ -286,9 +281,13 @@ git --version
 
 Expected: `git version 2.x.x` or newer.
 
-> If no dialog appeared when you ran `git --version`, trigger the installation manually with `xcode-select --install`.
+> If no dialog appeared when you ran `git --version`, trigger the installation manually with `xcode-select --install`. If it still won't install, see [Annex 2 — Troubleshooting](#annex-2--troubleshooting).
 
-Now create a folder for AIStudio and clone the repository — run all four commands in sequence:
+---
+
+## 7. Clone AIStudio
+
+AIStudio is a public repository — no GitHub account, SSH key, or access token required. Create a folder for it and clone the repository:
 ```bash
 mkdir -p ~/Developer
 cd ~/Developer
@@ -296,18 +295,20 @@ git clone https://github.com/mbarberony/AIStudio.git
 cd AIStudio
 ```
 
-> ⚠️ **Important:** Make sure you run `mkdir -p ~/Developer` and `cd ~/Developer` before cloning. AIStudio expects to live at `~/Developer/AIStudio/` — every command in this guide uses that exact path. If you accidentally cloned to `~/AIStudio/` instead, move it now:
+This downloads about 96 MB — expect under 2 minutes on a 100 Mbps connection. When complete you will see `Resolving deltas: 100% (...), done.` and land in the `AIStudio` folder.
+
+After the clone, AIStudio lives at `~/Developer/AIStudio/` — the path every command in this guide assumes.
+
+> **Cloned to the wrong place?** Only if your prompt shows `~/AIStudio` (not `~/Developer/AIStudio`) did the folder land wrong — move it:
 > ```bash
 > mkdir -p ~/Developer && mv ~/AIStudio ~/Developer/AIStudio
 > ```
 
-This downloads about 96 MB — expect under 2 minutes on a 100 Mbps connection. When complete you will see `Resolving deltas: 100% (...), done.` and return to the prompt.
-
 ---
 
-## 7. Install AIStudio Commands
+## 8. Install AIStudio Commands
 
-`./ais_install` does two things: creates the Python environment and installs all dependencies, then makes the `ais_*` commands available in your Terminal. The commands all start with `ais_` — like `ais_start`, `ais_stop`, `ais_bench`. Here is how we make them available to you — the last step will let you see what they are and what they do.
+`./ais_install` does two things: it creates the Python environment and installs all dependencies, then makes the `ais_*` commands available in your Terminal.
 
 ```bash
 cd ~/Developer/AIStudio
@@ -316,86 +317,80 @@ source ~/.zshrc
 ais_help
 ```
 
-This takes 2–3 minutes. You'll see progress messages as dependencies are installed.
+The `ais_*` notation is shorthand for *all the commands that begin with* `ais_` — like `ais_start`, `ais_stop`, `ais_bench`; the `*` is a wildcard standing in for the rest of each name. `ais_help` prints the full list by category, and `ais_help <command>` gives detailed help on any one.
 
-> You may see a series of `WARNING: Cache entry deserialization failed` messages — these are harmless pip cache warnings, not errors. The install will continue normally. Ignore them.
+This takes 2–3 minutes. You'll see progress messages as dependencies install.
 
-> You may also see a notice like `[notice] A new release of pip is available` — ignore it.
+> You may see `WARNING: Cache entry deserialization failed` messages, or a notice like `[notice] A new release of pip is available` — these are harmless. Ignore them.
 
-You should see a list of all available AIStudio commands organized by category. Run `ais_help <command>` at any time for detailed help on a specific command.
-
-> You only need to run `source ~/.zshrc` once — right after installing. Every new Terminal window or tab you open in the future will load your commands automatically.
+> You only need to run `source ~/.zshrc` once — right after installing. Every new Terminal window or tab you open in the future loads your commands automatically.
 
 ---
 
-## 8. Activate the Virtual Environment
+## 9. Activate the Virtual Environment
 
-Each time you open a new terminal tab — which should be rare after this session if you install a shortcut on your Desktop in Step 11 — activate the virtual environment before running AIStudio commands. A virtual environment is an isolated Python workspace that keeps AIStudio's dependencies separate from the rest of your system.
+A virtual environment is an isolated Python workspace that keeps AIStudio's dependencies separate from the rest of your system. After this session you'll rarely touch it — especially if you add a Desktop shortcut in Step 12.
 
 ```bash
 source ~/Developer/AIStudio/.venv/bin/activate
 ```
 
-This command returns no output — silence means success. Your prompt will show `(.venv)` confirming the environment is active.
+This command returns no output — silence means success. Your prompt will show `(.venv)`, confirming the environment is active.
 
-> You do not need to activate the virtual environment manually before running `ais_start` — it handles this automatically. You only need to activate it manually if running `ais_*` commands from a fresh terminal tab before `ais_start` has run.
+> You do **not** need to activate the virtual environment manually before `ais_start` — it handles that automatically. You only need this if you run other `ais_*` commands from a fresh terminal tab before `ais_start` has run.
 
 ---
 
-## 9. Start AIStudio
+## 10. Start AIStudio
 
 ```bash
 ais_start
 ```
 
-AIStudio starts three processes — Qdrant, Ollama, and the FastAPI backend — and opens the UI in your browser automatically. AIStudio starts in about 20 seconds.
+AIStudio starts three processes — Qdrant, Ollama, and the FastAPI backend — and opens the UI in your browser automatically, in about 20 seconds.
 
 > You may see a warning that the backend was slow to start — this is normal on first run. The UI will still open correctly.
 
-> **First run:** On a fresh install, `ais_start` automatically indexes the **demo** and **help** corpora in the background. You might see a progress banner in the UI while indexing completes — if indexing takes more than 30 seconds this banner will appear. Wait for it to complete before asking your first question.
+> **First run:** On a fresh install, `ais_start` automatically indexes the **demo** and **help** corpora in the background. A progress banner appears in the UI if indexing takes more than 30 seconds — wait for it to finish before asking your first question.
 
-> **First query:** The first query may take 20–50 seconds while the model loads fully into memory. Subsequent queries will be faster — typically 6–7 seconds.
-
-It is OK to **minimize** the Terminal window now — but **do not close it**. The Terminal is where the backend runs. Closing it will shut down AIStudio.
-
-**To stop AIStudio when you're done:**
-```bash
-ais_stop
-```
+It is OK to **minimize** the Terminal window now — but **do not close it**. The Terminal is where the backend runs; closing it shuts AIStudio down.
 
 **To verify the backend is up:**
 ```bash
 curl http://localhost:8000/health
 ```
-Expected: `{"status": "ok"}`
+Expected: `{"status": "ok"}`. If you get an error or no response instead, the backend isn't ready — see [Annex 2 — Troubleshooting](#annex-2--troubleshooting) (start with a hard-refresh of the browser, then `ais_stop` and `ais_start`).
 
 ---
 
-## 10. What You're Looking At
+## 11. What You're Looking At — and Your First Query
 
 When AIStudio opens in your browser, you'll see three main areas:
 
-**On the left** — the corpus selector. This is where you choose which document collection to query. The **demo** corpus is already loaded — 9 original documents spanning 2003–2026, covering enterprise architecture, IT strategy, financial services, and agentic AI.
+**On the left** — the corpus selector. This is where you choose which document collection to query. The **demo** corpus is already loaded — original documents spanning 2003–2026, covering enterprise architecture, IT strategy, financial services, and agentic AI.
 
 **In the center** — the chat area. Type a question, get a cited answer. References below each answer show exactly which document and page the answer came from. Click **Open ↗** to see the source.
 
-**On the right** — the settings sidebar. Controls how AIStudio retrieves and generates answers. See Step 12.
+**On the right** — the settings sidebar. It controls how AIStudio retrieves and generates answers (model, Top K, temperature, retrieval mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
+
+The **Model** is set to `gemma3:4b` by default — small and fast, ideal for the demo. (For the heavier SEC 10-K corpus in the [Tutorial](TUTORIAL.md), switch it to `gemma3:27b`.)
 
 Try these questions on the demo corpus to start:
 - *"What is QFD and how does it apply to technology architecture?"*
-- *"How should a CTO prioritize a three-year technology strategy?"*
-- *"What are the key principles for modernizing legacy applications?"*
+- *"How do you design an IT organization around architectural principles?"*
+- *"What does a reference architecture for enterprise AI look like?"*
 
-Then try switching to the **help** corpus and asking: *"How do I re-ingest a corpus?"* — AIStudio is answering questions about itself, using the same RAG pipeline to retrieve answers from its own documentation.
+Then switch to the **help** corpus and ask: *"How do I re-ingest a corpus?"* — AIStudio is answering questions about itself, using the same RAG pipeline to retrieve answers from its own documentation.
+
+> **Initial latency:** Your very first query may take 20–50 seconds while the model loads fully into memory. Every query after that is faster — typically 6–7 seconds.
 
 ---
 
-## 11. Add a Desktop Shortcut (Optional)
+## 12. Add a Desktop Shortcut (Optional)
 
-If you minimized the Terminal window in Step 9, reopen it now — press **⌘ Space** (Command key + Space bar), type **Terminal**, press **Enter**.
+If you minimized the Terminal window in Step 10, reopen it — press **⌘ Space**, type **Terminal**, press **Enter**.
 
 If you'd like to launch AIStudio by double-clicking an icon instead of opening a terminal:
-
 ```bash
 ais_create_shortcut
 ```
@@ -404,7 +399,7 @@ This creates `AIStudio.app` in `~/Applications` and adds a shortcut to your Desk
 
 > **Icon not showing correctly?** Run `killall Dock` to refresh the icon cache.
 
-If, in the future, you want to remove the shortcut:
+To remove the shortcut later:
 ```bash
 ais_create_shortcut --remove
 ```
@@ -416,71 +411,115 @@ ais_create_shortcut --nodesktop
 
 ---
 
+## Stopping AIStudio
+
+When you're done for the session:
+```bash
+ais_stop
+```
+This shuts down the backend and Qdrant. Your corpora and settings are saved — `ais_start` (or the Desktop shortcut) brings everything back next time.
+
+---
+
 AIStudio is ready. Your documents are waiting.
 
-★★★     ★★★
+<div align="center">★★★&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;★★★</div>
 
 For a full guided walkthrough — including the SEC 10-K at-scale exercise and benchmarking — see [TUTORIAL.md](TUTORIAL.md).
 
 ---
 
-## 12. Tuning Parameters
+## TL;DR — Fast Install
 
-| Parameter | Default | Effect |
-|-----------|---------|--------|
-| Top K | 5 | Chunks retrieved per query. Higher = more context, slightly slower. **Use 10 for the demo corpus and the SEC 10-K corpus** — the demo has small documents (as few as 20 chunks) that only surface reliably at K=10; the SEC corpus needs K=10 for cross-firm multi-source queries. |
-| Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
-| Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (finds related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
-| Score Threshold | 0.2–0.5 | Filters out retrieved chunks that scored too low to be useful. Set it too high and you starve genuinely relevant chunks — especially dense financial-filing text, which the indexing model under-scores — so answers turn hedged ("I don't have information about…"). Configured per-corpus — the demo uses 0.3; sec_10k uses 0.2 (the lower floor keeps the dense 10-K tables from being filtered out). |
+*For experienced users who already live in a terminal. This skips every explanation above — you'll get a running instance, but you'll miss the understanding of how a RAG system is built. If anything here is unfamiliar, use the full guide instead.*
 
-> For more on query settings, see [HOWTO.md](HOWTO.md).
-
----
-
-## Troubleshooting
-
-**⌘K clears the terminal** — when the terminal fills up with output, press **Command + K** to clear the screen. Your session and commands stay active. Useful after long ingests or benchmark runs.
-
-**Close and reopen Terminal** if something unexpected happens. Press **⌘ Space** (Command key + Space bar), type **Terminal**, press **Enter**. Re-run the last command you were on and continue from there. A fresh terminal always starts with a clean environment.
-
-**`brew --version` returns `command not found`** — Homebrew not installed. Run the installer in Step 1.
-
-**`python3` not found** — run `brew install python@3.13`
-
-**`ollama list` hangs** — Ollama is not running. If brew-installed: `brew services start ollama`. If .dmg installed: `ollama serve` in a separate tab.
-
-**UI shows "Ollama not running"** — run `brew services start ollama` then `ais_start` again.
-
-**UI shows "Error loading corpora" on startup** — the browser opened before the backend finished starting. Hard-refresh (`Cmd+Shift+R`). If it persists, run `ais_stop` then `ais_start`.
-
-**`(.venv)` not in prompt** — run `source ~/Developer/AIStudio/.venv/bin/activate`
-
-**Stats show 0 chunks** — corpus not yet ingested. Use the UI to add and ingest documents.
-
-**Qdrant not found** — `~/bin` not in PATH. Run `source ~/.zshrc`.
-
-**Commands suddenly vanish (`zsh: command not found`) mid-session** — your terminal's working directory was deleted or renamed while the shell was open (you'll also see `getcwd: cannot access parent directories`). Fix:
+**Prereqs:** Apple Silicon Mac. The block below installs Homebrew, Python, Ollama, Pango, Qdrant, and git if missing — skip any you already have.
 
 ```bash
-cd ~/Developer/AIStudio
+# 1. Toolchain
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install python@3.13 ollama pango git
+brew services start ollama
+
+# 2. Models — embedding (required) + Google's Gemma (the default; small & fast)
+ollama pull nomic-embed-text
+ollama pull gemma3:4b           # default; add gemma3:27b on 32GB+ for the SEC corpus
+
+# 3. Qdrant binary
+mkdir -p ~/qdrant_storage ~/bin
+curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
+mv qdrant ~/bin/qdrant
+grep -q 'export PATH="$HOME/bin' ~/.zshrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+
+# 4. Clone + install
+mkdir -p ~/Developer && cd ~/Developer
+git clone https://github.com/mbarberony/AIStudio.git
+cd AIStudio
+./ais_install
 source ~/.zshrc
+
+# 5. Go
+ais_start
 ```
 
-This resets the working directory and reloads all aliases. Run `ais_start --version` to confirm.
+First run auto-indexes the **demo** and **help** corpora (~60s) and opens the UI on `gemma3:4b`. First query is slow (model load, 20–50s); after that ~6–7s. `ais_help` lists commands; `ais_stop` when done.
 
-**`ais_*` command not found after install** — run `source ~/.zshrc` to reload your aliases. **Important:** run it as a standalone command on its own line — do not chain it with `&&` or paste it together with other commands in the same block. A `source` inside a pasted sequence runs in a subshell and the aliases do not persist. After sourcing, verify with `ais_start --version`.
+> In the UI sidebar the demo corpus defaults to **Top K = 10**. Full knobs in [Annex 3](#annex-3--tuning-parameters).
 
 ---
 
-## Tools Used in This Guide
+## Annex 1 — Tools Used in This Guide
 
 | Tool | What it does | URL |
 |------|--------------|-----|
 | Homebrew | Package manager for macOS | https://brew.sh |
 | Python | Programming language AIStudio runs on | https://www.python.org |
 | Ollama | Local AI model runtime | https://ollama.com |
+| Pango | Text-rendering library for PDF benchmark reports | https://pango.gnome.org |
 | Qdrant | Vector database for document storage | https://qdrant.tech |
 | GitHub / git | Code hosting and version control | https://github.com |
+
+The language models themselves — Google **Gemma**, Meta **Llama**, Mistral AI's **Mistral** — are downloaded through Ollama in Step 4.
+
+---
+
+## Annex 2 — Troubleshooting
+
+Entries follow the order of the steps, so you can scan to where you are.
+
+**Something unexpected happened** — close and reopen Terminal (**⌘ Space**, type **Terminal**, **Enter**), then re-run the last command. A fresh terminal always starts with a clean environment.
+
+**(Step 1) `brew --version` returns `command not found`** — Homebrew not installed, or its PATH isn't set. Run the installer in Step 1; on older Macs run the three `~/.zprofile` lines at the end of Step 1.
+
+**(Step 2) `python3` not found** — run `brew install python@3.13`.
+
+**(Step 3) `ollama list` hangs or errors** — Ollama isn't running. If brew-installed: `brew services start ollama`. Otherwise: `ollama serve` in a separate tab.
+
+**(Step 3/10) UI shows "Ollama not running"** — run `brew services start ollama`, then `ais_start` again.
+
+**(Step 5) `qdrant` — `command not found`** — `~/bin` isn't on your PATH. Run `source ~/.zshrc` (and confirm the PATH line is in `~/.zshrc`, per Step 5).
+
+**(Step 9) `(.venv)` not in your prompt** — run `source ~/Developer/AIStudio/.venv/bin/activate`.
+
+**(Step 10) `curl …/health` doesn't return `{"status":"ok"}`, or UI shows "Error loading corpora"** — the browser opened before the backend finished starting. Hard-refresh (`Cmd+Shift+R`). If it persists, run `ais_stop` then `ais_start`.
+
+**(Step 11) Stats show 0 chunks** — the corpus isn't ingested yet. Use the UI **Add** button to upload and ingest documents.
+
+---
+
+## Annex 3 — Tuning Parameters
+
+The settings sidebar (Step 11) controls retrieval and generation. Defaults are tuned for the demo corpus; adjust per corpus as needed.
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| Model | `gemma3:4b` | The language model that writes answers. Small & fast for the demo; switch to `gemma3:27b` for the SEC 10-K corpus. |
+| Top K | 10 | Chunks retrieved per query. Higher = more context, slightly slower. **10 is the default** — the demo has small documents (as few as 20 chunks) that only surface reliably at K=10, and the SEC corpus needs K=10 for cross-firm multi-source queries. |
+| Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
+| Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
+| Score Threshold | 0.3–0.5 | Filters out retrieved chunks that scored too low to be useful. Low-score chunks cause hedged or incorrect answers. Set lower (0.3) for corpora with small documents; higher (0.5) for large uniform corpora like SEC 10-K. Configured per-corpus — the demo uses 0.3, sec_10k uses 0.5. |
+
+> For more on query settings, see [HOWTO.md](HOWTO.md).
 
 ---
 
