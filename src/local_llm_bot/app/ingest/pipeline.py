@@ -1,4 +1,7 @@
 # Version: 1.8.35
+# Changelog: 1.8.36 — F-026 (Manuel): per-file completion line split into two — line 1 keeps
+#            "N of T · file · size · chunks · format"; line 2 (aligned under the filename)
+#            "chunk prefix: <…> · source: <…>". "aug." dropped; the format↔prefix " · " removed.
 # Changelog: 1.8.35 — F-025: truncate _prefix_label display to 80 chars with … in the
 #            STD §8 completion line. Prevents mid-token terminal wrap on wide ESEF canonical
 #            names (e.g. Banco Bilbao Vizcaya Argentaria). Full prefix written to chunks unchanged.
@@ -1283,14 +1286,17 @@ def ingest_corpus(
                         # F-025: truncate prefix display to 80 chars — prevents mid-token terminal wrap.
                         _prefix_display = (_prefix_label[:77] + "…") if len(_prefix_label) > 80 else _prefix_label
                         # STD §8 completion line — scrolls in terminal, stays in history
-                        _completion = (
-                            f"  {_n_str} of {_t_str} · {file_path.name} · "
+                        _pfx = f"  {_n_str} of {_t_str} · "
+                        _line1 = (
+                            f"{_pfx}{file_path.name} · "
                             f"size: {_file_size:,} · chunks: {_file_chunks:,} · "
-                            f"format: {_fmt_label} · chunk prefix aug.: {_prefix_display} · source: {_source}"
+                            f"format: {_fmt_label}"
                         )
+                        _line2 = f"{' ' * len(_pfx)}chunk prefix: {_prefix_display} · source: {_source}"
                         if doc_mismatch:
-                            _completion += f" · \u26a0 entity mismatch: filename={file_path.stem[:30]}"
-                        _tqdm_write(p_process, _completion)
+                            _line2 += f" · \u26a0 entity mismatch: filename={file_path.stem[:30]}"
+                        _tqdm_write(p_process, _line1)
+                        _tqdm_write(p_process, _line2)
 
                         # Structured machine-parseable line for api.py → UI (AIStudio_680)
                         # AIStudio_722a — TTY-gate: emit only when stderr is a pipe
