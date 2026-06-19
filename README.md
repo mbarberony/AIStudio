@@ -1,4 +1,4 @@
-[![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
+<!-- [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)  TODO: re-enable after CI green (ruff import-order + compileall src path + help_conformance roster post-_ops-scrub) -->
 
 *Version: Beta | Updated: 2026-06-17*
 
