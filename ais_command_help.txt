@@ -14,41 +14,29 @@ Options:
 
 ---
 
-## ais_install
-
-Usage: ais_install [--help] [--version] [--verify] [--list] [<command>]
-
-Install or update AIStudio user command aliases in ~/.zshrc.
-Run once after cloning. Safe to re-run — updates existing aliases.
-
-Options:
-  --help      Show this help
-  --version   Show script version
-  --list      List all available user commands without installing
-  --verify    Check which user commands are active in ~/.zshrc
-  <command>   Install a single named command alias
-
-· Run from: ~/Developer/AIStudio after ./install.sh
-
----
-
 ## ais_start
 
-Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open]
+Usage: ais_start [--help] [--version] [--verbose] [--show-log] [--show-splash] [--no-separator] [--no-open] [--start_with <corpus>]
 
 Start all AIStudio services and open the UI.
 Stops any running services first — safe to run even if already running.
 Services: Qdrant (vector store), Ollama (LLM host), FastAPI backend.
-On first run, automatically indexes the demo and help corpora.
+On first run, automatically indexes the demo and help corpora (tracked in git;
+Qdrant collections are empty until indexed). Backend health is polled every
+second for up to 30s — browser only opens once the backend is confirmed healthy.
+
+Implementation: ais_start.sh (wrapper) → scripts/ais_start.py (logic). Both tracked in git.
 
 Options:
-  --help          Show this help
-  --version       Show script version
-  --verbose       Show full service output (Qdrant, uvicorn logs)
-  --show-log      Open new iTerm2 tab with live backend log after start
-  --show-splash   Show splash dialog on startup (useful when launching from Terminal)
-  --no-separator  Use blank lines between sections instead of --- labels
-  --no-open       Skip opening the browser (used by ais_create_shortcut desktop app)
+  --help               Show this help
+  --version            Show script version
+  --verbose            Show full service output (Qdrant, uvicorn logs)
+  --show-log           Open new iTerm2 tab with live backend log after start
+  --show-splash        Show splash dialog on startup (useful when launching from Terminal)
+  --no-separator       Use blank lines between sections instead of --- labels
+  --no-open            Skip opening the browser (used by ais_create_shortcut desktop app)
+  --start_with <name>  Open UI with the named corpus pre-selected
+                       Example: ais_start --start_with sec_10k
 
 · To stop:    ais_stop
 · Logs:       ais_log
@@ -86,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--firm <name>] [--subset <group>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -98,8 +86,8 @@ Options:
   --top-k <n>            Number of chunks to retrieve (default: 5)
   --temperature <t>      LLM temperature (default: 0.3)
   --model <name>         LLM model to use (default: from API config)
+  --alpha <f>            Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25 (default: backend default)
   --firm <name>          Inject firm filter into all queries (overrides YAML firm fields)
-  --subset <group>       Run only questions whose firm is in the named subset
   --topics <list>        Comma-separated list of topic: values to include
   --question-ids <list>  Comma-separated list of question id: values to include
   --questions <path>     Path to YAML question file (default: auto-detect from corpus name)
@@ -107,46 +95,23 @@ Options:
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
 
-Question subset filtering (sec_10k):
-  ais_bench --corpus sec_10k --subset big_banks
+Question scope filtering (sec_10k):
+  ais_bench --corpus sec_10k --scope big_banks
   ais_bench --corpus sec_10k --topics "AI Risk Evolution,Cybersecurity"
   ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
-  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --subset big_banks
+  ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
 
-· Subsets compose with --topics and --question-ids using AND
-· Available subsets: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
+· Scopes compose with --topics and --question-ids using AND
+· Available scopes: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
 · Requires: ais_start must be running
 · Questions: benchmarks/<corpus>/<corpus>_questions.yaml
 · Reports:   benchmarks/<corpus>/reports/ (filename includes filter suffix when active)
 
 ---
 
-## ais_download_esef
-ais_download_esef v1.0.0 — Download ESEF iXBRL annual reports from filings.xbrl.org
-
-Downloads XHTML annual reports for 10 major European financial institutions
-from the XBRL International public filing repository (filings.xbrl.org).
-Covers: ING Group, BNP Paribas, Deutsche Bank, Santander, Société Générale,
-UniCredit, ABN AMRO, KBC Group, Crédit Agricole, Nordea.
-
-Usage: ais_download_esef [options]
-
-Options:
-  --help            Show this help
-  --version         Show script version
-  --out DIR         Output directory (default: data/corpora/esef_banks/uploads/)
-  --period-start    Earliest filing period end date (default: 2022-01-01)
-  --period-end      Latest filing period end date (default: 2025-12-31)
-
-· Downloads ~10 ESEF XHTML filings (~50-200MB total)
-· Source: filings.xbrl.org (XBRL International, 24,800+ filings)
-· Files named: <Entity>_ESEF_<year>.xhtml
-· Next step: create corpus 'esef_banks' in AIStudio UI, then ingest
-
----
 ## ais_download_sec_10k
 
-Usage: ais_download_sec_10k [--help] [--version] [--limit <n>] [--out <dir>]
+Usage: ais_download_sec_10k [--help] [--version] [--out <dir>]
 
 Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k_corpus/.
 Downloads the most recent 10-K for each company in the default list.
@@ -154,7 +119,6 @@ Downloads the most recent 10-K for each company in the default list.
 Options:
   --help         Show this help
   --version      Show script version
-  --limit <n>    Maximum number of filings to download (default: all)
   --out <dir>    Output directory (default: ~/Downloads/sec_10k_corpus/)
 
 · After downloading: ingest via the UI — select sec_10k corpus, Add files
@@ -166,38 +130,68 @@ Options:
 
 Usage: ais_ingest_sec_10k [--help] [--version] [--force]
 
-Ingest SEC 10-K filings into AIStudio from ~/Downloads/sec_10k_corpus/.
-Creates the sec_10k corpus if it does not exist.
-This is the real-scale test corpus — 100+ filings, ~30 min first run.
+Ingest SEC 10-K filings into AIStudio from data/corpora/sec_10k/uploads/.
+Creates the sec_10k corpus metadata and benchmark questions on first run.
+This is the real-scale test corpus — 100+ filings, ~35 min on M4 Pro / ~90 min on M4 Air.
+
+Normalizer: pipeline.py v1.6.8 applies Document-Head + Temporal Context Injection at
+ingest time. Each chunk is prefixed with "[Document: <entity> FY<year>]" extracted from
+dei:EntityRegistrantName and dei:DocumentFiscalYearFocus in the inline XBRL header.
+This resolves entity anaphora (firms using "the Firm" throughout) and enables precise
+temporal trend queries at K=5. Non-XBRL files fall back to entity-only or no prefix.
 
 Options:
   --help      Show this help
   --version   Show script version
   --force     Re-ingest all files regardless of hash
 
+· Source: ~/Developer/AIStudio/ais_ingest_sec_10k.sh
 · Run after: ais_download_sec_10k
 · Requires: ais_start must be running
+· Benchmark: ais_bench --corpus sec_10k
+
+---
+
+## ais_download_esef
+
+Usage: ais_download_esef [--help] [--version] [--scope <stem>|--lei <LEI>] [--latest [N]|--years YYYY...] [--no-inventory]
+
+Download ESEF iXBRL annual reports from filings.xbrl.org into the esef_banks
+corpus uploads directory. Streams the primary XHTML report per firm (~50-200MB
+each) with a live progress bar.
+
+Options:
+  --help            Show this help
+  --version         Show script version
+  --scope <stem>    Named subset (scopes/esef_banks_<stem>_scope.yaml) or a path; absence = the corpus inventory (esef_banks_full_scope.yaml)
+  --lei <LEI>       Single firm by LEI
+  --latest [N]      The N most-recent filings per firm (bare = 1; default 1)
+  --years YYYY...   Explicit fiscal year(s); mutually exclusive with --latest
+  --no-inventory    Skip the *_full_scope write-back (throwaway/test runs)
+
+· Source: filings.xbrl.org (XBRL International public ESEF repository)
+· Next step: create corpus 'esef_banks' in the UI, then ingest via Upload
 
 ---
 
 ## ais_ingest_esef
 
-Usage: ais_ingest_esef [--corpus <name>] [--force] [--verbose] [--help] [--version]
+Usage: ais_ingest_esef [--help] [--version] [--corpus <name>] [--force] [--files <pat1,pat2,...>] [--verbose]
 
-Ingest ESEF iXBRL annual reports into AIStudio.
-Requires corpus metadata file to exist before running.
-Reference implementation for user corpus ingest — see AIStudio Tutorial §3.
+Ingest an ESEF iXBRL corpus into AIStudio. Incremental by default (only
+new/changed files); --force does a full rebuild. Reference implementation for
+user corpus ingest — gates on the corpus metadata file existing.
 
 Options:
-  --corpus <name>   Corpus name (default: esef_banks)
-  --force           Re-ingest even if corpus already indexed in Qdrant
-  --verbose         Print full JSON result payload after summary
   --help            Show this help
   --version         Show script version
+  --corpus <name>   Corpus name (default: esef_banks)
+  --force           Full rebuild — wipe collection and re-ingest all files
+  --files <list>    Ingest ONLY files matching these comma-separated patterns (substring or regex, OR-matched case-insensitively against the basename; others untouched). e.g. --files Nordea  or  --files 'BNP.*2025,ING'
+  --verbose         Print full JSON result payload after summary
 
-· Run after: ais_download_esef
-· Requires: ais_start · corpus metadata file (create via UI or REST POST /corpus/create)
-· To benchmark: ais_bench --corpus esef_banks
+· Prerequisites: ais_start · ais_download_esef · corpus metadata file
+· To benchmark : ais_bench --corpus <name>
 
 ---
 
@@ -220,3 +214,39 @@ Options:
 · macOS only
 · Launch log: ~/Library/Logs/AIStudio/launcher.log
 · Docs: see docs/README - AIStudio - ais_create_shortcut.md
+
+---
+
+## ais_import_entity_kb
+
+Usage: ais_import_entity_kb [--help] [--version] --corpus <C> [--apply] [--dry-run]
+
+Import the entity knowledge base for a corpus from its scope file — resolves the
+open <provenance>_<data_type> schema (bare field wins; gleif_/sec_ as fallback).
+Dry-run by default; --apply writes the resolved KB into the corpus.
+
+Options:
+  --help        Show this help
+  --version     Show script version
+  --corpus <C>  Corpus name (e.g. sec_10k, esef_banks)
+  --apply       Write resolved entities to the corpus KB (default is dry-run)
+  --dry-run     Preview resolution without writing
+
+· Requires: ais_start must be running for --apply
+
+---
+
+## ais_import_glossary_kb
+
+Usage: ais_import_glossary_kb [--help] [--version] --source <S> [--apply]
+
+Import a glossary knowledge base (e.g. BIS Basel term definitions) into the
+glossary corpus. Civilian companion to ais_import_entity_kb.
+
+Options:
+  --help        Show this help
+  --version     Show script version
+  --source <S>  Glossary source (e.g. bis_basel)
+  --apply       Write resolved glossary terms (default is dry-run)
+
+· Requires: ais_start must be running for --apply

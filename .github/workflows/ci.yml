@@ -35,7 +35,7 @@ jobs:
       - name: Sanity checks
         run: |
           .venv/bin/python -m pip check
-          .venv/bin/python -m compileall local_llm_bot
+          .venv/bin/python -m compileall src/local_llm_bot
 
       - name: Lint (ruff)
         run: |
