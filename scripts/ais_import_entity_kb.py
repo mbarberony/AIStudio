@@ -38,6 +38,9 @@ Run via the wrapper (cd repo, venv) or directly:
     python3 scripts/ais_import_entity_kb.py --corpus sec_10k --apply    # build the KB
 
 Changelog
+  1.6.4 — CLI: the no-`--apply` "Next steps" reminder is now bold-red — the KB is NOT written
+           until --apply; makes the dry-run unmistakable (TTY-aware, plain when piped). Also bumped
+           the VERSION constant, stuck at 1.6.2 while the changelog/docstring read 1.6.3 (printed version lagged).
   1.6.3 — F-021/F-030: scope_name in _write_kb now prefers bare xbrl_name (user correction) over
            sec_xbrl_name. Makes KB source_path token match corrected filename prefix.
   1.6.2 — F-014: truncate sec_xbrl_name display at 100 chars in review output (prevents line-wrap on narrow terminals). Long names get …-suffix.
@@ -100,7 +103,7 @@ Changelog
   1.1.0 — Output conformed to STD - AIStudio - CLI Output.
   1.0.0 — Initial split from ais_import_knowledge_base_ops.py.
 
-Version: 1.6.3
+Version: 1.6.4
 """
 
 import argparse
@@ -113,7 +116,7 @@ import _kb_common as kb  # shared lib (underscore = not a command; no alias)
 import _scope_common as sc  # shared scope resolver (the full_scope IS the worksheet)
 import yaml
 
-VERSION = "1.6.2"
+VERSION = "1.6.4"
 SCRIPT_NAME = "ais_import_entity_kb"
 
 # iXBRL self-reported-name tags, in priority order (SEC, ESEF, UK GAAP).
@@ -493,7 +496,7 @@ def _build(corpus: str, apply: bool) -> int:
         cli.section("Next steps")
         print(f"· full_scope refreshed → {scope_path.relative_to(kb.REPO)}")
         print("· Edit unresolved rows (add a verified `lei`, or hand-add `aliases`), then re-run.")
-        print("· When the table is clean, re-run with --apply to build the KB.")
+        print(cli._wrap("1;91", "· When the table is clean, re-run with --apply to build the KB."))
         return 0
 
     # 6. --apply: build the KB from whatever has an identity (report exclusions — never no-op).

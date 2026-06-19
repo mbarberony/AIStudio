@@ -121,3 +121,10 @@ ais_import_knowledge_base.sh
 !data/corpora/esef_banks/scopes/
 !data/corpora/esef_banks/scopes/esef_banks_lang_en_scope.yaml
 !data/corpora/esef_banks/scopes/esef_banks_lang_noen_scope.yaml
+
+# AIStudio — esef_banks runtime artifacts (parity with sec_10k/help; ship scope+metadata only)
+data/corpora/esef_banks/index.jsonl
+data/corpora/esef_banks/manifest.jsonl
+data/corpora/esef_banks/doc_chunk_map.json
+data/corpora/esef_banks/uploads/
+data/corpora/esef_banks/trash/
