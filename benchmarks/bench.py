@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Changelog: 2.7.0 — report now records the actual run manifest: scope name + resolved firm
+#            universe, and the questions file path + content SHA-8 (pins the exact question
+#            set, label-drift-proof). Written to BOTH the JSON config block (recorded) and the
+#            MD Configuration section (shown). Closes the "report must show the scope manifest" TODO.
 # Changelog: 2.6.0 — add --timeout flag (default 120s); threaded through run_query to the
 #            per-question urlopen. Slow large models (gemma3:27b) need --timeout 300 on heavy
 #            multi-firm questions that otherwise hit the 120s wall with 0 citations.
@@ -115,6 +119,7 @@ Question file auto-detection (in order):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import time
 
@@ -817,7 +822,18 @@ def evaluate(result: dict, expected_keywords: list[str],
 # ── Write BENCHMARK_FINDINGS.md ───────────────────────────────────────────────
 
 
-def write_markdown(results: list[dict], args: argparse.Namespace, output_path: Path) -> None:
+def _file_sha8(path) -> str:
+    """Short content hash of the question file — pins the exact set used (label-drift-proof)."""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:8]
+    except Exception:
+        return "—"
+
+
+def write_markdown(results: list[dict], args: argparse.Namespace, output_path: Path,
+                   *, scope_firms: list[str] | None = None,
+                   questions_label: str | None = None,
+                   questions_sha: str | None = None) -> None:
     md_path = output_path.with_suffix(".md")
     passed = sum(1 for r in results if r["eval"]["pass"])
     total = len(results)
@@ -831,12 +847,14 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         "",
         "## Configuration",
         f"- **Corpus:** `{args.corpus}`",
+        f"- **Scope:** {(args.scope + f' — {len(scope_firms or [])} firm(s): ' + ', '.join(scope_firms or [])) if args.scope else 'none (full corpus)'}",
         f"- **Base Top K:** {args.top_k} (effective K may be higher for multi-entity queries)",
         f"- **Temperature:** {args.temperature}",
         *([ f"- **Alpha:** {args.alpha}" ] if args.alpha is not None else []),
         *([ f"- **Min Score:** {args.min_score}" ] if args.min_score is not None else []),
         f"- **Model:** {args.model or 'API default'}",
         f"- **API:** {args.api}",
+        f"- **Questions:** `{questions_label or '(default)'}`" + (f" · sha `{questions_sha}`" if questions_sha and questions_sha != '—' else ''),
         "",
         "## Summary",
         f"- **Questions:** {total}",
@@ -1070,6 +1088,7 @@ def main() -> None:
         if questions_path
         else f"benchmarks/{args.corpus}/{args.corpus}_questions.yaml"
     )
+    questions_sha = _file_sha8(questions_label)
     total_loaded = len(questions)
 
     # Apply filters
@@ -1227,10 +1246,16 @@ def main() -> None:
                 "run_at": datetime.now().isoformat(),
                 "config": {
                     "corpus": args.corpus,
+                    "scope": args.scope,
+                    "scope_firms": scope_firms,
                     "top_k": args.top_k,
                     "temperature": args.temperature,
+                    "alpha": args.alpha,
+                    "min_score": args.min_score,
                     "model": args.model,
                     "api": args.api,
+                    "questions_file": questions_label,
+                    "questions_sha8": questions_sha,
                 },
                 "summary": {
                     "total": total,
@@ -1244,12 +1269,13 @@ def main() -> None:
         )
 
     # Write markdown
+    _wm_kwargs = dict(scope_firms=scope_firms, questions_label=questions_label, questions_sha=questions_sha)
     if not args.no_markdown:
-        write_markdown(results, args, output_path)
+        write_markdown(results, args, output_path, **_wm_kwargs)
 
     # Write PDF via pandoc (always attempted)
     if args.no_markdown:
-        write_markdown(results, args, output_path)
+        write_markdown(results, args, output_path, **_wm_kwargs)
     md_path = output_path.with_suffix(".md")
     pdf_path = output_path.with_suffix(".pdf")
     html_path = output_path.with_suffix(".html")

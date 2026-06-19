@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.0.1 · Updated 2026-06-18*
+*Version: 1.2.1 · Updated 2026-06-18*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -72,21 +72,21 @@ Same RAG pipeline, pointed at AIStudio's own docs. Try it before reaching for th
 ## Module 2 — At Scale: The SEC 10-K Corpus
 *Goal: Build a large corpus from scratch, give it the reference data it needs to retrieve well, and query it. ~45 minutes (30 min ingest).*
 
-This module downloads a portfolio of SEC 10-K annual filings, ingests them, and queries them. It also introduces the part of AIStudio that makes retrieval at this scale work: **knowledge bases**. The corpus ships with a benchmark question set; running it and — more importantly — reading it correctly is **Annex 4**.
+This module downloads a portfolio of SEC 10-K annual filings, ingests them, and queries them. It also introduces the part of AIStudio that makes retrieval at this scale work: **knowledge bases**. The corpus ships with a benchmark question set; running it and — more importantly — reading it correctly is **Module 5**.
 
 ### 2.1 Download the Filings
 
 ```bash
-ais_download_sec_10k
+ais_download_sec_10k --latest 5
 ```
 
-This reads the corpus's **membership list** (a manifest) and pulls each firm's most recent 10-K filings from SEC EDGAR into the corpus. Allow 5–10 minutes.
+This reads the corpus's **membership list** (a manifest) and pulls each firm's **five most recent** annual 10-K filings from SEC EDGAR into the corpus — about **100 filings** across the portfolio. Allow ~10 minutes. (`--latest 5` selects the five newest filings per firm; a bare `ais_download_sec_10k` defaults to the single most recent.)
 
 EDGAR serves filings by **CIK** — the *Central Index Key*, the unique number the SEC assigns to every entity that files with it (look one up at the SEC's [CIK lookup](https://www.sec.gov/search-filings/cik-lookup)). So preparing this corpus came down to building a small **manifest** — one row per firm, pairing a **Label** (the name AIStudio uses for the firm throughout the system) with two identifiers: its **CIK**, the key EDGAR needs to return the filings, and a verified **LEI** (the 20-character global Legal Entity Identifier), which §2.2 puts to work. In short: a manifest of CIKs and LEIs. Its full structure is in **Annex 1**.
 
 > **What is SEC EDGAR?** The SEC requires public companies to file annual reports (10-K); EDGAR is the public database where they live. AIStudio's downloader handles the access protocol — you get the files, it handles the plumbing.
 
-> **Firms included:** Goldman Sachs, JPMorgan Chase, Morgan Stanley, BNY Mellon, Citigroup, and others — bulge-bracket banks, asset managers, exchanges, custody banks.
+> **Firms included:** Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, BNY Mellon, Citigroup, and others — bulge-bracket banks, asset managers, exchanges, custody banks.
 
 ### *Going deeper* — Why these filings need more than raw text
 *(skippable)*
@@ -168,7 +168,7 @@ ais_ingest_sec_10k
 
 ### 2.5 Query at Scale
 
-Switch to the **sec_10k** corpus. First, a word on **model choice**. As covered in QUICKSTART, AIStudio runs its models locally through Ollama, and you can add as many as you like — some small and fast, some large. For the easy questions in Module 1 the difference between a small and a large model is negligible, in both answer quality and speed. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline — a small model starts to trade accuracy for speed (Annex 4 quantifies the cost).
+Switch to the **sec_10k** corpus. First, a word on **model choice**. As covered in QUICKSTART, AIStudio runs its models locally through Ollama, and you can add as many as you like — some small and fast, some large. For the easy questions in Module 1 the difference between a small and a large model is negligible, in both answer quality and speed. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline — a small model starts to trade accuracy for speed (Module 5 quantifies the cost).
 
 So for this module, **select `gemma3:27b` in the model dropdown** — Google's flagship open model (Gemma 3, 27 billion parameters), and the synthesis model AIStudio is tuned around. Because it's a large model it needs a reasonably capable machine to run at good speed; if you don't have it yet, pull it once through Ollama (QUICKSTART shows how to add a model). Start with the showcase question:
 
@@ -187,11 +187,11 @@ Then:
 
 > **Worked example — the same question, two models.** Ask *"What does Goldman Sachs say about the risks of artificial intelligence?"* on **gemma3:27b**, then switch the model to **mistral:7b** and press **↑** then Enter to re-ask. Both answers are grounded and cite real Goldman filings — but they differ. The larger model is more exhaustive: it surfaces an extra year's filing and names the governance committees that oversee AI risk. The smaller model is tighter and faster, covering the same core (regulatory uncertainty, model error and bias, third-party reliance, bad-actor misuse) in fewer words. Neither is "wrong." The model sets the depth and emphasis; the citations are how you confirm which framing the filings actually support. That is the *radical-transparency* note from the top of this tutorial made concrete — read the sources, don't take the wording on faith.
 
-> **When the answer is a number from a table, read it twice.** A cross-firm numeric query — *"Compare the CET1 ratios for JPMorgan and Citigroup"* — is where AIStudio is most likely to return a confident wrong figure: financial ratios live in multi-year, multi-column tables, and a chunk can sever a cell from the column header (the year) that gives it meaning. **Annex 5** is the full worked case — one of those two firms comes back exactly right and the other a full year off, and the contrast is the whole lesson.
+> **When the answer is a number from a table, read it twice.** A cross-firm numeric query — *"Compare the CET1 ratios for JPMorgan and Citigroup"* — is where AIStudio is most likely to return a confident wrong figure: financial ratios live in multi-year, multi-column tables, and a chunk can sever a cell from the column header (the year) that gives it meaning. **Annex 4** is the full worked case — one of those two firms comes back exactly right and the other a full year off, and the contrast is the whole lesson.
 
 ### 2.6 Add a Firm on Demand
 
-You don't have to rebuild the whole corpus to add one company. The flow is **download → selective re-ingest → query**, and it leaves the other ~100 filings untouched.
+You don't have to rebuild the whole corpus to add one company. The flow is **download → selective re-ingest → query**, and it leaves the other 100 filings untouched.
 
 **1. Download just the new firm** (by ticker — download stays a manual step):
 
@@ -199,39 +199,42 @@ You don't have to rebuild the whole corpus to add one company. The flow is **dow
 ais_download_sec_10k --tkr BLK --latest
 ```
 
-> **BlackRock dual-CIK.** BlackRock reorganized in 2024 and received a new EDGAR CIK (`0002012383`). The ticker `BLK` resolves to this new CIK, which only carries FY2024–FY2025. To build a full 5-year history, supplement with the legacy CIK:
+That fetches BlackRock's most recent 10-K into the corpus's `uploads/`. One firm, one command.
+
+> ***Going deeper* — corporate events change a firm's filing identity.** A ticker resolves to a company *as it files today* — but a firm's identity in EDGAR isn't fixed. [**Corporate events**](https://corporatefinanceinstitute.com/resources/management/corporate-action/) — mergers, spin-offs, name or ticker changes, redomiciles, holding-company reorganizations — can split one business's filings across more than one identifier over time.
+>
+> BlackRock is a clean case. On October 1, 2024 it completed a holding-company reorganization: the predecessor company (EDGAR CIK `0001364742`) was replaced by a new "BlackRock, Inc." (CIK `0002012383`), each old share converting one-for-one into the new. The business is continuous, but EDGAR now indexes it under **two** CIKs — the new one carries FY2024 onward, the predecessor the earlier years — and `BLK` only resolves to the new one. So to build a full multi-year history you fetch each era explicitly:
 >
 > ```bash
-> # FY2024–FY2025 (new CIK 0002012383)
-> ais_download_sec_10k --tkr BLK --latest
+> # FY2024–FY2025 — current company (the ticker resolves here)
+> ais_download_sec_10k --tkr BLK --latest 2
 >
-> # FY2021–FY2023 (legacy CIK 0000014272)
-> ais_download_sec_10k --cik 0000014272 --force_name "BlackRock" --latest 3
->
-> # Ingest both
-> ais_ingest_sec_10k --files BlackRock
+> # FY2021–FY2023 — predecessor, by its CIK, labeled to the same firm
+> ais_download_sec_10k --cik 0001364742 --force_name "BlackRock" --latest 3
 > ```
->
-> This pattern applies to any firm whose EDGAR CIK changed through a reorganization.
 
-**2. Re-ingest only that file.** `ais_ingest_sec_10k` is incremental by default (it skips unchanged files), so a plain run already picks up the new filing. But you can also name exactly what to ingest with `--files`:
+**2. Re-ingest only one of a group of select files.** `ais_ingest_sec_10k` is incremental by default — it skips files it has already indexed — so a plain run already picks up the new filing. But you can also name exactly what to ingest with `--files`:
 
 ```bash
 ais_ingest_sec_10k --files BlackRock
 ```
 
-`--files` takes one or more comma-separated **patterns**, OR-matched against the filename: each is a literal substring, or a regex if it contains regex metacharacters (`* + ? [ ] ( ) | ^ $ { } \`). So `--files BlackRock` matches `BlackRock_10K_2025-02-25.htm`; `--files 'JPM.*2025,Citi'` matches either. Everything not matched is left untouched, and the run ends with a `· File Ingested:` roster listing exactly what landed.
+`--files` takes one or more comma-separated **patterns**, OR-matched against the filename: each is a literal substring, or a regex if it contains regex metacharacters (`* + ? [ ] ( ) | ^ $ { } \`). So `--files BlackRock` matches every BlackRock filing on disk and ingests them in one pass; `--files 'JPM.*2025,Citi'` matches either. Everything unmatched is left untouched, and the run ends with a `· File Ingested:` roster of exactly what landed.
 
-**3. Query it.** Switch to **sec_10k**, set the **Firm** filter to `BlackRock, Inc.` (or leave it on auto — the entity KB resolves the filter), and ask. BlackRock answers end-to-end the moment its filing is ingested: plain ingest stamps the registrant tag that drives firm isolation, so no separate enrichment step is required.
+In the predecessor download above we passed `--force_name "BlackRock"` so those filings carry the same firm label as the current company — otherwise they'd file under the predecessor's own registrant name and read as a separate firm. (For how AIStudio maps a company across its identifiers — CIK, ticker, LEI, and the registrant name in the filing itself — see **Annex 1 §A1.5**.)
 
-> **Correcting the firm's identity.** An on-demand add resolves its LEI by name-search — a machine *guess* until a human verifies it. Annex 1 §A1.5 walks the one-edit correction, with BlackRock as the worked case.
+**3. Query it.** Switching back to AIStudio in the browser, select **sec_10k** and ask a question only BlackRock can answer — that's what surfaces its filing on its own merits:
+
+> *What is BlackRock's Aladdin platform, and what role does it play in the firm's business?*
+
+> **One firm, many identifiers.** A company appears under several codes across naming standards — CIK, ticker, LEI, the registrant name in the filing itself — and AIStudio records them in an open schema where a human-verified value always wins over a machine's name-search guess. Again, Annex 1 §A1.5 walks one such one-edit correction — promoting BlackRock's LEI to its verified value — as the worked case.
 
 ---
 
 ## Module 3 — A Second Corpus: European Banks (ESEF)
 *Goal: Build a second production corpus that mirrors Module 2 — same four steps, a different regulator and access key. ~40 minutes.*
 
-The SEC corpus is US filers retrieved from EDGAR by **CIK**. European banks file under the EU's **ESEF** mandate, retrieved from **filings.xbrl.org** by **LEI**. The shape of the work is identical — download → entities → glossary → ingest — which is the point: the corpus machinery is source-independent, only the access key and the source endpoint change.
+The SEC corpus is US filers retrieved from EDGAR by **CIK**. European banks file under the EU's **ESEF** (European Single Electronic Format) mandate, retrieved from **filings.xbrl.org** by **LEI**. The shape of the work is identical — download → entities → glossary → ingest — which is the point: the corpus machinery is source-independent, only the access key and the source endpoint change.
 
 ### 3.1 Download the Filings
 
@@ -261,7 +264,7 @@ Same command as SEC, pointed at the European corpus: it scans the ESEF filings, 
 ais_import_glossary_kb --source bis_basel
 ```
 
-The same BIS Basel glossary applies — capital and regulatory terms are shared vocabulary across US and European banks. The glossary is corpus-wide; there is nothing ESEF-specific to build.
+This is the **same** glossary you built in §2.3, not a new one. Basel vocabulary (CET1, leverage ratio, NSFR, RWA…) is identical for US and European banks, so it's stored **corpus-agnostically** (`any_corpus`) and built once. If you ran Module 2 it already exists — re-running is a harmless idempotent refresh, here only so this module stands on its own. Its job is unchanged from §2.3 *Going deeper*: at **query time** it expands an acronym to its spelled-out form and back, so *"CET1"* and *"Common Equity Tier 1"* retrieve the same chunks. There is nothing ESEF-specific to build.
 
 ### 3.4 Ingest the Corpus
 
@@ -273,10 +276,13 @@ Same enrichment as SEC: each chunk is prefixed `[Document: <entity> | <aliases> 
 
 ### 3.5 Query at Scale
 
-Switch to the **esef_banks** corpus (again `gemma3:27b` — a larger model buys real multilingual headroom here, see Annex 3):
+Switch to the **esef_banks** corpus and try these three, in order:
 
-- *"How does BNP Paribas describe its CET1 capital position?"* &nbsp;← **BIS / Basel-glossary example**
-- *"What do European banks say about climate-related financial risk?"*
+- *"How does HSBC describe its CET1 capital position?"* — an English filer. The glossary expands *CET1* → *Common Equity Tier 1*, and the answer comes back specific and cited.
+- *"What do European banks say about climate-related financial risk?"* — no firm is named, so this tests **breadth**: expect several banks cited side by side.
+- *"How does BNP Paribas describe its CET1 capital position?"* — **the language case.** BNP files in **French**, so an English query is reaching across languages.
+
+That third question is where **model size** earns its keep. Ask it on a small model and the answer is a vague, *uncited* hedge — it knows the question is about BNP but can't pull the specific figure across the language gap. Switch the model to `gemma3:27b` and re-ask: it bridges *fonds propres de base de catégorie 1* → CET1, retrieves the specific passage, and grounds it with a citation. **The retrieval mechanics did not change — only the model did.** That is the whole point of **Annex 3**: retrieval quality is not language-neutral, and on non-English filings a larger model is the lever that recovers the specific fact a smaller one misses.
 
 ### *Going deeper* — When the portfolio isn't in English
 *(skippable)*
@@ -320,11 +326,120 @@ Create `benchmarks/<your-corpus>/<your-corpus>_questions.yaml`:
       notes: What a correct answer looks like.
 ```
 
-Then `ais_bench --corpus your-corpus-name`. What the pass/fail checks really mean is **Annex 4**.
+Then `ais_bench --corpus your-corpus-name`. What the pass/fail checks really mean is **Module 5**.
 
 ### 4.6 Optional — Add Corpus Guidance
 
 Use the **Edit Corpus** modal to set description, summary, and search guidance (routing hints that tell the model which document to consult for which question) — written straight to the runtime `<your-corpus>_corpus_metadata.yaml`. No YAML editing required.
+
+---
+
+## Module 5 — Benchmarking
+
+*Goal: measure a corpus scientifically — and learn to read the score correctly.*
+
+Benchmarking is how you find out what actually makes a difference — model choice, retrieval settings, entity handling, question shape. Without a measurement you are guessing. That is why we built a benchmark tool, and why it has carried this whole project: it lets us measure progress and find what works run after run, **scientifically** rather than by impression. `ais_bench` is easy to run and easy to *misread*, though — the naive score lies in a specific, dangerous direction, and the audit discipline below exists to catch that lie.
+
+### 5.1 — A benchmark run is a coordinate, not just "the questions"
+
+A run isn't simply *ask the questions*. It evaluates one point in a space of choices — **which questions × which firms (the scope) × the retrieval settings × how entities are handled × which model** — scored by a grading method. Reproducibility means writing that coordinate down: the question file and the scope file *are* the experiment record, and the run flags are its conditions. That is why the tests live in files, not in code.
+
+The settings that move the result, and why each sits where it does:
+
+- **Top K = 10** for multi-firm financial corpora — fewer slots drop firms from a comparison; 5 is fine for small single-topic corpora.
+- **Retrieval Mix (α) = 0.5.** Pure conceptual retrieval loses the *named firm*: the query embedding is dominated by the shared concept (every bank discusses "CET1"), so the firm names barely move it and retrieval latches onto whoever wrote most densely about the topic. Blending in literal matching restores the names. 0.5 is the locked default.
+- **Score Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so ~0.2 is the working value for these corpora.
+- **Entity handling — isolation, not expansion.** The central lesson: recognizing a firm and *appending* its name to the query does **not** stop the wrong firms' chunks from being retrieved. Only a retrieval-time **filter** keyed to the recognized firm isolates correctly — and AIStudio builds that filter automatically. Expansion decorates the query; the filter excludes the contaminants. Conflating the two once produced answers that cited the wrong companies while scoring 100% mechanically.
+- **Model.** When retrieval is the bottleneck, model size barely moves the score — a small local model matches a large one on retrieval-limited questions; the larger model pulls ahead only on dense multi-firm synthesis. Either way, a model handed a chunk that lacks the fact will *fabricate* rather than abstain — which is exactly why the audit reads the cited chunk, not the answer's confidence.
+
+One structural ceiling sits above all of this: **language.** On non-English filings accuracy falls off by language (English near-perfect, French partial, others weaker) — an embedding-and-extraction limit, not an isolation failure — so it is measured separately rather than hidden inside the score.
+
+### 5.2 — What the mechanical score actually checks
+
+A benchmark question carries `keywords` and an expected answer shape. A run marks a question **pass** on three checks, all mechanical:
+
+1. every `keyword` appears in the answer,
+2. the answer carries at least one citation,
+3. the model didn't hedge with "no information available."
+
+That's it. Notice what's **not** in the list: whether the answer is *correct*, whether it cites the *right firm*, whether the cited chunk actually *supports* the claim. The mechanical score is a presence test, not a truth test.
+
+### 5.3 — The trap: a passing question can be wrong
+
+Because the checks are presence tests, a question can pass all three while being substantively wrong. Real cases from the record:
+
+- A KBC net-interest-income question **passed** — keywords present, citation present — while the answer was entirely about **ING**. Right keywords, wrong firm.
+- A multi-firm question about JPMorgan / Bank of America / Citigroup **passed** while citing **Prudential Financial**. Right shape, wrong source.
+
+The keyword check is a *signal*, not a guarantee of source correctness. This is the single most important thing to internalize about the harness: **mechanical pass ≠ quality.** We measured a no-scaffold run at **8/8 mechanical and 1/7 audited** — a 100% mechanical score that was almost entirely wrong on inspection.
+
+### 5.4 — The worst case: fabrication scores *higher* than honesty
+
+The trap gets actively perverse when you compare models. On the same seven SEC questions, a fast **small model — which we'll leave unnamed** — ran 3× quicker and **fabricated**: an incoherent CET1, a revenue figure off by 10× ("$1,618 billion"), citations mapped to the wrong firms' filings, invented disclosure dates — while the standing model (gemma3:27b) correctly **abstained** where retrieval starved it. The mechanical score: **small model 7/7, gemma 6/7.** The keyword-and-citation gate *rewarded* the confident fabrication and *penalized* the honest abstention.
+
+That's the strongest possible argument that the mechanical verdict, used alone, optimizes for exactly the wrong behavior.
+
+### 5.5 — The fix to the verdict
+
+We stopped trusting the pass-rate and moved the verdict to signals that catch fabrication:
+
+- **Objective-%, not "pass-rate."** Define the quality metric as `a / (a + b + c)` — the fraction of answers that are *objectively correct* (right content, right firm, supported by the cited chunk), excluding architectural ceilings. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
+- **A four-state audit, not a binary.** Every audited question gets one of: **✅ Good** (correct, right firm, substantive, cited), **⚠ Partial** (mechanically passing but incomplete or wrong firm), **❌ Miss** (retrieval or generation failure), **🔍 Grading artifact** (mechanically failed but substantively *correct* — keyword brittleness, citation dropout, an accent mismatch). The grading-artifact bucket is the mirror image of §5.3: it's where the mechanical score *understates* quality, and it's what tells you to fix a keyword list rather than the engine.
+- **An amber, entity-weighted score.** The weighted-sum grader leads with **entity coverage** (did the answer cite the firms it should) and demotes raw keyword presence to one signal among several — so confident-but-wrong-firm answers can't score green.
+
+### 5.6 — The discipline that makes it real: verify the cited chunk
+
+None of the above works on trust. A confident, well-cited, fluent answer can still be fabricated — the only thing that confirms a claim is **scrolling the cited chunk** and reading whether it actually says what the answer claims. Worked example: a CET1 answer that *looked* right was only validated by pulling the exact Qdrant chunk and confirming the number and the column it came from. The rule — **verify-the-artifact**, or here, *verify-the-cited-chunk* — is why an audit is a read, not a re-run. A re-ingest that "completed successfully" is a claim; the chunk is the evidence.
+
+### 5.7 — Running it, and the canonical settings
+
+```bash
+ais_bench --corpus sec_10k --top-k 10
+```
+
+writes a timestamped report to `benchmarks/<corpus>/reports/` in three formats (`.md` readable with answers, `.json` machine-readable, `.pdf` if `weasyprint` is installed). The harness reads the right parameters per corpus from metadata, so you rarely pass flags by hand. Canonical configuration: **α = 0.5, K = 10** for `sec_10k` and `esef_banks`; **K = 5** for `demo`/`help`. Per-question `entity_filter` lives in the question YAML and is passed through to retrieval.
+
+**The one-line takeaway for an operator:** the green number is where you *start* reading, not where you stop. Run the bench for the signal, then audit the answers — read the cited chunks, check the firms — because the mechanical score's failure mode is to reward exactly the confident wrongness you most need to catch.
+
+### 5.8 — Naming scopes so the benchmark binds them
+
+> **Tip — name scopes so the benchmark binds them automatically.** A scope file named `<corpus>_<description>_scope.yaml` lets you run `ais_bench --corpus <corpus> --scope <description>` without repeating the corpus name or a path — `ais_bench` resolves `<corpus>_<description>_scope.yaml` from the convention. For example, a file `sec_10k_big_banks_scope.yaml` is reached with `ais_bench --corpus sec_10k --scope big_banks`. The same naming works for the download scope (`--scope`), so one consistently-named file serves both. Keep your corpus's scope, questions, and metadata files together under `data/corpora/<corpus>/`.
+
+---
+
+### 5.9 — Worked examples: four runs, read honestly
+
+The principles above stay abstract until you watch them on real output. We ran four benchmarks across the two shipped corpora and read each one the way §5.1–5.6 prescribe: start at the mechanical score, audit the answers, then state the **objective** read (the §5.5 metric — correct answers over correct-plus-partial-plus-miss, with architectural ceilings set aside). Two runs vary the **questions** on a fixed corpus; two vary a single **retrieval setting** on fixed questions. Together they show the §5.1 thesis from both sides — the score is a coordinate, not a verdict.
+
+| Run | Corpus · set | Knob | Mechanical | Objective (audited) |
+|---|---|---|---|---|
+| **A** | sec_10k · default (BIC) | K=10 | 8/10 | ~8/9 |
+| **B** | sec_10k · June_2026 (hard) | K=10 | 7/10 | ~6/10 |
+| **C** | esef_banks · lang_en | **K=5** | 6/12 | ~9/12 |
+| **D** | esef_banks · lang_en | **K=10** | 8/12 | ~9/12 |
+
+```bash
+ais_bench --corpus sec_10k                                  # Run A
+ais_bench --corpus sec_10k --questions June_2026 --top-k 10 # Run B
+ais_bench --corpus esef_banks --scope lang_en --top-k 5     # Run C
+ais_bench --corpus esef_banks --scope lang_en --top-k 10    # Run D
+```
+
+**Run A — the clean baseline.** Eight green. The audit moves two of them in opposite directions: the climate question failed only on a missing literal token ("Net Zero") while answering correctly — a grading artifact, *read up* — and one single-firm lookup (BlackRock's revenue) passed mechanically while describing another firm's business segments entirely — *read down*. The one red, a multi-year cyber comparison, returned a fluent answer with **zero citations**: the harness correctly failed it, because an ungrounded synthesis is exactly what you cannot trust. Objective lands near 8/9 once that temporal-synthesis ceiling is set aside — close to the mechanical 8, but a *different* eight, and that difference is the whole reason to audit. **Direction:** the wrong-segment lookup is the entity-grounding edge that the verify-the-chunk discipline (§5.6) and the entity-KB work keep tightening; on the larger synthesis model the same question grounds correctly, so model choice is the near-term lever.
+
+**Run B — same corpus, harder questions.** Seven green, and the two extra losses are the *point* of the harder set. The three-firm, five-year CET1-and-revenue question — one multi-column table query — passes mechanically with eleven citations and returns a confident, fully-formatted table that is **not reliable**: it reports the wrong FY2025 ratio for JPMorgan, leaves several years "not available," and mixes the Standardized and Advanced capital bases across rows. This is the table-cell frontier (Annex 4) at full scale: maximally fluent, citation-rich, wrong in the cells — the clearest possible case of *mechanical pass ≠ correct*. The "dedicated AI governance committees" question went the honest way instead — the filings disclose no body by that name, so the model declined rather than invent, a red that is really an honest abstention. **Direction:** binding each number to its row, year, and basis is the active build — the structured-data and table-recognition modules (Annex 4); the harder set exists precisely to keep that boundary measured rather than discovered live in front of someone.
+
+*A note spanning A and B:* three questions carry identical text across the two sets yet flipped verdict between the runs — the cyber comparison from red to green, two others trading between amber and green. At a non-zero temperature the mechanical score carries run-to-run noise, so a one-point delta between two runs is **not** a finding. The stable signal is the audit, not the number.
+
+**Run C — fewer retrieval slots than the corpus wants.** Six green at K=5, but here the mechanical score *understates*: three ambers are low-density answers that are correct but sparsely attributed (*read up*), and the genuine misses split in two — two firms starved of context at K=5 (Nordea's leverage, ING's digital, both zero citations) and one true frontier (Erste, the multilingual tokenization case of Annex 3). Objective sits near 9/12. **Direction:** the canonical depth for these multi-firm corpora is K=10 (§5.7) — the starvation misses are one knob away, which Run D tests directly.
+
+**Run D — same questions, the canonical depth.** Eight green at K=10. Nordea's leverage and ING's digital both recover from zero citations to grounded answers — confirming those misses were *depth, not capability* — and Erste climbs from zero to a sparse citation. Two questions move the other way (BBVA climate, Barclays holding-company), shedding citations as the larger candidate pool and the reranker push a borderline chunk below threshold — so K=10 is clearly better in aggregate but **not monotonic** per question. **Direction:** K=10 is the right default for these corpora; the two regressions point at reranker-threshold tuning, the next knob on the retrieval side.
+
+**Overall assessment.** Across both corpora the system is solid where the audits say it is: firm isolation on well-tagged corpora, narrative and cross-firm synthesis, and single-fact English lookups come back grounded and correctly cited. The frontiers are equally clear and equally stated — multi-firm **table-cell extraction** (Run B's capital table), **entity isolation under load** (the BlackRock lookup, which across runs both leaked a neighbour's chunks and flip-flopped between confident-wrong and honest-decline), **non-English retrieval** (Erste), and **multi-year temporal synthesis** (the flickering cyber comparison). None of these hides inside a green number; each was found by reading the answers, which is the method. And the direction of travel is named throughout: structured-data and table-recognition handling for the table frontier, tighter entity isolation and chunk-verification for the lookups, the multilingual work of Annex 3 for non-English filings, and a richer model for dense synthesis. The benchmark's job is not to award a grade — it is to keep that map of solid ground and frontier honest, current, and visible, run after run.
+
+---
+
+If you have worked through all of this, you are equipped to experiment freely — swap models, reshape questions, build your own corpora, and read the results honestly. AIStudio keeps growing: we are sharpening [**query understanding**](https://en.wikipedia.org/wiki/Query_understanding) (reading the intent behind a question), building modules to ingest other kinds of [**structured data**](https://en.wikipedia.org/wiki/Data_model), improving [**data recognition inside tables**](https://en.wikipedia.org/wiki/Table_extraction) (the active frontier — see **Annex 4**), and bringing [**multimodal**](https://en.wikipedia.org/wiki/Multimodal_learning) inputs into the same pipeline. Happy Building :-)
 
 ---
 
@@ -446,7 +561,7 @@ For LEI specifically: `gleif_lei` holds what GLEIF confirmed; if you find a bett
 
 This is why the 2026-06-16 ESEF build succeeded despite five firms filing under names we didn't expect — Nordeakoncernen, Erste Group BankAG, Barclays Bank PLC, StandardChartered Bank, Skandinaviska Enskilda Banken AB (publ). The LEI resolved each identity correctly regardless of what the filer typed. For European entities, **supply the LEI — the rest resolves from there.**
 
-> **Implementation status.** This open/provenance convention is the decided target, ratified on the documentation side. It is **not yet wired**: the live resolver (`_scope_common_ops.py`) still uses the old cascade (`lei_corrected → gleif_lei → lei`, `canonical → gleif_canonical → xbrl_name → label`), and on-disk rows carry old names. The resolver rewire + one-time file migration are parked for PIPELINE.
+> **Implementation status.** This open/provenance convention is **live**: the ESEF corpus scopes ship in this form and the resolver reads them directly — Module 3 was built end-to-end on it. The SEC scope is the remaining laggard: its rows still carry the older names and are being migrated to match.
 
 ### A1.5 — Correcting a LEI: a worked example
 
@@ -490,6 +605,10 @@ entities:
 ```
 
 Each firm is **one entry in the `entities:` list**, identified by its **LEI**. At ingestion the pipeline reads the chunk's self-reported entity, matches it against this list, and prefixes the chunk `[Document: <canonical> | <scope_name> | <ticker> FY<year>]` — so the firm and year travel inside the chunk text. The LEI stays in the KB as the **identity key**; it is deliberately **not** in the prefix (it isn't a retrieval token and would only add noise to keyword matching). `scope_name` is the human-facing name the prefix and queries use; `aliases` widens lexical recall.
+
+Practical order for adding a US firm to a scope: find it on **EDGAR** to confirm it files a domestic 10-K and grab its **CIK**; cross-check the **ticker** in `company_tickers.json`; look up the **LEI** on **GLEIF** for the `lei` field (used by entity resolution and the benchmark scope). For a European bank, the **LEI** is the primary key — start at **GLEIF**, then confirm filings exist on **filings.xbrl.org**.
+
+> Identifiers are reference data: verify them at the source, don't trust a guess. A wrong CIK silently downloads the wrong company's filing — and EDGAR is the only authority that settles it.
 
 ### A1.7 — The European parallel
 
@@ -566,100 +685,15 @@ The observable result: the European corpus runs materially below the US one on o
 
 ### A3.4 — The honest limits
 
-This is a **frontier, not a closed problem.** Cross-language terminology has no glossary bridge yet; non-Latin and heavily-accented text still stresses the tokenizer; and a multilingual corpus's objective-% sits structurally below an English one until those are addressed. The right operator posture is the same as everywhere else in AIStudio: segment by language so the failures are visible, verify the language labels like any other reference data, and read the cited chunks (Annex 4) rather than trusting a score that English tuning inflated.
+This is a **frontier, not a closed problem.** Cross-language terminology has no glossary bridge yet; non-Latin and heavily-accented text still stresses the tokenizer; and a multilingual corpus's objective-% sits structurally below an English one until those are addressed. The right operator posture is the same as everywhere else in AIStudio: segment by language so the failures are visible, verify the language labels like any other reference data, and read the cited chunks (Module 5) rather than trusting a score that English tuning inflated.
 
 ---
 
-## Annex 4 — Benchmarking
-
-`ais_bench` is easy to run and easy to misread. This annex is the story of how we learned to read it — because the naive score lies in a specific, dangerous direction, and the whole audit discipline exists to catch that lie.
-
-### A4.0 — A benchmark run is a coordinate, not just "the questions"
-
-A run isn't simply *ask the questions*. It evaluates one point in a space of choices — **which questions × which firms (the scope) × the retrieval settings × how entities are handled × which model** — scored by a grading method. Reproducibility means writing that coordinate down: the question file and the scope file *are* the experiment record, and the run flags are its conditions. That is why the tests live in files, not in code.
-
-The settings that move the result, and why each sits where it does:
-
-- **Top K = 10** for multi-firm financial corpora — fewer slots drop firms from a comparison; 5 is fine for small single-topic corpora.
-- **Retrieval Mix (α) = 0.5.** Pure conceptual retrieval loses the *named firm*: the query embedding is dominated by the shared concept (every bank discusses "CET1"), so the firm names barely move it and retrieval latches onto whoever wrote most densely about the topic. Blending in literal matching restores the names. 0.5 is the locked default.
-- **Score Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so ~0.2 is the working value for these corpora.
-- **Entity handling — isolation, not expansion.** The central lesson: recognizing a firm and *appending* its name to the query does **not** stop the wrong firms' chunks from being retrieved. Only a retrieval-time **filter** keyed to the recognized firm isolates correctly — and AIStudio builds that filter automatically. Expansion decorates the query; the filter excludes the contaminants. Conflating the two once produced answers that cited the wrong companies while scoring 100% mechanically.
-- **Model.** When retrieval is the bottleneck, model size barely moves the score — a small local model matches a large one on retrieval-limited questions; the larger model pulls ahead only on dense multi-firm synthesis. Either way, a model handed a chunk that lacks the fact will *fabricate* rather than abstain — which is exactly why the audit reads the cited chunk, not the answer's confidence.
-
-One structural ceiling sits above all of this: **language.** On non-English filings accuracy falls off by language (English near-perfect, French partial, others poor) — an embedding-and-extraction limit, not an isolation failure — so it is measured separately rather than hidden inside the score.
-
-### A4.1 — What the mechanical score actually checks
-
-A benchmark question carries `keywords` and an expected answer shape. A run marks a question **pass** on three checks, all mechanical:
-
-1. every `keyword` appears in the answer,
-2. the answer carries at least one citation,
-3. the model didn't hedge with "no information available."
-
-That's it. Notice what's **not** in the list: whether the answer is *correct*, whether it cites the *right firm*, whether the cited chunk actually *supports* the claim. The mechanical score is a presence test, not a truth test.
-
-### A4.2 — The trap: a passing question can be wrong
-
-Because the checks are presence tests, a question can pass all three while being substantively wrong. Real cases from the record:
-
-- A KBC net-interest-income question **passed** — keywords present, citation present — while the answer was entirely about **ING**. Right keywords, wrong firm.
-- A multi-firm question about JPMorgan / Bank of America / Citigroup **passed** while citing **Prudential Financial**. Right shape, wrong source.
-
-The keyword check is a *signal*, not a guarantee of source correctness. This is the single most important thing to internalize about the harness: **mechanical pass ≠ quality.** We measured a no-scaffold run at **8/8 mechanical and 1/7 audited** — a 100% mechanical score that was almost entirely wrong on inspection.
-
-### A4.3 — The worst case: fabrication scores *higher* than honesty
-
-The trap gets actively perverse when you compare models. On the same seven SEC questions, a fast small model (mistral) ran 3× quicker and **fabricated** — an incoherent CET1, a revenue figure off by 10× ("$1,618 billion"), citations mapped to the wrong firms' filings, invented disclosure dates — while the standing model (gemma3:27b) correctly **abstained** where retrieval starved it. The mechanical score: **mistral 7/7, gemma 6/7.** The keyword-and-citation gate *rewarded* the confident fabrication and *penalized* the honest abstention.
-
-That's the strongest possible argument that the mechanical verdict, used alone, optimizes for exactly the wrong behavior. Two standing consequences:
-
-- **mistral is disqualified as an unsupervised extractor** for financial data; gemma3:27b is the benchmark/synthesis model and we don't switch off it.
-- gemma fabricates too **when retrieval starves it** — so the **abstention guardrail** (the model must say "I don't have it" rather than invent) matters for every model, and a fabrication-catching verdict matters more than a faster one.
-
-### A4.4 — The fix to the verdict
-
-We stopped trusting the pass-rate and moved the verdict to signals that catch fabrication:
-
-- **Objective-%, not "pass-rate."** Define the quality metric as `a / (a + b + c)` — the fraction of answers that are *objectively correct* (right content, right firm, supported by the cited chunk), excluding architectural ceilings. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
-- **A four-state audit, not a binary.** Every audited question gets one of: **✅ Good** (correct, right firm, substantive, cited), **⚠ Partial** (mechanically passing but incomplete or wrong firm), **❌ Miss** (retrieval or generation failure), **🔍 Grading artifact** (mechanically failed but substantively *correct* — keyword brittleness, citation dropout, an accent mismatch). The grading-artifact bucket is the mirror image of A4.2: it's where the mechanical score *understates* quality, and it's what tells you to fix a keyword list rather than the engine.
-- **An amber, entity-weighted score.** The weighted-sum grader leads with **entity coverage** (did the answer cite the firms it should) and demotes raw keyword presence to one signal among several — so confident-but-wrong-firm answers can't score green.
-
-### A4.5 — The discipline that makes it real: verify the cited chunk
-
-None of the above works on trust. A confident, well-cited, fluent answer can still be fabricated — the only thing that confirms a claim is **scrolling the cited chunk** and reading whether it actually says what the answer claims. Worked example: a CET1 answer that *looked* right was only validated by pulling the exact Qdrant chunk and confirming the number and the column it came from. The rule — **verify-the-artifact**, or here, *verify-the-cited-chunk* — is why an audit is a read, not a re-run. A re-ingest that "completed successfully" is a claim; the chunk is the evidence.
-
-### A4.6 — Running it, and the canonical settings
-
-```bash
-ais_bench --corpus sec_10k --top-k 10
-```
-
-writes a timestamped report to `benchmarks/<corpus>/reports/` in three formats (`.md` readable with answers, `.json` machine-readable, `.pdf` if `weasyprint` is installed). The harness reads the right parameters per corpus from metadata, so you rarely pass flags by hand. Canonical configuration: **α = 0.5, K = 10** for `sec_10k` and `esef_banks`; **K = 5** for `demo`/`help`. Per-question `entity_filter` lives in the question YAML and is passed through to retrieval.
-
-**The one-line takeaway for an operator:** the green number is where you *start* reading, not where you stop. Run the bench for the signal, then audit the answers — read the cited chunks, check the firms — because the mechanical score's failure mode is to reward exactly the confident wrongness you most need to catch.
-
-### A4.7 — Naming scopes so the benchmark binds them
-
-> **Tip — name scopes so the benchmark binds them automatically.** A scope file named `<corpus>_<description>_scope.yaml` lets you run `ais_bench --corpus <corpus> --scope <description>` without repeating the corpus name or a path — `ais_bench` resolves `<corpus>_<description>_scope.yaml` from the convention. For example, a file `sec_10k_big_banks_scope.yaml` is reached with `ais_bench --corpus sec_10k --scope big_banks`. The same naming works for the download scope (`--scope`), so one consistently-named file serves both. Keep your corpus's scope, questions, and metadata files together under `data/corpora/<corpus>/`.
-
----
-
-### A4.8 — Two question sets, and what running both teaches
-
-A benchmark is only as honest as its questions (A4.0). To see that directly, the `sec_10k` corpus carries two question sets worth running back to back:
-
-- **The default set** — questions shaped to what the system handles cleanly today: narrative comparisons (risk disclosure, cybersecurity, climate, strategy), single-firm descriptions, and single-figure lookups. Run it with `ais_bench --corpus sec_10k`.
-- **A harder, dated set** — the same topics pushed into the area still under development: multi-year, multi-firm *quantitative tables* (a five-year capital-ratio-and-revenue trend across three banks in a single question). Run it by pointing `--questions` at the `..._June_2026_...` file.
-
-Run both and the contrast is clear and repeatable. The narrative and single-fact questions come back clean — right firms, grounded answers, correct citations, no cross-firm bleed. The multi-firm *table* question is where the work continues: the system reliably retrieves the right firm's filing, but lifting an exact figure out of a dense, multi-column capital table — binding each number to its row label and its year — is **work in progress**, and it will sometimes return a confident value drawn from an adjacent row or year.
-
-The takeaway is about method, not a verdict on the tool: **which question shapes a retrieval system handles well is itself a finding.** Narrative synthesis and firm isolation are solid here; precise table-cell extraction is the active frontier (Annex 5 walks one such case in detail). Running both sets is how you keep that boundary visible and stated up front — rather than discovering it live in front of someone.
-
-## Annex 5 — The Table Problem (Ahhh… tables…)
+## Annex 4 — The Table Problem (Ahhh… tables…)
 
 Everything to this point assumed the answer lives in a *sentence*. Financial filings break that assumption constantly: the number you want sits in a cell, and a cell only means something through its **column header** (the period — *FY2025* vs *FY2024*) and its **row header** (the variant — *Standardized* vs *Advanced*). RAG chunks a document into ~1,200-character windows; when a chunk boundary falls between the header band and the data row — or when the model reads across a wide row to the wrong column — the cell arrives stripped of the headers that gave it meaning. The model then answers fluently and **confidently wrong**. This annex is one worked case where the failure and the success sit side by side, because the contrast *is* the teaching point.
 
-### A5.1 — The query that exposes it
+### A4.1 — The query that exposes it
 
 Ask the SEC corpus a cross-firm numeric question:
 
@@ -667,7 +701,7 @@ Ask the SEC corpus a cross-firm numeric question:
 
 Grounded in each firm's FY2025 10-K, AIStudio returns JPMorgan ≈ **15.7%** and Citigroup **13.2%**, both labeled *as of December 31, 2025*, each citing the correct firm's filing. Entity isolation worked — right firms, right documents, no cross-contamination. **But one of those two numbers is exactly right and the other is a full year wrong** — and nothing in the answer tells you which.
 
-### A5.2 — Why Citigroup is right and JPMorgan is wrong: prose vs. grid
+### A4.2 — Why AIStudio's reading of Citigroup's report is correct and its reading of JPMorgan's is not: prose vs. grid
 
 The difference is *how each filing states the number*, not which firm the system prefers.
 
@@ -676,7 +710,7 @@ The difference is *how each filing states the number*, not which firm the system
 
 That is column-header detachment in its purest form: the prose figure survives, the grid figure loses the year and lands one column off.
 
-### A5.3 — The second loss: the row header (and the tell it leaves)
+### A4.3 — The second loss: the row header (and the tell it leaves)
 
 The same mechanism corrupts the *variant* (the row header) — and it leaves a tell you can catch without ever opening the source. Both firms came back with an "Advanced" figure that is **structurally impossible**:
 
@@ -685,23 +719,23 @@ The same mechanism corrupts the *variant* (the row header) — and it leaves a t
 
 Catching this needs no source at all: each answer **contradicts itself**. That is the operator's cheapest table-misbind detector — when a derived comparison violates a rule the answer itself states (binding = the lower of the two), suspect a row/column detachment, not a real datum.
 
-### A5.4 — Why it's hard, and what AIStudio does about it
+### A4.4 — Why it's hard, and what AIStudio does about it
 
 A naïve text extractor flattens a table to a stream of numbers and the headers dissolve. AIStudio's ingestion runs a table-extraction normalizer (`loaders.py` / `chunking.py`) that detects grids and serializes them to header-bonded markdown rows, so a clean single-header table survives as `| CET1 capital ratio | 13.1 | % | … |` with the label attached — that closes the common case. The open frontier — the "hard 10%" — is exactly what the JPM example hits: **stacked / multi-level column headers** (a year band sitting *over* a Standardized/Advanced band) and **chunk boundaries that sever the header band from the data rows**. Composing multi-level headers into each data cell (`label (Standardized, FY2025): value`) is the header-binding work tracked as the table-understanding item; until it lands, multi-year multi-basis tables are the residual risk.
 
-### A5.5 — The operator's defenses, today
+### A4.5 — The operator's defenses, today
 
 - **Name the column in the query.** Asking for *"JPMorgan's consolidated holding-company Standardized CET1 ratio as of fiscal year-end 2025"* hands the retriever and the model the column and row keys explicitly — in the record, re-asking a misread CET1 question *with the column named* returned the correct cell from the very same chunk. The data was always there; the query supplied the missing header.
-- **Verify the cited chunk — including the column.** This is Annex 4's discipline (A4.5) applied to tables: scroll the cited chunk and confirm not just that the number appears, but that it sits under the period and basis the answer claims. A table answer is verified at the *cell*, not the page.
+- **Verify the cited chunk — including the column.** This is Module 5's discipline (§5.6) applied to tables: scroll the cited chunk and confirm not just that the number appears, but that it sits under the period and basis the answer claims. A table answer is verified at the *cell*, not the page.
 - **Trust prose over grids, and cross-check the period.** A figure stated in a sentence can be weighted; a figure lifted from a table should be treated as needing confirmation. A two-firm comparison where one number is prose-sourced and the other grid-sourced — this exact case — is the highest-risk shape there is.
 
-### A5.6 — The honest limit
+### A4.6 — The honest limit
 
-Prose-stated numbers extract faithfully; **table-grid numbers are a frontier, not a solved problem** — single-header grids are handled, stacked-header multi-year tables are not yet. The posture is the one the whole tutorial keeps returning to: read the cited chunk, distrust a confident derived comparison that contradicts itself, and treat a table figure as a claim to verify rather than a fact to repeat. The system's job is to make the misbind *visible* — the self-contradiction in A5.3 is that visibility — and closing it for good is the header-binding serializer's job.
+Prose-stated numbers extract faithfully; **table-grid numbers are a frontier — not a solved problem, at least not completely by AIStudio, but actively worked on** as we evaluate several techniques and libraries to address the challenge. Single-header grids are handled today; stacked-header multi-year tables are not yet. The posture is the one the whole tutorial keeps returning to: read the cited chunk, distrust a confident derived comparison that contradicts itself, and treat a table figure as a claim to verify rather than a fact to repeat. The system's job is to make the misbind *visible* — the self-contradiction in A4.3 is that visibility — and closing it for good is the header-binding serializer's job.
 
 ---
 
-## Annex 6 — Under the Hood: Where Data Lives
+## Annex 5 — Under the Hood: Where Data Lives
 
 The modules keep file paths out of the way on purpose. This annex is the map — where AIStudio stores each piece on disk, so you can find, back up, or inspect it. Everything sits under the AIStudio install directory.
 
@@ -713,7 +747,7 @@ The modules keep file paths out of the way on purpose. This annex is the map —
 | **Entity knowledge base** | `data/knowledge_sources/gleif/<corpus>_full_entities.yaml` | Canonical name + LEI + aliases per firm (**Annex 1**). |
 | **Glossary knowledge base** | `data/knowledge_sources/bis_basel/bis_basel_<corpus>_<scope>_glossary.yaml` | Term → full form → keyword expansion (**Annex 2**). |
 | **Source metadata** | `data/knowledge_sources/gleif/gleif_metadata.yaml` | Endpoints, base URL, rate limits — kept as data, not code. |
-| **Benchmark questions** | `benchmarks/<corpus>/<corpus>_questions.yaml` | The benchmark suite (**Annex 4**); reports in `reports/`. |
+| **Benchmark questions** | `benchmarks/<corpus>/<corpus>_questions.yaml` | The benchmark suite (**Module 5**); reports in `reports/`. |
 | **The vector index** | Qdrant collection `aistudio_<corpus>` | The embedded chunks; rebuilt on every ingest (`--force` wipes first). |
 
 **The shape of it:** everything *about* one corpus lives under `data/corpora/<corpus>/`; the *shared* reference data — the entity and glossary knowledge bases, and source metadata — lives under `data/knowledge_sources/`; and the vector index lives in Qdrant. The source documents and the two YAML knowledge bases are the human-editable inputs; the metadata file's ingest stats and the Qdrant collection are machine-written outputs.
@@ -741,25 +775,11 @@ The modules keep file paths out of the way on purpose. This annex is the map —
 
 When you build your own scope (Module 4, Annex 1) you'll need to look up identifiers by hand. These are the authoritative, free sources for each:
 
-<style>
-.srcref { width:100%; border-collapse:collapse; table-layout:fixed; font-size:0.72rem; }
-.srcref th, .srcref td { border:1px solid #ddd; padding:4px 6px; vertical-align:top; text-align:left; word-break:break-word; overflow-wrap:anywhere; }
-.srcref code { word-break:break-all; white-space:normal; background:#f5f5f5; padding:0 2px; }
-</style>
-
-<table class="srcref">
-<colgroup><col style="width:18%"><col style="width:44%"><col style="width:38%"></colgroup>
-<thead><tr><th>You need</th><th>Where to look it up</th><th>Source</th></tr></thead>
-<tbody>
-<tr><td><strong>CIK</strong> (US filer ID) and the filings themselves</td><td>Company/CIK lookup — <code>https://www.sec.gov/search-filings/cik-lookup</code> · full-text search — <code>https://www.sec.gov/edgar/search/</code></td><td><strong>SEC EDGAR</strong> (U.S. Securities and Exchange Commission), <code>https://www.sec.gov/edgar</code>; data API <code>https://data.sec.gov</code></td></tr>
-<tr><td><strong>Ticker → CIK</strong> (the map AIStudio resolves <code>--tkr</code> against)</td><td><code>https://www.sec.gov/files/company_tickers.json</code></td><td><strong>SEC EDGAR</strong></td></tr>
-<tr><td><strong>LEI</strong> (the 20-char legal entity ID — the entity-KB input)</td><td>LEI search — <code>https://search.gleif.org</code> (US alt: OFR finder <code>https://www.financialresearch.gov/data/legal-entity-identifier/find-lei/</code>)</td><td><strong>GLEIF</strong> (Global Legal Entity Identifier Foundation), <code>https://www.gleif.org</code>; API <code>https://api.gleif.org/api/v1</code></td></tr>
-<tr><td><strong>European (ESEF) filings</strong>, by LEI</td><td><code>https://filings.xbrl.org</code></td><td><strong>filings.xbrl.org</strong> (operated by XBRL International)</td></tr>
-<tr><td><strong>Basel terms</strong> behind the glossary</td><td>Basel Framework — <code>https://www.bis.org/basel_framework/</code></td><td><strong>BIS</strong> (Bank for International Settlements)</td></tr>
-<tr><td>The <strong>ESEF mandate</strong> itself (why European filings are iXBRL)</td><td><code>https://www.esma.europa.eu</code></td><td><strong>ESMA</strong> (European Securities and Markets Authority)</td></tr>
-</tbody>
-</table>
-
-Practical order for adding a US firm to a scope: find it on **EDGAR** to confirm it files a domestic 10-K and grab its **CIK**; cross-check the **ticker** in `company_tickers.json`; look up the **LEI** on **GLEIF** for the `lei` field (used by entity resolution and the benchmark scope). For a European bank, the **LEI** is the primary key — start at **GLEIF**, then confirm filings exist on **filings.xbrl.org**.
-
-> Identifiers are reference data: verify them at the source, don't trust a guess. A wrong CIK silently downloads the wrong company's filing — and EDGAR is the only authority that settles it.
+| You need | Where to look it up | Source |
+|---|---|---|
+| **CIK** (US filer ID) and the filings themselves | Company/CIK lookup — `https://www.sec.gov/search-filings/cik-lookup` · full-text search — `https://www.sec.gov/edgar/search/` | **SEC EDGAR** (U.S. Securities and Exchange Commission), `https://www.sec.gov/edgar`; data API `https://data.sec.gov` |
+| **Ticker → CIK** (the map AIStudio resolves `--tkr` against) | `https://www.sec.gov/files/company_tickers.json` | **SEC EDGAR** |
+| **LEI** (the 20-char legal entity ID — the entity-KB input) | LEI search — `https://search.gleif.org` (US alt: OFR finder `https://www.financialresearch.gov/data/legal-entity-identifier/find-lei/`) | **GLEIF** (Global Legal Entity Identifier Foundation), `https://www.gleif.org`; API `https://api.gleif.org/api/v1` |
+| **European (ESEF) filings**, by LEI | `https://filings.xbrl.org` | **filings.xbrl.org** (operated by XBRL International) |
+| **Basel terms** behind the glossary | Basel Framework — `https://www.bis.org/basel_framework/` | **BIS** (Bank for International Settlements) |
+| The **ESEF mandate** itself (why European filings are iXBRL) | `https://www.esma.europa.eu` | **ESMA** (European Securities and Markets Authority) |
