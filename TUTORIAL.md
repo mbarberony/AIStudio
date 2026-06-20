@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.2.1 · Updated 2026-06-18*
+*Version: 1.2.2 · Updated 2026-06-19*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -49,7 +49,7 @@ AIStudio keeps conversation context across a session, so you can build on the pr
 In the **Query Settings** section of the sidebar — just below the CORPUS area — are the knobs that shape how AIStudio retrieves and answers. Let's walk each one.
 
 **Top K** is how many document chunks AIStudio retrieves to answer from:
-- Default 5 chunks. **Use 10 for the demo** — it includes small documents (the QFD paper is 34 chunks) that get outcompeted at K=5 and surface reliably at K=10.
+- The demo ships with **Top K = 10** (you'll see 10 in the field) — it includes small documents (the QFD paper is 34 chunks) that get outcompeted at lower K and surface reliably at 10. *(A corpus that stores no default of its own falls back to the system default of 5.)*
 - **Use 10 for SEC 10-K and ESEF** — these are the large financial-filing corpora you'll build in Modules 2 and 3 (annual reports from many firms). There you'll ask cross-firm *comparison* questions, which need chunks from several filings at once. AIStudio also raises Top K automatically when a query names several firms (~2 more chunks per firm, ceiling K=20).
 
 **Temperature** controls creativity (0.1–0.3 precise, 0.5–0.7 more synthesis; default 0.3 suits document Q&A).
