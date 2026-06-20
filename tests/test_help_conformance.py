@@ -48,7 +48,10 @@ REPO_ROOT = Path(__file__).parent.parent
 def _load_manifest() -> dict:
     manifest_path = REPO_ROOT / "meta" / "bundle_manifest.yaml"
     if not manifest_path.exists():
-        pytest.skip(f"bundle_manifest.yaml not found at {manifest_path} — meta/ not present")
+        pytest.skip(
+            f"bundle_manifest.yaml not found at {manifest_path} — meta/ not present",
+            allow_module_level=True,
+        )
     with open(manifest_path) as f:
         return yaml.safe_load(f)
 
