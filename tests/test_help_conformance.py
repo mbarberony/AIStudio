@@ -173,7 +173,7 @@ def test_script_file_exists(entry: dict) -> None:
     if not script_path.exists() and install == "operator":
         pytest.skip(
             f"Operator script {entry['path']} not on disk — "
-            f"restore from BUNDLE: ais_restore"
+            f"restore from BUNDLE: ais_restore_scripts"
         )
     assert script_path.exists(), (
         f"Script not found: {script_path}. Deploy it: ais_deploy {entry['path']}"
@@ -400,24 +400,21 @@ def _extract_declared_flags(section_text: str) -> set[str]:
 
 
 def _is_passthrough(script_content: str) -> bool:
-    """True if the shell script passes $@ through to another executable (flags live elsewhere).
+    """True if the shell script passes $@ through to another script (flags live elsewhere).
 
     Covers:
-    - python3 ... "$@"                          — direct python3 invocation
-    - exec python3 ... "$@"                     — exec'd python3
-    - exec env PYTHONPATH=... python3 ... "$@"  — env-wrapped python3
-    - exec "$PYTHON" ... "$@"                   — $PYTHON variable
-    - "$PYTHON" ... "$@"                        — $PYTHON variable without exec
-    - exec "$SCRIPT_DIR/scripts/foo.sh" "$@"    — shell-to-shell delegation
+    - exec python3 ... "$@"  — flags live in Python argparse
+    - python3 ... "$@"       — flags live in Python argparse
+    - exec "$SCRIPT_DIR/scripts/foo.sh" "$@"  — flags live in delegated shell script
+    - exec ./scripts/foo.sh "$@"
     """
     return bool(
-        _re.search(r'python3[^\n]*"\$@"', script_content)
-        or _re.search(r'exec[^\n]*python3[^\n]*"\$@"', script_content)
-        or _re.search(r'"\$PYTHON"[^\n]*"\$@"', script_content)
-        or _re.search(r'exec[^\n]*"\$PYTHON"[^\n]*"\$@"', script_content)
-        or _re.search(r'exec\s+["\'\']?\$[^"\'\' ]*\.sh["\'\']?\s+"\$@"', script_content)
+        _re.search(r'python3.*"\$@"', script_content)
+        or _re.search(r'exec.*python3.*"\$@"', script_content)
+        or _re.search(r'exec\s+["\']?\$[^"\']*\.sh["\']?\s+"\$@"', script_content)
         or _re.search(r'exec\s+"?\$\{?SCRIPT_DIR\}?[^"]*"\s+"\$@"', script_content)
     )
+
 
 def _extract_script_flags(script_content: str) -> set[str]:
     """Extract flags explicitly handled by a shell script.
