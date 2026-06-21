@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.8.3 -->
+<!-- Changelog: 2.8.3 — Default model now pins canon gemma3:4b explicitly. Was: first Gemma in
+     /models order, which surfaced gemma3:12b or :27b depending on ordering. Now falls back to the
+     smallest available Gemma, then first available model — fixing the v2.7.0 "smallest Gemma"
+     intent that .find() never actually honored. -->
 <!-- Version: 2.8.2 -->
 <!-- Changelog: 2.8.2 — Removed the last user-facing _ops leak: the suggested help question
      naming ais_test_ops (operator-only, not in the public build) replaced with a public
@@ -1302,9 +1307,12 @@
             modelSelect.innerHTML = chatModels
                 .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
                 .join('');
-            // Prefer Google's Gemma as the default; fall back to the smallest available model
-            const gemmaDefault = chatModels.find(m => m.available && /gemma/i.test(m.id));
-            const first = gemmaDefault || chatModels.find(m => m.available);
+            // Default model: canon gemma3:4b -> smallest available Gemma -> first available (v2.8.3)
+            const gemmas = chatModels.filter(m => m.available && /gemma/i.test(m.id));
+            const sizeOf = id => { const x = id.match(/(\d+(?:\.\d+)?)b/i); return x ? parseFloat(x[1]) : Infinity; };
+            const canon = gemmas.find(m => m.id === 'gemma3:4b');
+            const smallestGemma = gemmas.slice().sort((a, b) => sizeOf(a.id) - sizeOf(b.id))[0];
+            const first = canon || smallestGemma || chatModels.find(m => m.available);
             if (first) modelSelect.value = first.id;
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';

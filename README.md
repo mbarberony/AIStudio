@@ -10,7 +10,7 @@ AIStudio is what you use when you want to query your own documents with AI. It i
 
 > *AIStudio is a hands-on AI engineering lab for exploring how LLM-enabled systems behave under real operational constraints — retrieval quality, vocabulary mismatch, metadata filtering, observability, and deployment trade-offs — before those issues get hidden behind abstractions.*
 >
-> **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · llama3.1 · mistral · gemma3 · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (future) · AWS ECS (future)
+> **Current stack:** Python · FastAPI · local Ollama inference · Qdrant vector storage · gemma3 · mistral · llama3.1 · nomic-embed-text · sentence-transformers · pdfplumber page-aware PDF extraction · CrossEncoder reranker · benchmark harness · CI/CD pipeline · Docker (future) · AWS ECS (future)
 >
 > The architecture choices are deliberate and documented. See [docs/architecture_decisions.md](docs/architecture_decisions.md). For a guide to how the codebase is organized, see [docs/CODEBASE_GUIDE.md](docs/CODEBASE_GUIDE.md).
 
@@ -52,7 +52,7 @@ The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corp
 
 **ESEF corpus — European banks, the harder cousin:** AIStudio also builds a second at-scale corpus from European banks' **ESEF** filings (retrieved from filings.xbrl.org by LEI — the same download → entities → glossary → ingest machinery as SEC, only the access key and endpoint change). The two corpora are deliberately complementary learning vehicles: together they surface the problems that actually bite in production — resolving the **many names one firm files under** (handled with a GLEIF/LEI entity knowledge base), **multilingual retrieval** (an English question against a filing that says *fonds propres de base de catégorie 1* rather than *Common Equity Tier 1* retrieves worse), and **pulling numbers out of dense, multi-column tables** without severing a cell from the year that gives it meaning. The [Tutorial](TUTORIAL.md) — Modules 2 and 3, plus Annexes 3 and 5 — walks through all of it end to end.
 
-**Models & benchmarking:** AIStudio runs **any Ollama model** — `llama3.1`, `mistral`, `gemma3`, and whatever else you pull; the names here are defaults, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [HARNESS.md](docs/HARNESS.md).
+**Models & benchmarking:** AIStudio runs **any Ollama model** — `gemma3`, `mistral`, `llama3.1`, and whatever else you pull; `gemma3:4b` is the out-of-the-box default, the rest are options, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [HARNESS.md](docs/HARNESS.md).
 
 ---
 
@@ -88,7 +88,7 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 - **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
 - **SEC 10-K synthesis** — ~58 s avg (gemma3:27b, multi-firm)
 - **Retrieval** — ~0.3–0.5 s even at 100K+ chunks
-- **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5 default) · SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
+- **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5) · SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
 
 ---
 
@@ -164,7 +164,7 @@ flowchart TD
 
     subgraph OL["Ollama · :11434"]
         OE["nomic-embed-text\n768-dim embeddings"]
-        OM["llama3.1:8b / mistral:7b / gemma3:27b\nlocal inference\nno external API"]
+        OM["gemma3:4b / gemma3:27b / llama3.1:8b / mistral:7b\nlocal inference\nno external API"]
     end
 
     subgraph ING["Ingestion Pipeline"]
@@ -254,8 +254,8 @@ flowchart TD
 Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
-- **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With the default `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
-- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With the default `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see audited reports under `benchmarks/sec_10k/reports/`
+- **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
+- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see audited reports under `benchmarks/sec_10k/reports/`
 - **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 100K+ chunks — inference, not retrieval, is the bottleneck
@@ -273,11 +273,11 @@ All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean in
 Corpus:     100+ SEC 10-K filings, 21 financial services firms
 Chunks:     100K+
 Ingest:     ~31 min, ~54 chunks/sec, 0 failures
-Model:      gemma3:27b (SEC 10-K benchmark) · llama3.1 / mistral (demo)
+Model:      gemma3:4b (default) · gemma3:27b (SEC 10-K / benchmark) · llama3.1 / mistral (also supported)
 Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
             ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
-Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b default)
-            demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5 default)
+Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b)
+            demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5)
 Frontier:   precise table-cell extraction — see benchmarks/sec_10k/reports/ (audited)
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 100K+ chunks
@@ -315,7 +315,7 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 14/14 questions pass at α=0.5 hybrid retrieval, K=10, gemma3:27b (M4 Pro) ✅ · 12/14 with default llama3.1:8b at K=5
+- Demo corpus benchmark: 14/14 questions pass at α=0.5 hybrid retrieval, K=10, gemma3:27b (M4 Pro) ✅ · 12/14 with llama3.1:8b at K=5
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
 - Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
