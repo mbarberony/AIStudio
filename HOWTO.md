@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-06-17*
+*Version: Beta | Updated: 2026-06-22*
 
 ---
 
@@ -94,8 +94,7 @@ ais_start
 No. Your corpus data lives in `~/qdrant_storage/` on disk — completely separate from the AIStudio codebase. It persists across upgrades, restarts, and reboots. You never need to re-ingest after a routine upgrade.
 
 **When would I need to re-ingest after an upgrade?**
-Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, run:
-re-ingest from the UI: open the corpus, **Delete Corpus**, recreate it with the same name, and re-upload your files with **Add** — AIStudio rebuilds it cleanly in one pass.
+Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, re-ingest from the UI: open the corpus, **Delete Corpus**, recreate it with the same name, and re-upload your files with **Add** — AIStudio rebuilds it cleanly in one pass.
 The `--force` flag wipes and rebuilds the corpus cleanly.
 
 **The demo corpus re-ingests automatically** on first `ais_start` after an upgrade if needed.

@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: 2.0.0 | Updated: 2026-06-18*
+*Version: Beta | Updated: 2026-06-22*
 
 Get a running AIStudio instance in under 30 minutes.
 

@@ -1,5 +1,6 @@
 # AIStudio Tutorial
-*Version: 1.3.6-draft · Updated 2026-06-22 · v1.3.6: Annex 1 field-map — removed vestigial `ais_files`/`ais_last_updated` derived-field names (not real commands); files/last_updated now shown as tool-managed, no derived equivalent. v1.3.5: §4.1 UI path (CORPUS panel, not Settings); A1.5 BlackRock row find-by-name/CIK + two-row LEI; §5.5 self-contained objective-% rephrase; §3.5 cross-language beat; new §5.10 "verify the bench ran what you think". v1.3.4: #52b §1.1/§1.3 hero-thread swap.*
+*Version: Beta | Updated: 2026-06-22*
+*Changelog: 1.3.6 — Annex 1 field-map: removed vestigial `ais_files`/`ais_last_updated` derived-field names (not real commands); files/last_updated now shown as tool-managed, no derived equivalent. 1.3.5 — §4.1 UI path (CORPUS panel, not Settings); A1.5 BlackRock row find-by-name/CIK + two-row LEI; §5.5 self-contained objective-% rephrase; §3.5 cross-language beat; new §5.10 "verify the bench ran what you think". 1.3.4 — #52b §1.1/§1.3 hero-thread swap.*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
