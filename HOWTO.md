@@ -186,11 +186,11 @@ ollama list
 
 ***How do I install a new LLM?***
 ```bash
-ollama pull llama3.1:8b       # ~5GB — recommended default, fast
+ollama pull gemma3:4b         # ~3.3GB — the out-of-the-box default, fast
+ollama pull gemma3:27b        # ~17GB — best quality-for-size; the benchmark model
+ollama pull llama3.1:8b       # ~5GB — alternative, fast
 ollama pull llama3.1:70b      # ~42GB — best quality, requires ~64GB RAM
 ollama pull mistral:7b        # ~4.4GB — alternative option
-ollama pull gemma3:4b         # ~3.3GB — small and fast
-ollama pull gemma3:27b        # ~17GB — best quality-for-size; the benchmark model
 ```
 Once pulled, the model appears automatically in the **Model** dropdown in the UI.
 No restart required.
@@ -198,9 +198,9 @@ No restart required.
 ***Which model should I choose?***
 On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 (~6–7s) once warm. Choose based on available RAM:
-- `llama3.1:8b` — 8GB RAM minimum, recommended for most users
-- `gemma3:4b` — 8GB+ RAM, small and fast
+- `gemma3:4b` — 8GB+ RAM, the out-of-the-box default; small, fast, best first run
 - `gemma3:27b` — 32GB+ RAM, best quality-for-size; the model AIStudio benchmarks on
+- `llama3.1:8b` — 8GB RAM minimum, solid alternative
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 

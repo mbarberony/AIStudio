@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.3.5-draft · Updated 2026-06-21 · v1.3.5: §4.1 UI path (CORPUS panel, not Settings); A1.5 BlackRock row find-by-name/CIK + two-row LEI; §5.5 self-contained objective-% rephrase; §3.5 cross-language beat; new §5.10 "verify the bench ran what you think". v1.3.4: #52b §1.1/§1.3 hero-thread swap.*
+*Version: 1.3.6-draft · Updated 2026-06-22 · v1.3.6: Annex 1 field-map — removed vestigial `ais_files`/`ais_last_updated` derived-field names (not real commands); files/last_updated now shown as tool-managed, no derived equivalent. v1.3.5: §4.1 UI path (CORPUS panel, not Settings); A1.5 BlackRock row find-by-name/CIK + two-row LEI; §5.5 self-contained objective-% rephrase; §3.5 cross-language beat; new §5.10 "verify the bench ran what you think". v1.3.4: #52b §1.1/§1.3 hero-thread swap.*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -642,7 +642,7 @@ The **bare field IS the canonical** — there is no separate `canonical` field. 
 | `jurisdiction` / `filing_language` | bare | `sec_*` / `esef_*` |
 | `aliases` | `aliases` | `gleif_aliases` ∪ `wikidata_aliases` → `combined_aliases` |
 | `expected_xbrl_name` | seed — download-verify guard (fetched filing must match) | — |
-| files / last_updated | tool-managed | `ais_files` / `ais_last_updated` |
+| files / last_updated | tool-managed (written by download/ingest; not hand-edited) | — |
 
 For LEI specifically: `gleif_lei` holds what GLEIF confirmed; if you find a better one, fill the bare `lei` and it wins. There is **no `lei_corrected`** — vestigial, replaced by this convention.
 
