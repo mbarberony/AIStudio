@@ -1,0 +1,247 @@
+# sec_10k_questions.yaml — DEFAULT set (= sec_10k_BIC_June_2026, replicated 2026-06-14)
+# Q2/Q5/Q9/Q10 reworked to question shapes the system handles cleanly (target 10/10):
+#   Q2 drops the AI-committee presupposition; Q5 reframed qualitative; Q9 qualitative; Q10 pinned single-figure.
+# Replicated verbatim into sec_10k_questions.yaml (the default).
+# Baseline benchmark questions with entity_filter for firm isolation.
+# entity_filter: list of source_path substrings with OR semantics.
+# Retrieval restricted to matching documents — no re-ingest required.
+#
+# Schema version: 1.5  (field schema unchanged since v1.5; the entry below is a data revision, not a schema bump)
+# Data revision — 2026-06-14 — Wells Fargo removed from Q1/Q2/Q5: not in the sec_10k corpus (21 firms, no WFC).
+#   entity_count adjusted (Q1 3→2, Q2/Q5 4→3); question text, keywords, entity_filter updated to match.
+# v1.5 — 2026-06-02 — AIStudio_852/878: full Complexity-Ladder schema on all 10 questions.
+#   Fields (each maps to one ladder ∂ so questions are filterable by axis, not just rung):
+#     rung                 L1..L9 | mod    — composite ladder position
+#     moniker              ladder_<rung>_<topic>_<n>
+#     question_language    en | fr | ...   — X: language probe (L1b/c)
+#     main_topic           subject category (capital, cyber, climate, digital, revenue, regulatory, ai_*)
+#     entity_scope         single | multi  — X: L5 ∂ (entity_count kept as int)
+#     data_type            qualitative | quantitative | mixed   — Y
+#     temporal_scope       none | single_year | multi_year      — Y: L4/L6 ∂
+#     temporal_expression  n/a | explicit | relative            — Y: L4 sub-∂
+#     derived              true | false    — Y: L7 ∂ (stated vs must-compute)
+#     answer_location      prose_only | prose_and_table | table_only  — Z: L2 ∂
+#     section_scope        single | multi  — Z: L3 ∂ (was section_count)
+#     cross_document       true | false    — Z: synthesis across ≥2 filings
+#     expect_decline       true | false    — modifier: honesty (absent metric → decline)
+#   Also: net_revenue_jpm keyword 'total revenue' → 'net revenue' (2026-06-02 audit: answer says
+#   "total net revenue"; old token was a false-fail). Existing 7 rung-tagged (proposed L5/L6/L9).
+# v1.4 — 2026-06-01 — AIStudio_852: 10-question build; added rung + moniker; 3 new ladder questions.
+# v1.0–1.3 — see prior history (AIStudio_850 compliance-keyword fix; 851 latency_test retired 8→7).
+
+- topic: AI Risk & Governance
+  questions:
+    - id: ai_disclosure_evolution
+      rung: L6
+      moniker: ladder_L6_ai_disclosure_evolution_1
+      question: "When did JPMorgan and Bank of America first start disclosing AI as a specific risk factor in their 10-K filings, and what language do they use in their most recent filings?"
+      keywords: [AI, risk, JPMorgan, Bank of America]
+      entity_filter: [JPMorgan_Chase, Bank_of_America]
+      question_language: en
+      main_topic: ai_risk
+      entity_scope: multi
+      entity_count: 2
+      data_type: qualitative
+      temporal_scope: multi_year
+      temporal_expression: relative
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Emergence-of-AI-risk-language framing; answerable with current corpus.
+
+    - id: ai_governance_committees_comparison
+      rung: L5
+      moniker: ladder_L5_ai_governance_committees_1
+      question: "How do JPMorgan, Bank of America, and Citigroup describe oversight of AI-related risk — through dedicated AI committees, or folded into their existing risk-governance structures?"
+      keywords: [AI, risk, governance, oversight]
+      entity_filter: [JPMorgan_Chase, Bank_of_America, Citigroup]
+      question_language: en
+      main_topic: ai_governance
+      entity_scope: multi
+      entity_count: 3
+      data_type: qualitative
+      temporal_scope: none
+      temporal_expression: n/a
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Reframed (BIC) — drops the dedicated-AI-committee presupposition; the correct answer ('AI risk is folded into existing risk governance') scores clean and contains 'AI'. The presupposing original lives in the June_2026 set.
+
+- topic: Cybersecurity
+  questions:
+    - id: cyber_disclosure_2022_vs_2026
+      rung: L6
+      moniker: ladder_L6_cyber_2022_vs_2026_1
+      question: "Compare how JPMorgan and Citigroup describe their cybersecurity risk management framework in their 2022 versus 2026 annual reports. What concrete changes have emerged?"
+      keywords: [cybersecurity, JPMorgan, Citigroup, risk management]
+      entity_filter: [JPMorgan_Chase, Citigroup]
+      question_language: en
+      main_topic: cyber
+      entity_scope: multi
+      entity_count: 2
+      data_type: qualitative
+      temporal_scope: multi_year
+      temporal_expression: explicit
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Explicit 2022-vs-2026 temporal contrast across two firms.
+
+- topic: Climate Risk
+  questions:
+    - id: climate_risk_evolution
+      rung: L6
+      moniker: ladder_L6_climate_evolution_1
+      question: "How has climate risk disclosure evolved since 2022 at Bank of America and Citigroup? Which firm has the most detailed Net Zero or transition risk framework?"
+      keywords: [climate, risk, Bank of America, Citigroup, Net Zero]
+      entity_filter: [Bank_of_America, Citigroup]
+      question_language: en
+      main_topic: climate
+      entity_scope: multi
+      entity_count: 2
+      data_type: qualitative
+      temporal_scope: multi_year
+      temporal_expression: relative
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Two-firm climate evolution since 2022.
+
+- topic: Capital & Financial Position
+  questions:
+    - id: capital_ratios_trend
+      rung: L5
+      moniker: ladder_L5_capital_position_qualitative_1
+      question: "How do JPMorgan, Bank of America, and Citigroup describe their approach to managing capital strength and their CET1 capital position in their most recent 10-K filings?"
+      keywords: [CET1, capital, JPMorgan, Bank of America, Citigroup]
+      entity_filter: [JPMorgan_Chase, Bank_of_America, Citigroup]
+      question_language: en
+      main_topic: capital
+      entity_scope: multi
+      entity_count: 3
+      data_type: qualitative
+      temporal_scope: none
+      temporal_expression: n/a
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Reframed (BIC) — qualitative capital-management / CET1-position comparison, prose-only. The hard multi-year CET1+revenue TABLE trend is preserved in the June_2026 set as the work-in-progress table exhibit (Annex 5).
+
+- topic: Digital Banking
+  questions:
+    - id: digital_banking_strategy
+      rung: L6
+      moniker: ladder_L6_digital_banking_strategy_1
+      question: "How have JPMorgan, Bank of America, and Citigroup described their digital banking strategy and technology investment priorities over the last 5 years? What major themes emerge?"
+      keywords: [digital, technology, JPMorgan, Bank of America, Citigroup]
+      entity_filter: [JPMorgan_Chase, Bank_of_America, Citigroup]
+      question_language: en
+      main_topic: digital
+      entity_scope: multi
+      entity_count: 3
+      data_type: qualitative
+      temporal_scope: multi_year
+      temporal_expression: relative
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: Three-firm digital strategy over a relative 5-year window.
+
+- topic: Regulatory Environment
+  questions:
+    - id: regulatory_burden_evolution
+      rung: L6
+      moniker: ladder_L6_regulatory_burden_evolution_1
+      question: "What new regulatory burdens and capital rules have JPMorgan and Citigroup disclosed in their 2025 and 2026 filings compared to 2022? Are there themes both firms agree are most challenging?"
+      keywords: [regulatory, capital, JPMorgan, Citigroup]
+      entity_filter: [JPMorgan_Chase, Citigroup]
+      question_language: en
+      main_topic: regulatory
+      entity_scope: multi
+      entity_count: 2
+      data_type: mixed
+      temporal_scope: multi_year
+      temporal_expression: explicit
+      derived: false
+      answer_location: prose_only
+      section_scope: multi
+      cross_document: true
+      expect_decline: false
+      notes: "'compliance' keyword removed 2026-05-30 (AIStudio_850) as a false negative."
+
+# ── Complexity-Ladder foundation questions (AIStudio_852) ──────────────────────
+- topic: Ladder L1 — single-firm prose baseline
+  questions:
+    - id: cyber_goldman
+      rung: L1
+      moniker: ladder_L1_cyber_goldman_1
+      question: "How does Goldman Sachs describe its cybersecurity risk-management framework and board-level oversight in its most recent 10-K?"
+      keywords: [cybersecurity, Goldman Sachs, risk management, oversight]
+      entity_filter: [Goldman_Sachs]
+      question_language: en
+      main_topic: cyber
+      entity_scope: single
+      entity_count: 1
+      data_type: qualitative
+      temporal_scope: none
+      temporal_expression: n/a
+      derived: false
+      answer_location: prose_only
+      section_scope: single
+      cross_document: false
+      expect_decline: false
+      notes: L1 baseline. 2026-06-02 audit GREEN — Goldman-only, substantive. Token verified on Beast.
+
+    - id: revenue_sources_blackrock
+      rung: L1
+      moniker: ladder_L1_revenue_sources_blackrock_2
+      question: "What are the principal categories of revenue BlackRock identifies in its most recent 10-K, and how does it describe each?"
+      keywords: [BlackRock, revenue, investment advisory, fees]
+      entity_filter: [BlackRock]
+      question_language: en
+      main_topic: revenue
+      entity_scope: single
+      entity_count: 1
+      data_type: qualitative
+      temporal_scope: none
+      temporal_expression: n/a
+      derived: false
+      answer_location: prose_only
+      section_scope: single
+      cross_document: false
+      expect_decline: false
+      notes: Reframed (BIC) — qualitative 'describe the sources' (base & performance fees, securities lending, technology services). Avoids inviting a precise sub-line figure; the original audited GREEN on sources but the model volunteered a wrong technology-services number.
+
+- topic: Ladder L2 — single-firm table-located fact
+  questions:
+    - id: net_revenue_jpm
+      rung: L2
+      moniker: ladder_L2_net_revenue_jpm_1
+      question: "What was JPMorgan Chase's total net revenue for fiscal year 2024, as reported in its FY2024 consolidated statements of income? Report the single FY2024 figure."
+      keywords: [JPMorgan, "net revenue", "2024"]
+      entity_filter: [JPMorgan_Chase]
+      question_language: en
+      main_topic: revenue
+      entity_scope: single
+      entity_count: 1
+      data_type: quantitative
+      temporal_scope: single_year
+      temporal_expression: explicit
+      derived: false
+      answer_location: table_only
+      section_scope: single
+      cross_document: false
+      expect_decline: false
+      notes: Pinned (BIC) — single FY2024 figure (~$177.6B), the income-statement total the system retrieves correctly; the wording discourages the multi-year pull that produced the contradictory FY2025 figure in the June_2026 run. The single-cell table lookup is the one quantitative shape handled cleanly.
