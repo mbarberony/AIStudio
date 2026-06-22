@@ -129,3 +129,6 @@ data/corpora/esef_banks/manifest.jsonl
 data/corpora/esef_banks/doc_chunk_map.json
 data/corpora/esef_banks/uploads/
 data/corpora/esef_banks/trash/
+
+# accidental source archives (never ship)
+*.zip
