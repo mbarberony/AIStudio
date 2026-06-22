@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: 1.2.2 · Updated 2026-06-19*
+*Version: 1.3.5-draft · Updated 2026-06-21 · v1.3.5: §4.1 UI path (CORPUS panel, not Settings); A1.5 BlackRock row find-by-name/CIK + two-row LEI; §5.5 self-contained objective-% rephrase; §3.5 cross-language beat; new §5.10 "verify the bench ran what you think". v1.3.4: #52b §1.1/§1.3 hero-thread swap.*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -23,13 +23,15 @@ Open AIStudio:
 ais_start
 ```
 
+> **If `ais_start` doesn't come up:** run `./ais_install` (rebuilds the venv and re-registers the `ais_*` commands), then `ais_start` again. Still stuck? See QUICKSTART Step 8 (troubleshooting).
+
 When AIStudio opens, the **left sidebar** is your control panel. The **CORPUS** section near the top is where you choose which document set to query — **demo** is pre-selected. **New**, **Delete**, and **Rename** do what they say; the **Edit** button (corpus settings) we cover in §4.6. Below them, two buttons manage a corpus's files: **Add** ingests a new file into the selected corpus, and **Inspect** lists the corpus's files so you can remove or re-index them.
 
 We'll build a short **three-question thread** across §1.1–§1.3 that walks the whole loop — grounding, then conversation memory, then multi-source citations. Start with the opener:
 
-- *"What is the root of the word strategy?"* &nbsp;← **start here**
+- *"How do you design an IT organization around architectural principles?"* &nbsp;← **start here**
 
-The answer traces *strategy* to the Greek στρατηγία ("generalship"), cited to a specific page of the source — your first look at a grounded, attributable answer.
+You'll get a grounded answer from the FS Journal *Strategy and Architecture* paper — a systematic analysis bridging business vision, organizational constructs, processes, and enabling technologies — with each claim cited to a specific page and a clickable **Source Dive** back to it. Your first look at a grounded, attributable answer.
 
 > **Tip — recall a question.** Press **↑ / ↓** in the question box to scroll back through questions you've already asked this session, edit, and re-send — no retyping.
 
@@ -39,10 +41,10 @@ Every answer carries citations — `[1]`, `[2]` — and a **References** panel s
 
 ### 1.3 Follow-up Questions
 
-AIStudio keeps conversation context across a session, so you can build on the previous answer with pronouns — it remembers what *that* and *this* refer to. Continue the thread from §1.1:
+AIStudio keeps conversation context across a session, so you can build on the previous answer with pronouns — it remembers what *that* refers to. Continue the thread from §1.1:
 
-- *"How does that differ from tactics?"* — *that* = strategy, from your first question; the answer stays grounded in the same paper.
-- *"How does this apply to the development of an Enterprise Architecture?"* — this one draws on several documents at once; watch the **References** panel fill with multiple sources, each claim carrying its own clickable `[N]`.
+- *"How does that differ from just drawing org charts?"* — *that* = designing an IT organization around architectural principles, from your first question; the model resolves the pronoun across turns, and the answer now draws on **several documents at once** — watch the **References** panel fill with multiple sources (five, here), each claim carrying its own clickable `[N]` and **Source Dive**.
+- *"What domains can the notion of "Product Management" apply to in an IT organization?"* — a fresh, broadening question; grounded in the *Architecture Concepts* paper (solution engines, user interface, engineering, integration operations, and more), each domain cited to its page.
 
 ### 1.4 Tuning Your Query
 
@@ -51,12 +53,13 @@ In the **Query Settings** section of the sidebar — just below the CORPUS area 
 **Top K** is how many document chunks AIStudio retrieves to answer from:
 - The demo ships with **Top K = 10** (you'll see 10 in the field) — it includes small documents (the QFD paper is 34 chunks) that get outcompeted at lower K and surface reliably at 10. *(A corpus that stores no default of its own falls back to the system default of 5.)*
 - **Use 10 for SEC 10-K and ESEF** — these are the large financial-filing corpora you'll build in Modules 2 and 3 (annual reports from many firms). There you'll ask cross-firm *comparison* questions, which need chunks from several filings at once. AIStudio also raises Top K automatically when a query names several firms (~2 more chunks per firm, ceiling K=20).
+- **For your own corpora**, this is the main retrieval knob to tune: raise it (**15–20**) for broad or synthesis questions, or sparse corpora where the relevant context is scattered; lower it (**~5**) for precise single-fact lookups, to cut noise and latency. Too-high a K dilutes the prompt and can *worsen* a small model's answer.
 
 **Temperature** controls creativity (0.1–0.3 precise, 0.5–0.7 more synthesis; default 0.3 suits document Q&A).
 
-**Retrieval Mix** is a slider that runs **left → right = literal → conceptual**. Drag **left** for literal matching — exact terms, tickers, defined phrases, names; drag **right** for conceptual matching — themes and ideas where the wording varies; the **middle (default) blends both**. (Under the hood the slider blends keyword/BM25 and semantic/vector retrieval; the panel shows it in plain literal↔conceptual terms.)
+**Retrieval Mix** is a slider that runs **left → right = literal → conceptual**. Drag **left** for literal matching — exact terms, tickers, defined phrases, names; drag **right** for conceptual matching — themes and ideas where the wording varies; the **middle (default) blends both**. (Under the hood the slider blends keyword/BM25 and semantic/vector retrieval; the panel shows it in plain literal↔conceptual terms.) Lean **literal** for exact terms, tickers, and acronyms (CET1, firm names); lean **conceptual** for paraphrased or thematic questions — see **Annex 5 (BM25)** for the mechanics.
 
-**Score Threshold** is a relevance floor — retrieved chunks scoring below it are dropped before the model sees them, which suppresses weak, off-topic context. AIStudio stores a per-corpus default (demo 0.3, SEC 10-K 0.5). **When to lower it:** the embedding model (`nomic-embed-text`) often scores genuinely-relevant chunks below 0.5, so if good answers come back hedged or empty, drop the floor toward **~0.2–0.3** and re-ask.
+**Score Threshold** is a relevance floor — retrieved chunks scoring below it are dropped before the model sees them, which suppresses weak, off-topic context. The default is **0.5**, and **each corpus can set its own** (demo ships at 0.3) — you change it per corpus in the corpus **Edit** panel (§4.6). **When to lower it:** the embedding model (`nomic-embed-text`) often scores genuinely-relevant chunks below 0.5, so if good answers come back hedged or empty, drop the floor toward **~0.2–0.3** and re-ask.
 
 ### 1.5 The Help Corpus — AIStudio Answering About Itself
 
@@ -168,30 +171,49 @@ ais_ingest_sec_10k
 
 ### 2.5 Query at Scale
 
-Switch to the **sec_10k** corpus. First, a word on **model choice**. As covered in QUICKSTART, AIStudio runs its models locally through Ollama, and you can add as many as you like — some small and fast, some large. For the easy questions in Module 1 the difference between a small and a large model is negligible, in both answer quality and speed. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline — a small model starts to trade accuracy for speed (Module 5 quantifies the cost).
+Switch to the **sec_10k** corpus (the breadcrumb at the top should now read `AIStudio · sec_10k · …` — that's how you confirm which document set the next answer draws on; changing the *model* does **not** change the corpus, they're separate dropdowns).
 
-So for this module, **select `gemma3:27b` in the model dropdown** — Google's flagship open model (Gemma 3, 27 billion parameters), and the synthesis model AIStudio is tuned around. Because it's a large model it needs a reasonably capable machine to run at good speed; if you don't have it yet, pull it once through Ollama (QUICKSTART shows how to add a model). Start with the showcase question:
+First, a word on **model choice**. AIStudio runs its models locally through Ollama, and you can add as many as you like. For the easy Module 1 questions, small and large models are about equal. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline. So for this module, **select `gemma3:27b` in the model dropdown** — the synthesis model AIStudio is tuned around. If you don't have it yet, pull it once through Ollama (QUICKSTART shows how).
 
-- *"Which financial firms have dedicated AI governance committees?"* &nbsp;← **showcase** (cross-firm, answered from prose disclosures)
+#### Start with one firm
 
-Then:
+A question that **names a firm** is the easy case — the name acts as a natural anchor, so retrieval lands on that firm's filing and a modest **Top K of 10** is plenty:
 
-- *"What does Goldman Sachs say about the risks of artificial intelligence?"*
-- *"How does JPMorgan Chase describe their cybersecurity risk management?"*
+- *"What are JPMorgan's primary cybersecurity risks?"*
 
-> **Tip:** Use the **Firm** filter to restrict retrieval to one firm (type `Goldman Sachs`); leave blank for cross-corpus queries.
+You'll get a focused answer — unauthorized access, data manipulation, ransomware, multi-source attacks — citing `JPMorgan_Chase_10K_2026-02-13.htm` and nothing else. That single-source citation is the point: at scale, with 20 firms in the index, retrieval still isolated to the firm you asked about. Try another:
 
-> **Try a few models.** Once you've added more than one model (QUICKSTART covers it), re-ask the same question on each from the model dropdown and compare — a small model answers markedly faster, a large one more thoroughly and with tighter citations. Switching models keeps your conversation: AIStudio shows a brief *"Changed to &lt;model&gt;"* line, and your **↑ / ↓** question history still works across the switch, so you can recall the previous question and send it to the new model without retyping.
+- *"How does Goldman Sachs describe its approach to AI and machine-learning risk?"*
 
-> **Switching corpora.** Whenever you change the selected corpus, AIStudio prints a short *"— Changed to &lt;corpus&gt; —"* line in the chat, so you always know which document set the next answer will draw on.
+#### Then ask across firms — and watch what happens
 
-> **Worked example — the same question, two models.** Ask *"What does Goldman Sachs say about the risks of artificial intelligence?"* on **gemma3:27b**, then switch the model to **mistral:7b** and press **↑** then Enter to re-ask. Both answers are grounded and cite real Goldman filings — but they differ. The larger model is more exhaustive: it surfaces an extra year's filing and names the governance committees that oversee AI risk. The smaller model is tighter and faster, covering the same core (regulatory uncertainty, model error and bias, third-party reliance, bad-actor misuse) in fewer words. Neither is "wrong." The model sets the depth and emphasis; the citations are how you confirm which framing the filings actually support. That is the *radical-transparency* note from the top of this tutorial made concrete — read the sources, don't take the wording on faith.
+Now ask a question that **doesn't name any firm** but expects several:
+
+- *"Which of these firms disclose a dedicated climate-risk or sustainability governance committee, and how do they differ?"*
+
+At **Top K = 10**, this question may come back thin or empty. That isn't a bug — it's the most important lesson in this module. **Top K is a global budget**: it retrieves the 10 best-matching chunks *in total*, across the whole corpus. When you name a firm, those 10 chunks concentrate on that firm. When you *don't*, they scatter — and with 20 firms competing, 10 chunks isn't enough to cover several of them, so the answer starves.
+
+**Raise Top K to 20** and re-ask. Now it answers — but read it carefully: it likely surfaces only **two or three** firms, not all 20. Raising K helped, but a global budget still clusters on whichever firms have the densest matching language; the rest are silently left out. The answer is *correct for the firms it found* and should be read as "among the firms retrieved…", not "these are the only firms that qualify."
+
+#### The fix: name the firms you want compared
+
+If you know which firms you care about, **name them** — that gives retrieval an anchor per firm:
+
+- *"Compare how JPMorgan, Citigroup, and Goldman disclose climate governance."*
+
+At Top K = 20 this now surfaces **all three**, each with its own distinct framework (JPMorgan's Climate, Nature and Social Risk Management function; Citigroup's Climate Risk Management Framework; Goldman's Firmwide Enterprise Risk Committee), and it even flags where a firm's disclosure is less explicit. Naming the entities turned an open question that starved into a precise one that delivered.
+
+> **The takeaway — match Top K to the question.** Named, single-firm or few-firm questions work at **K=10**. Open "which firms…" questions need **K=20+** *and* will still under-cover a large corpus — so for a real comparison, **name the firms**. For your own corpora later, this is the main retrieval knob to tune (see §1.4 and the annexes): raise K for breadth, lower it for precision, and anchor cross-entity questions with explicit names. AIStudio is exploring [query understanding](https://en.wikipedia.org/wiki/Query_understanding) so that an open "which firms…" question can fan out across entities automatically — for now, naming them is the reliable path. The annexes cover why this happens (entity coverage vs. lexical density) and the directions being explored.
+
+> **Switching models keeps your conversation.** Once you've added more than one model, re-ask the same question on each from the dropdown and compare. AIStudio prints a brief *"Changed to &lt;model&gt;"* line, and your **↑ / ↓** question history works across the switch, so you can recall a question and send it to the new model without retyping.
+
+> **Worked example — the same question, two models.** Ask *"How does Goldman Sachs describe its approach to AI and machine-learning risk?"* on **gemma3:27b**, then switch to a smaller model (e.g. **mistral:7b**) and press **↑** then Enter to re-ask. Both answers are grounded and cite real Goldman filings — but they differ. The larger model is more exhaustive; the smaller is tighter and faster, covering the same core in fewer words. Neither is "wrong." The model sets depth and emphasis; the citations are how you confirm which framing the filings actually support — radical transparency made concrete: read the sources, don't take the wording on faith.
 
 > **When the answer is a number from a table, read it twice.** A cross-firm numeric query — *"Compare the CET1 ratios for JPMorgan and Citigroup"* — is where AIStudio is most likely to return a confident wrong figure: financial ratios live in multi-year, multi-column tables, and a chunk can sever a cell from the column header (the year) that gives it meaning. **Annex 4** is the full worked case — one of those two firms comes back exactly right and the other a full year off, and the contrast is the whole lesson.
 
 ### 2.6 Add a Firm on Demand
 
-You don't have to rebuild the whole corpus to add one company. The flow is **download → selective re-ingest → query**, and it leaves the other 100 filings untouched.
+You don't have to rebuild the whole corpus to add one company. The flow is **download → (refresh entity KB) → selective re-ingest → query**, and it leaves the other filings untouched.
 
 **1. Download just the new firm** (by ticker — download stays a manual step):
 
@@ -210,24 +232,77 @@ That fetches BlackRock's most recent 10-K into the corpus's `uploads/`. One firm
 > ais_download_sec_10k --tkr BLK --latest 2
 >
 > # FY2021–FY2023 — predecessor, by its CIK, labeled to the same firm
-> ais_download_sec_10k --cik 0001364742 --force_name "BlackRock" --latest 3
+> ais_download_sec_10k --cik 0001364742 --force_name "BlackRock, Inc." --latest 3
 > ```
 
-**2. Re-ingest only one of a group of select files.** `ais_ingest_sec_10k` is incremental by default — it skips files it has already indexed — so a plain run already picks up the new filing. But you can also name exactly what to ingest with `--files`:
+**2. (Optional) Refresh the entity KB so the new firm gets its aliases.** The other firms carry ticker/short-name anchors (e.g. `Citi`, `C`) built in §2.2. To give the new firm the same — so a *ticker-only* query like "BLK" anchors as well as the full name — refresh the KB before re-ingesting:
+
+```bash
+ais_import_entity_kb --corpus sec_10k --apply
+```
+
+For a firm you'll query **by name** (as we do below), you can skip this — name-anchoring works without it. (See Annex 1 §A1.5 for how the KB resolves a firm's aliases.)
+
+**3. Re-ingest to make the new firm queryable.** Downloading only puts the filing on disk — the firm won't appear in answers until you ingest it. (Ask about BlackRock right after the download and AIStudio correctly says it has nothing: the file exists but isn't indexed yet.) Re-ingest, naming just the new firm so the other filings are left untouched:
 
 ```bash
 ais_ingest_sec_10k --files BlackRock
 ```
 
-`--files` takes one or more comma-separated **patterns**, OR-matched against the filename: each is a literal substring, or a regex if it contains regex metacharacters (`* + ? [ ] ( ) | ^ $ { } \`). So `--files BlackRock` matches every BlackRock filing on disk and ingests them in one pass; `--files 'JPM.*2025,Citi'` matches either. Everything unmatched is left untouched, and the run ends with a `· File Ingested:` roster of exactly what landed.
+`ais_ingest_sec_10k` is incremental — it skips files already indexed — so `--files BlackRock` adds only the new BlackRock filings in one pass. `--files` takes one or more comma-separated **patterns**, OR-matched against the filename: each is a literal substring, or a regex if it contains regex metacharacters (`*+?[]()|^${}\`). So `--files BlackRock` matches every BlackRock filing on disk and ingests them in one pass; `--files 'JPM.*2025,Citi'` matches either. Everything unmatched is left untouched, and the run ends with a `· File Ingested:` roster of exactly what landed.
 
 In the predecessor download above we passed `--force_name "BlackRock"` so those filings carry the same firm label as the current company — otherwise they'd file under the predecessor's own registrant name and read as a separate firm. (For how AIStudio maps a company across its identifiers — CIK, ticker, LEI, and the registrant name in the filing itself — see **Annex 1 §A1.5**.)
 
-**3. Query it.** Switching back to AIStudio in the browser, select **sec_10k** and ask a question only BlackRock can answer — that's what surfaces its filing on its own merits:
+**4. Query it.** Switching back to AIStudio in the browser, select **sec_10k** and ask a question only BlackRock can answer — that's what surfaces its filing on its own merits:
 
 > *What is BlackRock's Aladdin platform, and what role does it play in the firm's business?*
 
 > **One firm, many identifiers.** A company appears under several codes across naming standards — CIK, ticker, LEI, the registrant name in the filing itself — and AIStudio records them in an open schema where a human-verified value always wins over a machine's name-search guess. Again, Annex 1 §A1.5 walks one such one-edit correction — promoting BlackRock's LEI to its verified value — as the worked case.
+
+### 2.7 The Full Picture — Multi-Year
+
+Everything so far used **the latest fiscal year only** — with one exception: the prior-year BlackRock filings you pulled in §2.6's *Going deeper* box. That single-year default — one filing per firm, the most recent — is chosen so the first ingest is fast (you saw 20 filings ingest in a few minutes). But a single year can't answer the questions a 10-K corpus is really *for*: how things **change**. Capital ratios tighten or loosen, risk language shifts, a new regulation appears in the 2026 filing that wasn't in the 2022 one. To see that, you need several years per firm.
+
+The downloader takes parameters for exactly this. Your most-recent-year run was the default — equivalent to `--latest 1`. Two flags widen the scope:
+
+```
+--latest N          Download the N most-recent 10-K filings per firm
+--years YYYY ...    Download specific fiscal years (space-separated, e.g. --years 2022 2023 2024 2025 2026)
+```
+
+> **Watch the `--years` meaning.** `--years` takes **explicit fiscal years**, not a count. To get "the five most recent," use `--latest 5` — *not* `--years 5` (a bare small number is rejected with a hint, since no firm filed in year 5 AD).
+
+BlackRock already has all five years (you pulled them in §2.6). Adding the four prior years to the other **20 firms** means **20 × 4 = 80 new filings**, bringing the corpus to **105 filings (= 21 firms × 5 years)**.
+
+Expanding the corpus is **three steps** — you re-run the same sequence you did for one year, and each stage is incremental, touching only the new filings:
+
+```bash
+ais_download_sec_10k --latest 5              # 1. fetch the 4 prior years you don't have yet
+ais_import_entity_kb --corpus sec_10k --apply # 2. refresh the entity KB so the new filings resolve
+ais_ingest_sec_10k                           # 3. ingest — incremental, only the 80 new files
+```
+
+> **Where the time goes.** The download is quick — the filings are a few hundred MB and EDGAR is fast. **The cost is the indexing.** Each filing has to be chunked, entity- and temporal-prefixed, and embedded — the per-file rate you saw in §2.4. So the 80 new files are the bulk of the wait, almost all of it in step 3 (ingest), not step 1 (download). The ingest banner's time estimate scales to the number of files actually queued.
+
+#### What this unlocks
+
+With multiple years indexed, you can ask **temporal** and **cross-firm-over-time** questions — the kind a single-year corpus simply cannot answer:
+
+- *How has climate-risk and Net-Zero / transition-risk disclosure evolved across these filings since 2022 — and which firm has the most detailed framework?*
+- *How have the major banks described their digital-banking strategy and technology-investment priorities over the last five years — what themes emerge across firms?*
+- *What new regulatory, capital, or compliance burdens appear in the 2025–2026 filings that weren't in 2022 — and which do firms agree are hardest?*
+
+Each asks the model to retrieve across **both** the firm axis and the year axis, then synthesize a trend.
+
+#### A fair warning — these are the hard ones
+
+Multi-year, multi-firm questions are **among the most difficult retrieval-and-synthesis tasks in this whole tutorial**, and it's worth understanding why before you judge the answers:
+
+- **The intent is implicit.** "How has X evolved?" names no year, firm, or metric — the system has to infer you want a comparison *across* the years it holds. Reading that intent is its own research problem: [query understanding](https://en.wikipedia.org/wiki/Query_understanding) — inferring what a question is really asking before retrieving against it. (You saw a smaller version of this in §2.5: an open "which firms…" question starves where naming the firms succeeds.)
+- **Retrieval has to span partitions.** A good answer needs chunks from *several* firms *and* several years; a global top-K can over-sample one verbose firm or one year and miss the rest — the entity-coverage-vs-lexical-density effect from §2.5, now multiplied by the year axis.
+- **The needles are often in tables.** Year-over-year numbers live in financial tables, the hardest content to extract and align (see the CET1 note in §2.5 and Annex 4).
+
+AIStudio's current approach to these — entity-anaphora normalization, temporal-context injection at ingest (the `[Document: <entity> FY<year>]` prefix), and the directions being explored for query understanding — is laid out in the **annexes**. Treat the multi-year answers as a window into an open problem, not a solved one: read them alongside Module 5 (benchmarking), which is precisely about reading these results *correctly* rather than at face value.
 
 ---
 
@@ -299,7 +374,7 @@ Modules 2 and 3 used the operator seed machinery that ships the SEC and European
 
 ### 4.1 Create a New Corpus
 
-In the browser: **Settings → New Corpus**, name it (e.g. `my_docs`), **Create**. This makes `data/corpora/my_docs/` with an `uploads/` folder.
+In the browser, in the left **CORPUS** panel, click **New**, name it (e.g. `my_docs`), **Create**. This makes `data/corpora/my_docs/` with an `uploads/` folder.
 
 ### 4.2 Upload Your Documents
 
@@ -340,7 +415,7 @@ Use the **Edit Corpus** modal to set description, summary, and search guidance (
 
 Benchmarking is how you find out what actually makes a difference — model choice, retrieval settings, entity handling, question shape. Without a measurement you are guessing. That is why we built a benchmark tool, and why it has carried this whole project: it lets us measure progress and find what works run after run, **scientifically** rather than by impression. `ais_bench` is easy to run and easy to *misread*, though — the naive score lies in a specific, dangerous direction, and the audit discipline below exists to catch that lie.
 
-### 5.1 — A benchmark run is a coordinate, not just "the questions"
+### 5.1 — A benchmark run is a point with coordinates in a multi-dimensional space, not just "the questions"
 
 A run isn't simply *ask the questions*. It evaluates one point in a space of choices — **which questions × which firms (the scope) × the retrieval settings × how entities are handled × which model** — scored by a grading method. Reproducibility means writing that coordinate down: the question file and the scope file *are* the experiment record, and the run flags are its conditions. That is why the tests live in files, not in code.
 
@@ -383,7 +458,7 @@ That's the strongest possible argument that the mechanical verdict, used alone, 
 
 We stopped trusting the pass-rate and moved the verdict to signals that catch fabrication:
 
-- **Objective-%, not "pass-rate."** Define the quality metric as `a / (a + b + c)` — the fraction of answers that are *objectively correct* (right content, right firm, supported by the cited chunk), excluding architectural ceilings. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
+- **Objective-%, not "pass-rate."** Score quality as the fraction of answers that are *objectively correct* — right content, right firm, supported by the cited chunk — out of every answer except the grading artifacts. In the four-state audit below, that's **✅ Good ÷ (✅ Good + ⚠ Partial + ❌ Miss)**; the 🔍 grading-artifact answers are excluded from the denominator because they're a measurement ceiling, not a model failure. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
 - **A four-state audit, not a binary.** Every audited question gets one of: **✅ Good** (correct, right firm, substantive, cited), **⚠ Partial** (mechanically passing but incomplete or wrong firm), **❌ Miss** (retrieval or generation failure), **🔍 Grading artifact** (mechanically failed but substantively *correct* — keyword brittleness, citation dropout, an accent mismatch). The grading-artifact bucket is the mirror image of §5.3: it's where the mechanical score *understates* quality, and it's what tells you to fix a keyword list rather than the engine.
 - **An amber, entity-weighted score.** The weighted-sum grader leads with **entity coverage** (did the answer cite the firms it should) and demotes raw keyword presence to one signal among several — so confident-but-wrong-firm answers can't score green.
 
@@ -409,7 +484,7 @@ writes a timestamped report to `benchmarks/<corpus>/reports/` in three formats (
 
 ### 5.9 — Worked examples: four runs, read honestly
 
-The principles above stay abstract until you watch them on real output. We ran four benchmarks across the two shipped corpora and read each one the way §5.1–5.6 prescribe: start at the mechanical score, audit the answers, then state the **objective** read (the §5.5 metric — correct answers over correct-plus-partial-plus-miss, with architectural ceilings set aside). Two runs vary the **questions** on a fixed corpus; two vary a single **retrieval setting** on fixed questions. Together they show the §5.1 thesis from both sides — the score is a coordinate, not a verdict.
+The principles above stay abstract until you watch them on real output. We ran four benchmarks across the two shipped corpora and read each one the way §5.1–5.6 prescribe: start at the mechanical score, audit the answers, then state the **objective** read (the §5.5 metric — correct answers over correct-plus-partial-plus-miss, with architectural ceilings set aside). Two runs vary the **questions** on a fixed corpus; two vary a single **retrieval setting** on fixed questions. Together they show the §5.1 thesis from both sides — the score is a point in that space, not a verdict.
 
 | Run | Corpus · set | Knob | Mechanical | Objective (audited) |
 |---|---|---|---|---|
@@ -436,6 +511,18 @@ ais_bench --corpus esef_banks --scope lang_en --top-k 10    # Run D
 **Run D — same questions, the canonical depth.** Eight green at K=10. Nordea's leverage and ING's digital both recover from zero citations to grounded answers — confirming those misses were *depth, not capability* — and Erste climbs from zero to a sparse citation. Two questions move the other way (BBVA climate, Barclays holding-company), shedding citations as the larger candidate pool and the reranker push a borderline chunk below threshold — so K=10 is clearly better in aggregate but **not monotonic** per question. **Direction:** K=10 is the right default for these corpora; the two regressions point at reranker-threshold tuning, the next knob on the retrieval side.
 
 **Overall assessment.** Across both corpora the system is solid where the audits say it is: firm isolation on well-tagged corpora, narrative and cross-firm synthesis, and single-fact English lookups come back grounded and correctly cited. The frontiers are equally clear and equally stated — multi-firm **table-cell extraction** (Run B's capital table), **entity isolation under load** (the BlackRock lookup, which across runs both leaked a neighbour's chunks and flip-flopped between confident-wrong and honest-decline), **non-English retrieval** (Erste), and **multi-year temporal synthesis** (the flickering cyber comparison). None of these hides inside a green number; each was found by reading the answers, which is the method. And the direction of travel is named throughout: structured-data and table-recognition handling for the table frontier, tighter entity isolation and chunk-verification for the lookups, the multilingual work of Annex 3 for non-English filings, and a richer model for dense synthesis. The benchmark's job is not to award a grade — it is to keep that map of solid ground and frontier honest, current, and visible, run after run.
+
+### 5.10 — Verify the bench ran what you think it ran
+
+Every reading above assumes the run actually executed the questions you meant, against the corpus you meant, with the filter you meant. That assumption fails silently and the failure looks exactly like a model regression — a cliff in the score with no code change behind it. Before you trust *any* number (and certainly before you cite one), run this five-question pre-flight. Each maps to a real failure mode that produces a believable-but-false score.
+
+1. **Did the run load the questions on disk now?** The harness reads a default question file unless you pass `--questions`. If your repo checkout and your working tree disagree (a gitignored questions file that never traveled, a stale copy in a clone), the run grades a *different* set than the one you're holding. Check the run's recorded `questions_sha8` against the hash of the file you intend: `shasum -a 256 <questions.yaml> | cut -c1-8`. If they differ, the run is void — re-run with `--questions <path>` to pin it.
+2. **Is the file on disk the set you think it is?** Hash-matching a stale file just confirms you ran the stale file. Eyeball the question `id`s and confirm they're the curated set (for sec_10k that's the BIC default; the harder `June_2026` set is a separate file). A run against last month's questions is not comparable to this month's.
+3. **Does every `entity_filter` token match a real corpus filename?** The filter binds on a filename substring, not on the LEI — so a token that drifted from the ingested slug (`Standard_Chartered_PLC` when the file is `StandardChartered_Bank`) silently retrieves **nothing**, and the question scores as a confident miss that is really a dead filter. Cross-check every token against `ls data/corpora/<corpus>/uploads/` before trusting a low score on an entity-filtered question.
+4. **Did any question come back with zero citations?** Zero citations on a filtered question is the signature of #3 (or of genuine retrieval starvation at low K — see Run C). Either way it is not a model-quality signal; it is a plumbing signal. Separate the zero-citation answers out and diagnose them before they drag the objective read down.
+5. **Right model, right corpus?** The report filename and config record both. A "regression" is often a small model where you meant a large one, or the default corpus where you meant a scope. Confirm `--model` and `--corpus`/`--scope` in the run's recorded config match your intent.
+
+The discipline here is the same as §5.6, pushed one level earlier: §5.6 verifies the *answer* against its chunk; §5.10 verifies the *run* against your intent. A clean four-state audit on a run that loaded the wrong file is a rigorous reading of the wrong thing.
 
 ---
 
@@ -571,7 +658,7 @@ When a row resolves by name-search, the review prints it as `(name-search, not v
    ```bash
    open -e ~/Developer/AIStudio/data/corpora/sec_10k/sec_10k_full_scope.yaml
    ```
-2. Find the row (here `label: CIK_0002012383`) and set the **bare `lei`** to the value you verified at GLEIF, replacing the sentinel:
+2. Find the BlackRock row and set the **bare `lei`** to the value you verified at GLEIF, replacing the sentinel. Note the row's `label` depends on *how you downloaded the firm*: it's `CIK_0002012383` if you fetched by `--cik` (the downloader's synthetic label), or `BlackRock, Inc.` if you used `--tkr BLK` (the resolved name). Grep by CIK or name rather than assuming the label: `grep -n "2012383\|BlackRock" <scope.yaml>`. And if you pulled a multi-year history, BlackRock is **two rows** — the successor (`cik: 0002012383`, recent years) and the predecessor (`cik: 0001364742`, older years, pre-reorg) — set the bare `lei` on **both**, since they share one GLEIF LEI:
    ```yaml
      lei: 529900VBK42Y5HHRMD23
    ```
