@@ -1,3 +1,9 @@
+# Version: 1.10.12
+# Changelog: 1.10.12 — AIStudio_888: /ask model-availability guard. Resolve the effective model
+#            (req.model or CONFIG.rag.default_model) and verify it is present in `ollama list` before
+#            generation; if absent, return a readable AskResponse ("run: ollama pull X") instead of
+#            letting ollama_generate raise → HTTP 500. Surfaced by Nuclear Test Pass 2 cold install
+#            (canon-only model store). SDK-version-agnostic list parse (matches /models).
 # Version: 1.10.11
 # Changelog: 1.10.11 — AIS (2026-06-18): metadata-writer durability — the post-ingest (≈1470)
 #            and delete-file (≈2253) writers now emit the `# <corpus>_corpus_metadata.yaml`
@@ -806,6 +812,40 @@ async def ask(req: AskRequest) -> AskResponse:
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="query must not be empty")
     _require_corpus(req.corpus)
+
+    # AIStudio_888 — model-availability guard. Resolve the effective model the same way the
+    # generation path does (per-request override → config default) and confirm it is actually
+    # pulled in Ollama before we try to use it. Without this, an unpulled model (the stale default
+    # on a cold install, or a dropdown pick the user never pulled) raises inside ollama_generate
+    # and surfaces as an opaque HTTP 500 / "Failed to fetch" in the UI. (Nuclear Test Pass 2.)
+    _effective_model = req.model or CONFIG.rag.default_model
+    try:
+        import ollama as _ollama
+        _resp = _ollama.list()
+        _models = _resp.models if hasattr(_resp, "models") else _resp.get("models", [])
+        _avail: set[str] = set()
+        for _m in _models:
+            _name = getattr(_m, "model", None) or getattr(_m, "name", None) or (
+                _m.get("name") if isinstance(_m, dict) else None
+            )
+            if _name:
+                _avail.add(_name)
+        if _avail and _effective_model not in _avail:
+            return AskResponse(
+                answer=(
+                    f"The model '{_effective_model}' is not available in Ollama. "
+                    f"Pull it first:  ollama pull {_effective_model}\n\n"
+                    f"Currently available: {', '.join(sorted(_avail))}."
+                ),
+                citations=None,
+                has_citations=False,
+                retrieval_query=req.query,
+                model_used=_effective_model,
+            )
+    except Exception:
+        # Ollama unreachable or list() failed — don't block here; the normal generation path
+        # will surface any real connection error exactly as it did before this guard.
+        pass
 
     # Use provided top_k or default from config
     top_k = req.top_k if req.top_k is not None else CONFIG.rag.top_k

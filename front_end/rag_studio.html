@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.9.0 -->
+<!-- Changelog: 2.9.0 — AIStudio_888: /ask now sends the selected model from the dropdown. It was
+     previously omitted from the request body, so every query used the backend default regardless of
+     the dropdown selection — the Module 2 "switch to gemma3:27b" silently had no effect on generation
+     (prewarm loaded 27b into memory, but /ask still requested the default). Surfaced in Nuclear Test Pass 2. -->
 <!-- Version: 2.8.3 -->
 <!-- Changelog: 2.8.3 — Default model now pins canon gemma3:4b explicitly. Was: first Gemma in
      /models order, which surfaced gemma3:12b or :27b depending on ordering. Now falls back to the
@@ -1444,6 +1449,7 @@
             const body = {
                 query,
                 corpus: currentCorpus,
+                model: document.getElementById('modelSelect').value || undefined,   // AIStudio_888: send the dropdown selection; was omitted, so /ask always used the backend default (Module 2 "switch to gemma3:27b" had no effect)
                 top_k: parseInt(topKInput.value) || 10,
                 temperature: parseFloat(tempInput.value) || 0.3,
                 hybrid_alpha: 1 - parseFloat(alphaInput.value),

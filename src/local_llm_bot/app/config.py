@@ -1,5 +1,6 @@
 # src/local_llm_bot/app/config.py
-# Version: 1.1.0
+# Version: 1.2.0
+# Changelog: 1.2.0 — AIStudio_888: default_model llama3.1:8b → gemma3:4b (canon). See note at the field.
 from __future__ import annotations
 
 import os
@@ -44,7 +45,10 @@ class RagConfig(BaseModel):
     max_distance: float | None = Field(default=None, ge=0.0)
 
     # default_model: str = Field(default="llama3.2:3b")
-    default_model: str = Field(default="llama3.1:8b")
+    # AIStudio_888: canon default is gemma3:4b (README/QUICKSTART/help/UI v2.8.3+). Was "llama3.1:8b",
+    # which 500s /ask on any install that never pulled llama — the cold-install release-blocker found
+    # in Nuclear Test Pass 2 (fresh clone + canon-only model store → first query failed).
+    default_model: str = Field(default="gemma3:4b")
 
     default_embed_model: str = Field(default="nomic-embed-text")
     strict_unknown_reply: str = Field(default="I don't know based on the provided documents.")
