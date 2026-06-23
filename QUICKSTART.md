@@ -1,6 +1,14 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-06-22*
+*Version: Beta | Updated: 2026-06-23*
+
+<!-- Changelog 2026-06-23 (AIStudio_888, Nuclear Test Pass 2 doc findings): Step 1 — note Homebrew's
+     post-install analytics/donation/Next-steps blocks are informational. Step 2 — make the "skip"
+     imperative (don't install an older Python over a compliant one). Step 3 — Ollama start now branches
+     Homebrew-service vs standalone-app (brew services start ollama errors for app installs); ollama list
+     is the real readiness gate; Pango split into its own sub-step. Step 6 — git/CLT reframed to
+     "confirm, don't install" (Homebrew already installed CLT in Step 1). Step 7 — prompt shows
+     "…AIStudio %", not the full path. Step 8 — note these commands are used in the Tutorial. -->
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -68,7 +76,7 @@ If you see `command not found`, install Homebrew. You will be asked for your Mac
 
 The installer will show a list of directories it will create. Press **Enter** to continue.
 
-When installation completes you will see `==> Installation successful!` Modern Macs set the Homebrew PATH automatically. Verify:
+When installation completes you will see `==> Installation successful!` Homebrew then prints a few more blocks — an analytics notice (with an opt-out link), a donation note, and a `==> Next steps:` section. **These are all informational — you don't need to act on any of them** (the "Next steps" are generic Homebrew tips, not part of AIStudio setup). Modern Macs set the Homebrew PATH automatically. Verify:
 ```bash
 brew --version
 ```
@@ -89,11 +97,11 @@ First, check if Python is already installed; in the Terminal, type:
 python3 --version
 ```
 
-If you see a version number where the second part is 10 or higher — for example Python 3.10, 3.11, 3.12, 3.13, or 3.14 — Python is recent enough for AIStudio. **→ Skip to Step 3.**
+If you see a version number where the second part is 10 or higher — for example Python 3.10, 3.11, 3.12, 3.13, or 3.14 — Python is recent enough for AIStudio. **→ Skip to Step 3. Do not run the install command below** — it would install an *older* Python (3.13) alongside the newer one you already have.
 
 "3.10 or higher" means: look at the number after the first dot. If it is 10 or more, you are good.
 
-If you see `command not found` — Python is not installed. Install it via Homebrew:
+**Only if** you see `command not found` — Python is not installed. Install a current Python via Homebrew:
 ```bash
 brew install python@3.13
 ```
@@ -139,19 +147,30 @@ This takes less than a minute. You'll see a stream of messages — ignore them. 
 
 > You may also see technical notes about `OLLAMA_FLASH_ATTENTION` and background services — ignore them. Ollama is installed correctly.
 
-**Start Ollama** — run this once now. It also ensures Ollama starts automatically every time your Mac starts up:
-```bash
-brew services start ollama
-```
+**Start Ollama.** How you do this depends on how Ollama was installed:
 
-Also install **Pango** — required for PDF report generation (benchmark reports):
+- **Installed via Homebrew just now** (`brew install ollama` above) — start it as a background service:
+  ```bash
+  brew services start ollama
+  ```
+- **Installed as the Ollama app** (downloaded from [ollama.com](https://ollama.com)), or it was already on your Mac — it already runs automatically as a background item. **Do not run `brew services start ollama`** — for an app install it errors with `Error: Formula `ollama` is not installed.` There's nothing to start; skip straight to the verify step.
+
+> The real check that Ollama is working is `ollama list` (below), **not** the `brew services` command — `ollama list` works for both install types.
+
+---
+
+### Install Pango (for PDF reports)
+
+**Pango** is a text-rendering library required for generating the benchmark PDF reports (Module 5 of the [Tutorial](TUTORIAL.md)). It installs via Homebrew regardless of how Ollama was installed — so run it even if you skipped the `brew services` line above:
 ```bash
 brew install pango
 ```
 
-> **Why Pango?** AIStudio's benchmark runner generates PDF reports. Pango is a text rendering library that weasyprint (the PDF engine) depends on. It's a system library — `brew install` handles it in under a minute.
+> **Why Pango?** AIStudio's benchmark runner generates PDF reports via weasyprint (the PDF engine), which depends on Pango. `brew install` handles it in under a minute. You won't need it until Module 5, but it's cleanest to install now.
 
-Verify it is running:
+---
+
+Verify Ollama is running:
 ```bash
 ollama list
 ```
@@ -256,32 +275,23 @@ This warning is harmless — ignore it.
 
 ## 6. Check You Have git
 
-`git` is the tool that downloads ("clones") AIStudio from GitHub. It usually ships with macOS developer tools.
+`git` is the tool that downloads ("clones") AIStudio from GitHub. **If you installed Homebrew in Step 1, you already have it** — Homebrew installs Apple's Command Line Tools (which include `git`) as part of its own setup. This step just confirms it.
 
 Check; in the Terminal, type:
 ```bash
 git --version
 ```
 
-If you see `git version 2.x.x` or newer — **→ skip to Step 7, Clone AIStudio.**
+If you see `git version 2.x.x` or newer — **→ skip to Step 7, Clone AIStudio.** (This is the normal case after Step 1.)
 
-If you see `command not found`, or macOS shows a dialog asking to install developer tools — run:
+**Only if** you see `command not found` (you skipped Homebrew, or are on an unusual setup) — install the Command Line Tools directly:
 ```bash
 xcode-select --install
 ```
 
-**A dialog will appear** saying "The xcode-select command requires the command line developer tools. Would you like to install the tools now?" — click **Install**. A **License Agreement** appears — click **Agree**.
+A dialog will appear saying "The xcode-select command requires the command line developer tools. Would you like to install the tools now?" — click **Install**, then **Agree** to the License Agreement. The progress dialog's time estimate may start very high — even hours — then drop to minutes within seconds; ignore the initial estimate (on a 100 Mbps connection expect about 8–10 minutes). When done, re-run `git --version` to confirm `git version 2.x.x` or newer.
 
-A progress dialog appears. The time estimate may start very high — even hours — then drop to minutes within seconds. Ignore the initial estimate; on a 100 Mbps connection expect about 8–10 minutes.
-
-When done, verify:
-```bash
-git --version
-```
-
-Expected: `git version 2.x.x` or newer.
-
-> If no dialog appeared when you ran `git --version`, trigger the installation manually with `xcode-select --install`. If it still won't install, see [Annex 2 — Troubleshooting](#annex-2--troubleshooting).
+> If git is already present, running `xcode-select --install` simply reports "Command line tools are already installed" and does nothing — that's expected, not an error. If it genuinely won't install, see [Annex 2 — Troubleshooting](#annex-2--troubleshooting).
 
 ---
 
@@ -297,7 +307,7 @@ cd AIStudio
 
 This downloads about 96 MB — expect under 2 minutes on a 100 Mbps connection. When complete you will see `Resolving deltas: 100% (...), done.` and land in the `AIStudio` folder.
 
-After the clone, AIStudio lives at `~/Developer/AIStudio/` — the path every command in this guide assumes.
+After the clone, AIStudio lives at `~/Developer/AIStudio` — the path every command in this guide assumes. Your prompt will now end in `AIStudio %` (it shows the current folder's name, not the full path) — that's how you know you're inside the cloned folder.
 
 > **Cloned to the wrong place?** Only if your prompt shows `~/AIStudio` (not `~/Developer/AIStudio`) did the folder land wrong — move it:
 > ```bash
@@ -318,6 +328,8 @@ ais_help
 ```
 
 The `ais_*` notation is shorthand for *all the commands that begin with* `ais_` — like `ais_start`, `ais_stop`, `ais_bench`; the `*` is a wildcard standing in for the rest of each name. `ais_help` prints the full list by category, and `ais_help <command>` gives detailed help on any one.
+
+> Most of these commands are exercised in the [Tutorial](TUTORIAL.md), not here — Modules 2–3 build the SEC 10-K and ESEF corpora (`ais_download_*`, `ais_ingest_*`) and Module 5 runs the benchmark (`ais_bench`). You don't need them yet; the Tutorial introduces each where it's used. For now, only `ais_start` / `ais_stop` matter.
 
 This takes 2–3 minutes. You'll see progress messages as dependencies install.
 
