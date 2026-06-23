@@ -77,13 +77,13 @@ Same RAG pipeline, pointed at AIStudio's own docs. Try it before reaching for th
 
 This module downloads a portfolio of SEC 10-K annual filings, ingests them, and queries them. It also introduces the part of AIStudio that makes retrieval at this scale work: **knowledge bases**. The corpus ships with a benchmark question set; running it and — more importantly — reading it correctly is **Module 5**.
 
-### 2.1 Download the Filings
+### 2.1 Download Filings
 
 ```bash
-ais_download_sec_10k --latest 5
+ais_download_sec_10k
 ```
 
-This reads the corpus's **membership list** (a manifest) and pulls each firm's **five most recent** annual 10-K filings from SEC EDGAR into the corpus — about **100 filings** across the portfolio. Allow ~10 minutes. (`--latest 5` selects the five newest filings per firm; a bare `ais_download_sec_10k` defaults to the single most recent.)
+This reads the corpus's **membership list** (a manifest) and pulls each firm's **most recent** annual 10-K filing from SEC EDGAR into the corpus — **20 filings** across the portfolio. Allow a few minutes. (`--latest 5` selects the five newest filings per firm; the bare `ais_download_sec_10k` defaults to the single most recent.)
 
 EDGAR serves filings by **CIK** — the *Central Index Key*, the unique number the SEC assigns to every entity that files with it (look one up at the SEC's [CIK lookup](https://www.sec.gov/search-filings/cik-lookup)). So preparing this corpus came down to building a small **manifest** — one row per firm, pairing a **Label** (the name AIStudio uses for the firm throughout the system) with two identifiers: its **CIK**, the key EDGAR needs to return the filings, and a verified **LEI** (the 20-character global Legal Entity Identifier), which §2.2 puts to work. In short: a manifest of CIKs and LEIs. Its full structure is in **Annex 1**.
 
