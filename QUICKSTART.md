@@ -1,14 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-06-23*
-
-<!-- Changelog 2026-06-23 (AIStudio_888, Nuclear Test Pass 2 doc findings): Step 1 — note Homebrew's
-     post-install analytics/donation/Next-steps blocks are informational. Step 2 — make the "skip"
-     imperative (don't install an older Python over a compliant one). Step 3 — Ollama start now branches
-     Homebrew-service vs standalone-app (brew services start ollama errors for app installs); ollama list
-     is the real readiness gate; Pango split into its own sub-step. Step 6 — git/CLT reframed to
-     "confirm, don't install" (Homebrew already installed CLT in Step 1). Step 7 — prompt shows
-     "…AIStudio %", not the full path. Step 8 — note these commands are used in the Tutorial. -->
+*Version: Beta | Updated: 2026-06-24*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -75,6 +67,8 @@ If you see `command not found`, install Homebrew. You will be asked for your Mac
 ```
 
 The installer will show a list of directories it will create. Press **Enter** to continue.
+
+> **On a brand-new or freshly-wiped Mac, this step installs the developer command-line tools first.** Before Homebrew finishes, macOS may pop up a dialog titled **"The `xcode-select` command requires the command line developer tools"** (or Homebrew prints `xcode-select: note: install requested`). **Click "Install" in that dialog and wait for the multi-gigabyte download to finish** — it can take several minutes. This is normal when setting up a Mac from scratch, and it is what gives you `git`. You cannot skip it or script past it; let it complete, then continue here.
 
 When installation completes you will see `==> Installation successful!` Homebrew then prints a few more blocks — an analytics notice (with an opt-out link), a donation note, and a `==> Next steps:` section. **These are all informational — you don't need to act on any of them** (the "Next steps" are generic Homebrew tips, not part of AIStudio setup). Modern Macs set the Homebrew PATH automatically. Verify:
 ```bash
@@ -445,19 +439,27 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 *For experienced users who already live in a terminal. This skips every explanation above — you'll get a running instance, but you'll miss the understanding of how a RAG system is built. If anything here is unfamiliar, use the full guide instead.*
 
-**Prereqs:** Apple Silicon Mac. The block below installs Homebrew, Python, Ollama, Pango, Qdrant, and git if missing — skip any you already have.
+**Prereqs:** Apple Silicon Mac. The steps below install Homebrew, Python, Ollama, Pango, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
 
+**Run it in two parts.** On a bare-metal Mac the Homebrew install (Part 0) is the one step that needs a human: it triggers the macOS *"install command line developer tools"* dialog — click **Install** and let it finish (that's what provides `git`). Once `brew --version` answers, the rest (Parts 1–5) is a single uninterrupted paste. On a machine that already has Homebrew, skip Part 0 and paste Parts 1–5 in one go.
+
+**Part 0 — Homebrew (the one interactive step on a bare-metal Mac).** Run this line alone; on a wiped machine it pops the *"command line developer tools"* dialog — click **Install**, wait for it to finish, then confirm `brew` answers before continuing. (Already have Homebrew? Skip straight to Parts 1–5.)
 ```bash
-# 1. Toolchain
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew --version    # must print a version before you proceed
+```
+
+**Parts 1–5 — everything else, one uninterrupted paste:**
+```bash
+# 1. Toolchain (brew installs each; no-op for anything already present)
 brew install python@3.13 ollama pango git
 brew services start ollama
 
 # 2. Models — embedding (required) + Google's Gemma (the default; small & fast)
 ollama pull nomic-embed-text
-ollama pull gemma3:4b           # default; add gemma3:27b on 32GB+ for the SEC corpus
+ollama pull gemma3:4b           # the default; add `ollama pull gemma3:27b` on 32GB+ for the SEC/ESEF corpora (Tutorial Modules 2–3)
 
-# 3. Qdrant binary
+# 3. Qdrant binary (needs ~/bin on PATH; the grep makes the line idempotent)
 mkdir -p ~/qdrant_storage ~/bin
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mv qdrant ~/bin/qdrant

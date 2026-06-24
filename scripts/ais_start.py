@@ -1,4 +1,12 @@
-# Version: 1.2.0
+# Version: 1.3.0
+# Changelog: 1.3.0 — C18 / #888 model guard. (1) Zero chat models → graceful hard-fail
+#            referencing the RESOLVED default (was: stale `ollama pull llama3.1:8b`), with
+#            generic guidance for any model + the AISTUDIO_DEFAULT_MODEL override. (2) If the
+#            configured default is NOT installed but other model(s) ARE, the backend is
+#            launched on an available model FOR THIS SESSION (default model from config.py /
+#            env — single source of truth) so the first query can't 500; this is announced
+#            after startup with both permanent fixes (pull the default, or export the model
+#            as default). Works with a single imported model. (3) Default present → echoed.
 # Changelog: 1.2.0 — PARK-20/21: guard the Qdrant launch. Pre-check shutil.which("qdrant")
 #            and, if absent, print the QUICKSTART §5 install recipe + ais_restore note and
 #            exit 1 (was: raw FileNotFoundError traceback from subprocess.Popen). Post-check
@@ -39,7 +47,7 @@ import webbrowser
 from pathlib import Path
 
 SCRIPT_NAME = "ais_start"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 BOLD   = "\033[1m"
@@ -73,6 +81,34 @@ def _qdrant_collection_count(collection: str) -> int:
         return int(result.get("points_count") or result.get("vectors_count") or 0)
     except Exception:
         return -1
+
+
+def _ollama_chat_models() -> list[str]:
+    """Names of installed chat (non-embedding) models, e.g. ['gemma3:4b', 'mistral:7b']."""
+    try:
+        with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3) as r:
+            d = json.loads(r.read())
+        return [
+            m.get("name", "")
+            for m in d.get("models", [])
+            if "embed" not in m.get("name", "").lower()
+        ]
+    except Exception:
+        return []
+
+
+def _resolve_default_model(repo: Path) -> str | None:
+    """The default model the backend WILL use: AISTUDIO_DEFAULT_MODEL env, else the
+    backend's own config.py default. Single source of truth — never hardcoded here.
+    Returns None only if the import fails (best-effort)."""
+    env = os.environ.get("AISTUDIO_DEFAULT_MODEL")
+    if env:
+        return env
+    try:
+        from local_llm_bot.app.config import CONFIG
+        return CONFIG.rag.default_model
+    except Exception:
+        return None
 
 
 def _ollama_chat_model_count() -> int:
@@ -178,11 +214,27 @@ def main() -> int:
             if _ollama_chat_model_count() > 0:
                 break
         if _ollama_chat_model_count() == 0:
-            print("❌ No chat models found in Ollama.")
-            print("· Run: ollama pull llama3.1:8b")
-            print("· This takes ~5 minutes on first run (~4.7 GB download).")
+            _dm = _resolve_default_model(repo) or "gemma3:4b"
+            print("❌ No chat models found in Ollama — AIStudio can't answer queries.")
+            print(f"· Pull the default model:  ollama pull {_dm}")
+            print("· (First pull is a few-GB download; smaller models like gemma3:4b are quickest.)")
+            print("· Any Ollama chat model works — if you pull a different one, start with:")
+            print("    AISTUDIO_DEFAULT_MODEL=<that-model> ais_start   (or export it in ~/.zshrc)")
             return 1
         print("✅ Ollama started.")
+
+    # ── Resolve the model the backend will actually use (C18 / #888 guard) ────
+    # Decide BEFORE launching the backend so it runs with a model that EXISTS.
+    # default present → use it. default absent but other model(s) present →
+    # fall back to an available one FOR THIS SESSION (transparent) so the first
+    # query can't 500. Zero models was already a hard fail above.
+    _present = _ollama_chat_models()
+    _default = _resolve_default_model(repo)
+    _active_model = _default
+    _model_overridden = False
+    if _default and _present and _default not in _present:
+        _active_model = sorted(_present)[0]
+        _model_overridden = True
 
     # ── Backend (continues the Ecosystem bundle — no separator per STD §2) ────
     print("▶ Starting AIStudio backend...")
@@ -203,6 +255,11 @@ def main() -> int:
         "AISTUDIO_VECTORSTORE": "qdrant",
         "PYTHONPATH": str(repo / "src"),
     }
+    # If the configured default isn't installed, run the backend on an available
+    # model for this session so the first query can't 500 (#888). Transparent —
+    # announced after startup with how to make it permanent.
+    if _model_overridden and _active_model:
+        backend_env["AISTUDIO_DEFAULT_MODEL"] = _active_model
     # Use bare 'uvicorn' — venv is activated by wrapper before exec, so
     # venv/bin/ is already on PATH. Matches old shell behavior exactly.
     cmd = ["uvicorn", "local_llm_bot.app.api:app", "--host", "0.0.0.0", "--port", "8000"]
@@ -230,6 +287,17 @@ def main() -> int:
 
     if backend_ready:
         print("✅ Backend started.")
+        # C18: make the model AIStudio will actually use visible at startup — the #888
+        # trap (a stale/absent default that 500s the first query) is otherwise invisible.
+        if _active_model:
+            if _model_overridden:
+                only = " (your only installed model)" if len(_present) == 1 else ""
+                print(f"⚠ Configured default '{_default}' is NOT installed.")
+                print(f"· Using '{_active_model}'{only} for THIS session so queries work.")
+                print(f"· Make it permanent — either install the default:  ollama pull {_default}")
+                print(f"  or set your model as the default:  export AISTUDIO_DEFAULT_MODEL={_active_model}  (add to ~/.zshrc)")
+            else:
+                print(f"· Default model: {_active_model}  (override: AISTUDIO_DEFAULT_MODEL)")
     else:
         # AIStudio_715: do NOT open browser if backend failed to start
         print("❌ Backend did not start after 60s.")

@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: Beta | Updated: 2026-06-22*
+*Version: Beta | Updated: 2026-06-24*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -173,7 +173,7 @@ ais_ingest_sec_10k
 
 Switch to the **sec_10k** corpus (the breadcrumb at the top should now read `AIStudio · sec_10k · …` — that's how you confirm which document set the next answer draws on; changing the *model* does **not** change the corpus, they're separate dropdowns).
 
-First, a word on **model choice**. AIStudio runs its models locally through Ollama, and you can add as many as you like. For the easy Module 1 questions, small and large models are about equal. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline. So for this module, **select `gemma3:27b` in the model dropdown** — the synthesis model AIStudio is tuned around. If you don't have it yet, pull it once through Ollama (QUICKSTART shows how).
+First, a word on **model choice**. AIStudio runs its models locally through Ollama, and you can add as many as you like. For the easy Module 1 questions, small and large models are about equal. That changes here: SEC filings are dense, and questions that span several firms or turn on a precise disclosure reward a model with stronger synthesis and tighter citation discipline. So for this module, **select `gemma3:27b` in the model dropdown** — the synthesis model AIStudio is tuned around. If you don't have it yet, pull it once through Ollama — `ollama pull gemma3:27b` (it's a one-time ~17 GB download; QUICKSTART Step 4 and HOWTO cover model management in full).
 
 #### Start with one firm
 
