@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.9.1 -->
+<!-- Changelog: 2.9.1 — Fold in the ingest progress-bar completion fix (originally drafted as 2.7.1
+     but never version-bumped onto the 2.8.x/2.9.0 line — caused a version collision where two
+     different rag_studio.html contents both read "2.9.0"). Both pollers (sidebar pollIngestStatus +
+     upload-path): maxPolls 300->900 (10min->30min) so normal long runs (ESEF 12 iXBRL ~12min) don't
+     trip the cap mid-run; and on cap-out do ONE final /ingest-status read, rendering the real 100%
+     "done" if the backend finished instead of the "re-open Inspect" fallback. Carries the 2.9.0
+     AIStudio_888 model-dropdown fix (superset). -->
 <!-- Version: 2.9.0 -->
 <!-- Changelog: 2.9.0 — AIStudio_888: /ask now sends the selected model from the dropdown. It was
      previously omitted from the request body, so every query used the backend default regardless of
@@ -23,7 +31,14 @@
 <!-- Changelog: 2.8.0 — Added native title= tooltips to the query-setting controls (Model, Top K,
      Temperature, Retrieval Mix, Keywords, and the Edit-corpus Score Threshold). Wording consistent
      with QUICKSTART Annex 3; same hover pattern as the Inspect button. -->
-<!-- Version: 2.7.0 -->
+<!-- Version: 2.7.1 -->
+<!-- Changelog: 2.7.1 — AIStudio_NNN: ingest progress bar now reaches 100% and shows the real
+     "✓ done" on long runs. Two fixes in both pollers (sidebar pollIngestStatus + upload-path):
+     (1) poll cap 300→900 (10min→30min) so normal long runs (ESEF: 9 large iXBRL ≈ 9-11min) don't
+     trip it mid-run; (2) on cap-out, do ONE final /ingest-status read — if the backend says 'done'
+     (it completes regardless of the foreground poll), render the real 100% completion summary
+     instead of the old "Still indexing — re-open Inspect / check Stats" fallback, which fired even
+     when the run had already finished one poll later. -->
 <!-- Changelog: 2.7.0 — (a) Default model now prefers Google Gemma (smallest available Gemma)
      rather than merely the smallest model overall — ships Gemma-first. (b) Top K default 5 → 10
      across the UI (initial input + send fallback + new-corpus dialog), matching the demo/sec
@@ -2792,7 +2807,12 @@
 
     async function pollIngestStatus(corpus, statusEl, estimated) {
         // Uses same rich polling logic as upload ingest bar (AIStudio_543)
-        const maxPolls = 300;
+        // AIStudio_NNN: cap raised 300→900 (10min→30min) so normal long runs (ESEF: 9 large
+        // iXBRL filings ≈ 9-11min) no longer trip the cap mid-run; and on cap-out we now do one
+        // FINAL status read and render the real 100% "done" if the backend has finished — the
+        // backend always completes regardless of the foreground poll, so the old "re-open Inspect"
+        // fallback fired even when the run was already done one poll later.
+        const maxPolls = 900;
         let polls = 0;
         let _lastLiveText = '';
         const uid = 'pb_' + Date.now();
@@ -2870,16 +2890,46 @@
                     }
                 } catch (_) {}
                 if (polls >= maxPolls) {
-                    // Don't give up silently — report the last known live count so the
-                    // user knows work is still happening, and point them to a quick check.
-                    _hideIngestCancel(statusEl);
-                    if (txt) {
-                        txt.textContent = _lastLiveText
-                            ? `Still indexing (long run) — last seen: ${_lastLiveText}. It will finish in the background; re-open Inspect to see final counts.`
-                            : 'Still indexing in the background — re-open Inspect to see final counts.';
-                    }
                     clearInterval(interval);
-                    resolve('timeout');
+                    // AIStudio_NNN: before falling back, do ONE final status read — the backend
+                    // finishes regardless of the foreground poll, so a run that crossed the cap is
+                    // very often already 'done'. If so, render the real 100% completion (same as the
+                    // done branch); only show the background note if it is genuinely still running.
+                    let finished = false;
+                    try {
+                        const fr = await fetch(`${API}/corpus/${corpus}/ingest-status`);
+                        const fd = await fr.json();
+                        if (fd.status === 'done') {
+                            finished = true;
+                            if (bar) bar.style.width = '100%';
+                            _hideIngestCancel(statusEl);
+                            const finalChunks = fd.chunks_written || 0;
+                            const ft = fd.files_total || 0;
+                            const totalBytes = fd.total_bytes || 0;
+                            const mbFinal = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : null;
+                            let doneText;
+                            if (fd.summary) {
+                                doneText = fd.summary + (finalChunks ? ` · ${finalChunks.toLocaleString()} chunks` : '');
+                            } else if (mbFinal) {
+                                doneText = `${ft} file(s) indexed · ${mbFinal} MB · ${finalChunks.toLocaleString()} chunks`;
+                            } else {
+                                doneText = `${ft} file(s) indexed · ${finalChunks.toLocaleString()} chunks`;
+                            }
+                            if (txt) txt.textContent = '✓ ' + doneText;
+                            resolve('done');
+                        }
+                    } catch (_) {}
+                    if (!finished) {
+                        // Genuinely still running past 30 min — report the last live count and note
+                        // it continues in the background; re-open Inspect to see final counts.
+                        _hideIngestCancel(statusEl);
+                        if (txt) {
+                            txt.textContent = _lastLiveText
+                                ? `Still indexing (very long run) — last seen: ${_lastLiveText}. It will finish in the background; re-open Inspect to see final counts.`
+                                : 'Still indexing in the background — re-open Inspect to see final counts.';
+                        }
+                        resolve('timeout');
+                    }
                 }
             }, 2000);
         });
@@ -3070,7 +3120,7 @@
             await fetch(`${API}/corpus/${currentCorpus}/ingest`, { method: 'POST' });
 
             const totalMBNum = totalBytes_ingest / (1024 * 1024);
-            const maxPolls = 300;
+            const maxPolls = 900;  // AIStudio_NNN: 10min→30min, matches pollIngestStatus
             let polls = 0;
             let lastChunks = 0;
 
@@ -3164,11 +3214,37 @@
                         }
                     } catch (_) {}
                     if (polls >= maxPolls) {
-                        if (ingestStatusEl) ingestStatusEl.textContent = 'Still indexing — check Stats when complete';
-                        const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
-                        if (cancelBtn) cancelBtn.remove();
                         clearInterval(interval);
-                        resolve('timeout');
+                        // AIStudio_NNN: final status read before fallback — the backend finishes
+                        // regardless of the foreground poll, so render the real 100% done if it has.
+                        let finished = false;
+                        try {
+                            const fr = await fetch(`${API}/corpus/${currentCorpus}/ingest-status`);
+                            const fd = await fr.json();
+                            if (fd.status === 'done') {
+                                finished = true;
+                                if (ingestBar) ingestBar.style.width = '100%';
+                                const finalChunks = fd.chunks_written || 0;
+                                const totalBytFinal = fd.total_bytes || totalBytes_ingest || 0;
+                                const mbTotalFinal = totalBytFinal > 0 ? (totalBytFinal / (1024 * 1024)).toFixed(1) : null;
+                                const ftFinal = fd.files_total || fileSizes.length || saved.length;
+                                let doneText = mbTotalFinal
+                                    ? `File ${ftFinal} of ${ftFinal} indexed · ${mbTotalFinal}MB · ${finalChunks.toLocaleString()} chunks`
+                                    : `${ftFinal} file${ftFinal !== 1 ? 's' : ''} indexed · ${finalChunks.toLocaleString()} chunks`;
+                                if (ingestStatusEl) ingestStatusEl.textContent = '✓ ' + doneText;
+                                if (ingestHeaderEl) ingestHeaderEl.innerHTML =
+                                    `✓ ${saved.length} file${saved.length > 1 ? 's' : ''} indexed into corpus <em>'${currentCorpus}'</em>`;
+                                const cb = document.getElementById(`${ingestUid}_cancel`);
+                                if (cb) cb.remove();
+                                resolve('done');
+                            }
+                        } catch (_) {}
+                        if (!finished) {
+                            if (ingestStatusEl) ingestStatusEl.textContent = 'Still indexing in the background — re-open Inspect to see final counts.';
+                            const cancelBtn = document.getElementById(`${ingestUid}_cancel`);
+                            if (cancelBtn) cancelBtn.remove();
+                            resolve('timeout');
+                        }
                     }
                 }, 2000);
             });

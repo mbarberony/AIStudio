@@ -1,4 +1,15 @@
-# Version: 1.8.35
+# Version: 1.8.37
+# Changelog: 1.8.37 — AIStudio_NNN (2026-06-25): _selective_match no longer silently drops files
+#            whose basename contains regex-meta chars but is meant literally. A token with
+#            ( ) [ ] + ? * | ^ $ { } was compiled as a regex; if re.search did not match it
+#            `continue`d, SKIPPING the literal-substring fallback below. So a real filename like
+#            "Skandinaviska_Enskilda_Banken_AB_(publ)_ESEF_2024.xhtml" — where "(publ)" is a VALID
+#            regex (capturing group matching "publ" sans parens) that does NOT match the literal
+#            parens — failed discovery silently (files_discovered:0, files_failed:0, no error).
+#            Surfaced when the 12-file ESEF reingest reported "11 total" (SEB dropped). Fix: removed
+#            the `continue` so a valid-but-non-matching regex falls through to the literal test.
+#            (The except still catches MALFORMED regex.) KRR silent-failure cluster also wants a
+#            HALT/WARN when --files matches 0 of N requested — NOT fixed here (api/cli caller side).
 # Changelog: 1.8.36 — F-026 (Manuel): per-file completion line split into two — line 1 keeps
 #            "N of T · file · size · chunks · format"; line 2 (aligned under the filename)
 #            "chunk prefix: <…> · source: <…>". "aug." dropped; the format↔prefix " · " removed.
@@ -462,7 +473,13 @@ def _selective_match(name: str, patterns: Iterable[str]) -> bool:
             try:
                 if _re.search(pat, name, _re.IGNORECASE):
                     return True
-                continue
+                # AIStudio_NNN (2026-06-25): NO `continue` here. A token may contain
+                # regex-meta chars yet be intended literally (e.g. a real basename like
+                # "..._AB_(publ)_ESEF_2024.xhtml"). As a regex, "(publ)" is a capturing
+                # group matching "publ" WITHOUT the parens, so re.search fails against the
+                # literal-paren filename. The old `continue` skipped the literal test below
+                # → the file silently failed discovery (files_discovered:0, no error). Now a
+                # valid-but-non-matching regex falls through to the literal-substring test.
             except _re.error:
                 pass  # malformed regex → fall through to literal-substring test
         if pat.lower() in low:
