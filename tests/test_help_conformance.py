@@ -406,14 +406,21 @@ def _is_passthrough(script_content: str) -> bool:
     """True if the shell script passes $@ through to another script (flags live elsewhere).
 
     Covers:
-    - exec python3 ... "$@"  — flags live in Python argparse
-    - python3 ... "$@"       — flags live in Python argparse
-    - exec "$SCRIPT_DIR/scripts/foo.sh" "$@"  — flags live in delegated shell script
-    - exec ./scripts/foo.sh "$@"
+    - exec python3 ... "$@"                         flags live in Python argparse
+    - python3 ... "$@"
+    - exec ... "$PYTHON" -m pkg.mod ... "$@"        variable-invoked venv python (AIStudio_NNN)
+    - exec ... "$PYTHON" path/to/foo.py ... "$@"    variable-invoked python script
+    - exec "$SCRIPT_DIR/scripts/foo.sh" "$@"        delegated shell script
     """
     return bool(
         _re.search(r'python3.*"\$@"', script_content)
         or _re.search(r'exec.*python3.*"\$@"', script_content)
+        # Variable-invoked Python: wrappers set PYTHON="$REPO/.venv/bin/python3"
+        # then `exec ... "$PYTHON" -m mod "$@"` or `"$PYTHON" "$SCRIPT" ... "$@"`
+        # (script path held in another variable). ais_start uses literal python3
+        # (matched above) -> routed to _get_python_help_flags which returns None -> skip.
+        or _re.search(r'\$\{?PYTHON\}?"?\s+-m\s+[\w.]+', script_content)
+        or _re.search(r'\$\{?PYTHON\}?"?\s+"?\$\{?[A-Z_]+\}?"?\s', script_content)
         or _re.search(r'exec\s+["\']?\$[^"\']*\.sh["\']?\s+"\$@"', script_content)
         or _re.search(r'exec\s+"?\$\{?SCRIPT_DIR\}?[^"]*"\s+"\$@"', script_content)
     )
@@ -441,44 +448,71 @@ def _extract_script_flags(script_content: str) -> set[str]:
 
 
 def _get_python_help_flags(script_path: Path, repo_root: Path) -> set[str] | None:
-    """For pass-through scripts, run the Python backing script with --help and parse flags.
+    """For pass-through scripts, run the Python backing with --help and parse flags.
 
-    Returns set of --flags found in argparse output, or None if invocation fails.
+    Handles literal `python3` AND variable-invoked venv python (`"$PYTHON" -m mod`
+    or `"$PYTHON" foo.py`). Honors a PYTHONPATH= the wrapper exports (e.g. scripts/),
+    falling back to src/. argparse prints usage to stderr even when it rejects
+    --help (rc != 0), so usage text is parsed regardless of return code as long
+    as a "usage:" line is present.
     """
-    content = script_path.read_text(encoding="utf-8", errors="replace")
-    # Find the python3 invocation line to extract the script/module path
-    # Covers: python3 scripts/foo.py, python3 -m pkg.mod, exec env ... python3 -m pkg.mod
-    module_m = _re.search(r"python3\s+-m\s+([\w.]+)", content)
-    script_m = _re.search(r'python3\s+["\']?([^\s"\'$]+\.py)', content)
+    import os as _os
 
+    content = script_path.read_text(encoding="utf-8", errors="replace")
+
+    # PYTHONPATH the wrapper exports (e.g. PYTHONPATH="$REPO/scripts"); default src/.
+    pp_m = _re.search(r"PYTHONPATH=[\"']?\$\{?REPO\}?/([\w/]+)", content)
+    pythonpath = str(repo_root / pp_m.group(1)) if pp_m else str(repo_root / "src")
+
+    # Module form: (python3 | $PYTHON) -m pkg.mod
+    module_m = _re.search(r"(?:python3|\$\{?PYTHON\}?\"?)\s+-m\s+([\w.]+)", content)
+    # Variable-script form ONLY: `"$PYTHON" "$SCRIPT" ...` where SCRIPT="...foo.py" is
+    # assigned elsewhere. Resolve the assignment to the .py path.
+    # NOTE: we deliberately do NOT match an inline `python3 "$REPO/..foo.py"` path here —
+    # executing such a backing for --help is unsafe (e.g. ais_start.py boots services on
+    # any args). Those fall through to result=None -> the caller SKIPS (cannot verify),
+    # which is the correct conservative behavior.
+    script_var = None
+    var_use = _re.search(r"\$\{?PYTHON\}?\"?\s+\"?\$\{?([A-Z_]+)\}?", content)
+    if var_use:
+        asg = _re.search(
+            rf"{var_use.group(1)}=[\"']?(?:\$\{{?REPO\}}?/)?([\w./-]+\.py)",
+            content,
+        )
+        if asg:
+            script_var = asg.group(1)
+
+    env = {**_os.environ, "PYTHONPATH": pythonpath}
     result = None
     if module_m:
         result = subprocess.run(
             ["python3", "-m", module_m.group(1), "--help"],
-            capture_output=True, text=True, timeout=10,
-            cwd=str(repo_root),
-            env={**__import__("os").environ, "PYTHONPATH": str(repo_root / "src")},
+            capture_output=True, text=True, timeout=10, cwd=str(repo_root), env=env,
         )
-    elif script_m:
-        py_path = repo_root / script_m.group(1)
-        if py_path.exists():
-            result = subprocess.run(
-                ["python3", str(py_path), "--help"],
-                capture_output=True, text=True, timeout=10,
-                cwd=str(repo_root),
-            )
+    else:
+        rel = script_var
+        if rel:
+            py_path = repo_root / rel
+            if py_path.exists():
+                result = subprocess.run(
+                    ["python3", str(py_path), "--help"],
+                    capture_output=True, text=True, timeout=10, cwd=str(repo_root), env=env,
+                )
 
-    if result is None or result.returncode != 0:
+    if result is None:
         return None
 
     output = result.stdout + result.stderr
+    # argparse may exit non-zero on --help yet still print "usage: ... [--flag]".
+    if result.returncode != 0 and "usage:" not in output.lower():
+        return None
+
     flags: set[str] = set()
     for m in _re.finditer(r"(--[\w-]+)", output):
         flags.add(m.group(1))
     flags.discard("--help")
     flags.discard("--version")
     return flags
-
 
 # ---------------------------------------------------------------------------
 # 10. Shell scripts: # Version: comment must match VERSION= variable
