@@ -1,4 +1,5 @@
-avg_seconds_per_file: 4.33
+# demo_corpus_metadata.yaml
+avg_seconds_per_file: 1.0
 content_summary: '9 documents covering: enterprise architecture methodology and toolset
   (Barbero 2006), QFD and architecture toolset (Erder|Pureur 2003), FS Journal volumes
   edited by Barbero et al. — Strategy and Architecture (2006), IT Infrastructure (2005),
@@ -39,15 +40,15 @@ files:
     normalizer_year: ''
     size_bytes: 1383620
   Barbero - 2026 - Agentic AI in Financial Services.pdf:
-    chunks: 20
-    duration_sec: 0.771
     file_type: PDF
-    ingested_at: '2026-06-18T04:40:32+00:00'
+    size_bytes: 123765
+    chunks: 20
+    duration_sec: 1.176
+    ingested_at: '2026-06-25T18:59:26+00:00'
     normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
     normalizer_year: ''
-    size_bytes: 96823
+    normalizer_source: ''
+    normalizer_mismatch: false
   Barbero et al. - 2005 - FS Journal - Digitization.pdf:
     chunks: 130
     duration_sec: 3.992
@@ -108,11 +109,11 @@ files:
     normalizer_source: ''
     normalizer_year: ''
     size_bytes: 453563
-ingest_duration_seconds: 39
-last_ingest_chunks: 1070
-last_ingest_files: 9
-last_ingested_at: '2026-06-18T00:41:02'
-last_updated: '2026-06-18'
+ingest_duration_seconds: 1
+last_ingest_chunks: 20
+last_ingest_files: 1
+last_ingested_at: '2026-06-25T14:59:26'
+last_updated: '2026-06-25'
 schema_version: '2.0'
 search_guidance: 'Route questions to the most relevant document based on intent:
 
