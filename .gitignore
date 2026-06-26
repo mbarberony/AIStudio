@@ -136,3 +136,10 @@ data/corpora/esef_banks/trash/
 
 # accidental source archives (never ship)
 *.zip
+
+# Root-level operator commands without _ops suffix (historical exceptions)
+/ais_commit.sh
+/ais_deploy.sh
+
+# Demo corpus trash (superseded files, never tracked)
+data/corpora/demo/trash/
