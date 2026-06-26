@@ -1,5 +1,5 @@
 # AIStudio — File Guide
-*Version: Beta | Updated: 2026-06-15*
+*Version: Beta | Updated: 2026-06-24*
 *Created: 2026-05-20 | Last updated: 2026-06-08 | Owner: Manuel Barbero*
 ---
 
@@ -75,16 +75,19 @@ Each corpus is a self-contained folder:
 | File | What it is | Who writes it |
 |---|---|---|
 | `uploads/` | Source documents (PDF, DOCX, etc.) | User via UI Add Files |
-| `<name>_corpus_metadata.yaml` | Description, search_guidance, sources[], runtime stats | Seed at create-time, updated at ingest |
-| `index.jsonl` | One row per chunk: ID, source path, page, text | Ingest pipeline |
-| `manifest.jsonl` | Per-file ingest record: chunks count, last_ingested_at | Ingest pipeline |
+| `<name>_corpus_metadata.yaml` | Description, search_guidance, sources[], default query settings, runtime stats | Seed at create-time, updated at ingest; UI **Edit Corpus** |
+| `<name>_full_scope.yaml` | Corpus **membership** — the firm/entity universe (the superset). At the corpus root. | Downloader / entity-KB tools *(bundled financial corpora)* |
+| `scopes/<name>_<stem>_scope.yaml` | Named **subsets** of the membership (e.g. `lang_en`, `big_banks`) — read-only selectors for download, bench, selective ingest | Hand-authored *(optional)* |
+| `index.jsonl`, `manifest.jsonl` | Internal ingest bookkeeping (per-chunk / per-file records). Not user-edited; **internal, may be retired** in a future cleanup — corpus config now lives in `<name>_corpus_metadata.yaml`. | Ingest pipeline |
 | `trash/` | Soft-deleted files (recoverable) | UI delete |
+
+Note the split: a corpus's **defining inputs** — documents, metadata, and (for the financial corpora) scope + entity KB — live under `data/corpora/<name>/`. Benchmark **question sets** live separately under `benchmarks/<name>/` (next section).
 
 **Demo corpus** ships with the repo. **Help corpus** is built from `docs/` + key root markdown. **SEC 10-K corpus** is downloaded from SEC EDGAR via `ais_download_sec_10k` and ingested through the UI (Upload button), like any corpus. **User corpora** are created via the UI New button — private, gitignored, no special setup required.
 
 ### `benchmarks/<corpus>/` — Benchmark questions and reports
 
-Each corpus that has a benchmark questions file can be tested with `ais_bench`:
+`benchmarks/<corpus>/` holds the bench **question sets** (inputs) and the **reports** they produce (outputs) — kept separate from the corpus-defining files under `data/corpora/<corpus>/`. Each corpus that has a questions file can be tested with `ais_bench`:
 
 ```
 benchmarks/
@@ -92,12 +95,15 @@ benchmarks/
     demo_questions.yaml       ← pre-built questions for the demo corpus
     reports/                  ← timestamped benchmark reports (.md, .json, .pdf)
   sec_10k/
-    sec_10k_questions.yaml    ← pre-built questions (created by ais_ingest_sec_10k)
+    sec_10k_questions.yaml         ← default question set
+    sec_10k_<stem>_questions.yaml  ← named alternates (e.g. sec_10k_June_2026_questions.yaml)
     reports/
   <your-corpus>/
     <your-corpus>_questions.yaml  ← you write this (see format below)
     reports/
 ```
+
+The default set is `<corpus>_questions.yaml`; a named alternate is selected by stem (`ais_bench --questions June_2026` → `sec_10k_June_2026_questions.yaml`). Reports are written per run into `reports/` under a standard timestamped name — `.md` to read, `.json` for tooling, `.pdf` to share.
 
 **Questions file format** — create `benchmarks/<name>/<name>_questions.yaml`:
 
@@ -183,7 +189,7 @@ All commands available after running `./ais_install` from repo root.
 | `<corpus>_corpus_metadata.yaml` | `api.py` (system prompt), UI Edit | Ingest pipeline, UI Edit | LLM routing, search_guidance display |
 | `prompts/system.txt` | `api.py` | Manual edit | LLM system instructions |
 | `data/corpora/<name>/uploads/*` | Ingest pipeline | UI Add Files | Corpus chunks → Qdrant |
-| `data/corpora/<name>/index.jsonl` | `rag_core.py` retrieval | Ingest pipeline | Query → ranked chunks |
+| `data/corpora/<name>/index.jsonl` | *(internal — see note)* | Ingest pipeline | Per-chunk ingest record |
 | `benchmarks/<corpus>/<corpus>_questions.yaml` | `ais_bench` | User-authored or auto-generated | Benchmark pass/fail evaluation |
 
 ---
@@ -198,10 +204,14 @@ This is the *where* for corpora; the *how* (what builds them) is in `CODEBASE_GU
 |---|---|
 | `data/corpora/<name>/uploads/` | the actual documents (what gets searched) |
 | `data/corpora/<name>/<name>_corpus_metadata.yaml` | the corpus's description, search guidance, and default query settings; read every time you ask a question |
-| `benchmarks/<name>/<name>_questions.yaml` | *(optional)* benchmark questions for the corpus |
+| `data/corpora/<name>/<name>_full_scope.yaml` | *(bundled `sec_10k`/`esef_banks` only)* the corpus **membership** — which firms/entities belong to it |
+| `data/corpora/<name>/scopes/<name>_<stem>_scope.yaml` | *(optional)* named **subsets** of the membership (e.g. `lang_en`) — selectors for download, benchmarking, and selective ingest |
+| `benchmarks/<name>/<name>_questions.yaml` | *(optional)* benchmark question sets for the corpus — note these live under `benchmarks/`, not with the corpus |
 | `data/knowledge_sources/gleif/<name>_entities.yaml` | *(bundled `sec_10k`/`esef_banks` only)* company-identity (GLEIF) lookups used to keep firms apart in cross-company questions — see Tutorial Annex 1 |
 
-So *what files define a corpus?* At minimum: the documents in `uploads/`, and the `<name>_corpus_metadata.yaml` that describes it. Questions and the GLEIF identity file are optional enrichment used by the bundled financial corpora.
+So *what files define a corpus?* At minimum: the documents in `uploads/`, and the `<name>_corpus_metadata.yaml` that describes it. Membership scope, subset scopes, questions, and the GLEIF identity file are enrichment used by the bundled financial corpora.
+
+**Where things live — the split.** A corpus's *defining* files sit together under `data/corpora/<name>/`: the documents, the metadata, and (for the financial corpora) the scope and entity KB. Benchmark *question sets* sit apart under `benchmarks/<name>/`, alongside the `reports/` they generate. Rule of thumb: **what defines the corpus → `data/corpora/`; how you test it → `benchmarks/`.**
 
 ### Where YOUR files go
 
@@ -217,10 +227,10 @@ To query your own portfolio — your filings, reports, decks, or PDFs — create
 
 ## §15 Version history
 
-| Beta | 2026-06-15 | Trimmed to the AIStudio file, command, and corpus reference; SEC ingest is UI-only. |
-
 | Version | Date | Changes |
 |---|---|---|
+| Beta | 2026-06-24 | Corpus-data consistency sweep (§71, §85, §12a): added membership scope (`<name>_full_scope.yaml`) + subset scopes (`scopes/`) to the corpus tables; stated the **defining-inputs (`data/corpora/`) vs question-sets (`benchmarks/`)** split explicitly; documented named question alternates by stem; softened `index.jsonl`/`manifest.jsonl` to internal-may-be-retired. |
+| Beta | 2026-06-15 | Trimmed to the AIStudio file, command, and corpus reference; SEC ingest is UI-only. |
 | 1.2.0 | 2026-06-08 | Added §12a "What files define a corpus — and where they live" (corpus definition + where user portfolio files go). |
 | 1.1.0 | 2026-05-25 | Added user-created corpus type. Added benchmarks/ subsection with questions file format and pass/fail explanation. Added benchmarks row to §12. |
 | 1.0.0 | 2026-05-20 | Initial version. |

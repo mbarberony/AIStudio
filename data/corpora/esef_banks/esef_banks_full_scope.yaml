@@ -7,171 +7,183 @@ schema_version: '2.0'
 kind: scope
 corpus: esef_banks
 entities:
-- label: ING Group
+- label: ING Groep N.V.
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: 549300NYKK9MWM7GGW15
-  gleif_lei: 549300NYKK9MWM7GGW15
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: ING Groep N.V.
   gleif_name: ING GROEP N.V.
+  gleif_lei: 549300NYKK9MWM7GGW15
   expected_xbrl_name: ING Groep N.V.
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - ING_Groep_N.V._ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: NL
   filing_language: en
-- label: Barclays
+- label: Barclays Bank PLC
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: G5GSEF7VJP5I7OUK5573
-  gleif_lei: G5GSEF7VJP5I7OUK5573
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: Barclays Bank PLC
   gleif_name: BARCLAYS BANK PLC
+  gleif_lei: G5GSEF7VJP5I7OUK5573
   expected_xbrl_name: Barclays PLC
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - Barclays_Bank_PLC_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: GB
   filing_language: en
-- label: HSBC
+- label: HSBC Holdings plc
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: MLU0ZO3ML4LN2LL2TL39
-  gleif_lei: MLU0ZO3ML4LN2LL2TL39
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: HSBC Holdings plc
   gleif_name: HSBC HOLDINGS PLC
+  gleif_lei: MLU0ZO3ML4LN2LL2TL39
   expected_xbrl_name: HSBC Holdings plc
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - HSBC_Holdings_plc_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: GB
   filing_language: en
-- label: Standard Chartered
+- label: StandardChartered Bank
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: RILFO74KP1CM8P6PCT96
-  gleif_lei: RILFO74KP1CM8P6PCT96
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: StandardChartered Bank
   gleif_name: STANDARD CHARTERED BANK
+  gleif_lei: RILFO74KP1CM8P6PCT96
   expected_xbrl_name: Standard Chartered PLC
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - StandardChartered_Bank_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: GB
   filing_language: en
-- label: BBVA
+- label: Banco Bilbao Vizcaya Argentaria, S.A.
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: K8MS7FD7N5Z2WQ51AZ71
-  gleif_lei: K8MS7FD7N5Z2WQ51AZ71
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: Banco Bilbao Vizcaya Argentaria, S.A.
   gleif_name: BANCO BILBAO VIZCAYA ARGENTARIA SOCIEDAD ANONIMA
+  gleif_lei: K8MS7FD7N5Z2WQ51AZ71
   expected_xbrl_name: Banco Bilbao Vizcaya Argentaria, S.A.
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - Banco_Bilbao_Vizcaya_Argentaria,_S.A._ESEF_2024.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: ES
   filing_language: en
-- label: Nordea
+- label: Nordeakoncernen
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: 529900ODI3047E2LIV03
-  gleif_lei: 529900ODI3047E2LIV03
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: Nordeakoncernen
   gleif_name: Nordea Bank Abp
+  gleif_lei: 529900ODI3047E2LIV03
   expected_xbrl_name: Nordea Bank Abp
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - Nordeakoncernen_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: FI
   filing_language: en
-- label: SEB
+- label: Skandinaviska Enskilda Banken AB (publ)
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: F3JS33DEI6XQ4ZBPTN86
-  gleif_lei: F3JS33DEI6XQ4ZBPTN86
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: Skandinaviska Enskilda Banken AB (publ)
   gleif_name: Skandinaviska Enskilda Banken AB
+  gleif_lei: F3JS33DEI6XQ4ZBPTN86
   expected_xbrl_name: Skandinaviska Enskilda Banken AB
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - Skandinaviska_Enskilda_Banken_AB_(publ)_ESEF_2024.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: SE
   filing_language: en
-- label: Erste Group
+- label: Erste Group BankAG
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: PQOH26KWDF7CG10L6792
-  gleif_lei: PQOH26KWDF7CG10L6792
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: Erste Group BankAG
   gleif_name: ERSTE GROUP BANK AG
+  gleif_lei: PQOH26KWDF7CG10L6792
   expected_xbrl_name: Erste Group Bank AG
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - Erste_Group_BankAG_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: AT
   filing_language: en
-- label: BNP Paribas
+- label: BNP PARIBAS
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: R0MUWSFPU8MPRO8K5P83
-  gleif_lei: R0MUWSFPU8MPRO8K5P83
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
+  sec_xbrl_name: Groupe BNP Paribas
   gleif_name: BNP PARIBAS
+  gleif_lei: R0MUWSFPU8MPRO8K5P83
   expected_xbrl_name: BNP PARIBAS
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - BNP_PARIBAS_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: FR
   filing_language: fr
-- label: UniCredit
+- label: UNICREDIT, SOCIETA' PER AZIONI
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: 549300TRUWO2CD2G5692
-  gleif_lei: 549300TRUWO2CD2G5692
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
+  sec_xbrl_name: UniCreditS.p.A.
   gleif_name: UNICREDIT, SOCIETA' PER AZIONI
+  gleif_lei: 549300TRUWO2CD2G5692
   expected_xbrl_name: UNICREDIT, SOCIETA' PER AZIONI
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - UNICREDIT,_SOCIETA'_PER_AZIONI_ESEF_2024.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: IT
   filing_language: it
-- label: Société Générale
+- label: SOCIETE GENERALE
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: O2RNE8IBXP4R0TD8PU41
-  gleif_lei: O2RNE8IBXP4R0TD8PU41
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
+  sec_xbrl_name: Société Générale
   gleif_name: SOCIETE GENERALE
+  gleif_lei: O2RNE8IBXP4R0TD8PU41
   expected_xbrl_name: SOCIETE GENERALE
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - SOCIETE_GENERALE_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: FR
   filing_language: fr
-- label: KBC Group
+- label: KBC Groep NV
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: 213800X3Q9LSAKRUWY91
-  gleif_lei: 213800X3Q9LSAKRUWY91
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   sec_xbrl_name: KBC Groep NV
   gleif_name: KBC GROEP
+  gleif_lei: 213800X3Q9LSAKRUWY91
   expected_xbrl_name: KBC GROEP
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - KBC_Groep_NV_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: BE
   filing_language: en

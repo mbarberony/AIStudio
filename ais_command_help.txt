@@ -74,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--canonical] [--canonical-id <id>]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -94,12 +94,23 @@ Options:
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
+  --canonical            Run the canonical benchmark set from benchmarks/bench_canonical.yaml
+                         (the four runs in TUTORIAL §5.9); each writes a standard report
+                         into benchmarks/<corpus>/reports/
+  --canonical-id <id>    With --canonical, run only the run with this id (e.g. A)
 
 Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --scope big_banks
   ais_bench --corpus sec_10k --topics "AI Risk Evolution,Cybersecurity"
   ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
   ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
+
+Canonical reports (reproducible reference set, TUTORIAL §5.9):
+  ais_bench --canonical                 Run all runs in benchmarks/bench_canonical.yaml
+  ais_bench --canonical --canonical-id A  Run only run A
+  · Spec:    benchmarks/bench_canonical.yaml (one parameter set per run)
+  · Reports: benchmarks/<corpus>/reports/ (standard timestamped names; .md/.json/.pdf)
+  · --canonical manages its own corpora — other run flags are ignored in this mode
 
 · Scopes compose with --topics and --question-ids using AND
 · Available scopes: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques

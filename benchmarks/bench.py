@@ -106,9 +106,10 @@ Flags:
     --alpha         Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25, None=backend default
 
 Output files (in benchmarks/<corpus>/reports/):
-    benchmark_<corpus>_<timestamp>.json
-    benchmark_<corpus>_<timestamp>.md
-    benchmark_<corpus>_<timestamp>.pdf  (if pandoc + weasyprint installed)
+    benchmark_<corpus>_<model>_<descriptors>_<YYYY-MM-DD_HHMM>.json
+    benchmark_<corpus>_<model>_<descriptors>_<YYYY-MM-DD_HHMM>.md
+    benchmark_<corpus>_<model>_<descriptors>_<YYYY-MM-DD_HHMM>.pdf  (if pandoc + weasyprint installed)
+    (descriptors: scope/questions/top_k/etc.; datetime is always the last field — Naming STD §2)
 
 Question file auto-detection (in order):
     benchmarks/<corpus>/<corpus>_questions.yaml
@@ -141,6 +142,22 @@ import _scope_common as _scope  # noqa: E402
 
 # Version — single source of truth for urc_deploy and runtime display.
 # Must be within first 8KB (extract_version limit). No # Version: comment.
+# Changelog: 2.7.3 — Naming STD §2 conformance: timestamp moved to the END of base_name,
+#            after all descriptors (was mid-string). New: benchmark_{corpus}_{model}{suffix}_{ts}.
+#            Legacy reports keep their old mid-string order on disk; new reports are datetime-last.
+# Changelog: 2.7.2 — Naming STD §2 descriptor ordering: filter_suffix fields now ordered
+#            LEAST-VOLATILE-FIRST (questions → scope → sub-selectors → ablations → top_k),
+#            and a `questions` stem descriptor was added (non-default sets self-label; the
+#            default set stays unlabelled). Run B (June_2026) no longer collides with run A.
+# Changelog: 2.7.1 — AIStudio_931 correction (Naming STD §14 / Command Dev §3a). --canonical is now
+#            pure orchestration: sub-runs write standard benchmark_{corpus}_{model}_{timestamp}{suffix}
+#            reports into benchmarks/<corpus>/reports/ — no copy, no rename, no sample_reports/ dir
+#            (removed the fragile newest-by-mtime heuristic, the AIStudio_930 clock trap). Added a
+#            top_k{N} descriptor to filter_suffix so runs differing only by K are distinguishable.
+# Changelog: 2.7.0 — AIStudio_931 (provisional #): --canonical mode. Runs the pinned set from
+#            benchmarks/bench_canonical.yaml (the four TUTORIAL §5.9 runs) via the normal
+#            single-run path. +--canonical-id to run one. Inert (graceful exit) when the spec yaml
+#            is absent — ships safe before the apparatus is finalized.
 # Changelog: 2.5.0 — AIStudio_882 (scope application): --scope now RESTRICTS retrieval.
 #            scope_tokens ride the /ask allowed_source_paths field (server ANDs them with
 #            each question's entity logic — intersect). Closes the 2.4.0 deferred seam.
@@ -169,7 +186,7 @@ import _scope_common as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.6.0"
+VERSION = "2.7.3"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -317,6 +334,24 @@ def parse_args() -> argparse.Namespace:
             "query, mapping them to source_path tokens via the entity KB (DEFAULT). Requires a "
             "reachable KB for the corpus; if none loads, auto applies no filter. Replaces --augment-from."
         ),
+    )
+
+    p.add_argument(
+        "--canonical",
+        action="store_true",
+        help=(
+            "Run the pinned canonical benchmark set from benchmarks/bench_canonical.yaml "
+            "(the four runs referenced in TUTORIAL §5.9). Each run executes via the normal single-run "
+            "path and writes its standard timestamped report into benchmarks/<corpus>/reports/. All other "
+            "run flags are ignored in this mode. Exits cleanly with a message if the spec yaml is absent."
+        ),
+    )
+    p.add_argument(
+        "--canonical-id",
+        dest="canonical_id",
+        default=None,
+        metavar="ID",
+        help="With --canonical, run only the single run whose id matches (e.g. --canonical-id A).",
     )
 
     return p.parse_args()
@@ -995,9 +1030,92 @@ def filter_questions(
 
 
 
+def run_canonical(args: argparse.Namespace) -> int:
+    """Run the pinned canonical benchmark set (AIStudio_931).
+
+    Reads benchmarks/bench_canonical.yaml and executes each defined run via the
+    normal single-run path (subprocess re-invocation of this script). Each sub-run
+    writes its own report into benchmarks/<corpus>/reports/ under the standard
+    benchmark_{corpus}_{model}_{timestamp}{filter_suffix} name (Naming STD §14) —
+    nothing is renamed or copied. The canonical layer is pure orchestration: it only
+    decides *which* runs execute. Returns a process exit code (0 = all runs ok).
+
+    Ships safe: if the spec yaml is absent, prints guidance and returns 1 without side effects.
+    """
+    import subprocess
+
+    import yaml
+
+    script_dir = Path(__file__).resolve().parent
+    spec_path = script_dir / "bench_canonical.yaml"
+    if not spec_path.exists():
+        print(f"❌ Canonical spec not found: {spec_path}")
+        print("   Create benchmarks/bench_canonical.yaml (see TUTORIAL §5.9), then retry.")
+        return 1
+
+    spec = yaml.safe_load(spec_path.read_text()) or {}
+    runs = spec.get("runs", []) or []
+    default_model = spec.get("model")
+
+    if args.canonical_id is not None:
+        runs = [r for r in runs if str(r.get("id")) == str(args.canonical_id)]
+        if not runs:
+            print(f"❌ No canonical run with id={args.canonical_id!r} in {spec_path.name}")
+            return 1
+
+    if not runs:
+        print(f"❌ No runs defined in {spec_path.name}")
+        return 1
+
+    print(f"\033[1m[ais_bench --canonical — {len(runs)} run(s) → benchmarks/<corpus>/reports/]\033[0m")
+
+    failures = 0
+    for r in runs:
+        rid = r.get("id", "?")
+        corpus = r.get("corpus")
+        if not corpus:
+            print(f"  ❌ run {rid}: missing 'corpus' — skipped")
+            failures += 1
+            continue
+        model = r.get("model", default_model)
+
+        # Build the single-run argv — reuses the full single-run path verbatim.
+        argv = [sys.executable, str(Path(__file__).resolve()), "--corpus", str(corpus)]
+        if model:
+            argv += ["--model", str(model)]
+        if r.get("top_k") is not None:
+            argv += ["--top-k", str(r["top_k"])]
+        if r.get("questions"):
+            argv += ["--questions", str(r["questions"])]
+        if r.get("scope"):
+            argv += ["--scope", str(r["scope"])]
+        if r.get("alpha") is not None:
+            argv += ["--alpha", str(r["alpha"])]
+        if r.get("min_score") is not None:
+            argv += ["--min-score", str(r["min_score"])]
+
+        print(f"\n\033[1m──► canonical {rid}: {r.get('label', corpus)}\033[0m")
+        print("    " + " ".join(argv[2:]))
+        result = subprocess.run(argv)  # inherits env (PYTHONPATH/venv) + streams output
+        if result.returncode != 0:
+            print(f"  ❌ run {rid} failed (exit {result.returncode})")
+            failures += 1
+            continue
+        print(f"  ✅ {rid} done → benchmarks/{corpus}/reports/")
+
+    ok = len(runs) - failures
+    mark = "✅" if failures == 0 else "⚠"
+    print(f"\n{mark} canonical: {ok}/{len(runs)} run(s) ok → benchmarks/<corpus>/reports/")
+    return 1 if failures else 0
+
+
 def main() -> None:
     args = parse_args()
     print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
+
+    # AIStudio_931 — canonical mode short-circuits the single-run path.
+    if getattr(args, "canonical", False):
+        raise SystemExit(run_canonical(args))
 
     # ── Scope (AIStudio_882): load + validate the firm-universe up front ─────────
     # --scope names a firm subset; the resolver hard-errors on a missing named scope
@@ -1059,14 +1177,22 @@ def main() -> None:
     _model_slug = _model_raw.replace(":", "-").replace("/", "-")[:20]
 
     # Build filter suffix for filename so scope/lang/ablation runs are distinguishable
+    # Descriptor ordering: LEAST-VOLATILE FIRST (Naming STD §2). Fields that rarely
+    # change for a corpus lead; the dial you sweep most (top_k) sits last, just before
+    # the timestamp. Order: questions → scope → question sub-selectors → ablations → top_k.
     filter_parts = []
+    # questions: the named set/stem (the default set is unlabelled, so a baseline run
+    # stays clean and a non-default set self-identifies in the filename).
+    if args.questions and "/" not in str(args.questions) and "\\" not in str(args.questions):
+        _q_stem = str(args.questions).strip().lower().replace(" ", "_")[:24]
+        filter_parts.append(_q_stem)
+    if args.scope:
+        filter_parts.append(args.scope)
     if args.topics:
         first_topic = args.topics.split(",")[0].strip().lower().replace(" ", "_").replace("&", "and")[:20]
         filter_parts.append(f"topics_{first_topic}")
     if args.question_ids:
         filter_parts.append("qids")
-    if args.scope:
-        filter_parts.append(args.scope)
     if args.lang_questions:
         filter_parts.append("langq_" + "_".join(sorted(args.lang_questions)))
     # Ablation markers — keep entity/keyword-ablated runs distinguishable in report names
@@ -1074,9 +1200,14 @@ def main() -> None:
         filter_parts.append(f"ef-{args.entity_filter_mode}")
     if args.keywords == "off":
         filter_parts.append("kwoff")
+    # Top-K descriptor (Naming STD §14: fields that describe the report). Most-swept dial
+    # → last before the timestamp. Makes runs differing only by K distinguishable.
+    filter_parts.append(f"top_k{args.top_k}")
     filter_suffix = ("_" + "_".join(filter_parts)) if filter_parts else ""
 
-    base_name = f"benchmark_{args.corpus}_{_model_slug}_{timestamp}{filter_suffix}"
+    # Naming STD §2: datetime is ALWAYS the last field, after all descriptors.
+    # base_name = benchmark_{corpus}_{model}_{descriptors}_{timestamp}
+    base_name = f"benchmark_{args.corpus}_{_model_slug}{filter_suffix}_{timestamp}"
     output_path = reports_dir / f"{base_name}.json"
     questions_path = args.questions
 

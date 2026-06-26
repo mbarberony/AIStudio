@@ -1,22 +1,1070 @@
 # sec_10k_corpus_metadata.yaml
-avg_seconds_per_file: 0.0
-content_summary: 'Filings from major financial services firms: bulge-bracket banks (Goldman Sachs, JPMorgan Chase, Morgan Stanley, Bank of America, Citigroup), asset managers (T. Rowe Price, Franklin Templeton, Invesco), exchanges (CME Group, ICE, Nasdaq, CBOE), insurance (AIG, MetLife, Prudential, Travelers), custody (State Street, Northern Trust), and boutiques (Jefferies, Raymond James).'
+avg_seconds_per_file: 27.78
+content_summary: 'Filings from major financial services firms: bulge-bracket banks
+  (Goldman Sachs, JPMorgan Chase, Morgan Stanley, Bank of America, Citigroup), asset
+  managers (T. Rowe Price, Franklin Templeton, Invesco), exchanges (CME Group, ICE,
+  Nasdaq, CBOE), insurance (AIG, MetLife, Prudential, Travelers), custody (State Street,
+  Northern Trust), and boutiques (Jefferies, Raymond James).'
 corpus_name: sec_10k
 default_hybrid_alpha: 0.5
 default_min_score: 0.5
 default_temperature: 0.3
 default_top_k: 10
 deleted_files: {}
-description: 'Annual report (10-K) filings from major financial services firms covering financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024, 2025. Downloaded from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and custody banks.'
+description: 'Annual report (10-K) filings from major financial services firms covering
+  financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024, 2025. Downloaded
+  from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and custody
+  banks.'
 file_count_after_change: 0
-files: {}
-ingest_duration_seconds: 0.0
+files:
+  AIG_10K_2022-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 26182808
+    chunks: 1744
+    duration_sec: 41.419
+    ingested_at: '2026-06-24T17:31:45+00:00'
+    normalizer_entity: American International Group, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  AIG_10K_2023-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 18010113
+    chunks: 1546
+    duration_sec: 37.395
+    ingested_at: '2026-06-24T17:32:22+00:00'
+    normalizer_entity: American International Group, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  AIG_10K_2024-02-14.htm:
+    file_type: SEC XBRL
+    size_bytes: 16430658
+    chunks: 1692
+    duration_sec: 42.117
+    ingested_at: '2026-06-24T17:33:04+00:00'
+    normalizer_entity: American International Group, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  AIG_10K_2025-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 12307024
+    chunks: 1210
+    duration_sec: 29.804
+    ingested_at: '2026-06-24T17:33:34+00:00'
+    normalizer_entity: American International Group, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  AIG_10K_2026-02-12.htm:
+    file_type: SEC XBRL
+    size_bytes: 9811602
+    chunks: 1027
+    duration_sec: 25.844
+    ingested_at: '2026-06-24T17:34:00+00:00'
+    normalizer_entity: American International Group, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Bank_of_America_10K_2022-02-22.htm:
+    file_type: SEC XBRL
+    size_bytes: 16049671
+    chunks: 1329
+    duration_sec: 32.9
+    ingested_at: '2026-06-24T17:34:33+00:00'
+    normalizer_entity: Bank of America Corporation
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Bank_of_America_10K_2023-02-22.htm:
+    file_type: SEC XBRL
+    size_bytes: 16266085
+    chunks: 1319
+    duration_sec: 31.561
+    ingested_at: '2026-06-24T17:35:04+00:00'
+    normalizer_entity: Bank of America Corporation
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Bank_of_America_10K_2024-02-20.htm:
+    file_type: SEC XBRL
+    size_bytes: 12861659
+    chunks: 1327
+    duration_sec: 31.9
+    ingested_at: '2026-06-24T17:35:36+00:00'
+    normalizer_entity: Bank of America Corporation
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Bank_of_America_10K_2025-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 12899522
+    chunks: 1309
+    duration_sec: 32.987
+    ingested_at: '2026-06-24T17:36:09+00:00'
+    normalizer_entity: Bank of America Corporation
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Bank_of_America_10K_2026-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 12819060
+    chunks: 1302
+    duration_sec: 32.862
+    ingested_at: '2026-06-24T17:36:42+00:00'
+    normalizer_entity: Bank of America Corporation
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  BlackRock,_Inc._10K_2025-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 11025801
+    chunks: 715
+    duration_sec: 21.424
+    ingested_at: '2026-06-24T17:37:03+00:00'
+    normalizer_entity: BlackRock, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  BlackRock,_Inc._10K_2026-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 12551314
+    chunks: 747
+    duration_sec: 22.74
+    ingested_at: '2026-06-24T17:37:26+00:00'
+    normalizer_entity: BlackRock, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  CME_Group_10K_2022-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 2990453
+    chunks: 399
+    duration_sec: 11.519
+    ingested_at: '2026-06-24T17:37:38+00:00'
+    normalizer_entity: CME GROUP INC.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  CME_Group_10K_2023-02-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 2931654
+    chunks: 395
+    duration_sec: 11.74
+    ingested_at: '2026-06-24T17:37:49+00:00'
+    normalizer_entity: CME GROUP INC.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  CME_Group_10K_2024-02-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 2258101
+    chunks: 397
+    duration_sec: 11.557
+    ingested_at: '2026-06-24T17:38:01+00:00'
+    normalizer_entity: CME GROUP INC.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  CME_Group_10K_2025-02-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 2195872
+    chunks: 404
+    duration_sec: 11.552
+    ingested_at: '2026-06-24T17:38:13+00:00'
+    normalizer_entity: CME GROUP INC.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  CME_Group_10K_2026-02-26.htm:
+    file_type: SEC XBRL
+    size_bytes: 2510862
+    chunks: 449
+    duration_sec: 13.336
+    ingested_at: '2026-06-24T17:38:26+00:00'
+    normalizer_entity: CME GROUP INC.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Cboe_Global_Markets_10K_2022-02-18.htm:
+    file_type: SEC XBRL
+    size_bytes: 6470799
+    chunks: 646
+    duration_sec: 21.704
+    ingested_at: '2026-06-24T17:38:48+00:00'
+    normalizer_entity: Cboe Global Markets, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Cboe_Global_Markets_10K_2023-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 7205944
+    chunks: 726
+    duration_sec: 21.552
+    ingested_at: '2026-06-24T17:39:09+00:00'
+    normalizer_entity: Cboe Global Markets, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Cboe_Global_Markets_10K_2024-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 7423036
+    chunks: 768
+    duration_sec: 22.115
+    ingested_at: '2026-06-24T17:39:31+00:00'
+    normalizer_entity: Cboe Global Markets, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Cboe_Global_Markets_10K_2025-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 3961678
+    chunks: 711
+    duration_sec: 20.394
+    ingested_at: '2026-06-24T17:39:52+00:00'
+    normalizer_entity: Cboe Global Markets, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Cboe_Global_Markets_10K_2026-02-20.htm:
+    file_type: SEC XBRL
+    size_bytes: 4107643
+    chunks: 684
+    duration_sec: 19.674
+    ingested_at: '2026-06-24T17:40:11+00:00'
+    normalizer_entity: Cboe Global Markets, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Citigroup_10K_2022-02-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 21446797
+    chunks: 1724
+    duration_sec: 57.882
+    ingested_at: '2026-06-24T17:41:09+00:00'
+    normalizer_entity: Citigroup Inc
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Citigroup_10K_2023-02-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 21965110
+    chunks: 1746
+    duration_sec: 56.577
+    ingested_at: '2026-06-24T17:42:06+00:00'
+    normalizer_entity: Citigroup Inc
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Citigroup_10K_2024-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 16271620
+    chunks: 1732
+    duration_sec: 52.672
+    ingested_at: '2026-06-24T17:42:59+00:00'
+    normalizer_entity: Citigroup Inc
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Citigroup_10K_2025-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 16686353
+    chunks: 1744
+    duration_sec: 225.712
+    ingested_at: '2026-06-24T17:46:44+00:00'
+    normalizer_entity: Citigroup Inc
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Citigroup_10K_2026-02-20.htm:
+    file_type: SEC XBRL
+    size_bytes: 16150764
+    chunks: 1642
+    duration_sec: 52.371
+    ingested_at: '2026-06-24T17:47:37+00:00'
+    normalizer_entity: Citigroup Inc
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Franklin_Templeton_10K_2021-11-19.htm:
+    file_type: SEC XBRL
+    size_bytes: 4027979
+    chunks: 449
+    duration_sec: 12.961
+    ingested_at: '2026-06-24T17:47:50+00:00'
+    normalizer_entity: FRANKLIN RESOURCES, INC.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Franklin_Templeton_10K_2022-11-14.htm:
+    file_type: SEC XBRL
+    size_bytes: 3684616
+    chunks: 425
+    duration_sec: 13.177
+    ingested_at: '2026-06-24T17:48:03+00:00'
+    normalizer_entity: FRANKLIN RESOURCES, INC.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Franklin_Templeton_10K_2023-11-14.htm:
+    file_type: SEC XBRL
+    size_bytes: 2935571
+    chunks: 418
+    duration_sec: 13.747
+    ingested_at: '2026-06-24T17:48:17+00:00'
+    normalizer_entity: FRANKLIN RESOURCES, INC.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Franklin_Templeton_10K_2024-11-12.htm:
+    file_type: SEC XBRL
+    size_bytes: 2986156
+    chunks: 438
+    duration_sec: 12.905
+    ingested_at: '2026-06-24T17:48:29+00:00'
+    normalizer_entity: FRANKLIN RESOURCES, INC.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Franklin_Templeton_10K_2025-11-10.htm:
+    file_type: SEC XBRL
+    size_bytes: 2802766
+    chunks: 427
+    duration_sec: 12.59
+    ingested_at: '2026-06-24T17:48:42+00:00'
+    normalizer_entity: FRANKLIN RESOURCES, INC.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Goldman_Sachs_10K_2022-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 13257143
+    chunks: 1268
+    duration_sec: 45.007
+    ingested_at: '2026-06-24T17:49:27+00:00'
+    normalizer_entity: The Goldman Sachs Group, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Goldman_Sachs_10K_2023-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 12826567
+    chunks: 1256
+    duration_sec: 47.496
+    ingested_at: '2026-06-24T17:50:15+00:00'
+    normalizer_entity: The Goldman Sachs Group, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Goldman_Sachs_10K_2024-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 10095489
+    chunks: 1272
+    duration_sec: 43.911
+    ingested_at: '2026-06-24T17:50:58+00:00'
+    normalizer_entity: The Goldman Sachs Group, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Goldman_Sachs_10K_2025-02-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 10084107
+    chunks: 1265
+    duration_sec: 36.266
+    ingested_at: '2026-06-24T17:51:35+00:00'
+    normalizer_entity: The Goldman Sachs Group, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Goldman_Sachs_10K_2026-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 9611165
+    chunks: 1250
+    duration_sec: 31.194
+    ingested_at: '2026-06-24T17:52:06+00:00'
+    normalizer_entity: The Goldman Sachs Group, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Intercontinental_Exchange_10K_2022-02-03.htm:
+    file_type: SEC XBRL
+    size_bytes: 5230839
+    chunks: 702
+    duration_sec: 16.949
+    ingested_at: '2026-06-24T17:52:23+00:00'
+    normalizer_entity: INTERCONTINENTAL EXCHANGE, INC.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Intercontinental_Exchange_10K_2023-02-02.htm:
+    file_type: SEC XBRL
+    size_bytes: 5258177
+    chunks: 722
+    duration_sec: 17.114
+    ingested_at: '2026-06-24T17:52:40+00:00'
+    normalizer_entity: INTERCONTINENTAL EXCHANGE, INC.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Intercontinental_Exchange_10K_2024-02-08.htm:
+    file_type: SEC XBRL
+    size_bytes: 4270867
+    chunks: 746
+    duration_sec: 18.0
+    ingested_at: '2026-06-24T17:52:58+00:00'
+    normalizer_entity: INTERCONTINENTAL EXCHANGE, INC.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Intercontinental_Exchange_10K_2025-02-06.htm:
+    file_type: SEC XBRL
+    size_bytes: 4125591
+    chunks: 729
+    duration_sec: 16.575
+    ingested_at: '2026-06-24T17:53:15+00:00'
+    normalizer_entity: INTERCONTINENTAL EXCHANGE, INC.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Intercontinental_Exchange_10K_2026-02-05.htm:
+    file_type: SEC XBRL
+    size_bytes: 4120442
+    chunks: 730
+    duration_sec: 17.359
+    ingested_at: '2026-06-24T17:53:32+00:00'
+    normalizer_entity: INTERCONTINENTAL EXCHANGE, INC.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Invesco_10K_2022-02-18.htm:
+    file_type: SEC XBRL
+    size_bytes: 4318197
+    chunks: 540
+    duration_sec: 13.213
+    ingested_at: '2026-06-24T17:53:45+00:00'
+    normalizer_entity: Invesco Ltd.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Invesco_10K_2023-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 4153409
+    chunks: 486
+    duration_sec: 12.09
+    ingested_at: '2026-06-24T17:53:57+00:00'
+    normalizer_entity: Invesco Ltd.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Invesco_10K_2024-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 3972055
+    chunks: 514
+    duration_sec: 12.913
+    ingested_at: '2026-06-24T17:54:10+00:00'
+    normalizer_entity: Invesco Ltd.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Invesco_10K_2025-02-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 3601721
+    chunks: 478
+    duration_sec: 12.07
+    ingested_at: '2026-06-24T17:54:22+00:00'
+    normalizer_entity: Invesco Ltd.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Invesco_10K_2026-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 3151037
+    chunks: 468
+    duration_sec: 11.745
+    ingested_at: '2026-06-24T17:54:34+00:00'
+    normalizer_entity: Invesco Ltd.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  JPMorgan_Chase_10K_2022-02-22.htm:
+    file_type: SEC XBRL
+    size_bytes: 16005771
+    chunks: 1546
+    duration_sec: 38.651
+    ingested_at: '2026-06-24T17:55:13+00:00'
+    normalizer_entity: JPMorgan Chase & Co
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  JPMorgan_Chase_10K_2023-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 15882897
+    chunks: 1547
+    duration_sec: 38.685
+    ingested_at: '2026-06-24T17:55:51+00:00'
+    normalizer_entity: JPMorgan Chase & Co
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  JPMorgan_Chase_10K_2024-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 13211658
+    chunks: 1635
+    duration_sec: 40.846
+    ingested_at: '2026-06-24T17:56:32+00:00'
+    normalizer_entity: JPMorgan Chase & Co
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  JPMorgan_Chase_10K_2025-02-14.htm:
+    file_type: SEC XBRL
+    size_bytes: 12849180
+    chunks: 1607
+    duration_sec: 40.336
+    ingested_at: '2026-06-24T17:57:13+00:00'
+    normalizer_entity: JPMorgan Chase & Co
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  JPMorgan_Chase_10K_2026-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 12927325
+    chunks: 1572
+    duration_sec: 39.896
+    ingested_at: '2026-06-24T17:57:52+00:00'
+    normalizer_entity: JPMorgan Chase & Co
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Jefferies_10K_2022-01-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 8347195
+    chunks: 852
+    duration_sec: 21.381
+    ingested_at: '2026-06-24T17:58:14+00:00'
+    normalizer_entity: JEFFERIES FINANCIAL GROUP INC.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Jefferies_10K_2023-01-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 7722495
+    chunks: 758
+    duration_sec: 18.863
+    ingested_at: '2026-06-24T17:58:33+00:00'
+    normalizer_entity: JEFFERIES FINANCIAL GROUP INC.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Jefferies_10K_2024-01-26.htm:
+    file_type: SEC XBRL
+    size_bytes: 5933680
+    chunks: 740
+    duration_sec: 18.07
+    ingested_at: '2026-06-24T17:58:51+00:00'
+    normalizer_entity: JEFFERIES FINANCIAL GROUP INC.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Jefferies_10K_2025-01-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 15816627
+    chunks: 915
+    duration_sec: 27.765
+    ingested_at: '2026-06-24T17:59:19+00:00'
+    normalizer_entity: Jefferies Financial Group Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Jefferies_10K_2026-01-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 14181355
+    chunks: 907
+    duration_sec: 27.811
+    ingested_at: '2026-06-24T17:59:46+00:00'
+    normalizer_entity: Jefferies Financial Group Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  MetLife_10K_2022-02-18.htm:
+    file_type: SEC XBRL
+    size_bytes: 15534556
+    chunks: 1490
+    duration_sec: 36.368
+    ingested_at: '2026-06-24T18:00:23+00:00'
+    normalizer_entity: MetLife, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  MetLife_10K_2023-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 15270559
+    chunks: 1462
+    duration_sec: 35.431
+    ingested_at: '2026-06-24T18:00:58+00:00'
+    normalizer_entity: MetLife, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  MetLife_10K_2024-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 15501729
+    chunks: 1590
+    duration_sec: 40.046
+    ingested_at: '2026-06-24T18:01:38+00:00'
+    normalizer_entity: MetLife, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  MetLife_10K_2025-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 13846079
+    chunks: 1443
+    duration_sec: 36.361
+    ingested_at: '2026-06-24T18:02:15+00:00'
+    normalizer_entity: MetLife, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  MetLife_10K_2026-02-19.htm:
+    file_type: SEC XBRL
+    size_bytes: 13958657
+    chunks: 1483
+    duration_sec: 37.186
+    ingested_at: '2026-06-24T18:02:52+00:00'
+    normalizer_entity: MetLife, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Morgan_Stanley_10K_2022-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 12005331
+    chunks: 936
+    duration_sec: 23.658
+    ingested_at: '2026-06-24T18:03:15+00:00'
+    normalizer_entity: MORGAN STANLEY
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Morgan_Stanley_10K_2023-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 12034542
+    chunks: 937
+    duration_sec: 24.024
+    ingested_at: '2026-06-24T18:03:39+00:00'
+    normalizer_entity: MORGAN STANLEY
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Morgan_Stanley_10K_2024-02-22.htm:
+    file_type: SEC XBRL
+    size_bytes: 9664493
+    chunks: 948
+    duration_sec: 24.101
+    ingested_at: '2026-06-24T18:04:04+00:00'
+    normalizer_entity: MORGAN STANLEY
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Morgan_Stanley_10K_2025-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 9788390
+    chunks: 953
+    duration_sec: 23.927
+    ingested_at: '2026-06-24T18:04:27+00:00'
+    normalizer_entity: MORGAN STANLEY
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Morgan_Stanley_10K_2026-02-19.htm:
+    file_type: SEC XBRL
+    size_bytes: 9714712
+    chunks: 953
+    duration_sec: 24.303
+    ingested_at: '2026-06-24T18:04:52+00:00'
+    normalizer_entity: MORGAN STANLEY
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Nasdaq_10K_2022-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 4004705
+    chunks: 568
+    duration_sec: 13.577
+    ingested_at: '2026-06-24T18:05:05+00:00'
+    normalizer_entity: Nasdaq, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Nasdaq_10K_2023-02-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 4006937
+    chunks: 565
+    duration_sec: 13.428
+    ingested_at: '2026-06-24T18:05:19+00:00'
+    normalizer_entity: Nasdaq, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Nasdaq_10K_2024-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 3293453
+    chunks: 574
+    duration_sec: 14.064
+    ingested_at: '2026-06-24T18:05:33+00:00'
+    normalizer_entity: Nasdaq, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Nasdaq_10K_2025-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 3204350
+    chunks: 561
+    duration_sec: 13.585
+    ingested_at: '2026-06-24T18:05:46+00:00'
+    normalizer_entity: Nasdaq, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Nasdaq_10K_2026-02-12.htm:
+    file_type: SEC XBRL
+    size_bytes: 9611494
+    chunks: 589
+    duration_sec: 15.31
+    ingested_at: '2026-06-24T18:06:02+00:00'
+    normalizer_entity: Nasdaq, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Northern_Trust_10K_2022-02-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 9792150
+    chunks: 960
+    duration_sec: 23.786
+    ingested_at: '2026-06-24T18:06:26+00:00'
+    normalizer_entity: NORTHERN TRUST CORPORATION
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Northern_Trust_10K_2023-02-28.htm:
+    file_type: SEC XBRL
+    size_bytes: 9768656
+    chunks: 982
+    duration_sec: 24.498
+    ingested_at: '2026-06-24T18:06:50+00:00'
+    normalizer_entity: NORTHERN TRUST CORPORATION
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Northern_Trust_10K_2024-02-27.htm:
+    file_type: SEC XBRL
+    size_bytes: 7673532
+    chunks: 991
+    duration_sec: 24.148
+    ingested_at: '2026-06-24T18:07:14+00:00'
+    normalizer_entity: NORTHERN TRUST CORPORATION
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Northern_Trust_10K_2025-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 7625525
+    chunks: 982
+    duration_sec: 24.748
+    ingested_at: '2026-06-24T18:07:39+00:00'
+    normalizer_entity: NORTHERN TRUST CORPORATION
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Northern_Trust_10K_2026-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 7502785
+    chunks: 971
+    duration_sec: 23.029
+    ingested_at: '2026-06-24T18:08:02+00:00'
+    normalizer_entity: NORTHERN TRUST CORPORATION
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Prudential_Financial_10K_2022-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 16281044
+    chunks: 1733
+    duration_sec: 41.952
+    ingested_at: '2026-06-24T18:08:44+00:00'
+    normalizer_entity: Prudential Financial, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Prudential_Financial_10K_2023-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 16483496
+    chunks: 1712
+    duration_sec: 40.141
+    ingested_at: '2026-06-24T18:09:24+00:00'
+    normalizer_entity: Prudential Financial, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Prudential_Financial_10K_2024-02-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 16755446
+    chunks: 1968
+    duration_sec: 48.339
+    ingested_at: '2026-06-24T18:10:12+00:00'
+    normalizer_entity: Prudential Financial, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Prudential_Financial_10K_2025-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 15496286
+    chunks: 1845
+    duration_sec: 45.12
+    ingested_at: '2026-06-24T18:10:58+00:00'
+    normalizer_entity: Prudential Financial, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Prudential_Financial_10K_2026-02-12.htm:
+    file_type: SEC XBRL
+    size_bytes: 14934941
+    chunks: 1705
+    duration_sec: 42.94
+    ingested_at: '2026-06-24T18:11:40+00:00'
+    normalizer_entity: Prudential Financial, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Raymond_James_10K_2021-11-23.htm:
+    file_type: SEC XBRL
+    size_bytes: 7603355
+    chunks: 771
+    duration_sec: 18.349
+    ingested_at: '2026-06-24T18:11:59+00:00'
+    normalizer_entity: RAYMOND JAMES FINANCIAL, INC.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Raymond_James_10K_2022-11-22.htm:
+    file_type: SEC XBRL
+    size_bytes: 8607283
+    chunks: 830
+    duration_sec: 20.559
+    ingested_at: '2026-06-24T18:12:19+00:00'
+    normalizer_entity: RAYMOND JAMES FINANCIAL, INC.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Raymond_James_10K_2023-11-21.htm:
+    file_type: SEC XBRL
+    size_bytes: 7142063
+    chunks: 836
+    duration_sec: 20.173
+    ingested_at: '2026-06-24T18:12:40+00:00'
+    normalizer_entity: RAYMOND JAMES FINANCIAL, INC.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Raymond_James_10K_2024-11-26.htm:
+    file_type: SEC XBRL
+    size_bytes: 7025965
+    chunks: 851
+    duration_sec: 20.82
+    ingested_at: '2026-06-24T18:13:00+00:00'
+    normalizer_entity: RAYMOND JAMES FINANCIAL, INC.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Raymond_James_10K_2025-11-25.htm:
+    file_type: SEC XBRL
+    size_bytes: 6917799
+    chunks: 828
+    duration_sec: 20.316
+    ingested_at: '2026-06-24T18:13:21+00:00'
+    normalizer_entity: RAYMOND JAMES FINANCIAL, INC.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  State_Street_10K_2022-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 9854781
+    chunks: 1114
+    duration_sec: 26.608
+    ingested_at: '2026-06-24T18:13:47+00:00'
+    normalizer_entity: STATE STREET CORPORATION
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  State_Street_10K_2023-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 9782265
+    chunks: 1105
+    duration_sec: 26.461
+    ingested_at: '2026-06-24T18:14:14+00:00'
+    normalizer_entity: STATE STREET CORPORATION
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  State_Street_10K_2024-02-15.htm:
+    file_type: SEC XBRL
+    size_bytes: 7944638
+    chunks: 1109
+    duration_sec: 26.714
+    ingested_at: '2026-06-24T18:14:41+00:00'
+    normalizer_entity: STATE STREET CORPORATION
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  State_Street_10K_2025-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 7985617
+    chunks: 1087
+    duration_sec: 26.247
+    ingested_at: '2026-06-24T18:15:07+00:00'
+    normalizer_entity: STATE STREET CORPORATION
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  State_Street_10K_2026-02-19.htm:
+    file_type: SEC XBRL
+    size_bytes: 7694408
+    chunks: 1044
+    duration_sec: 25.204
+    ingested_at: '2026-06-24T18:15:32+00:00'
+    normalizer_entity: STATE STREET CORPORATION
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  T_Rowe_Price_10K_2022-02-24.htm:
+    file_type: SEC XBRL
+    size_bytes: 3368432
+    chunks: 424
+    duration_sec: 10.225
+    ingested_at: '2026-06-24T18:15:42+00:00'
+    normalizer_entity: PRICE T ROWE GROUP INC
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  T_Rowe_Price_10K_2023-02-15.htm:
+    file_type: SEC XBRL
+    size_bytes: 3684948
+    chunks: 448
+    duration_sec: 10.809
+    ingested_at: '2026-06-24T18:15:53+00:00'
+    normalizer_entity: PRICE T ROWE GROUP INC
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  T_Rowe_Price_10K_2024-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 2785932
+    chunks: 425
+    duration_sec: 10.452
+    ingested_at: '2026-06-24T18:16:03+00:00'
+    normalizer_entity: PRICE T ROWE GROUP INC
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  T_Rowe_Price_10K_2025-02-14.htm:
+    file_type: SEC XBRL
+    size_bytes: 2781377
+    chunks: 438
+    duration_sec: 10.822
+    ingested_at: '2026-06-24T18:16:14+00:00'
+    normalizer_entity: PRICE T ROWE GROUP INC
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  T_Rowe_Price_10K_2026-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 2783131
+    chunks: 439
+    duration_sec: 10.78
+    ingested_at: '2026-06-24T18:16:25+00:00'
+    normalizer_entity: PRICE T ROWE GROUP INC
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Travelers_10K_2022-02-17.htm:
+    file_type: SEC XBRL
+    size_bytes: 8674075
+    chunks: 924
+    duration_sec: 22.569
+    ingested_at: '2026-06-24T18:16:48+00:00'
+    normalizer_entity: Travelers Companies, Inc.
+    normalizer_year: '2021'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Travelers_10K_2023-02-16.htm:
+    file_type: SEC XBRL
+    size_bytes: 8692556
+    chunks: 923
+    duration_sec: 22.063
+    ingested_at: '2026-06-24T18:17:10+00:00'
+    normalizer_entity: Travelers Companies, Inc.
+    normalizer_year: '2022'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Travelers_10K_2024-02-15.htm:
+    file_type: SEC XBRL
+    size_bytes: 6968688
+    chunks: 929
+    duration_sec: 22.126
+    ingested_at: '2026-06-24T18:17:32+00:00'
+    normalizer_entity: Travelers Companies, Inc.
+    normalizer_year: '2023'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Travelers_10K_2025-02-13.htm:
+    file_type: SEC XBRL
+    size_bytes: 7010838
+    chunks: 943
+    duration_sec: 22.716
+    ingested_at: '2026-06-24T18:17:55+00:00'
+    normalizer_entity: Travelers Companies, Inc.
+    normalizer_year: '2024'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+  Travelers_10K_2026-02-12.htm:
+    file_type: SEC XBRL
+    size_bytes: 6901439
+    chunks: 941
+    duration_sec: 22.495
+    ingested_at: '2026-06-24T18:18:17+00:00'
+    normalizer_entity: Travelers Companies, Inc.
+    normalizer_year: '2025'
+    normalizer_source: tags [EntityRegistrantName, DocumentFiscalYearFocus]
+    normalizer_mismatch: false
+ingest_duration_seconds: 2833.9
 last_file_change: ''
 last_file_change_at: ''
-last_ingest_chunks: 0
-last_ingest_files: 0
-last_ingested_at: ''
-last_updated: ''
+last_ingest_chunks: 101406
+last_ingest_files: 102
+last_ingested_at: '2026-06-24T14:18:17'
+last_updated: '2026-06-24'
 schema_version: '1.0'
-search_guidance: "Annual report (10-K) filings from major financial services firms covering financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024, 2025. Downloaded from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges, and custody banks. \n\nRoute questions to the most relevant firm and filing year:\nTopic routing:\n- AI risk, AI governance, artificial intelligence regulation, EU AI Act → JPMorgan Chase, Bank of America, Citigroup, Goldman Sachs, Morgan Stanley. AI risk language appears primarily in FY2023-2026 filings — do NOT expect it in FY2021/2022 filings. If absent in early years, say so explicitly rather than saying \"no information.\"\n- Cybersecurity risk management, information security, CISO, cyberattack → JPMorgan Chase, Bank of America, Citigroup. Describe what each filing says; if comparing years, note what changed or stayed the same.\n- Model risk governance → Morgan Stanley, Goldman Sachs\n- Climate risk, ESG, Net Zero, transition risk → Bank of America, Citigroup\n- CET1, capital ratios, total revenues, financials → use entity_filter with firm names for precision. Financial data is in tables — cite the filing and year even if exact numbers are hard to extract.\n- Digital banking, technology investment, fintech → JPMorgan Chase, Bank of America, Citigroup\n- Regulatory capital, Basel III, GSIB surcharge → JPMorgan Chase, Citigroup\n\nWhen a question asks about evolution or changes over time: retrieve multiple years for the same firm and compare what the filings say. If a topic appears in later filings but not earlier ones, that IS the answer — state it explicitly.\n\nAnswer directly from what the sources contain. Never say \"no information\" if the sources contain related content — synthesize what IS there and note what is absent."
+search_guidance: "Annual report (10-K) filings from major financial services firms\
+  \ covering financial and business data for 5 fiscal years: 2021, 2022, 2023, 2024,\
+  \ 2025. Downloaded from SEC EDGAR. Covers bulge-bracket banks, asset managers, exchanges,\
+  \ and custody banks. \n\nRoute questions to the most relevant firm and filing year:\n\
+  Topic routing:\n- AI risk, AI governance, artificial intelligence regulation, EU\
+  \ AI Act → JPMorgan Chase, Bank of America, Citigroup, Goldman Sachs, Morgan Stanley.\
+  \ AI risk language appears primarily in FY2023-2026 filings — do NOT expect it in\
+  \ FY2021/2022 filings. If absent in early years, say so explicitly rather than saying\
+  \ \"no information.\"\n- Cybersecurity risk management, information security, CISO,\
+  \ cyberattack → JPMorgan Chase, Bank of America, Citigroup. Describe what each filing\
+  \ says; if comparing years, note what changed or stayed the same.\n- Model risk\
+  \ governance → Morgan Stanley, Goldman Sachs\n- Climate risk, ESG, Net Zero, transition\
+  \ risk → Bank of America, Citigroup\n- CET1, capital ratios, total revenues, financials\
+  \ → use entity_filter with firm names for precision. Financial data is in tables\
+  \ — cite the filing and year even if exact numbers are hard to extract.\n- Digital\
+  \ banking, technology investment, fintech → JPMorgan Chase, Bank of America, Citigroup\n\
+  - Regulatory capital, Basel III, GSIB surcharge → JPMorgan Chase, Citigroup\n\n\
+  When a question asks about evolution or changes over time: retrieve multiple years\
+  \ for the same firm and compare what the filings say. If a topic appears in later\
+  \ filings but not earlier ones, that IS the answer — state it explicitly.\n\nAnswer\
+  \ directly from what the sources contain. Never say \"no information\" if the sources\
+  \ contain related content — synthesize what IS there and note what is absent."
 short_description: SEC 10-K filings from major financial services firms

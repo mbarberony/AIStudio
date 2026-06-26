@@ -73,7 +73,7 @@ Same RAG pipeline, pointed at AIStudio's own docs. Try it before reaching for th
 ---
 
 ## Module 2 — At Scale: The SEC 10-K Corpus
-*Goal: Build a large corpus from scratch, give it the reference data it needs to retrieve well, and query it. ~45 minutes (30 min ingest).*
+*Goal: Build a large corpus from scratch, give it the reference data it needs to retrieve well, and query it. ~20 minutes (6 min ingest).*
 
 This module downloads a portfolio of SEC 10-K annual filings, ingests them, and queries them. It also introduces the part of AIStudio that makes retrieval at this scale work: **knowledge bases**. The corpus ships with a benchmark question set; running it and — more importantly — reading it correctly is **Module 5**.
 
@@ -165,7 +165,7 @@ With the entity KB built and AIStudio running:
 ais_ingest_sec_10k
 ```
 
-~30 minutes on an M4 MacBook Pro. This is where chunk enrichment happens — as each filing is chunked, AIStudio reads its iXBRL entity and year and prefixes every chunk with the `[Document: …]` label. The summary reports how many files were augmented and which entities it recognized, and closes with a `· File Ingested:` roster of every file written this run.
+~6 minutes on an M4 MacBook Pro. This is where chunk enrichment happens — as each filing is chunked, AIStudio reads its iXBRL entity and year and prefixes every chunk with the `[Document: …]` label. The summary reports how many files were augmented and which entities it recognized, and closes with a `· File Ingested:` roster of every file written this run.
 
 > Leave the terminal open; ingestion is CPU- and memory-intensive.
 
@@ -499,6 +499,8 @@ ais_bench --corpus sec_10k --questions June_2026 --top-k 10 # Run B
 ais_bench --corpus esef_banks --scope lang_en --top-k 5     # Run C
 ais_bench --corpus esef_banks --scope lang_en --top-k 10    # Run D
 ```
+
+> Run these four and read each report alongside the analysis below — the point of §5 is reading a run honestly, not the headline number.
 
 **Run A — the clean baseline.** Eight green. The audit moves two of them in opposite directions: the climate question failed only on a missing literal token ("Net Zero") while answering correctly — a grading artifact, *read up* — and one single-firm lookup (BlackRock's revenue) passed mechanically while describing another firm's business segments entirely — *read down*. The one red, a multi-year cyber comparison, returned a fluent answer with **zero citations**: the harness correctly failed it, because an ungrounded synthesis is exactly what you cannot trust. Objective lands near 8/9 once that temporal-synthesis ceiling is set aside — close to the mechanical 8, but a *different* eight, and that difference is the whole reason to audit. **Direction:** the wrong-segment lookup is the entity-grounding edge that the verify-the-chunk discipline (§5.6) and the entity-KB work keep tightening; on the larger synthesis model the same question grounds correctly, so model choice is the near-term lever.
 

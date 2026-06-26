@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-06-22*
+*Version: Beta | Updated: 2026-06-24*
 
 ---
 
@@ -60,7 +60,7 @@ If a command is not found, run `source ~/.zshrc` first.
 | `ais_stop` | Stop all services |
 | `ais_bench` | Run a benchmark on the demo corpus |
 | `ais_log` | Tail live AIStudio backend log — run in a separate tab after ais_start |
-| `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR to ~/Downloads/sec_10k/ (~2 GB) |
+| `ais_download_sec_10k` | Download SEC 10-K filings from EDGAR into the corpus (`data/corpora/sec_10k/uploads/`; ~900 MB for the full multi-year set) |
 | `ais_help` | Print this command reference |
 
 Every command supports `--help`:
@@ -144,35 +144,40 @@ mv ~/.Trash/AIStudio_<name>_<timestamp> ~/Developer/AIStudio/data/corpora/<name>
 ```
 Then re-upload the files via the UI (Add button) to restore the corpus in Qdrant.
 
+***What if the Trash folder is gone (emptied), or I deleted a built-in corpus like SEC 10-K or ESEF banks?***
+The built-in corpora (`sec_10k`, `esef_banks`, plus `demo` and `help`) keep their *recipe* files —
+the scope and configuration that define the corpus — in the AIStudio repository itself, so you can
+always get those back even if Trash is gone:
+```bash
+cd ~/Developer/AIStudio
+git checkout -- data/corpora/<name>/      # restores the corpus's scope + config files
+```
+That restores the **recipe** (what the corpus is). To rebuild the **data** (the filings and the
+searchable index), follow the corpus's normal build steps — for SEC 10-K / ESEF banks that's the
+download → ingest flow in **TUTORIAL Module 2 / 3**; for `demo` and `help` the files ship with the
+repo, so a `git checkout` of the folder plus a re-ingest is enough. (Operators: the full
+delete/restore runbook, including how to verify nothing is missing, is in HOWTO_OPS.)
+
 ***How do I ingest the SEC 10-K corpus?***
 
-The SEC 10-K corpus is a special case. AIStudio provides `ais_download_sec_10k` because
-the SEC EDGAR filing system uses a specific access protocol — this automates what
-would otherwise be a complex multi-step download. But the ingest step that follows
-is **identical to ingesting any corpus you bring yourself**. The download step is
-what's special.
+The SEC 10-K corpus is **not** a one-line recipe, and — unlike a corpus you bring
+yourself — the ingest does real corpus-specific work. The full walkthrough lives in
+**TUTORIAL Module 2**; here's the shape so you know what's involved:
 
-This is one of the few places in AIStudio where you'll run terminal commands
-directly. We expose it deliberately — understanding how large corpora are built
-is part of what makes AIStudio a learning tool, not just a product.
+1. **Download** — `ais_download_sec_10k` pulls the filings from SEC EDGAR directly
+   into the corpus (`data/corpora/sec_10k/uploads/`; ~900 MB for the full multi-year
+   set). EDGAR's access protocol is why this step is automated for you.
+2. **Entity knowledge base** — before ingest, the corpus is given a verified entity KB
+   (LEIs + aliases) so retrieval can bind each chunk to the right firm. (TUTORIAL §2.2.)
+3. **Glossary** — a Basel-vocabulary glossary for query-time term expansion. (TUTORIAL §2.3.)
+4. **Ingest** — this is where chunk **enrichment** happens: each iXBRL filing is read for
+   its entity and fiscal year, and every chunk is prefixed with `[Document: <entity>
+   FY<year>]`. That prefix is what lets a terse table row be attributed to the correct
+   firm and year, and it's exactly why this corpus is **not** "the same as ingesting any
+   corpus you bring yourself."
 
-**Step 1 — Download the filings to ~/Downloads/sec_10k/ (~5 min, ~2 GB):**
-```bash
-ais_download_sec_10k
-```
-
-**Step 2 — Ingest using the AIStudio UI:**
-
-Open AIStudio, create a new corpus named `sec_10k`, then upload the files
-from `~/Downloads/sec_10k/` using the **Upload** button. This is the same
-process as ingesting any corpus you build yourself — the download step is
-what's special.
-
-Allow ~30 minutes for ingestion to complete.
-
-> **Why ~/Downloads?** You own the downloaded files — ~2 GB of SEC filings
-> you may want to reuse, inspect, or build a different subset from.
-> They stay in `~/Downloads/sec_10k/` until you decide what to do with them.
+So the special part isn't only the download — it's the entity/year enrichment and the
+knowledge bases that go with it. See **TUTORIAL Module 2** for the step-by-step.
 
 ---
 
@@ -341,7 +346,7 @@ pip3 install weasyprint --break-system-packages
 ```
 It's already in `requirements.txt` but not installed by default. Once installed, subsequent runs generate `.pdf` reports alongside `.md` and `.json`. The `⚠ PDF skipped` message is printed when weasyprint is missing — `.md` and `.json` reports are always generated regardless.
 
-See `TUTORIAL.md §3.4` for a step-by-step walkthrough.
+See `TUTORIAL.md` Module 5 (§5.7) for a step-by-step walkthrough.
 
 ---
 

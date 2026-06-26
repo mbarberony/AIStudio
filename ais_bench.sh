@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.6.0
+# Version: 1.7.0
+# Changelog: 1.7.0 — AIStudio_931: +--canonical / --canonical-id passthrough to bench.py v2.7.0.
+#   Under --canonical the single-corpus Preflight is skipped (canonical manages its own corpora
+#   from benchmarks/bench_canonical.yaml); all other invocations unchanged.
 # Changelog: 1.6.0 — version bump to match bench.py v2.2.0: --augment-from REPLACED by
 #   --query-expansion N + --entity-filter {none,yaml,auto} (AIStudio_875). Passthrough via "$@".
 # Changelog: 1.5.0 — version bump to match bench.py v2.1.0 capability: --augment-from
@@ -14,7 +17,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.6.0"
+VERSION="1.7.0"
 
 SCRIPT_NAME="ais_bench"
 REPO="${0:A:h}"
@@ -40,6 +43,20 @@ _dim()  { printf '\033[2m\033[3m%s\033[0m' "$1"; }
 _sep()  { echo "$(_dim "--- $1")"; }
 
 printf '\033[1m[ais_bench v%s — Run AIStudio benchmark]\033[0m\n' "$VERSION"
+
+# ── Canonical mode (AIStudio_931): manages its own corpora/params from ─────────
+# benchmarks/bench_canonical.yaml. Skip the single-corpus preflight and hand
+# straight to bench.py, which orchestrates each run via the normal path.
+for _arg in "$@"; do
+    if [[ "$_arg" == "--canonical" ]]; then
+        _sep "Canonical"
+        echo "· Canonical mode — corpora & params from benchmarks/bench_canonical.yaml; per-run preflight skipped."
+        cd "$REPO"
+        source .venv/bin/activate
+        python3 benchmarks/bench.py "$@"
+        exit $?
+    fi
+done
 
 # ── Parse --corpus from args ───────────────────────────────────────────────────
 CORPUS="demo"
