@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
 # Version: 1.7.0
+# Changelog: 1.8.0 — recognize --batch (bench.py v2.8.x primary flag) for preflight-skip, alongside
+#   --canonical (now the deprecated alias). Batch/canonical runs manage their own corpora from
+#   benchmarks/batch/bench_canonical.yaml, so the single-corpus preflight does not apply to either.
 # Changelog: 1.7.0 — AIStudio_931: +--canonical / --canonical-id passthrough to bench.py v2.7.0.
 #   Under --canonical the single-corpus Preflight is skipped (canonical manages its own corpora
 #   from benchmarks/bench_canonical.yaml); all other invocations unchanged.
@@ -17,7 +20,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.7.0"
+VERSION="1.8.0"
 
 SCRIPT_NAME="ais_bench"
 REPO="${0:A:h}"
@@ -48,9 +51,9 @@ printf '\033[1m[ais_bench v%s — Run AIStudio benchmark]\033[0m\n' "$VERSION"
 # benchmarks/bench_canonical.yaml. Skip the single-corpus preflight and hand
 # straight to bench.py, which orchestrates each run via the normal path.
 for _arg in "$@"; do
-    if [[ "$_arg" == "--canonical" ]]; then
-        _sep "Canonical"
-        echo "· Canonical mode — corpora & params from benchmarks/bench_canonical.yaml; per-run preflight skipped."
+    if [[ "$_arg" == "--canonical" || "$_arg" == "--batch" ]]; then
+        _sep "Batch"
+        echo "· Batch mode — corpora & params from benchmarks/batch/bench_canonical.yaml; per-run preflight skipped."
         cd "$REPO"
         source .venv/bin/activate
         python3 benchmarks/bench.py "$@"
