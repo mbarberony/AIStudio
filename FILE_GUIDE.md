@@ -103,6 +103,8 @@ benchmarks/
     reports/
 ```
 
+> **Shipped evidence suite** — `benchmarks/docs/` holds the curated, user-facing benchmark suite: the four audited canonical reports (`BENCH - Canonical Run A–D - …`, .md + .pdf), the suite synthesis (`BENCH - Canonical Suite - README and Synthesis`), and `benchmarks/docs/reports/` (the raw `ais_bench` reports duplicated as provenance). This is what the top README points to as the evaluation evidence; reproduce it with `ais_bench --batch`. Distinct from the operator `BENCH - AIS - *` audit packages, which are governance artifacts under `meta/ais/bench/`.
+
 The default set is `<corpus>_questions.yaml`; a named alternate is selected by stem (`ais_bench --questions June_2026` → `sec_10k_June_2026_questions.yaml`). Reports are written per run into `reports/` under a standard timestamped name — `.md` to read, `.json` for tooling, `.pdf` to share.
 
 **Questions file format** — create `benchmarks/<name>/<name>_questions.yaml`:

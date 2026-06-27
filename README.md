@@ -20,7 +20,7 @@ AIStudio is what you use when you want to query your own documents with AI. It i
 
 **[Agentic AI in Financial Services: Some Reflections](data/corpora/demo/uploads/Barbero%20-%202026%20-%20Agentic%20AI%20in%20Financial%20Services.pdf)**
 
-This work is one aspect of the author's work in AI. It explores the transition from descriptive to generative to agentic AI, the practical constraints on autonomous systems today, and a framework for thinking about where AI adds durable value versus where human judgment remains irreplaceable. Written December 2025.
+This work is one aspect of the author's work in AI. It explores the transition from descriptive to generative to agentic AI, the practical constraints on autonomous systems today, and a framework for thinking about where AI adds durable value versus where human judgment remains irreplaceable. Written Q1 2026, updated Q2 2026.
 
 ---
 
@@ -44,15 +44,15 @@ A browser-based interface lets you manage document collections and query them co
 
 A reviewer who asks *"What is the relationship between business strategy and technology strategy?"* gets a grounded, cited answer from a 2006 FS Journal article — original work, not sample data. That is what makes the demo corpus distinctive.
 
-**AIStudio as its own corpus:** AIStudio's documentation — architecture decisions, benchmark methodology, retrieval guides — is available as a corpus in the standard interface. Asking *"What embedding model does AIStudio use?"* or *"How does the reranker work?"* returns cited answers from the actual codebase docs. The tool documents itself.
+**AIStudio as its own corpus:** AIStudio's documentation — architecture decisions, benchmark methodology, retrieval guides — is available as a corpus in the standard interface. Asking *"What embedding model does AIStudio use?"* or *"How does the reranker work?"* returns cited answers from the actual codebase docs. The tool documents itself. And the point of view is in the corpus too: the demo set ships *Barbero — 2026 — Agentic AI in Financial Services*, so a reviewer can ask AIStudio directly for its author's take on where AI is heading in the industry and get it back grounded and cited — the argument about AI, queried through the thing it argues for.
 
-**On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average) — **once both fit in unified memory.** That is the prerequisite the claim rests on: a 70B model needs roughly 64 GB of unified memory to stay resident, and on a RAM-constrained Mac it will swap to disk, where the latency wall returns. Within that envelope, model size stops being a latency variable. See [benchmarks/](benchmarks/) for the full benchmark harness.
+**On performance:** Warm `llama3.1:70b` and warm `llama3.1:8b` are statistically identical in query latency on Apple Silicon (~6–7s average) — **once both fit in unified memory.** That is the prerequisite the claim rests on: a 70B model needs roughly 64 GB of unified memory to stay resident, and on a RAM-constrained Mac it will swap to disk, where the latency wall returns. Within that envelope, model size stops being a latency variable. See [benchmarks/docs/](benchmarks/docs/) for the benchmark evidence suite and `BENCH_HARNESS` for the harness manual.
 
 The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corpus** to demonstrate how AIStudio can operate at scale — **exploring 100+ annual filings from 21 financial services firms** — 20 in the base download scope, plus BlackRock added during the tutorial (Goldman Sachs, JPMorgan Chase, Morgan Stanley, BlackRock, and others) — 100K+ chunks **from over 900 MB of source filings**, ingested in roughly half an hour at ~54 chunks/sec on an M4 MacBook Pro. Due to their size, **the files for this corpus are not shipped with the app but need to be downloaded from the SEC first (utilities are provided)**. More importantly, **ingesting and indexing this type of corpus provides a good opportunity to learn how to work with a large corpus**.
 
 **ESEF corpus — European banks, the harder cousin:** AIStudio also builds a second at-scale corpus from European banks' **ESEF** filings (retrieved from filings.xbrl.org by LEI — the same download → entities → glossary → ingest machinery as SEC, only the access key and endpoint change). The two corpora are deliberately complementary learning vehicles: together they surface the problems that actually bite in production — resolving the **many names one firm files under** (handled with a GLEIF/LEI entity knowledge base), **multilingual retrieval** (an English question against a filing that says *fonds propres de base de catégorie 1* rather than *Common Equity Tier 1* retrieves worse), and **pulling numbers out of dense, multi-column tables** without severing a cell from the year that gives it meaning. The [Tutorial](TUTORIAL.md) — Modules 2 and 3, plus Annexes 3 and 5 — walks through all of it end to end.
 
-**Models & benchmarking:** AIStudio runs **any Ollama model** — `gemma3`, `mistral`, `llama3.1`, and whatever else you pull; `gemma3:4b` is the out-of-the-box default, the rest are options, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [HARNESS.md](docs/HARNESS.md).
+**Models & benchmarking:** AIStudio runs **any Ollama model** — `gemma3`, `mistral`, `llama3.1`, and whatever else you pull; `gemma3:4b` is the out-of-the-box default, the rest are options, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [BENCH_HARNESS.md](benchmarks/docs/BENCH_HARNESS.md).
 
 ---
 
@@ -88,13 +88,13 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 - **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
 - **SEC 10-K synthesis** — ~58 s avg (gemma3:27b, multi-firm)
 - **Retrieval** — ~0.3–0.5 s even at 100K+ chunks
-- **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5) · SEC 10-K 10/10 mechanical, 9/10 audited (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
+- **Benchmark** — demo 14/14 (gemma3:27b, K=10) · 12/14 (llama3.1:8b, K=5) · SEC 10-K 10/10 mechanical, 9/10 calibrated (gemma3:27b) · 8/10 mechanical, 9/10 substantive (llama3.1:8b)
 
 ---
 
 ## Documentation
 
-AIStudio ships ~15 reference documents (about 80 pages). Start wherever fits what you're doing:
+AIStudio ships ~16 reference documents (about 80 pages), plus the benchmark evidence suite. Start wherever fits what you're doing:
 
 | Document | What it covers | Read it when… |
 |---|---|---|
@@ -103,13 +103,14 @@ AIStudio ships ~15 reference documents (about 80 pages). Start wherever fits wha
 | **QUICKSTART** | Install + first run in under 30 min | You're setting it up |
 | **HOWTO** | Corpora, upload, filters, query settings, troubleshooting | You're using it day to day |
 | **TUTORIAL** | Guided walkthroughs + SEC 10-K at-scale + benchmarking | You want to go deep |
-| **architecture_elements** | How the pieces fit + data flow (the mental model) | You want the "under the hood" picture |
+| **architecture_elements** | How the pieces fit + data flow (the mental model) — the doc to read if you want to *really* understand how chunks, retrieval, grounding, and benchmarking work | You want the "under the hood" picture |
 | **architecture_decisions** | Why Qdrant / CrossEncoder / chunking | You're weighing the technical choices |
 | **api_introduction** | The local HTTP API — retrieve vs ask, firm isolation | You're building an integration |
 | **CODEBASE_GUIDE** | Directory layout, files, the ingest/query pipeline | You're reading or extending the code |
 | **FILE_GUIDE** | Commands, files, services reference | You need to look up a command or file |
 | **DEMO_CORPUS** | What ships in the demo + suggested questions | You're exploring the demo |
-| **HARNESS** | Running benchmarks, CLI flags, reading reports | You're measuring quality |
+| **BENCH_HARNESS** | Running benchmarks — `ais_bench` flags, question format, reading a report (`benchmarks/docs/`) | You're measuring quality |
+| **BENCH — Canonical Suite** | The audited benchmark evidence — four runs across both corpora + synthesis (`benchmarks/docs/`) | You want the proof, not just the claim |
 | **QA_TESTING_LESSONS_LEARNED** | Install friction + QA findings | You hit a snag or want the honest record |
 | **dependencies** | Python + system dependency versions | You're troubleshooting the environment |
 | **PRODUCT_ROADMAP** | What works now and the direction beyond Beta | You want to know what's next |
@@ -255,7 +256,7 @@ Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
 - **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
-- **10/10 mechanical · 9/10 audited** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — the 9/10 substantive is consistent across both models. Precise table-cell extraction is the known frontier; see the audited walkthrough in TUTORIAL §5.9
+- **10/10 mechanical · 9/10 calibrated** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — consistent across both models. Precise table-cell extraction is the known frontier. The full audited evidence — four canonical runs across both corpora (US + European), each read mechanical-score-then-calibrated-audit — lives in [benchmarks/docs/](benchmarks/docs/) (start with the suite synthesis, `BENCH - Canonical Suite - README and Synthesis`); reproduce it with `ais_bench --batch`. How to read these is TUTORIAL §5.
 - **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 100K+ chunks — inference, not retrieval, is the bottleneck
@@ -278,7 +279,7 @@ Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
             ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
 Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b)
             demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5)
-Frontier:   precise table-cell extraction — see TUTORIAL §5.9 (audited)
+Frontier:   precise table-cell extraction — see TUTORIAL §5 (calibrated audit)
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 100K+ chunks
 ```

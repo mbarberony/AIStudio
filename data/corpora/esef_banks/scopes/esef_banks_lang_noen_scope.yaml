@@ -1,48 +1,114 @@
-# esef_banks non-EN scope (3 firms: BNP Paribas FR, Société Générale FR, UniCredit IT) — Annex 3 language ceiling.
-# bench: ais_bench --corpus esef_banks --scope lang_noen. Open/provenance schema; read-only.
+# esef_banks non-EN scope (7 firms) — bench: ais_bench --corpus esef_banks --scope lang_noen
+# Open/provenance schema (see _scope_common.py). Read-only subset of the full inventory.
+# Derived 2026-06-26 from the corrected esef_banks_full_scope.yaml. Entity records byte-identical to
+#   full_scope. Now 7 firms across 5 languages: Nordea sv, SEB sv, Erste de, KBC nl, BNP fr,
+#   Societe Generale fr (bilingual: US-subsidiary sections in EN), UniCredit it.
 schema_version: '2.0'
 kind: scope
 corpus: esef_banks
 entities:
-- label: BNP Paribas
+- label: Nordeakoncernen
   cik: ''
-  ticker: ''
-  lei: R0MUWSFPU8MPRO8K5P83
-  gleif_lei: R0MUWSFPU8MPRO8K5P83
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: 529900ODI3047E2LIV03
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
+  sec_xbrl_name: Nordeakoncernen
+  gleif_name: Nordea Bank Abp
+  gleif_lei: 529900ODI3047E2LIV03
+  expected_xbrl_name: Nordea Bank Abp
+  aliases: []
+  files:
+  - Nordeakoncernen_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
+  jurisdiction: FI
+  filing_language: sv
+- label: Skandinaviska Enskilda Banken AB (publ)
+  cik: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: F3JS33DEI6XQ4ZBPTN86
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Skandinaviska Enskilda Banken AB (publ)
+  gleif_name: Skandinaviska Enskilda Banken AB
+  gleif_lei: F3JS33DEI6XQ4ZBPTN86
+  expected_xbrl_name: Skandinaviska Enskilda Banken AB
+  aliases: []
+  files:
+  - "Skandinaviska_Enskilda_Banken_AB_(publ)_ESEF_2024.xhtml"
+  last_updated: '2026-06-25T14:12:59'
+  jurisdiction: SE
+  filing_language: sv
+- label: Erste Group BankAG
+  cik: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: PQOH26KWDF7CG10L6792
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Erste Group BankAG
+  gleif_name: ERSTE GROUP BANK AG
+  gleif_lei: PQOH26KWDF7CG10L6792
+  expected_xbrl_name: Erste Group Bank AG
+  aliases: []
+  files:
+  - Erste_Group_BankAG_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
+  jurisdiction: AT
+  filing_language: de
+- label: BNP PARIBAS
+  cik: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: R0MUWSFPU8MPRO8K5P83
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: Groupe BNP Paribas
   gleif_name: BNP PARIBAS
+  gleif_lei: R0MUWSFPU8MPRO8K5P83
   expected_xbrl_name: BNP PARIBAS
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - BNP_PARIBAS_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: FR
   filing_language: fr
-- label: UniCredit
+- label: "UNICREDIT, SOCIETA' PER AZIONI"
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: 549300TRUWO2CD2G5692
-  gleif_lei: 549300TRUWO2CD2G5692
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
-  gleif_name: UNICREDIT, SOCIETA' PER AZIONI
-  expected_xbrl_name: UNICREDIT, SOCIETA' PER AZIONI
+  sec_xbrl_name: UniCreditS.p.A.
+  gleif_name: "UNICREDIT, SOCIETA' PER AZIONI"
+  gleif_lei: 549300TRUWO2CD2G5692
+  expected_xbrl_name: "UNICREDIT, SOCIETA' PER AZIONI"
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - "UNICREDIT,_SOCIETA'_PER_AZIONI_ESEF_2024.xhtml"
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: IT
   filing_language: it
-- label: Société Générale
+- label: SOCIETE GENERALE
   cik: ''
-  ticker: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
   lei: O2RNE8IBXP4R0TD8PU41
-  gleif_lei: O2RNE8IBXP4R0TD8PU41
   xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
-  sec_xbrl_name: ''
+  sec_xbrl_name: Société Générale
   gleif_name: SOCIETE GENERALE
+  gleif_lei: O2RNE8IBXP4R0TD8PU41
   expected_xbrl_name: SOCIETE GENERALE
   aliases: []
-  files: []
-  last_updated: ''
+  files:
+  - SOCIETE_GENERALE_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
   jurisdiction: FR
   filing_language: fr
+- label: KBC Groep NV
+  cik: ''
+  ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  lei: 213800X3Q9LSAKRUWY91
+  xbrl_name: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
+  sec_xbrl_name: KBC Groep NV
+  gleif_name: KBC GROEP
+  gleif_lei: 213800X3Q9LSAKRUWY91
+  expected_xbrl_name: KBC GROEP
+  aliases: []
+  files:
+  - KBC_Groep_NV_ESEF_2025.xhtml
+  last_updated: '2026-06-25T14:12:59'
+  jurisdiction: BE
+  filing_language: nl

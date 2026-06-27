@@ -60,8 +60,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 34812067
     chunks: 6005
-    duration_sec: 165.692
-    ingested_at: '2026-06-25T19:47:21+00:00'
+    duration_sec: 161.609
+    ingested_at: '2026-06-26T06:37:35+00:00'
     normalizer_entity: Groupe BNP Paribas
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -70,8 +70,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 76726130
     chunks: 3680
-    duration_sec: 97.586
-    ingested_at: '2026-06-25T19:48:58+00:00'
+    duration_sec: 96.621
+    ingested_at: '2026-06-26T06:39:12+00:00'
     normalizer_entity: Banco Bilbao Vizcaya Argentaria, S.A.
     normalizer_year: '2024'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -80,8 +80,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 29625571
     chunks: 2398
-    duration_sec: 64.795
-    ingested_at: '2026-06-25T19:50:03+00:00'
+    duration_sec: 64.459
+    ingested_at: '2026-06-26T06:40:16+00:00'
     normalizer_entity: Barclays Bank PLC
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -90,8 +90,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 19436305
     chunks: 2607
-    duration_sec: 77.041
-    ingested_at: '2026-06-25T19:51:20+00:00'
+    duration_sec: 75.662
+    ingested_at: '2026-06-26T06:41:32+00:00'
     normalizer_entity: Erste Group BankAG
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -100,8 +100,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 130538290
     chunks: 3133
-    duration_sec: 85.022
-    ingested_at: '2026-06-25T19:52:45+00:00'
+    duration_sec: 84.083
+    ingested_at: '2026-06-26T06:42:56+00:00'
     normalizer_entity: HSBC Holdings plc
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -110,8 +110,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 121318256
     chunks: 2155
-    duration_sec: 57.378
-    ingested_at: '2026-06-25T19:53:42+00:00'
+    duration_sec: 56.593
+    ingested_at: '2026-06-26T06:43:53+00:00'
     normalizer_entity: ING Groep N.V.
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -120,8 +120,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 99296648
     chunks: 2790
-    duration_sec: 89.988
-    ingested_at: '2026-06-25T19:55:12+00:00'
+    duration_sec: 89.952
+    ingested_at: '2026-06-26T06:45:23+00:00'
     normalizer_entity: KBC Groep NV
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -130,8 +130,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 48753989
     chunks: 2430
-    duration_sec: 73.039
-    ingested_at: '2026-06-25T19:56:25+00:00'
+    duration_sec: 73.069
+    ingested_at: '2026-06-26T06:46:36+00:00'
     normalizer_entity: Nordeakoncernen
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -140,8 +140,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 41867904
     chunks: 3576
-    duration_sec: 95.22
-    ingested_at: '2026-06-25T19:58:01+00:00'
+    duration_sec: 96.603
+    ingested_at: '2026-06-26T06:48:12+00:00'
     normalizer_entity: Société Générale
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -150,8 +150,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 19399173
     chunks: 1150
-    duration_sec: 28.554
-    ingested_at: '2026-06-25T19:58:29+00:00'
+    duration_sec: 29.589
+    ingested_at: '2026-06-26T06:49:38+00:00'
     normalizer_entity: StandardChartered Bank
     normalizer_year: '2025'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -160,8 +160,8 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 112526775
     chunks: 4729
-    duration_sec: 140.743
-    ingested_at: '2026-06-25T20:00:50+00:00'
+    duration_sec: 139.88
+    ingested_at: '2026-06-26T06:51:58+00:00'
     normalizer_entity: UniCreditS.p.A.
     normalizer_year: '2024'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
@@ -170,16 +170,16 @@ files:
     file_type: ESEF iXBRL
     size_bytes: 43781567
     chunks: 1805
-    duration_sec: 54.791
-    ingested_at: '2026-06-25T22:05:40+00:00'
+    duration_sec: 56.067
+    ingested_at: '2026-06-26T06:49:09+00:00'
     normalizer_entity: Skandinaviska Enskilda Banken AB (publ)
     normalizer_year: '2024'
     normalizer_source: '[tag: NameOfReportingEntity · filename]'
     normalizer_mismatch: false
 deleted_files: {}
-last_ingested_at: '2026-06-25T18:05:41'
-last_updated: '2026-06-25'
-ingest_duration_seconds: 56
-last_ingest_chunks: 1805
-last_ingest_files: 1
-avg_seconds_per_file: 56.0
+last_ingested_at: '2026-06-26T02:52:00'
+last_updated: '2026-06-26'
+ingest_duration_seconds: 1026
+last_ingest_chunks: 36458
+last_ingest_files: 12
+avg_seconds_per_file: 85.5

@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+# Changelog: 2.8.2 — Flag rename: --batch is now the primary flag for the pinned run set
+#            (--canonical kept as a silent deprecated alias; same dest, so behavior identical).
+#            --batch-id mirrors --canonical-id. NOTE: ais_bench.sh wrapper still keys its
+#            preflight-skip on --canonical — wrapper update to also skip on --batch is OWED.
+# Changelog: 2.8.1 — Canonical/batch spec relocated: --canonical now reads
+#            benchmarks/batch/bench_canonical.yaml (was flat benchmarks/bench_canonical.yaml);
+#            legacy flat path kept as fallback. Help strings updated.
+# Changelog: 2.8.0 — Questions resolver: named subsets now live in benchmarks/<corpus>/questions/
+#            (mirrors data/corpora/<corpus>/scopes/). load_questions tries questions/ first, flat
+#            <corpus>/ kept for back-compat. A NAMED --questions stem that does not resolve is now a
+#            HARD ERROR (SystemExit) — never silent-falls-back to defaults (silent-failure HALT rule).
+#            Empty --questions still resolves the corpus default superset benchmarks/<corpus>/<corpus>_
+#            questions.yaml. Stale June_2026 help-ref updated to questions/sec_10k_frontier_questions.yaml.
 # Changelog: 2.7.0 — report now records the actual run manifest: scope name + resolved firm
 #            universe, and the questions file path + content SHA-8 (pins the exact question
 #            set, label-drift-proof). Written to BOTH the JSON config block (recorded) and the
@@ -337,21 +350,25 @@ def parse_args() -> argparse.Namespace:
     )
 
     p.add_argument(
+        "--batch",
         "--canonical",
+        dest="canonical",
         action="store_true",
         help=(
-            "Run the pinned canonical benchmark set from benchmarks/bench_canonical.yaml "
-            "(the four runs referenced in TUTORIAL §5.9). Each run executes via the normal single-run "
+            "Run the pinned batch benchmark set from benchmarks/batch/bench_canonical.yaml "
+            "(the runs referenced in TUTORIAL §5.9). Each run executes via the normal single-run "
             "path and writes its standard timestamped report into benchmarks/<corpus>/reports/. All other "
-            "run flags are ignored in this mode. Exits cleanly with a message if the spec yaml is absent."
+            "run flags are ignored in this mode. Exits cleanly with a message if the spec yaml is absent. "
+            "(--canonical is a deprecated alias for --batch.)"
         ),
     )
     p.add_argument(
+        "--batch-id",
         "--canonical-id",
         dest="canonical_id",
         default=None,
         metavar="ID",
-        help="With --canonical, run only the single run whose id matches (e.g. --canonical-id A).",
+        help="With --batch, run only the single run whose id matches (e.g. --batch-id C).",
     )
 
     return p.parse_args()
@@ -462,7 +479,12 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
     #  question-file selector.)
     if path is not None and "/" not in path and "\\" not in path and "." not in path:
         script_dir_stem = Path(__file__).parent
+        # v2.8.0: named question subsets live in benchmarks/<corpus>/questions/ (mirrors
+        # data/corpora/<corpus>/scopes/). Search there first; flat <corpus>/ kept for
+        # back-compat. Empty stem (path is None) is handled below → corpus default superset.
         candidates = [
+            script_dir_stem / corpus / "questions" / f"{corpus}_{path}_questions.yaml",
+            script_dir_stem / corpus / "questions" / f"{path}_questions.yaml",
             script_dir_stem / corpus / f"{corpus}_{path}_questions.yaml",
             script_dir_stem / corpus / f"{path}_questions.yaml",
             script_dir_stem / corpus / f"{path}.yaml",
@@ -471,9 +493,16 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
         if matched:
             path = str(matched)
         else:
-            tried = ", ".join(c.name for c in candidates)
-            print(f"  ⚠ Questions stem '{path}' not found. Tried: {tried}")
-            print("  · Using defaults")
+            # v2.8.0: a NAMED stem that does not resolve is a HARD ERROR — never silently
+            # fall back to the default set (silent-failure HALT rule). Empty stem still
+            # resolves to the corpus default superset via the path-is-None branch below.
+            tried = "\n      ".join(str(c) for c in candidates)
+            raise SystemExit(
+                f"  \u2717 Questions stem '{path}' did not resolve for corpus '{corpus}'.\n"
+                f"    Named question sets live in benchmarks/{corpus}/questions/ "
+                f"as {corpus}_<stem>_questions.yaml.\n"
+                f"    Tried:\n      {tried}"
+            )
 
     # Auto-detect corpus question file if no explicit path given
     # Priority: {corpus}_questions.yaml > {corpus}_questions.json > DEFAULT_QUESTIONS
@@ -541,7 +570,7 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
                     "           question: \"...\"\n"
                     "           keywords: [kw1, kw2]"
                 )
-            _ref = "benchmarks/sec_10k/sec_10k_June_2026_questions.yaml"
+            _ref = "benchmarks/sec_10k/questions/sec_10k_frontier_questions.yaml"
             print(
                 f"\n❌  Questions file schema error: {p}\n"
                 f"    Expected a list of topic-blocks:\n"
@@ -1033,7 +1062,7 @@ def filter_questions(
 def run_canonical(args: argparse.Namespace) -> int:
     """Run the pinned canonical benchmark set (AIStudio_931).
 
-    Reads benchmarks/bench_canonical.yaml and executes each defined run via the
+    Reads benchmarks/batch/bench_canonical.yaml and executes each defined run via the
     normal single-run path (subprocess re-invocation of this script). Each sub-run
     writes its own report into benchmarks/<corpus>/reports/ under the standard
     benchmark_{corpus}_{model}_{timestamp}{filter_suffix} name (Naming STD §14) —
@@ -1047,10 +1076,16 @@ def run_canonical(args: argparse.Namespace) -> int:
     import yaml
 
     script_dir = Path(__file__).resolve().parent
-    spec_path = script_dir / "bench_canonical.yaml"
+    # v2.8.1: canonical/batch spec relocated to benchmarks/batch/. Fall back to the legacy
+    # flat benchmarks/bench_canonical.yaml so an un-migrated tree still runs.
+    spec_path = script_dir / "batch" / "bench_canonical.yaml"
+    if not spec_path.exists():
+        legacy = script_dir / "bench_canonical.yaml"
+        if legacy.exists():
+            spec_path = legacy
     if not spec_path.exists():
         print(f"❌ Canonical spec not found: {spec_path}")
-        print("   Create benchmarks/bench_canonical.yaml (see TUTORIAL §5.9), then retry.")
+        print("   Create benchmarks/batch/bench_canonical.yaml (see TUTORIAL §5.9), then retry.")
         return 1
 
     spec = yaml.safe_load(spec_path.read_text()) or {}
@@ -1067,7 +1102,7 @@ def run_canonical(args: argparse.Namespace) -> int:
         print(f"❌ No runs defined in {spec_path.name}")
         return 1
 
-    print(f"\033[1m[ais_bench --canonical — {len(runs)} run(s) → benchmarks/<corpus>/reports/]\033[0m")
+    print(f"\033[1m[ais_bench --batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/]\033[0m")
 
     failures = 0
     for r in runs:
@@ -1105,7 +1140,7 @@ def run_canonical(args: argparse.Namespace) -> int:
 
     ok = len(runs) - failures
     mark = "✅" if failures == 0 else "⚠"
-    print(f"\n{mark} canonical: {ok}/{len(runs)} run(s) ok → benchmarks/<corpus>/reports/")
+    print(f"\n{mark} batch: {ok}/{len(runs)} run(s) ok → benchmarks/<corpus>/reports/")
     return 1 if failures else 0
 
 

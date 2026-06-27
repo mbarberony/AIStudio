@@ -1,5 +1,6 @@
 # esef_banks full scope — corpus inventory (entity source for ais_import_entity_kb + ais_download_esef).
-# 12 firms: 9 EN-primary + 3 non-EN (Annex 3 language-ceiling cases).
+# 12 firms: 5 EN-primary + 7 non-EN. (CORRECTED 2026-06-26: was "9 EN + 3 non-EN" — four firms
+#   re-verified by reading ingested chunk content: Nordea=sv, SEB=sv, Erste=de, KBC=nl were mistagged en.)
 # Open/provenance schema (see _scope_common.py): bare field wins; sec_xbrl_name = filing self-report;
 # expected_xbrl_name = ingest guard (the clean name the tag SHOULD carry). LEI is the ESEF identity key.
 # Pristine: files:[] / last_updated:'' — populated at download/ingest. Tool-owned local data (gitignored).
@@ -96,7 +97,7 @@ entities:
   - Nordeakoncernen_ESEF_2025.xhtml
   last_updated: '2026-06-25T14:12:59'
   jurisdiction: FI
-  filing_language: en
+  filing_language: sv   # CORRECTED 2026-06-26 from en — verified Swedish by chunk-content read
 - label: Skandinaviska Enskilda Banken AB (publ)
   cik: ''
   ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
@@ -111,7 +112,7 @@ entities:
   - Skandinaviska_Enskilda_Banken_AB_(publ)_ESEF_2024.xhtml
   last_updated: '2026-06-25T14:12:59'
   jurisdiction: SE
-  filing_language: en
+  filing_language: sv   # CORRECTED 2026-06-26 from en — verified Swedish by chunk-content read
 - label: Erste Group BankAG
   cik: ''
   ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
@@ -126,7 +127,7 @@ entities:
   - Erste_Group_BankAG_ESEF_2025.xhtml
   last_updated: '2026-06-25T14:12:59'
   jurisdiction: AT
-  filing_language: en
+  filing_language: de   # CORRECTED 2026-06-26 from en — verified German by chunk-content read
 - label: BNP PARIBAS
   cik: ''
   ticker: REPLACE_WITH_VERIFIED_VALUE_IF_AVAILABLE
@@ -186,4 +187,4 @@ entities:
   - KBC_Groep_NV_ESEF_2025.xhtml
   last_updated: '2026-06-25T14:12:59'
   jurisdiction: BE
-  filing_language: en
+  filing_language: nl   # CORRECTED 2026-06-26 from en — verified Dutch by chunk-content read

@@ -1,6 +1,8 @@
-# Benchmark Harness
+# Benchmark Harness (BENCH_HARNESS)
 
-*Version: 1.1.0 | Updated: 2026-05-01*
+*Version: 2.0.0 | Updated: 2026-06-27*
+
+*Lives at `benchmarks/docs/` (renamed from `docs/HARNESS.md`). Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how-to-read-a-benchmark in TUTORIAL §5.*
 
 AIStudio ships with a benchmark harness (`benchmarks/bench.py`) that runs a structured question set against any corpus and produces timestamped reports. It is designed for the demo corpus out of the box but works with any corpus and any YAML question file you provide.
 
@@ -27,20 +29,32 @@ ais_bench [OPTIONS]
 
 Options:
   --corpus NAME         Corpus to query (default: demo)
-  --top-k INT           Chunks retrieved per query (default: 5)
+  --scope NAME          Restrict to a named corpus subset (e.g. lang_en) — reads
+                        data/corpora/<corpus>/scopes/<corpus>_<scope>_scope.yaml
+  --questions STEM      Named question subset by STEM (not a path). Empty = the flat
+                        default set; a STEM resolves to questions/<corpus>_<stem>_questions.yaml.
+                        An unknown STEM is a HARD ERROR (no silent fallback).
+  --batch               Run the pinned canonical suite from benchmarks/batch/bench_canonical.yaml
+                        (multiple corpus/scope/question combinations in one invocation).
+  --top-k INT           Chunks retrieved per query (default: 10 for the financial corpora;
+                        a corpus with no stored default falls back to the system default of 5)
   --temperature FLOAT   LLM sampling temperature 0.0–2.0 (default: 0.3)
   --model NAME          Ollama model name (default: API default)
-  --questions FILE      Path to YAML question file (auto-detected from corpus name if omitted)
   --api URL             Backend URL (default: http://localhost:8000)
   --no-markdown         Skip writing .md report
   --full                Include full answers in report (default: first 4 paragraphs)
   --help                Show this help message
   --version             Show version
+
+(`--canonical` is kept as a silent deprecated alias of `--batch`.)
 ```
 
-Question files are auto-detected: for `--corpus demo`, the harness looks for
-`benchmarks/demo/demo_questions.yaml` automatically. For any other corpus, place a
-`{corpus}_questions.yaml` file in `benchmarks/{corpus}/` and it will be auto-detected.
+**Question sets — one home.** The default set is the flat file
+`benchmarks/<corpus>/<corpus>_questions.yaml` (used when `--questions` is omitted).
+Named subsets live one level down in `benchmarks/<corpus>/questions/` as
+`<corpus>_<stem>_questions.yaml`, selected by STEM: `ais_bench --corpus sec_10k --questions frontier`
+resolves to `benchmarks/sec_10k/questions/sec_10k_frontier_questions.yaml`. A STEM that
+doesn't resolve is a hard error — the harness will not silently fall back to the default.
 
 ---
 
@@ -87,6 +101,17 @@ Reports are written to `benchmarks/my_corpus/reports/`.
 ---
 
 ## Running Systematic Benchmarks
+
+### The canonical suite (`--batch`)
+
+The pinned, reproducible benchmark set lives at `benchmarks/batch/bench_canonical.yaml` and runs with:
+
+```bash
+ais_bench --batch
+```
+
+It executes the canonical runs — across both shipped corpora, at the canonical depth — in one invocation, writing each run's report to its corpus `reports/`. This is how the headline numbers in `BENCH - Canonical Suite - README and Synthesis` are regenerated. Use it to reproduce the published evidence; use the individual flags below to explore.
+
 
 ### Compare models
 
@@ -147,10 +172,10 @@ To benchmark against the full 101-filing SEC corpus (21 firms):
 ais_download_sec_10k
 
 # Then benchmark
-ais_bench --corpus sec_10k --top-k 10
+ais_bench --corpus sec_10k        # K=10 is the stored default for sec_10k
 ```
 
-Question file ships at `benchmarks/sec_10k/sec_10k_questions.yaml`.
+Default question set ships at `benchmarks/sec_10k/sec_10k_questions.yaml`; named subsets (e.g. `frontier`) live in `benchmarks/sec_10k/questions/`.
 
 Reports are written to `benchmarks/sec_10k/reports/`.
 
@@ -158,8 +183,10 @@ Reports are written to `benchmarks/sec_10k/reports/`.
 
 ## What's Coming
 
-- **Cross-run comparison** — diff two reports on latency, answer quality, source overlap
+- **Cross-run comparison** — diff two reports on latency, answer quality, source overlap (partially delivered via `--batch` + the canonical suite)
 - **Hardware metadata** — machine specs recorded in report header for M4 Air vs M4 Max comparisons
 - **Model quality evaluation** — human eval framework for 8b vs 70b answer quality
 
 See `docs/PRODUCT_ROADMAP.md` for the full roadmap.
+
+<div align="center">✻✻✻  ✻✻✻</div>

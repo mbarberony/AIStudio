@@ -1,120 +1,21 @@
 # demo_corpus_metadata.yaml
-avg_seconds_per_file: 1.0
+schema_version: '2.0'
+corpus_name: demo
+corpus_type: seeded
+last_updated: '2026-06-27'
+short_description: 20 years of original thought leadership — architecture, strategy,
+  AI
+description: A curated corpus of original thought leadership documents spanning 2003–2026,
+  produced by Manuel Barbero and collaborators across senior technology roles at major
+  financial institutions. Covers enterprise architecture, IT strategy, organizational
+  design, technology modernization, financial services risk and compliance, and agentic
+  AI. Querying this corpus is querying 20+ years of original practitioner knowledge.
 content_summary: '9 documents covering: enterprise architecture methodology and toolset
   (Barbero 2006), QFD and architecture toolset (Erder|Pureur 2003), FS Journal volumes
   edited by Barbero et al. — Strategy and Architecture (2006), IT Infrastructure (2005),
   Digitization (2005), Risk/Compliance/Security (2005), technology modernization and
   cloud migration (Barbero 2020), data strategy (Barbero|Hunt 2021), and agentic AI
   in financial services (Barbero 2026).'
-corpus_name: demo
-corpus_type: seeded
-default_hybrid_alpha: 0.5
-default_min_score: 0.3
-default_temperature: 0.3
-default_top_k: 10
-deleted_files: {}
-description: A curated corpus of original thought leadership documents spanning 2003–2026,
-  produced by Manuel Barbero and collaborators across senior technology roles at major
-  financial institutions. Covers enterprise architecture, IT strategy, organizational
-  design, technology modernization, financial services risk and compliance, and agentic
-  AI. Querying this corpus is querying 20+ years of original practitioner knowledge.
-files:
-  Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf:
-    chunks: 127
-    duration_sec: 5.77
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:29+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 1086427
-  Barbero - 2020 - Technology Modernization and Cloud Migration.pdf:
-    chunks: 63
-    duration_sec: 2.338
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:31+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 1383620
-  Barbero - 2026 - Agentic AI in Financial Services.pdf:
-    file_type: PDF
-    size_bytes: 123765
-    chunks: 20
-    duration_sec: 1.176
-    ingested_at: '2026-06-25T18:59:26+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  Barbero et al. - 2005 - FS Journal - Digitization.pdf:
-    chunks: 130
-    duration_sec: 3.992
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:36+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 1769420
-  Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf:
-    chunks: 212
-    duration_sec: 7.498
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:44+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 1111130
-  Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf:
-    chunks: 226
-    duration_sec: 7.782
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:52+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 871554
-  Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf:
-    chunks: 236
-    duration_sec: 7.732
-    file_type: PDF
-    ingested_at: '2026-06-18T04:40:59+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 2693215
-  Barbero | Hunt - 2021 - Data Strategy.pdf:
-    chunks: 22
-    duration_sec: 0.95
-    file_type: PDF
-    ingested_at: '2026-06-18T04:41:00+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 2337736
-  Erder | Pureur - 2003 - Architecture and QFD.pdf:
-    chunks: 34
-    duration_sec: 1.276
-    file_type: PDF
-    ingested_at: '2026-06-18T04:41:01+00:00'
-    normalizer_entity: ''
-    normalizer_mismatch: false
-    normalizer_source: ''
-    normalizer_year: ''
-    size_bytes: 453563
-ingest_duration_seconds: 1
-last_ingest_chunks: 20
-last_ingest_files: 1
-last_ingested_at: '2026-06-25T14:59:26'
-last_updated: '2026-06-25'
-schema_version: '2.0'
 search_guidance: 'Route questions to the most relevant document based on intent:
 
 
@@ -171,9 +72,17 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   across the corpus.
 
   Answer directly and confidently from what the sources contain. Do not hedge or qualify
-  unnecessarily.'
-short_description: 20 years of original thought leadership — architecture, strategy,
-  AI, IT Infrastructure
+  unnecessarily.
+
+  '
+default_top_k: 5
+default_temperature: 0.3
+default_hybrid_alpha: 0.5
+default_min_score: 0.3
+last_ingested_at: '2026-06-27T15:01:40'
+last_ingest_chunks: 0
+last_ingest_files: 0
+ingest_duration_seconds: 0.04
 sources:
 - description: Enterprise architecture methodology and toolset — universal architecture
     concepts for organizational design
@@ -270,3 +179,5 @@ sources:
   - knowledge productivity
   - financial services
   title: Agentic AI in Financial Services
+files: {}
+deleted_files: {}

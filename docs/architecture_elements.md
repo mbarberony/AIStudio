@@ -111,13 +111,49 @@ A handful of dials shape retrieval and generation:
 
 ---
 
-## 8. The honest limits
+## 8. How the system is benchmarked
+
+Knowing *that* the system works is one thing; being able to **show how well, repeatably, and where it breaks** is another. AIStudio carries a benchmarking process, not just a benchmark number.
+
+The process has four moves, run for each corpus:
+
+1. **A fixed question set.** Each corpus has a versioned YAML of questions with expected-content keywords — the inputs are pinned so a run is reproducible, not ad-hoc.
+2. **A mechanical pass.** The harness (`ais_bench`) runs every question, checks three conditions — keywords present, at least one citation, no hedging — and scores each 🟢/🟡/🔴. This is cheap, automatic, and *deliberately naive*: it measures surface signals, not truth.
+3. **A calibrated audit.** Because the mechanical score rewards confident-looking output, every run is then read against the **primary source** — the actual filing — and re-scored: correct-and-grounded, partial, miss, or grading-artifact. The gap between mechanical and calibrated is itself a finding [1].
+4. **A pinned canonical suite.** A small set of runs — across both corpora, at the canonical depth — is fixed so the headline numbers can be regenerated on demand with `ais_bench --batch`, the same way the help corpus is rebuilt on each release.
+
+The design intent mirrors the rest of the architecture: **measure honestly, show the failures, make it reproducible.** The two frontiers the suite surfaces — multi-year/table synthesis on English text, and the language ceiling on non-English filings — are documented openly rather than hidden, because a system whose limits are known is more trustworthy than one whose limits are unstated [2]. The harness flags (`--corpus`, `--scope`, `--questions`, `--top-k`, `--batch`) and how to read a report are covered in the harness manual [3]; the audited evidence and its synthesis are the canonical suite [4].
+
+---
+
+## The honest limits
 
 Knowing where the trust promise strains is part of using AIStudio well:
 
-- **Tables are hard.** Dense numeric tables (an income statement, a multi-year capital table) retrieve poorly, because lexical scoring saturates across near-identical rows. A figure stated in prose is reliable; a precise number lifted from a grid should be treated as a claim to verify against the cited chunk, not a fact to repeat.
+- **Tables are hard.** [5] Dense numeric tables (an income statement, a multi-year capital table) retrieve poorly, because lexical scoring saturates across near-identical rows. A figure stated in prose is reliable; a precise number lifted from a grid should be treated as a claim to verify against the cited chunk, not a fact to repeat.
 - **Citations vary by model.** Different answer models mark references differently, and the count can come back short or doubled. When precision matters, trust the *retrieved set* over the model's inline markers.
-- **Language is a ceiling.** Retrieval and extraction are strongest on English filings and fall off on other languages — a limit of the embedding and extraction layers, not of the isolation logic.
+- **Language is a ceiling.** [6] Retrieval and extraction are strongest on English filings and fall off on other languages — a limit of the embedding and extraction layers, not of the isolation logic.
 - **Your own documents aren't auto-isolated.** Plain PDFs you bring don't carry a firm label, so they're retrieved by similarity rather than isolated by firm. That's fine for single-topic document sets; it matters for multi-entity comparison.
 
 The throughline: AIStudio's job is not to sound authoritative — it is to make its reasoning checkable. The architecture is the machinery that keeps every answer traceable back to a source you can open and read.
+
+<div align="center">✻✻✻  ✻✻✻</div>
+
+### Additional Reading
+
+The references below point into the rest of the AIStudio document corpus; bracket numbers appear in order of first mention above.
+
+[1] **TUTORIAL.md** §5 — https://github.com/mbarberony/AIStudio/blob/main/TUTORIAL.md — how to read a benchmark: mechanical score vs. calibrated audit, and why the gap matters.
+
+[2] **TUTORIAL.md** Annex 3 (the language ceiling) and Annex 4 (the table-cell frontier) — the two failure mechanisms, worked end to end.
+
+[3] **BENCH_HARNESS.md** — https://github.com/mbarberony/AIStudio/blob/main/benchmarks/docs/BENCH_HARNESS.md — the harness manual: `ais_bench` flags, question-file format, reading a report, reproducing `--batch`.
+
+[4] **BENCH - Canonical Suite - README and Synthesis** — https://github.com/mbarberony/AIStudio/blob/main/benchmarks/docs/ — the audited evidence across all four canonical runs, with the cross-corpus synthesis.
+
+[5] **TUTORIAL.md** Annex 4 — the multi-year, multi-column table case where a cell can be severed from the year that gives it meaning.
+
+[6] **TUTORIAL.md** Annex 3 — why an English question against a non-English filing retrieves worse, and how the glossary does (and does not) help.
+
+<div align="center">✻✻✻  ✻✻✻</div>
+

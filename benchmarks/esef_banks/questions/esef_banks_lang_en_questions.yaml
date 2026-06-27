@@ -1,0 +1,163 @@
+# AIStudio esef_banks Corpus — EN-reporting-firms Benchmark Questions (subset)
+# Version: 1.0.0
+# Derived 2026-06-26 from esef_banks_questions.yaml v1.1.0 — the 8 questions whose firms file in
+#   ENGLISH (verified by reading ingested chunk content). Pairs with --scope lang_en.
+# Run with: ais_bench --corpus esef_banks --scope lang_en --questions lang_en
+# Dropped (firm files in non-English — belong to lang_noen, not this set):
+#   nordea_leverage_ratio (sv), kbc_nii_sensitivity (nl), digital_nordea (sv), erste_whitespace_collapse (de)
+# EN firms covered (5): ING, Barclays, HSBC, Standard Chartered, BBVA.
+# Schema: topic-grouped list (bench.py load_questions schema). Question records are byte-identical
+#   to the source file — only the non-EN-firm questions were removed; no field edits.
+
+- topic: Capital Adequacy
+  questions:
+  - id: cet1_ing_group
+    question: How does ING Group describe its CET1 capital ratio and regulatory capital position in its most recent annual report?
+    keywords:
+    - CET1
+    - capital
+    - ING
+    - ratio
+    - regulatory
+    entity_filter:
+    - ING_Groep_N.V.
+    question_language: en
+    language: en
+    answer_location: prose_and_table
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: L1 baseline. ING files in English. Entity tag in corpus = 'ING Groep N.V.'.
+  - id: tier1_capital_barclays
+    question: What is Barclays' Tier 1 capital ratio and what are the components of their capital stack?
+    keywords:
+    - Tier 1
+    - capital
+    - ratio
+    - Barclays
+    - CET1
+    entity_filter:
+    - Barclays_Bank_PLC
+    question_language: en
+    language: en
+    answer_location: prose_and_table
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: Annex 1 holdco/sub case. Entity in corpus = 'Barclays Bank PLC' (sub). Tests alias resolution.
+  - id: leverage_ratio_hsbc
+    question: What is HSBC's leverage ratio and how does it compare to the regulatory minimum requirement?
+    keywords:
+    - leverage
+    - ratio
+    - HSBC
+    - regulatory
+    - minimum
+    entity_filter:
+    - HSBC_Holdings_plc
+    question_language: en
+    language: en
+    answer_location: prose_and_table
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: L1 table-located fact. Tests table extraction on a clean EN filer.
+  - id: cet1_cross_firm_en
+    question: How do ING Group, HSBC, and Barclays compare in terms of their CET1 capital ratios and capital management approaches?
+    keywords:
+    - CET1
+    - capital
+    - ING
+    - HSBC
+    - Barclays
+    entity_filter:
+    - ING_Groep_N.V.
+    - HSBC_Holdings_plc
+    - Barclays_Bank_PLC
+    question_language: en
+    language: en
+    answer_location: prose_and_table
+    section_count: multi
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 3
+    notes: Cross-firm EN comparison. Tests entity isolation across 3 firms.
+- topic: Climate & ESG
+  questions:
+  - id: climate_risk_bbva
+    question: How does BBVA describe its approach to climate-related risks and its net zero transition strategy?
+    keywords:
+    - climate
+    - risk
+    - BBVA
+    - emissions
+    - transition
+    entity_filter:
+    - Banco_Bilbao_Vizcaya_Argentaria
+    question_language: en
+    language: en
+    answer_location: prose_only
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: BBVA FY2024 (latest available). EN filer despite Spanish jurisdiction. GLEIF mis-merge risk class.
+  - id: climate_standard_chartered
+    question: How does Standard Chartered describe its climate risk framework and net zero commitments?
+    keywords:
+    - climate
+    - Standard Chartered
+    - risk
+    - net zero
+    - transition
+    entity_filter:
+    - StandardChartered_Bank
+    question_language: en
+    language: en
+    answer_location: prose_only
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: Annex 1 holdco/sub class. Entity in corpus = 'StandardChartered Bank' (whitespace missing).
+- topic: Digital Banking
+  questions:
+  - id: digital_ing
+    question: What are ING Group's key technology investments and digital transformation priorities?
+    keywords:
+    - technology
+    - digital
+    - ING
+    - transformation
+    entity_filter:
+    - ING_Groep_N.V.
+    question_language: en
+    language: en
+    answer_location: prose_only
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+- topic: Entity Resolution Teaching Cases
+  questions:
+  - id: barclays_holdco_sub
+    question: How does Barclays describe its capital structure and the relationship between the holding company and its banking subsidiaries?
+    keywords:
+    - Barclays
+    - capital
+    - structure
+    - holding
+    - subsidiary
+    entity_filter:
+    - Barclays_Bank_PLC
+    question_language: en
+    language: en
+    answer_location: prose_only
+    section_count: single
+    data_type: qualitative
+    difficulty: standard
+    entity_count: 1
+    notes: Annex 1 DEMO_10 holdco/sub teaching case. Entity = 'Barclays Bank PLC' in corpus. PROVEN PASS.

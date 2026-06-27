@@ -85,7 +85,7 @@ AIStudio/
 ├── front_end/      Single-file frontend (rag_studio.html)
 ├── data/           Corpus data (partially tracked)
 ├── docs/           Developer documentation and help corpus sources
-├── benchmarks/     Benchmark harness and reports
+├── benchmarks/     Benchmark harness, question sets, reports; readme/ = shipped canonical suite (BENCH - Canonical *)
 ├── prompts/        LLM system prompt
 └── [root files]    Install scripts, user aliases, README, HOWTO, config
 ```
