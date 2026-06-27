@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.7.0
+# Version: 1.8.0
 # Changelog: 1.8.0 — recognize --batch (bench.py v2.8.x primary flag) for preflight-skip, alongside
 #   --canonical (now the deprecated alias). Batch/canonical runs manage their own corpora from
 #   benchmarks/batch/bench_canonical.yaml, so the single-corpus preflight does not apply to either.
