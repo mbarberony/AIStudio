@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Changelog: 2.8.4 — Batch mode: child runs spawned by run_canonical now suppress their own
+#   [ais_bench v… ] header (env AIS_BENCH_CHILD=1 on the child; main() skips the header when set).
+#   The parent prints one header + the ▶ banner IDs each run — kills the N+1 header repetition in
+#   --batch output. Added module-level `import os` (was only a local import in the PDF block).
 # Changelog: 2.8.3 — VERSION constant synced 2.7.3 → 2.8.3 (was lagging the 2.8.2 changelog
 #   head — the T2.52 trap: bump the field the tool reads, not just the comment). CLI Output STD:
 #   batch banner de-bolded to a `·` info line (was a competing [ ] header); per-run ──► → ▶
@@ -140,6 +144,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import time
 
 try:
@@ -204,7 +209,7 @@ import _scope_common as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.8.3"
+VERSION = "2.8.4"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -1136,7 +1141,9 @@ def run_canonical(args: argparse.Namespace) -> int:
 
         print(f"\n\033[1m▶ canonical {rid}: {r.get('label', corpus)}\033[0m")
         print("    " + " ".join(argv[2:]))
-        result = subprocess.run(argv)  # inherits env (PYTHONPATH/venv) + streams output
+        # AIS_BENCH_CHILD=1 → child suppresses its own header (▶ banner IDs the run);
+        # env spread inherits the parent's PYTHONPATH/venv. Output streams through.
+        result = subprocess.run(argv, env={**os.environ, "AIS_BENCH_CHILD": "1"})
         if result.returncode != 0:
             print(f"  ❌ run {rid} failed (exit {result.returncode})")
             failures += 1
@@ -1151,7 +1158,10 @@ def run_canonical(args: argparse.Namespace) -> int:
 
 def main() -> None:
     args = parse_args()
-    print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
+    # Child runs spawned by run_canonical suppress their own header (the parent
+    # already printed one + the ▶ banner IDs each run); see AIS_BENCH_CHILD below.
+    if not os.environ.get("AIS_BENCH_CHILD"):
+        print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
 
     # AIStudio_931 — canonical mode short-circuits the single-run path.
     if getattr(args, "canonical", False):
@@ -1461,7 +1471,6 @@ def main() -> None:
         if r1.returncode != 0:
             print(f"  ⚠ PDF skipped: pandoc error: {r1.stderr.strip()[:80]}")
         else:
-            import os
             import tempfile
 
             script = f"""
