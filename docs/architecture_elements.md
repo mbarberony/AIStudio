@@ -1,6 +1,6 @@
 # AIStudio — Elements of an Architecture
 
-*Version: 1.0.0*
+*Version: 1.1.0*
 
 *How AIStudio is put together, why it's built that way, and where it strains — written for someone who wants the "under the hood" picture without needing to read the code.*
 
@@ -23,7 +23,7 @@ Logically there are three layers and three always-on services.
 **The three services:**
 
 - A **vector store** that holds the searchable index — one collection per corpus.
-- A **model host** that runs the embedding model (which turns text into vectors) and the answer-writing models.
+- A **model host** that runs the embedding model (which turns text into vectors) and the answer-writing models. What that host actually is — and why it's a swappable component — is §7.
 - A **backend** that orchestrates everything and exposes the application's interface and its local API.
 
 ---
@@ -101,7 +101,17 @@ A handful of dials shape retrieval and generation:
 
 ---
 
-## 7. Why it's built this way — the design choices
+## 7. The inference layer — what the model host actually is
+
+The **model host** named in §1 runs two kinds of model: the *embedding* model that turns text into vectors, and the *answer-writing* model that composes a response over the retrieved chunks. Both are large language models — and a model is not a program. It is a large array of trained numbers, its **weights**; on its own it does nothing. It needs a *runtime* to load those weights into memory and run the math that turns an input into an output. AIStudio uses **Ollama** as that runtime.
+
+Ollama wraps the inference engine that does the actual tensor math (`llama.cpp`), runs it through Apple's **Metal** GPU backend on Apple Silicon, and adds the operational layer around it: a model registry, automatic download, memory management, and a local API. The weights ship **quantized** — compressed from the 16-bit training precision down to roughly 4-bit — so a 27-billion-parameter model occupies ~16–20 GB of unified memory instead of the ~54 GB it would need at full precision. Quantization is the reason a model this size runs on a laptop at all; the host then keeps a model resident for a short window after each call, so the next question skips the cold load.
+
+The detail that matters architecturally: **because the runtime is separate from the weights, the inference layer is a swappable component.** AIStudio talks to the host over an **OpenAI-compatible API** — the de-facto interface that serving runtimes now converge on. The same calls would run, with a change of address and little more, against a high-throughput cloud serving stack the day the system had to answer many users at once rather than one — local today, scalable later, without rewriting the application above it. *(The concrete stack and pinned versions live in `dependencies.md`.)*
+
+---
+
+## 8. Why it's built this way — the design choices
 
 - **Local-first.** Documents, index, and models all run on one machine. The reason is trust and privacy: a corpus of sensitive filings or internal documents never has to leave the building. It also makes the system fully inspectable.
 - **Grounding over fluency.** The product is not "a chatbot that knows finance"; it is "answers you can check." That is why citations are first-class, why the model sees only retrieved evidence, and why the system is designed to *abstain* rather than guess when the evidence isn't there.
@@ -111,7 +121,7 @@ A handful of dials shape retrieval and generation:
 
 ---
 
-## 8. How the system is benchmarked
+## 9. How the system is benchmarked
 
 Knowing *that* the system works is one thing; being able to **show how well, repeatably, and where it breaks** is another. AIStudio carries a benchmarking process, not just a benchmark number.
 
