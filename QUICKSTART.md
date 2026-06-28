@@ -126,7 +126,7 @@ If you see a version number where the second part is 10 or higher — for exampl
 brew install python@3.13
 ```
 
-This takes less than a minute. You'll see a stream of messages, including a `==> Caveats` section — that is normal, and you don't need to read it.
+Homebrew shows what it will install, then asks **`Do you want to proceed with the installation? [y/n]`** — type **`y`** and press **Enter**. (It only proceeds once you answer; it will sit and wait otherwise.) This takes less than a minute. You'll see a stream of messages, including a `==> Caveats` section — that is normal, and you don't need to read it.
 
 You may also see notices like:
 ```
@@ -168,7 +168,7 @@ If Ollama is not installed:
 brew install ollama
 ```
 
-This takes less than a minute. You'll see a stream of messages — ignore them. All is good when you're back at the `%` prompt.
+When it asks **`Do you want to proceed with the installation? [y/n]`**, type **`y`** and press **Enter**. This takes less than a minute. You'll see a stream of messages — ignore them. All is good when you're back at the `%` prompt.
 
 > You may see a notification saying **"Background Items Added — ollama is an item that can run in the background."** Click to dismiss or ignore it. This means Ollama will start automatically when your Mac starts up — which is exactly what you want.
 
@@ -192,6 +192,8 @@ This takes less than a minute. You'll see a stream of messages — ignore them. 
 ```bash
 brew install pango
 ```
+
+When it asks **`Do you want to proceed with the installation? [y/n]`**, type **`y`** and press **Enter**.
 
 > **Why Pango?** AIStudio's benchmark runner generates PDF reports via weasyprint (the PDF engine), which depends on Pango. `brew install` handles it in under a minute. You won't need it until Module 5, but it's cleanest to install now.
 
@@ -474,42 +476,43 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 **Prereqs:** Apple Silicon Mac, **and a zsh shell** (the macOS default — if your prompt ends in `$` rather than `%`, run `chsh -s /bin/zsh`, quit Terminal with ⌘Q, and reopen before pasting; see [Step 0](#0-confirm-your-shell-is-zsh)). The steps below install Homebrew, Python, Ollama, Pango, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
 
-**Run it in two parts.** On a bare-metal Mac the Homebrew install (Part 0) is the one step that needs a human: it triggers the macOS *"install command line developer tools"* dialog — click **Install** and let it finish (that's what provides `git`). Once `brew --version` answers, the rest (Parts 1–5) is a single uninterrupted paste. On a machine that already has Homebrew, skip Part 0 and paste Parts 1–5 in one go.
+**Run it in three parts.** Two of them need a key-press: **Part 0** (Homebrew) triggers the macOS *"install command line developer tools"* dialog, and **Part 1** (`brew install`) asks `[y/n]`. The big paste — **Parts 2–5** — has no prompts, so it runs unattended. Pasting a `brew install` *inside* a block doesn't work: brew stops to ask `[y/n]` and reads the lines pasted behind it as (rejected) answers, so the block must keep that one line separate.
 
-**Part 0 — Homebrew (the one interactive step on a bare-metal Mac).** Run this line alone; on a wiped machine it pops the *"command line developer tools"* dialog — click **Install**, wait for it to finish, then confirm `brew` answers before continuing. (Already have Homebrew? Skip straight to Parts 1–5.)
+**Part 0 — Homebrew (interactive on a bare-metal Mac).** Run alone; on a wiped machine it pops the *"command line developer tools"* dialog — click **Install**, wait for it to finish, then confirm `brew` answers before continuing. (Already have Homebrew? Skip to Part 1.)
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew --version    # must print a version before you proceed
 ```
 
-**Parts 1–5 — everything else, one uninterrupted paste:**
+**Part 1 — the toolchain (interactive: press `y`).** Run this line on its own; when brew asks `Do you want to proceed with the installation? [y/n]`, type **`y`** and **Enter**. (Each formula is a no-op if already present.)
 ```bash
-# 1. Toolchain (brew installs each; no-op for anything already present)
 brew install python@3.13 ollama pango git
+```
+
+**Parts 2–5 — everything else, one uninterrupted paste (no prompts):**
+```bash
+# 2. Start Ollama + put Homebrew's keg-only python3 on PATH (else python3 stays at the system 3.9)
 brew services start ollama
-# put Homebrew's keg-only python3 on PATH (else python3 stays at the system 3.9)
 PY_LINE='export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
 grep -qxF "$PY_LINE" ~/.zprofile 2>/dev/null || echo "$PY_LINE" >> ~/.zprofile
 eval "$PY_LINE"
 
-# 2. Models — embedding (required) + Google's Gemma (the default; small & fast)
+# 3. Models — embedding (required) + Google's Gemma (the default; small & fast)
 ollama pull nomic-embed-text
 ollama pull gemma3:4b           # the default; add `ollama pull gemma3:27b` on 32GB+ for the SEC/ESEF corpora (Tutorial Modules 2–3)
 
-# 3. Qdrant binary (needs ~/bin on PATH; the grep makes the line idempotent)
+# 4. Qdrant binary (needs ~/bin on PATH; the grep makes the line idempotent)
 mkdir -p ~/qdrant_storage ~/bin
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mv qdrant ~/bin/qdrant
 grep -q 'export PATH="$HOME/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
 
-# 4. Clone + install
+# 5. Clone, install, launch
 mkdir -p ~/Developer && cd ~/Developer
 git clone https://github.com/mbarberony/AIStudio.git
 cd AIStudio
 ./ais_install
 source ~/.zshrc
-
-# 5. Go
 ais_start
 ```
 
@@ -540,7 +543,17 @@ Entries follow the order of the steps, so you can scan to where you are.
 
 **Something unexpected happened** — close and reopen Terminal (**⌘ Space**, type **Terminal**, **Enter**), then re-run the last command. A fresh terminal always starts with a clean environment.
 
+**Any command errors with `getcwd: cannot access parent directories` or `The current working directory must exist to run …`** — your Terminal is sitting *inside a folder that was deleted, moved, or renamed* (common right after removing `~/Developer/AIStudio`). The shell can't run anything until it's in a folder that exists. Fix:
+```bash
+cd ~
+```
+Then re-run your command. (Opening a brand-new Terminal window does the same thing — new windows always open in your home folder.)
+
 **The single most common cause of "it installed but the command isn't found": you're on bash, not zsh.** If your Terminal prompt ends in `$` (e.g. `Mac:~ yourname$`) instead of `%`, your account uses the older bash shell, and this guide's PATH/alias lines (which go into `~/.zprofile` and `~/.zshrc`) are being ignored. Symptoms: `brew`, `qdrant`, or any `ais_*` command reports `command not found` right after you installed it. **Fix:** `chsh -s /bin/zsh`, then **⌘ Q** to quit Terminal, reopen it, and re-run the step you were on. See [Step 0](#0-confirm-your-shell-is-zsh). This one switch resolves most of the entries below at once.
+
+**(TL;DR) `brew install` prints `Invalid input. Please press 'y'…` over and over, then `y: command not found`** — you pasted a block that contained `brew install`. brew stopped to ask `[y/n]` and read every following pasted line as a (rejected) answer; by the time you typed `y`, brew had already aborted. Run `brew install …` on its own line, press **`y`**, let it finish, *then* paste the rest. This is why the TL;DR keeps Part 1 (`brew install`) separate from the Parts 2–5 paste.
+
+**(Step 2/3) `brew install` seems to hang doing nothing** — it's waiting for you. brew asks `Do you want to proceed with the installation? [y/n]` and pauses; type **`y`** and **Enter**.
 
 **(Step 1) `brew --version` returns `command not found`** — Homebrew's PATH isn't loaded in this Terminal session. On a modern Mac, opening a *new* Terminal window fixes it (the installer registers Homebrew system-wide). To load it into the current window without reopening, run `eval "$(/opt/homebrew/bin/brew shellenv)"`. On older Macs, run the three `~/.zprofile` lines at the end of Step 1. (Note: the command is `brew --version` — two dashes. `brew -version` with one dash prints Homebrew's help and an "Unknown command" error.)
 
