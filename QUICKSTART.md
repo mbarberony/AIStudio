@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-06-24*
+*Version: Beta | Updated: 2026-06-28*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -47,6 +47,32 @@ AIStudio setup uses the shell to get installed and also to perform tasks the AIS
 You need a Mac with Apple Silicon (M1/M2/M3/M4). Everything else you need — Python, Homebrew, Qdrant, Ollama — is installed in the steps below.
 
 > Not sure if you have Apple Silicon? Click the **Apple menu** (on the top left part of the screen) → **About This Mac**. Look for "Chip: Apple M1" (or M2/M3/M4). Intel Macs have not been tested — results may vary.
+
+---
+
+## 0. Confirm Your Shell is zsh
+
+Every command in this guide assumes your Mac's Terminal uses **zsh** — the default shell on macOS since 2019. A few accounts (especially ones created long ago, or set up by hand) still default to the older **bash** shell. On those, this setup *silently half-works*: software installs correctly but the lines that are supposed to make commands permanently available go into the wrong place, so commands you just installed come back as `command not found`. This one check prevents the most common reason the install "looks done but doesn't work."
+
+The quickest tell is your prompt. Look at the very end of the prompt line in Terminal:
+
+- Ends in **`%`** (for example `yourname@Mac ~ %`) — you're on zsh. **→ Skip to Step 1.**
+- Ends in **`$`** (for example `Mac:~ yourname$`) — you're on bash. Switch to zsh (below).
+
+To be certain, type:
+```bash
+echo $SHELL
+```
+
+- If it prints something ending in **`/zsh`** (e.g. `/bin/zsh`) — you're set. **→ Go to Step 1.**
+- If it prints something ending in **`/bash`** (e.g. `/bin/bash`) — switch your account to zsh:
+```bash
+chsh -s /bin/zsh
+```
+
+Then **quit Terminal completely** — press **⌘ Q** (Command key + Q) with Terminal in front, *not* just the red close button — and **reopen it** (**⌘ Space**, type **Terminal**, **Enter**). Run `echo $SHELL` once more to confirm it now ends in `/zsh`, then continue with Step 1.
+
+> **Why this matters:** the later steps save settings into files named `~/.zprofile` and `~/.zshrc`. Those files are read by zsh. A bash session ignores them — so on bash the Homebrew path, the Qdrant path, and the `ais_*` commands all appear to install but won't be found in new Terminal windows. Switching to zsh once, here, makes every step below work exactly as written.
 
 ---
 
@@ -100,7 +126,7 @@ If you see a version number where the second part is 10 or higher — for exampl
 brew install python@3.13
 ```
 
-This takes less than a minute. You'll see a stream of messages — ignore them. All is good when you're back at the `%` prompt.
+This takes less than a minute. You'll see a stream of messages, including a `==> Caveats` section — that is normal, and you don't need to read it.
 
 You may also see notices like:
 ```
@@ -108,14 +134,21 @@ You may also see notices like:
 ```
 Ignore these — they do not affect AIStudio.
 
+Homebrew does **not** automatically make this the `python3` your Mac reaches for — the new Python is installed but "parked" off to the side, so `python3 --version` will still report the old built-in 3.9. Point your Mac at the new one (copy and paste the whole block at once; it's safe to run more than once):
+```bash
+PY_LINE='export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
+grep -qxF "$PY_LINE" ~/.zprofile 2>/dev/null || echo "$PY_LINE" >> ~/.zprofile
+eval "$PY_LINE"
+```
+
 Verify:
 ```bash
 python3 --version
 ```
 
-Expected: `Python 3.13.x` or higher.
+Expected: `Python 3.13.x`. If it still shows `3.9.x`, close the Terminal window, open a new one, and run `python3 --version` again.
 
-> AIStudio uses type syntax (`float | None`) that fails on Python 3.9. The macOS system Python is often 3.9 — that's why we check.
+> AIStudio uses type syntax (`float | None`) that fails on Python 3.9. The macOS system Python is often 3.9 — that's why we check, install a current one, and put it on your PATH.
 
 ---
 
@@ -252,7 +285,7 @@ Download and install the binary, put it on your PATH, and verify:
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mkdir -p ~/bin
 mv qdrant ~/bin/qdrant
-grep -q 'export PATH="$HOME/bin' ~/.zshrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+grep -q 'export PATH="$HOME/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 qdrant --version
 ```
@@ -439,7 +472,7 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 *For experienced users who already live in a terminal. This skips every explanation above — you'll get a running instance, but you'll miss the understanding of how a RAG system is built. If anything here is unfamiliar, use the full guide instead.*
 
-**Prereqs:** Apple Silicon Mac. The steps below install Homebrew, Python, Ollama, Pango, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
+**Prereqs:** Apple Silicon Mac, **and a zsh shell** (the macOS default — if your prompt ends in `$` rather than `%`, run `chsh -s /bin/zsh`, quit Terminal with ⌘Q, and reopen before pasting; see [Step 0](#0-confirm-your-shell-is-zsh)). The steps below install Homebrew, Python, Ollama, Pango, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
 
 **Run it in two parts.** On a bare-metal Mac the Homebrew install (Part 0) is the one step that needs a human: it triggers the macOS *"install command line developer tools"* dialog — click **Install** and let it finish (that's what provides `git`). Once `brew --version` answers, the rest (Parts 1–5) is a single uninterrupted paste. On a machine that already has Homebrew, skip Part 0 and paste Parts 1–5 in one go.
 
@@ -454,6 +487,10 @@ brew --version    # must print a version before you proceed
 # 1. Toolchain (brew installs each; no-op for anything already present)
 brew install python@3.13 ollama pango git
 brew services start ollama
+# put Homebrew's keg-only python3 on PATH (else python3 stays at the system 3.9)
+PY_LINE='export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
+grep -qxF "$PY_LINE" ~/.zprofile 2>/dev/null || echo "$PY_LINE" >> ~/.zprofile
+eval "$PY_LINE"
 
 # 2. Models — embedding (required) + Google's Gemma (the default; small & fast)
 ollama pull nomic-embed-text
@@ -463,7 +500,7 @@ ollama pull gemma3:4b           # the default; add `ollama pull gemma3:27b` on 3
 mkdir -p ~/qdrant_storage ~/bin
 curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz
 mv qdrant ~/bin/qdrant
-grep -q 'export PATH="$HOME/bin' ~/.zshrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+grep -q 'export PATH="$HOME/bin' ~/.zshrc 2>/dev/null || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
 
 # 4. Clone + install
 mkdir -p ~/Developer && cd ~/Developer
@@ -503,15 +540,25 @@ Entries follow the order of the steps, so you can scan to where you are.
 
 **Something unexpected happened** — close and reopen Terminal (**⌘ Space**, type **Terminal**, **Enter**), then re-run the last command. A fresh terminal always starts with a clean environment.
 
-**(Step 1) `brew --version` returns `command not found`** — Homebrew not installed, or its PATH isn't set. Run the installer in Step 1; on older Macs run the three `~/.zprofile` lines at the end of Step 1.
+**The single most common cause of "it installed but the command isn't found": you're on bash, not zsh.** If your Terminal prompt ends in `$` (e.g. `Mac:~ yourname$`) instead of `%`, your account uses the older bash shell, and this guide's PATH/alias lines (which go into `~/.zprofile` and `~/.zshrc`) are being ignored. Symptoms: `brew`, `qdrant`, or any `ais_*` command reports `command not found` right after you installed it. **Fix:** `chsh -s /bin/zsh`, then **⌘ Q** to quit Terminal, reopen it, and re-run the step you were on. See [Step 0](#0-confirm-your-shell-is-zsh). This one switch resolves most of the entries below at once.
 
-**(Step 2) `python3` not found** — run `brew install python@3.13`.
+**(Step 1) `brew --version` returns `command not found`** — Homebrew's PATH isn't loaded in this Terminal session. On a modern Mac, opening a *new* Terminal window fixes it (the installer registers Homebrew system-wide). To load it into the current window without reopening, run `eval "$(/opt/homebrew/bin/brew shellenv)"`. On older Macs, run the three `~/.zprofile` lines at the end of Step 1. (Note: the command is `brew --version` — two dashes. `brew -version` with one dash prints Homebrew's help and an "Unknown command" error.)
 
-**(Step 3) `ollama list` hangs or errors** — Ollama isn't running. If brew-installed: `brew services start ollama`. Otherwise: `ollama serve` in a separate tab.
+**(Step 2) `python3 --version` still shows `3.9.x` after `brew install python@3.13`** — this is expected, not a failure. Homebrew installs `python@3.13` "keg-only" — it does not replace the system `python3` on your PATH. Run the PATH block in Step 2 (the `PY_LINE=…` lines), then open a new Terminal window if it still reports 3.9. AIStudio needs 3.10 or newer.
+
+**(Step 2) `python3` not found at all** — Python isn't installed; run `brew install python@3.13`, then the Step 2 PATH block.
+
+**(Step 3) `ollama list` hangs or errors** — Ollama isn't running. If brew-installed: `brew services start ollama`. Otherwise: `ollama serve` in a separate tab. **Do not run `ollama serve` if `ollama list` already worked** — Ollama is already running as a background service, and a second copy fails with `address already in use` (harmless, but not needed).
 
 **(Step 3/10) UI shows "Ollama not running"** — run `brew services start ollama`, then `ais_start` again.
 
-**(Step 5) `qdrant` — `command not found`** — `~/bin` isn't on your PATH. Run `source ~/.zshrc` (and confirm the PATH line is in `~/.zshrc`, per Step 5).
+**(Step 5) `grep: /Users/<you>/.zshrc: No such file or directory`** — harmless. On a brand-new account `~/.zshrc` doesn't exist yet; the command still creates it and adds the PATH line. You can ignore this message and continue.
+
+**(Step 5) `qdrant` — `command not found`** — `~/bin` isn't on your PATH. Run `source ~/.zshrc` (and confirm the PATH line is in `~/.zshrc`, per Step 5). If you're on bash, see the bash/zsh note at the top of this annex.
+
+**(Step 7) `cd: AIStudiocd: No such file or directory`, or `./ais_install: No such file or directory`** — two commands got run on one line, or you're not inside the repo folder. Run `cd ~/Developer/AIStudio` on its own line, confirm your prompt ends in `AIStudio %`, then run `./ais_install`.
+
+**(Step 8) `ais_start` (or any `ais_*`) returns `command not found` immediately after `ais_install` succeeded** — the aliases were written to `~/.zshrc` but this Terminal session hasn't loaded them yet. Run `source ~/.zshrc` (exactly as the install summary says), then the command. If it *still* fails, you're on bash — see the bash/zsh note at the top of this annex. Note: `source ~/Developer/AIStudio/.venv/bin/activate` activates the Python environment but does **not** load the `ais_*` aliases — that's `source ~/.zshrc`.
 
 **(Step 9) `(.venv)` not in your prompt** — run `source ~/Developer/AIStudio/.venv/bin/activate`.
 
