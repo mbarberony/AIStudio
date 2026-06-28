@@ -1,6 +1,6 @@
 # Benchmark Harness (BENCH_HARNESS)
 
-*Version: 2.0.0 | Updated: 2026-06-27*
+*Version: 2.0.1 | Updated: 2026-06-27*
 
 *Lives at `benchmarks/docs/` (renamed from `docs/HARNESS.md`). Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how-to-read-a-benchmark in TUTORIAL §5.*
 
@@ -60,7 +60,7 @@ doesn't resolve is a hard error — the harness will not silently fall back to t
 
 ## Question File Format
 
-Questions are YAML files organized by topic. Each question has an `id`, a `question` string, optional `keywords` for pass/fail evaluation, and optional `notes`:
+Questions are YAML files organized by topic. Each question has an `id`, a `question` string, optional `keywords` (a soft signal feeding the GREEN/AMBER/RED rating — see Scoring below, not a binary gate), and optional `notes`:
 
 ```yaml
 - topic: Architecture Methodology
@@ -151,17 +151,27 @@ Each report contains:
 
 **Configuration** — full snapshot (corpus, model, top-k, temperature, timestamp) so every report is self-describing and reproducible.
 
-**Summary** — total questions, pass rate, average latency.
+**Summary** — total questions, the 🟢/🟡/🔴 rating tally, binary pass rate (back-compat), average latency.
 
 **Infrastructure** — vector store, embedding model, reranker, corpus stats.
 
-**Results table** — per question: latency, pass/fail, citation sources, notes.
+**Results table** — per question: latency, rating (🟢/🟡/🔴), citation density, sources, notes.
 
 **Detailed results** — full answer text with inline citations, per question.
 
 The first query in a cold session is slow (20–50s) while the LLM loads into memory. Subsequent queries run at ~6–7s warm on M4 Pro/Max, or ~26–28s on M4 Air — latency is hardware-bound, not corpus-bound. The benchmark summary reflects warm latency once the first query completes.
 
 ---
+
+## Scoring — the GREEN/AMBER/RED rating
+
+Since AIStudio_878, `evaluate()` returns a tri-state `rating ∈ {GREEN, AMBER, RED}` as the primary verdict, with the older binary `pass` demoted to a back-compat soft signal:
+
+- **🟢 GREEN** — cited, right firm, honest, keywords present, adequate citation density.
+- **🟡 AMBER** — cited and plausibly right, but with a soft weakness (a keyword miss, low citation density, or partial entity coverage) → read up / audit.
+- **🔴 RED** — no citations, honest-empty, or wrong firm (entity coverage 0 with a filter active).
+
+Keyword matching is demoted from the verdict to one input among several — a GREEN answer can miss a keyword and an AMBER one can hit them all. The thresholds are v1 defaults, calibrated against the audited canonical runs; the rating is a triage signal, not a grade. The contract is still the audit: verify the cited chunk, never the colour alone.
 
 ## SEC 10-K Corpus
 
