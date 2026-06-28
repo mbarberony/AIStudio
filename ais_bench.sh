@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.8.0
+# Version: 1.8.1
+# Changelog: 1.8.1 — Command Dev STD §7: remove the wrapper's bold [ais_bench v… ] header.
+#   bench.py now prints the single identity header (it was a double-header: wrapper v1.8.0
+#   then bench.py v2.8.x). Fix stale comment path benchmarks/ → benchmarks/batch/.
 # Changelog: 1.8.0 — recognize --batch (bench.py v2.8.x primary flag) for preflight-skip, alongside
 #   --canonical (now the deprecated alias). Batch/canonical runs manage their own corpora from
 #   benchmarks/batch/bench_canonical.yaml, so the single-corpus preflight does not apply to either.
@@ -20,7 +23,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.8.0"
+VERSION="1.8.1"
 
 SCRIPT_NAME="ais_bench"
 REPO="${0:A:h}"
@@ -45,10 +48,13 @@ if [[ "$1" == "--version" ]]; then echo "$SCRIPT_NAME v$VERSION"; exit 0; fi
 _dim()  { printf '\033[2m\033[3m%s\033[0m' "$1"; }
 _sep()  { echo "$(_dim "--- $1")"; }
 
-printf '\033[1m[ais_bench v%s — Run AIStudio benchmark]\033[0m\n' "$VERSION"
+# Header is owned by the Python module (bench.py), not this wrapper — see
+# Command Dev STD §7 (wrapper-backed command pattern). The wrapper prints only
+# its phase separators (--- Preflight / --- Batch); bench.py prints the single
+# bold [ais_bench v… ] identity header.
 
-# ── Canonical mode (AIStudio_931): manages its own corpora/params from ─────────
-# benchmarks/bench_canonical.yaml. Skip the single-corpus preflight and hand
+# ── Batch/canonical mode (AIStudio_931): manages its own corpora/params from ───
+# benchmarks/batch/bench_canonical.yaml. Skip the single-corpus preflight and hand
 # straight to bench.py, which orchestrates each run via the normal path.
 for _arg in "$@"; do
     if [[ "$_arg" == "--canonical" || "$_arg" == "--batch" ]]; then

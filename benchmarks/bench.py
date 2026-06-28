@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Changelog: 2.8.3 — VERSION constant synced 2.7.3 → 2.8.3 (was lagging the 2.8.2 changelog
+#   head — the T2.52 trap: bump the field the tool reads, not just the comment). CLI Output STD:
+#   batch banner de-bolded to a `·` info line (was a competing [ ] header); per-run ──► → ▶
+#   (──► not in the §1 symbol table). Docstring: stale --subset → --scope (removed 2.8.0).
 # Changelog: 2.8.2 — Flag rename: --batch is now the primary flag for the pinned run set
 #            (--canonical kept as a silent deprecated alias; same dest, so behavior identical).
 #            --batch-id mirrors --canonical-id. NOTE: ais_bench.sh wrapper still keys its
@@ -95,11 +99,11 @@ Usage:
     ais_bench --corpus sec_10k --top-k 10               # SEC corpus
     ais_bench --corpus demo --model llama3.1:70b        # 70b model
 
-Question subset filtering (sec_10k):
+Question scope filtering (sec_10k):
     ais_bench --corpus sec_10k --topics "AI Risk Evolution"
-    ais_bench --corpus sec_10k --subset big_banks
+    ais_bench --corpus sec_10k --scope big_banks
     ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
-    ais_bench --corpus sec_10k --topics "Capital & Financial Position" --subset big_banks
+    ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
 
 Flags:
     --corpus        Corpus name to query (default: demo)
@@ -112,9 +116,10 @@ Flags:
     --no-markdown   Skip writing .md report
     --full          Include full answers in report (default: first 4 paragraphs)
     --firm          Inject firm filter into all queries (overrides YAML firm fields)
-    --subset        Filter questions by firm group: big_banks, bulge_bracket, asset_managers,
-                    exchanges, insurance, custody, boutiques. Filters by firm names in question text.
-    --topics        Filter questions by topic name (comma-separated, AND with --subset)
+    --scope         Restrict the retrieval firm-universe to a named scope file:
+                    benchmarks resolve <corpus>_<scope>_scope.yaml (e.g. big_banks, bulge_bracket,
+                    asset_managers, exchanges, insurance, custody, boutiques). Missing scope = hard error.
+    --topics        Filter questions by topic name (comma-separated, AND with --scope)
     --question-ids  Filter to specific question IDs (comma-separated, AND with other filters)
     --alpha         Hybrid retrieval alpha: 0.0=pure vector, 1.0=pure BM25, None=backend default
 
@@ -199,7 +204,7 @@ import _scope_common as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.7.3"
+VERSION = "2.8.3"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -1102,7 +1107,7 @@ def run_canonical(args: argparse.Namespace) -> int:
         print(f"❌ No runs defined in {spec_path.name}")
         return 1
 
-    print(f"\033[1m[ais_bench --batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/]\033[0m")
+    print(f"· batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/")
 
     failures = 0
     for r in runs:
@@ -1129,7 +1134,7 @@ def run_canonical(args: argparse.Namespace) -> int:
         if r.get("min_score") is not None:
             argv += ["--min-score", str(r["min_score"])]
 
-        print(f"\n\033[1m──► canonical {rid}: {r.get('label', corpus)}\033[0m")
+        print(f"\n\033[1m▶ canonical {rid}: {r.get('label', corpus)}\033[0m")
         print("    " + " ".join(argv[2:]))
         result = subprocess.run(argv)  # inherits env (PYTHONPATH/venv) + streams output
         if result.returncode != 0:
