@@ -1,5 +1,9 @@
 # src/local_llm_bot/app/config.py
-# Version: 1.2.0
+# Version: 1.3.0
+# Changelog: 1.3.0 — AIStudio_945: default_model gemma3:4b → llama3.1:8b ("the good llama" — clean
+#   [N] citations; the seven-model sweep showed gemma3:4b drops citations + fabricates entity
+#   attribution). ⚠ REQUIRES the install canon to pull llama3.1:8b (cold-install guard — see the
+#   field note below; this reverts the AIStudio_888 gemma pin and re-takes on that dependency).
 # Changelog: 1.2.0 — AIStudio_888: default_model llama3.1:8b → gemma3:4b (canon). See note at the field.
 from __future__ import annotations
 
@@ -45,10 +49,14 @@ class RagConfig(BaseModel):
     max_distance: float | None = Field(default=None, ge=0.0)
 
     # default_model: str = Field(default="llama3.2:3b")
-    # AIStudio_888: canon default is gemma3:4b (README/QUICKSTART/help/UI v2.8.3+). Was "llama3.1:8b",
-    # which 500s /ask on any install that never pulled llama — the cold-install release-blocker found
-    # in Nuclear Test Pass 2 (fresh clone + canon-only model store → first query failed).
-    default_model: str = Field(default="gemma3:4b")
+    # AIStudio_945 (2026-06-30): canon default → llama3.1:8b ("the good llama"). The seven-model
+    # citation sweep showed gemma3:4b drops [N] citations and fabricates entity attribution; the 8B
+    # llama cites cleanly and is the recommended small/fast default (gemma3:27b for heavy work).
+    # ⚠ COLD-INSTALL DEPENDENCY (do not lose): a fresh clone 500s on its FIRST /ask if the install
+    # canon does not PULL this model — that is the AIStudio_888 Nuclear-Test-Pass-2 blocker that drove
+    # the earlier gemma3:4b pin. The install canon (install.sh + QUICKSTART) MUST pull llama3.1:8b in
+    # lockstep with this default. Safe on any machine that already has llama3.1:8b (e.g. Beast).
+    default_model: str = Field(default="llama3.1:8b")
 
     default_embed_model: str = Field(default="nomic-embed-text")
     strict_unknown_reply: str = Field(default="I don't know based on the provided documents.")

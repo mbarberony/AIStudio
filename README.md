@@ -52,7 +52,7 @@ The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corp
 
 **ESEF corpus — European banks, the harder cousin:** AIStudio also builds a second at-scale corpus from European banks' **ESEF** filings (retrieved from filings.xbrl.org by LEI — the same download → entities → glossary → ingest machinery as SEC, only the access key and endpoint change). The two corpora are deliberately complementary learning vehicles: together they surface the problems that actually bite in production — resolving the **many names one firm files under** (handled with a GLEIF/LEI entity knowledge base), **multilingual retrieval** (an English question against a filing that says *fonds propres de base de catégorie 1* rather than *Common Equity Tier 1* retrieves worse), and **pulling numbers out of dense, multi-column tables** without severing a cell from the year that gives it meaning. The [Tutorial](TUTORIAL.md) — Modules 2 and 3, plus Annexes 3 and 5 — walks through all of it end to end.
 
-**Models & benchmarking:** AIStudio runs **any Ollama model** — `gemma3`, `mistral`, `llama3.1`, and whatever else you pull; `gemma3:4b` is the out-of-the-box default, the rest are options, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [BENCH_HARNESS.md](benchmarks/docs/BENCH_HARNESS.md).
+**Models & benchmarking:** AIStudio runs **any Ollama model** — `gemma3`, `mistral`, `llama3.1`, and whatever else you pull; `llama3.1:8b` is the out-of-the-box default, the rest are options, not requirements. Model choice often barely moves warm latency (once weights are in unified memory, size stops being the variable), though it does change answer quality on the hard cases. Benchmarks here are normalized on the **Google Gemma suite** (`gemma3:27b`) for comparability — but the harness is model-agnostic: `ais_bench` automates question selection (by scope, topic, or id) and sweeps across models and retrieval parameters, so the same question set can run under permutations of model / α / top-k and be compared directly. See [BENCH_HARNESS.md](benchmarks/docs/BENCH_HARNESS.md).
 
 ---
 
@@ -274,7 +274,7 @@ All figures from Beast (M4 Pro, 128GB unified memory). MacBook Air (M4) clean in
 Corpus:     100+ SEC 10-K filings, 21 financial services firms
 Chunks:     100K+
 Ingest:     ~31 min, ~54 chunks/sec, 0 failures
-Model:      gemma3:4b (default) · gemma3:27b (SEC 10-K / benchmark) · llama3.1 / mistral (also supported)
+Model:      llama3.1:8b (default) · gemma3:27b (SEC 10-K / benchmark) · gemma3:4b / mistral (also supported)
 Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
             ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
 Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b)
@@ -327,6 +327,16 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 **What's next:** the Post-Beta and Future phases — Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).
 
 > AIStudio is intentionally in a state of permanent Beta — not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning marks milestones, not completion.
+
+## License
+
+AIStudio is **source-available** under the [PolyForm Noncommercial License 1.0.0](LICENSE.md) — free to use, study, modify, and share for **noncommercial** purposes (personal use, research, experimentation, evaluation, and use by educational, charitable, or government institutions).
+
+**Any commercial use — including commercial redistribution, hosting it as a paid service, or incorporating it into a commercial product — requires a separate license. Please reach out before redistributing or building on AIStudio commercially.**
+
+This is a *source-available* license, not an OSI-approved open-source license: the code is public to read and learn from, but redistribution and commercial use are gated. Re-licensing applies going forward; anything previously released under a different license remains under that license for those versions.
+
+Copyright © 2026 Manuel Barbero. See [LICENSE.md](LICENSE.md) for the full terms.
 
 ---
 

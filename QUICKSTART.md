@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-06-28*
+*Version: Beta | Updated: 2026-06-30*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -221,17 +221,17 @@ AIStudio uses two kinds of model that do completely different jobs.
 
 **The language model** reads the relevant passages found by the indexing model and writes a human-language answer with citations. This is what most people think of as "AI." AIStudio supports three open model families, each in a small (fast) and a large (highest-quality) size:
 
-| Family | Small — fast, the default | Large — best quality |
-|--------|---------------------------|----------------------|
-| **Google Gemma** ⭐ | `gemma3:4b` | `gemma3:27b` |
-| Meta Llama | `llama3.1:8b` | `llama3.1:70b` |
+| Family | Small — fast | Large — best quality |
+|--------|--------------|----------------------|
+| **Meta Llama** ⭐ | `llama3.1:8b` | `llama3.1:70b` |
+| Google Gemma | `gemma3:4b` | `gemma3:27b` |
 | Mistral AI | `mistral:7b` | `mixtral:8x7b` |
 
-**The default is `gemma3:4b`** — Google's Gemma. It loads in seconds and answers the demo corpus fast, which makes for the best first run; Gemma also tops the AIStudio benchmark on the SEC corpus. You can switch models at any time in the UI.
+**The default is `llama3.1:8b`** — Meta's Llama. It gives clean, reliably-cited answers on the demo and help corpora out of the box: it follows the citation format faithfully, which is what keeps answers verifiable. `gemma3:4b` is a lighter, faster alternative if you're tight on memory, and `gemma3:27b` is the high-quality model you'll switch to for the heavier SEC corpus (where it tops the AIStudio benchmark). You can switch models at any time in the UI.
 
 **Which to download — based on your Mac's memory** (Apple menu → **About This Mac** → "Memory"):
 
-- **8–16 GB** — `gemma3:4b` (the default). Plenty for the demo corpus.
+- **8–16 GB** — `llama3.1:8b` (the default). Comfortable on 16 GB; on 8 GB it runs but is tight — `gemma3:4b` is a lighter, faster fallback there if you want more headroom.
 - **32 GB** — also pull `gemma3:27b` for top-quality answers on heavier corpora.
 - **64 GB or more** — `gemma3:27b` is excellent; pull `llama3.1:70b` or `mixtral:8x7b` only if you want the largest Meta / Mistral options.
 
@@ -244,7 +244,7 @@ ollama pull nomic-embed-text
 
 **Step 2 — Download your language model.** Start with the default:
 ```bash
-ollama pull gemma3:4b
+ollama pull llama3.1:8b
 ```
 
 Optional — the larger Gemma for heavier corpora (32 GB+):
@@ -252,11 +252,11 @@ Optional — the larger Gemma for heavier corpora (32 GB+):
 ollama pull gemma3:27b
 ```
 
-Prefer Meta or Mistral? Small: `ollama pull llama3.1:8b` or `ollama pull mistral:7b`. Large: `ollama pull llama3.1:70b` or `ollama pull mixtral:8x7b`.
+Prefer a lighter model or another family? Small: `ollama pull gemma3:4b` (lighter, faster) or `ollama pull mistral:7b`. Large: `ollama pull llama3.1:70b` or `ollama pull mixtral:8x7b`.
 
-> **You'll switch to `gemma3:27b` later — on purpose.** The demo corpus runs beautifully on `gemma3:4b`. When you reach the SEC 10-K corpus in the [Tutorial](TUTORIAL.md), it prompts you to switch to `gemma3:27b` in the model dropdown — the heavier corpus rewards the larger model (it's the model behind AIStudio's top benchmark). Fast first impression now; full power when it counts.
+> **You'll switch to `gemma3:27b` later — on purpose.** The demo corpus runs beautifully on the default `llama3.1:8b`. When you reach the SEC 10-K corpus in the [Tutorial](TUTORIAL.md), it prompts you to switch to `gemma3:27b` in the model dropdown — the heavier corpus rewards the larger model (it's the model behind AIStudio's top benchmark). Fast first impression now; full power when it counts.
 
-> **Download times** depend on your internet speed (check yours at [fast.com](https://fast.com)). On a 100 Mbps connection, expect about 2 minutes for `gemma3:4b` and 10 minutes for `gemma3:27b`. The estimate shown during download may fluctuate — starting at hours, then dropping to minutes.
+> **Download times** depend on your internet speed (check yours at [fast.com](https://fast.com)). On a 100 Mbps connection, expect about 5 minutes for `llama3.1:8b` (or ~2 minutes for the lighter `gemma3:4b`) and 10 minutes for `gemma3:27b`. The estimate shown during download may fluctuate — starting at hours, then dropping to minutes.
 
 > **Note:** If your models show a modified date of several weeks ago — that's fine. They don't expire.
 
@@ -414,7 +414,7 @@ When AIStudio opens in your browser, you'll see three main areas:
 
 **On the right** — the settings sidebar. It controls how AIStudio retrieves and generates answers (model, Top K, temperature, retrieval mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
 
-The **Model** is set to `gemma3:4b` by default — small and fast, ideal for the demo. (For the heavier SEC 10-K corpus in the [Tutorial](TUTORIAL.md), switch it to `gemma3:27b`.)
+The **Model** is set to `llama3.1:8b` by default — small, fast, and reliably cited, ideal for the demo. (For the heavier SEC 10-K corpus in the [Tutorial](TUTORIAL.md), switch it to `gemma3:27b`.)
 
 Try these questions on the demo corpus to start:
 - *"What is QFD and how does it apply to technology architecture?"*
@@ -497,9 +497,9 @@ PY_LINE='export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
 grep -qxF "$PY_LINE" ~/.zprofile 2>/dev/null || echo "$PY_LINE" >> ~/.zprofile
 eval "$PY_LINE"
 
-# 3. Models — embedding (required) + Google's Gemma (the default; small & fast)
+# 3. Models — embedding (required) + the default language model (small, fast, reliably cited)
 ollama pull nomic-embed-text
-ollama pull gemma3:4b           # the default; add `ollama pull gemma3:27b` on 32GB+ for the SEC/ESEF corpora (Tutorial Modules 2–3)
+ollama pull llama3.1:8b         # the default; add `ollama pull gemma3:27b` on 32GB+ for the SEC/ESEF corpora (Tutorial Modules 2–3)
 
 # 4. Qdrant binary (needs ~/bin on PATH; the grep makes the line idempotent)
 mkdir -p ~/qdrant_storage ~/bin
@@ -516,7 +516,7 @@ source ~/.zshrc
 ais_start
 ```
 
-First run auto-indexes the **demo** and **help** corpora (~60s) and opens the UI on `gemma3:4b`. First query is slow (model load, 20–50s); after that ~6–7s. `ais_help` lists commands; `ais_stop` when done.
+First run auto-indexes the **demo** and **help** corpora (~60s) and opens the UI on `llama3.1:8b`. First query is slow (model load, 20–50s); after that ~6–7s. `ais_help` lists commands; `ais_stop` when done.
 
 > In the UI sidebar the demo corpus defaults to **Top K = 10**. Full knobs in [Annex 3](#annex-3--tuning-parameters).
 
@@ -587,7 +587,7 @@ The settings sidebar (Step 11) controls retrieval and generation. Defaults are t
 
 | Parameter | Default | Effect |
 |-----------|---------|--------|
-| Model | `gemma3:4b` | The language model that writes answers. Small & fast for the demo; switch to `gemma3:27b` for the SEC 10-K corpus. |
+| Model | `llama3.1:8b` | The language model that writes answers. Small, fast, and reliably cited for the demo; switch to `gemma3:27b` for the SEC 10-K corpus. |
 | Top K | 10 | Chunks retrieved per query. Higher = more context, slightly slower. **10 is the default** — the demo has small documents (as few as 20 chunks) that only surface reliably at K=10, and the SEC corpus needs K=10 for cross-firm multi-source queries. |
 | Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
 | Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |

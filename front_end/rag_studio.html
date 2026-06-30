@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.9.1 -->
+<!-- Version: 2.9.2 -->
+<!-- Changelog: 2.9.2 — AIStudio_945: default-model selection prefers the good llama (llama3.1:8b)
+     when available, then gemma3:4b, then smallest Gemma, then first available. Presence-aware: only
+     ever selects a PULLED model, so a cold install without llama falls back safely (no 500). -->
 <!-- Changelog: 2.9.1 — Fold in the ingest progress-bar completion fix (originally drafted as 2.7.1
      but never version-bumped onto the 2.8.x/2.9.0 line — caused a version collision where two
      different rag_studio.html contents both read "2.9.0"). Both pollers (sidebar pollIngestStatus +
@@ -1327,12 +1330,17 @@
             modelSelect.innerHTML = chatModels
                 .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
                 .join('');
-            // Default model: canon gemma3:4b -> smallest available Gemma -> first available (v2.8.3)
-            const gemmas = chatModels.filter(m => m.available && /gemma/i.test(m.id));
+            // Default model (AIStudio_945): prefer the good llama (llama3.1:8b — clean [N] citations),
+            // then gemma3:4b, then smallest available Gemma, then first available. Presence-aware —
+            // every candidate is filtered to m.available, so a cold install without llama falls back
+            // safely (no 500); gemma3:4b drops citations so it is no longer the preferred default.
+            const avail = chatModels.filter(m => m.available);
+            const gemmas = avail.filter(m => /gemma/i.test(m.id));
             const sizeOf = id => { const x = id.match(/(\d+(?:\.\d+)?)b/i); return x ? parseFloat(x[1]) : Infinity; };
-            const canon = gemmas.find(m => m.id === 'gemma3:4b');
+            const goodLlama = avail.find(m => m.id === 'llama3.1:8b');
+            const gemmaCanon = gemmas.find(m => m.id === 'gemma3:4b');
             const smallestGemma = gemmas.slice().sort((a, b) => sizeOf(a.id) - sizeOf(b.id))[0];
-            const first = canon || smallestGemma || chatModels.find(m => m.available);
+            const first = goodLlama || gemmaCanon || smallestGemma || avail[0];
             if (first) modelSelect.value = first.id;
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';
