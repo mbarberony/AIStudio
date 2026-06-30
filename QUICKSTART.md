@@ -227,7 +227,7 @@ AIStudio uses two kinds of model that do completely different jobs.
 | Google Gemma | `gemma3:4b` | `gemma3:27b` |
 | Mistral AI | `mistral:7b` | `mixtral:8x7b` |
 
-**The default is `llama3.1:8b`** — Meta's Llama. It gives clean, reliably-cited answers on the demo and help corpora out of the box: it follows the citation format faithfully, which is what keeps answers verifiable. `gemma3:4b` is a lighter, faster alternative if you're tight on memory, and `gemma3:27b` is the high-quality model you'll switch to for the heavier SEC corpus (where it tops the AIStudio benchmark). You can switch models at any time in the UI.
+**The default is `llama3.1:8b`** — Meta's Llama. It gives clean, well-grounded answers on the demo and help corpora out of the box and generally follows the citation format that keeps answers verifiable. Citation *rendering* can vary with your machine and retrieval load — see the [TUTORIAL §1.2 note](TUTORIAL.md) for when it fluctuates and the simple settings (lower Top K, the RAM-appropriate model) that keep it reliable. `gemma3:4b` is a lighter, faster alternative if you're tight on memory, and `gemma3:27b` is the high-quality model you'll switch to for the heavier SEC corpus (where it tops the AIStudio benchmark). You can switch models at any time in the UI.
 
 **Which to download — based on your Mac's memory** (Apple menu → **About This Mac** → "Memory"):
 

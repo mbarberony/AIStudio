@@ -39,6 +39,8 @@ You'll get a grounded answer from the FS Journal *Strategy and Architecture* pap
 
 Every answer carries citations — `[1]`, `[2]` — and a **References** panel showing exactly which document and page each claim came from. **The inline `[N]` markers are clickable**: click one — or the **Open ↗** on its References entry — to open the source in the **Source Dive** panel at the cited page (PDFs); other file types open in a new tab. This is AIStudio's core promise: answers grounded in your documents, with a path back to the source.
 
+> **A note on citation reliability across machines.** Citation behavior is not perfectly uniform across hardware. In our own testing the same query, corpus, and model produced clean inline citations on higher-memory Macs (e.g. 64–128 GB unified memory) while a memory-constrained machine occasionally returned a well-grounded answer that omitted the `[N]` markers — same prompt, same model, different box. We've traced part of this to how much context the answer is built from (large retrieval sets crowd a smaller model's instruction-following) and are actively investigating the role of available memory in particular. The practical takeaway for now: if you see answers that are correct but uncited on a lower-memory machine, lower **Top K** (fewer, tighter sources) and prefer the smaller model for your RAM tier — both reliably restore citations. This is an open area of work, tracked in the project notes; the grounding itself (the retrieved passages) is unaffected — only whether the model renders the `[N]` marker.
+
 ### 1.3 Follow-up Questions
 
 AIStudio keeps conversation context across a session, so you can build on the previous answer with pronouns — it remembers what *that* refers to. Continue the thread from §1.1:

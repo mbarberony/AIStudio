@@ -60,7 +60,7 @@ The [QUICKSTART](QUICKSTART.md) also shows you how to set up the **SEC 10-K corp
 
 Nothing AIStudio does is rocket science these days — it's the table stakes of the job. You could assemble most of it on any cloud platform tomorrow. **What you can't do is point it at your *whole* corpus and freely mix your own files with outside sources.** A CISO might sign off on dropping one file into Copilot; the whole corpus, blended with external feeds, is another matter — and in financial services that's the normal case, not the edge case.
 
-AIStudio does what any retrieval system worth its salt must: **it verifies its own faithfulness at the level of the cited passage**, so a confident-sounding answer can be checked against the exact text it rests on.
+AIStudio does what any retrieval system worth its salt must: **it verifies its own faithfulness at the level of the cited passage**, so a confident-sounding answer can be checked against the exact text it rests on. (Citation *rendering* — whether the model emits the `[N]` marker — can vary with the machine and retrieval load; the grounding does not. See the TUTORIAL §1.2 note for the current state of that work and the simple settings that keep citations reliable on lower-memory Macs.)
 
 **The honest test bed.** The system was audited claim-by-claim against the source chunks across a corpus of US and European bank filings. English is the clean regime, and retrieval fidelity degrades predictably with language — near-perfect on English, partial on French, weak on the Nordic/Italian/Dutch tail — so the results below are drawn from the English corpus. It handles three kinds of work:
 
