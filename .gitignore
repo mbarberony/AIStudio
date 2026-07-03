@@ -7,25 +7,19 @@ src/*.egg-info/
 # Environment
 .venv/
 .env
-
 # IDE
 .vscode/
 .idea/
-
 # macOS
 .DS_Store
 **/.DS_Store
-
 # Logs
 *.log
-
 # Test / lint caches
 .pytest_cache/
 .ruff_cache/
-
 # AIStudio — meta (operator only, travels via BUNDLE)
 meta/
-
 # AIStudio — operator scripts (gitignored, travels via BUNDLE)
 # All operator tooling uses the _ops suffix → ignore by pattern (current + future).
 *_ops.sh
@@ -45,7 +39,6 @@ scripts/ais_commit.sh
 scripts/ais_publish.sh
 scripts/restore_scripts.sh
 scripts/update_help_corpus.py
-
 # AIStudio — corpus data (large files, not in repo)
 data/corpora/*
 !data/corpora/demo/
@@ -56,13 +49,11 @@ data/corpora/demo/uploads/trash/
 data/corpora/demo/index.jsonl
 data/corpora/demo/manifest.jsonl
 data/corpora/demo/doc_chunk_map.json
-
 # AIStudio — sec_10k corpus (user builds their own — see QUICKSTART Step 7)
 data/corpora/sec_10k/*
 !data/corpora/sec_10k/
 !data/corpora/sec_10k/sec_10k_full_scope.yaml
 !data/corpora/sec_10k/sec_10k_corpus_metadata.yaml
-
 # AIStudio — help corpus (PDFs shipped, runtime files excluded)
 !data/corpora/help/
 !data/corpora/help/uploads/
@@ -73,7 +64,6 @@ data/corpora/help/trash/
 data/corpora/help/doc_chunk_map.json
 data/corpora/help/index.jsonl
 data/corpora/help/manifest.jsonl
-
 # AIStudio — sec_10k corpus benchmark (user builds their own — see QUICKSTART Step 7)
 benchmarks/sec_10k/*
 !benchmarks/sec_10k/sec_10k_questions.yaml
@@ -84,47 +74,37 @@ benchmarks/sec_10k/*
 benchmarks/sec_10k/questions/*.bak*
 benchmarks/sec_10k/questions/*.zip
 benchmarks/sec_10k/questions/.DS_Store
-
 # AIStudio — benchmark reports (generated output, not for public repo)
 benchmarks/*/reports/
 # Ship the curated benchmark suite (BENCH - Canonical * + duplicated raw reports under readme/)
 !benchmarks/docs/
 !benchmarks/docs/reports/
 !benchmarks/docs/reports/*
-
 # AIStudio — canonical benchmark spec (WIP — insulated until finalized; un-ignore to ship)
 # (canonical reports themselves are already covered by benchmarks/*/reports/ above)
 benchmarks/batch/bench_canonical.yaml
-
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
 DEMO_SCRIPT.md
 HOWTO_OPS.md
-
 # AIStudio — operator install artifacts
 ais_clean_install.sh
-
 # Legacy artifacts
 BASH_CHEATSHEET.md
 QuickReferenceGuide.docx
 QuickReferenceGuide.md
 ais_sec_download.sh
-
 # epaves (set aside files, recoverable)
 epaves/
-
 # Pipeline (operator only, never in public repo)
 PIPELINE.md
 meta/job_hunting/Thought Leadership and References/
 ais_command_help_ops.txt
-
 scripts/urc/
 data/corpora/help/ingest_failures.jsonl
 benchmarks/esef_banks/*
 !benchmarks/esef_banks/esef_banks_questions.yaml
-# Ship named question SUBSETS (mirror the scopes/ per-file un-ignore pattern)
 !benchmarks/esef_banks/questions/
 !benchmarks/esef_banks/questions/*.yaml
-# Re-ignore junk inside questions/ (named sets above already un-ignored; these patterns don't match them) — prevents .bak/.zip leak (KRR_064 family)
 benchmarks/esef_banks/questions/*.bak*
 benchmarks/esef_banks/questions/*.zip
 benchmarks/esef_banks/questions/.DS_Store
@@ -136,7 +116,6 @@ data/knowledge_sources/gleif/gleif_metadata.yaml
 scripts/ais_enrich_qdrant.py
 scripts/ais_import_knowledge_base.py
 ais_import_knowledge_base.sh
-
 # ── ESEF banks corpus — ship the curated scope + metadata (definition, not filings/vectors) ──
 !data/corpora/esef_banks/
 !data/corpora/esef_banks/esef_banks_full_scope.yaml
@@ -144,20 +123,17 @@ ais_import_knowledge_base.sh
 !data/corpora/esef_banks/scopes/
 !data/corpora/esef_banks/scopes/esef_banks_lang_en_scope.yaml
 !data/corpora/esef_banks/scopes/esef_banks_lang_noen_scope.yaml
-
 # AIStudio — esef_banks runtime artifacts (parity with sec_10k/help; ship scope+metadata only)
 data/corpora/esef_banks/index.jsonl
 data/corpora/esef_banks/manifest.jsonl
 data/corpora/esef_banks/doc_chunk_map.json
 data/corpora/esef_banks/uploads/
 data/corpora/esef_banks/trash/
-
 # accidental source archives (never ship)
 *.zip
-
 # Root-level operator commands without _ops suffix (historical exceptions)
 /ais_commit.sh
 /ais_deploy.sh
-
 # Demo corpus trash (superseded files, never tracked)
 data/corpora/demo/trash/
+data/model_manifest.json
