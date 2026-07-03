@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-06-30*
+*Version: Beta | Updated: 2026-07-03*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -412,7 +412,7 @@ When AIStudio opens in your browser, you'll see three main areas:
 
 **In the center** — the chat area. Type a question, get a cited answer. References below each answer show exactly which document and page the answer came from. Click **Open ↗** to see the source.
 
-**On the right** — the settings sidebar. It controls how AIStudio retrieves and generates answers (model, Top K, temperature, retrieval mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
+**On the right** — the settings sidebar. It controls how AIStudio retrieves and generates answers (model, Top K, temperature, timeout, threshold, retrieval mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
 
 The **Model** is set to `llama3.1:8b` by default — small, fast, and reliably cited, ideal for the demo. (For the heavier SEC 10-K corpus in the [Tutorial](TUTORIAL.md), switch it to `gemma3:27b`.)
 
@@ -592,6 +592,9 @@ The settings sidebar (Step 11) controls retrieval and generation. Defaults are t
 | Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
 | Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
 | Score Threshold | 0.3–0.5 | Filters out retrieved chunks that scored too low to be useful. Low-score chunks cause hedged or incorrect answers. Set lower (0.3) for corpora with small documents; higher (0.5) for large uniform corpora like SEC 10-K. Configured per-corpus — the demo uses 0.3, sec_10k uses 0.5. |
+| Timeout (s) | 300 | How long AIStudio waits for the model before giving up. The default is deliberately generous — it covers slow, large models (a 70B answer can take ~140–170s; cutting it off mid-generation wastes the whole run). Raise it only if you switch to a very large model and hit timeouts; there's rarely a reason to lower it. Configured per-corpus, overridable per-query in the left panel. |
+
+Each of Top K, Score Threshold, and Timeout resolves the same way: the value in the left panel wins; leave it blank and AIStudio uses the corpus's saved default; if the corpus has none, it falls back to the system default. So you can tune once per corpus (in **Edit Corpus**) or ad-hoc per query.
 
 > For more on query settings, see [HOWTO.md](HOWTO.md).
 

@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-06-24*
+*Version: Beta | Updated: 2026-07-03*
 
 # AIStudio
 
@@ -148,7 +148,7 @@ flowchart TD
     UI -->|HTTP POST /ask| API
 
     subgraph API["FastAPI · uvicorn · :8000"]
-        AV["Request validation\ntop_k / temperature / hybrid_alpha"]
+        AV["Request validation\ntop_k / temperature / hybrid_alpha\nmin_score / timeout"]
         AR["RAG pipeline\nretrieve → prompt → generate"]
         AC["Citation parser\ninline [1][2] + References"]
     end
@@ -322,6 +322,7 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
 - Help corpus search guidance — per-document routing rules injected into system prompt ✅
 - Relevance threshold — low-scoring chunks discarded at the vector layer ✅
+- Per-query timeout & threshold — the Ollama request timeout and the relevance floor (`min_score`) are tunable per query (left panel), per corpus (Edit Corpus), or by config default; the generous default keeps slow large models (70B ~140–170s) from being cut off mid-answer ✅
 - XBRL noise stripping in HTML ingestion ✅
 
 **What's next:** the Post-Beta and Future phases — Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).

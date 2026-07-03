@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: Beta | Updated: 2026-06-24*
+*Version: Beta | Updated: 2026-07-03*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -62,6 +62,10 @@ In the **Query Settings** section of the sidebar — just below the CORPUS area 
 **Retrieval Mix** is a slider that runs **left → right = literal → conceptual**. Drag **left** for literal matching — exact terms, tickers, defined phrases, names; drag **right** for conceptual matching — themes and ideas where the wording varies; the **middle (default) blends both**. (Under the hood the slider blends keyword/BM25 and semantic/vector retrieval; the panel shows it in plain literal↔conceptual terms.) Lean **literal** for exact terms, tickers, and acronyms (CET1, firm names); lean **conceptual** for paraphrased or thematic questions — see **Annex 5 (BM25)** for the mechanics.
 
 **Score Threshold** is a relevance floor — retrieved chunks scoring below it are dropped before the model sees them, which suppresses weak, off-topic context. The default is **0.5**, and **each corpus can set its own** (demo ships at 0.3) — you change it per corpus in the corpus **Edit** panel (§4.6). **When to lower it:** the embedding model (`nomic-embed-text`) often scores genuinely-relevant chunks below 0.5, so if good answers come back hedged or empty, drop the floor toward **~0.2–0.3** and re-ask.
+
+**Timeout** is how long AIStudio waits for the model to answer before giving up — the default is **300 seconds**, deliberately generous because large models are slow (a 70B answer can take ~140–170s, and cutting it off mid-generation wastes the whole run). Like Score Threshold, **each corpus can set its own** (in the **Edit** panel), and you can override it per query in the left panel. **When to change it:** raise it only if you switch to a very large model and see timeouts; there's rarely a reason to lower it. Most users never touch this one — it exists so a slow-but-valid answer on a heavy model isn't cut off.
+
+All three of these — Top K, Score Threshold, Timeout — follow the same resolution: the left-panel value wins for that query; leave it as-is (or blank) and the corpus's saved default applies; if the corpus stored none, the system default takes over. Tune once per corpus in **Edit**, or ad-hoc per query.
 
 ### 1.5 The Help Corpus — AIStudio Answering About Itself
 

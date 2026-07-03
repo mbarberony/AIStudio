@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-06-30*
+*Version: Beta | Updated: 2026-07-03*
 
 ---
 
@@ -267,9 +267,12 @@ Controls how the system finds relevant passages in your corpus.
 
 Adjust using the **Retrieval Mix** slider in the Query Settings sidebar.
 
-**Score Threshold** — *Relevance floor (per-corpus default)*
+**Score Threshold** — *Relevance floor*
 Chunks scoring below this are dropped before the model ever sees them. Default `0.50`. Lower it (≈`0.2–0.3`) if good answers come back empty or hedged; raise it to cut noise.
-Unlike the three settings above, Score Threshold is a **per-corpus default**, not a per-query control — set it in **Edit → Query Defaults** for the selected corpus, where it applies whenever that corpus is queried.
+Set it **per query** in the **Threshold** field in the sidebar, or **per corpus** in **Edit → Query Defaults** (where it applies whenever that corpus is queried). The per-query field wins; leave it blank and the corpus default applies.
+
+**Timeout** — *How long to wait for the model*
+The maximum time AIStudio waits for the model to answer before giving up. Default `300` seconds — generous on purpose, so a slow large model (a 70B can take ~140–170s) isn't cut off mid-answer. Raise it only if you switch to a very large model and start hitting timeouts; there's rarely a reason to lower it. Set it **per query** in the **Timeout (s)** field, or **per corpus** in **Edit → Query Defaults** — same precedence as the other knobs (query field → corpus default → system default).
 
 ---
 
