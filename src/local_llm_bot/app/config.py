@@ -1,4 +1,22 @@
 # src/local_llm_bot/app/config.py
+# Version: 1.6.0
+# Changelog: 1.6.0 — AIStudio_941: ollama.request_timeout_s default 60→300 and now actually APPLIED
+#   (ollama_client v1.3.0). Was a dormant field; a bigger _958 window pushed heavy questions past the
+#   old wall. 300s covers slow local models; overridable per-request (AskRequest.timeout) / per-corpus
+#   (default_timeout). Env AISTUDIO_OLLAMA_TIMEOUT_S.
+# Version: 1.5.0
+# Changelog: 1.5.0 — AIStudio_958: num_ctx (context window) — new RagConfig field (default 16384,
+#   env AISTUDIO_NUM_CTX). Previously unset → Ollama's own ~2-4k default silently truncated the
+#   ~6-14k-token RAG prompts. Defaulted at the single source of truth (ollama_client.build_generate_kwargs)
+#   so all generation paths inherit it. Fixes the low-RAM + long-follow-up truncation.
+# Version: 1.4.0
+# Changelog: 1.4.0 — AIStudio_956: full_prompt_min_b — tier boundary for system-prompt selection.
+#   New RagConfig field (default 20; env AISTUDIO_FULL_PROMPT_MIN_B). Models with >= N billion
+#   params get the full prompts/system.txt; smaller models get the slim prompts/system_small_model.txt
+#   (the ~1,944-tok full prompt dilutes instruction-following under a ~6,300-tok context and small /
+#   low-RAM models drop [N] citations — Suzanne 24GB 0/0/0, Beast 128GB unaffected). Read by
+#   api.py::_is_small_model(). Doubles as the A/B lever: 0 = always full, 999 = always slim.
+#   llama3.1:8b -> slim; gemma3:27b / llama3.1:70b -> full.
 # Version: 1.3.0
 # Changelog: 1.3.0 — AIStudio_945: default_model gemma3:4b → llama3.1:8b ("the good llama" — clean
 #   [N] citations; the seven-model sweep showed gemma3:4b drops citations + fabricates entity
@@ -66,6 +84,21 @@ class RagConfig(BaseModel):
     # See scoring.combine_hybrid() and CONCEPT - AIStudio - Hybrid Retrieval Design.
     hybrid_alpha: float | None = Field(default=None, ge=0.0, le=1.0)
 
+    # AIStudio_956 — tier boundary for system-prompt selection. A model whose param size (in
+    # billions, parsed from its tag) is >= this gets the full prompts/system.txt; a smaller model
+    # gets the slim prompts/system_small_model.txt. The slim prompt keeps [N] citations reliable on
+    # small / low-RAM models, where the full ~1,944-tok prompt competes with the ~6,300-tok
+    # retrieval context and instruction-following degrades. Env AISTUDIO_FULL_PROMPT_MIN_B overrides
+    # and doubles as the A/B lever: 0 = always full, 999 = always slim. Read by api.py::_is_small_model().
+    full_prompt_min_b: int = Field(default=20, ge=0)
+
+    # AIStudio_958 — context window (Ollama num_ctx). Unset, Ollama applies its own default
+    # (~2048-4096), silently truncating the ~6-14k-token RAG prompts assembled here. Setting it
+    # explicitly gives deterministic headroom across machines (fixes the low-RAM truncation and the
+    # long-follow-up truncation). Threaded via ollama_client.build_generate_kwargs so EVERY
+    # generation path (/ask, rag_core, bench, /debug/prompt, warmup) inherits it. Env AISTUDIO_NUM_CTX.
+    num_ctx: int = Field(default=16384, ge=512)
+
 
 class IngestConfig(BaseModel):
     chunk_size: int = Field(default=1200, ge=1)
@@ -82,7 +115,7 @@ class ChromaConfig(BaseModel):
 
 class OllamaConfig(BaseModel):
     base_url: str = Field(default="http://127.0.0.1:11434")
-    request_timeout_s: float = Field(default=60.0, ge=1.0)
+    request_timeout_s: float = Field(default=300.0, ge=1.0)  # AIStudio_941: Ollama HTTP request timeout, now APPLIED in ollama_client. 300s covers slow local models (gemma3:27b ~110s, 70b ~166s); overridable per-request / per-corpus. Env AISTUDIO_OLLAMA_TIMEOUT_S.
 
 
 @dataclass(frozen=True)
@@ -133,6 +166,10 @@ def load_config_from_env() -> AppConfig:
     cfg.rag.default_embed_model = _env_str(
         "AISTUDIO_DEFAULT_EMBED_MODEL", cfg.rag.default_embed_model
     )
+    cfg.rag.full_prompt_min_b = _env_int(
+        "AISTUDIO_FULL_PROMPT_MIN_B", cfg.rag.full_prompt_min_b
+    )
+    cfg.rag.num_ctx = _env_int("AISTUDIO_NUM_CTX", cfg.rag.num_ctx)
 
     # Ingest
     cfg.ingest.chunk_size = _env_int("AISTUDIO_INGEST_CHUNK_SIZE", cfg.ingest.chunk_size)

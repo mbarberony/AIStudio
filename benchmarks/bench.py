@@ -209,7 +209,11 @@ import _scope_common as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
-VERSION = "2.8.4"
+# Changelog: 2.9.0 — AIStudio_940: --batch/--canonical now propagates --timeout to sub-runs (per-run
+#            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
+#            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
+#            could hit the 120s wall → HTTP fail → mechanical RED.
+VERSION = "2.9.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -1138,6 +1142,13 @@ def run_canonical(args: argparse.Namespace) -> int:
             argv += ["--alpha", str(r["alpha"])]
         if r.get("min_score") is not None:
             argv += ["--min-score", str(r["min_score"])]
+        # AIStudio_940: propagate timeout to sub-runs. A bigger num_ctx (_958) slows generation, so
+        # the 120s default can time out heavy multi-firm questions → HTTP failure → mechanical fail
+        # (the likely cause of the Run C/D drop). Per-run spec `timeout` wins; else inherit the
+        # parent invocation's --timeout so `ais_bench --canonical --timeout 300` actually reaches children.
+        _run_timeout = r.get("timeout", args.timeout)
+        if _run_timeout is not None:
+            argv += ["--timeout", str(_run_timeout)]
 
         print(f"\n\033[1m▶ canonical {rid}: {r.get('label', corpus)}\033[0m")
         print("    " + " ".join(argv[2:]))

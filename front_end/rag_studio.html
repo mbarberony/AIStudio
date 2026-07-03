@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Version: 2.9.2 -->
+<!-- Version: 2.12.0 -->
+<!-- Changelog: 2.12.0 — New Corpus modal fixes: (1) generic placeholder hints instead of the demo corpus's literal identity (a new corpus no longer looks like it inherits demo's description/guidance — only Query Defaults pre-fill); (2) sticky Cancel/Create footer so the buttons stay visible while the form scrolls (was cut off below the fold on shorter viewports); max-height 85→88vh. -->
+<!-- Changelog: 2.11.1 — fix: the 2.11.0 changelog comment contained a nested comment marker that broke the HTML comment and leaked text onto the page; rephrased. -->
+<!-- Changelog: 2.11.0 — AIStudio_941/_778: Defaults modal (browser localStorage layer) gains Timeout (s) + Threshold, matching the per-corpus + main-panel controls — saved to ais_defaults, applied on load. \\trace min_score now reads the server-resolved dbg.min_score (not what the UI sent). Added a real Version: header line so urc_deploy labels the file correctly (was reading an older Changelog line). -->
+<!-- Changelog: 2.10.0 — AIStudio_941/_778: Timeout (s) + Threshold (min_score) query controls in the main panel — defaulted from /corpus/info (default_timeout / default_min_score), sent to /ask (blank ⇒ inherit corpus/config), and shown in \\trace (+ timeout_s echo, resolved server-side). Both knobs added to New Corpus + Edit Corpus modals (write default_timeout to corpus metadata). \\trace “sources used” → “sources (deduped files)” to disambiguate files-vs-chunks. -->
+<!-- Changelog: 2.9.8 — AIStudio_971: help modal now strips a trailing \trace (was leaking into the query → 0 citations) and renders the trace panel too. -->
+<!-- Changelog: 2.9.7 — AIStudio_970: help-modal citations open via Source Dive iframe (honors #page) not a new tab (Chrome ignored #page there → landed on p.1); source-dive panel z-index 1000→1100 so it shows above the modal. -->
+<!-- Changelog: 2.9.6 — AIStudio_969: trace system/full-prompt blocks were dark-on-dark; pin readable bg+text, scroll + max-height. -->
+<!-- Changelog: 2.9.5 — AIStudio_969: inline \trace — append "\trace" to a question to render a collapsed trace panel under the answer (raw vs expanded query, tier verdict, params, num_ctx, sizes, host RAM, and the exact system+prompt bytes via /debug/prompt). -->
+<!-- Version: 2.9.4 -->
+<!-- Changelog: 2.9.4 — AIStudio_967/_968: response time shown under each answer; model picker warns (orange ⚠ >75% RAM, red ⛔ >90%) using /system hw.memsize. -->
+<!-- Changelog: 2.9.3 — AIStudio_966: model picker shows disk size — "<model> (4.9 GB)" — from the new /models size fields. -->
 <!-- Changelog: 2.9.2 — AIStudio_945: default-model selection prefers the good llama (llama3.1:8b)
      when available, then gemma3:4b, then smallest Gemma, then first available. Presence-aware: only
      ever selects a PULLED model, so a cold install without llama falls back safely (no 500). -->
@@ -776,7 +787,7 @@
             background: var(--bg-panel);
             border-left: 1px solid var(--border);
             box-shadow: -4px 0 24px rgba(0,0,0,0.18);
-            z-index: 1000;
+            z-index: 1100;  /* AIStudio_970: above modal overlays (z 1000) so Source Dive shows from the help modal */
             display: flex;
             flex-direction: column;
             transform: translateX(100%);
@@ -1026,6 +1037,14 @@
                     <span class="param-label" title="Model creativity. Lower = more factual. Keep at 0.3 for document Q&amp;A.">Temperature</span>
                     <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3" title="Model creativity. Lower = more factual. Keep at 0.3 for document Q&amp;A.">
                 </div>
+                <div class="param-row">
+                    <span class="param-label" title="Ollama request timeout in seconds — how long to wait for the model before giving up. Raise for slow large models (gemma3:27b ~110s, llama3.3:70b ~166s). Blank = inherit the corpus/config default.">Timeout (s)</span>
+                    <input type="number" id="timeout" min="1" max="900" step="10" value="300" title="Ollama request timeout in seconds — how long to wait for the model before giving up. Raise for slow large models. Blank = inherit the corpus/config default.">
+                </div>
+                <div class="param-row">
+                    <span class="param-label" title="Minimum similarity score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Skipped automatically when an entity filter is active. Blank = inherit the corpus/config default.">Threshold</span>
+                    <input type="number" id="minScore" min="0" max="1" step="0.05" value="0.5" title="Minimum similarity score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Blank = inherit the corpus/config default.">
+                </div>
                 <div class="slider-row">
                     <div class="slider-row-header">
                         <span class="slider-label" title="Blends keyword (Literal) and semantic (Conceptual) retrieval. Center (0.5) suits most queries; Conceptual for themes, Literal for exact terms or names.">Retrieval Mix</span>
@@ -1205,6 +1224,8 @@
     const topKInput    = document.getElementById('topK');
     const tempInput    = document.getElementById('temperature');
     const alphaInput   = document.getElementById('hybridAlpha');
+    const timeoutInput = document.getElementById('timeout');    // AIStudio_941
+    const minScoreInput= document.getElementById('minScore');   // AIStudio_778 UI
     const alphaDisplay = document.getElementById('alphaDisplay');
     const filterKeywords = document.getElementById('filterKeywords');
     const convMeta     = document.getElementById('convMeta');
@@ -1247,6 +1268,8 @@
                 alphaInput.value = d.alpha;
                 alphaDisplay.textContent = parseFloat(d.alpha).toFixed(2);
             }
+            if (d.timeout  != null) timeoutInput.value  = d.timeout;    // AIStudio_941
+            if (d.minScore != null) minScoreInput.value = d.minScore;   // AIStudio_778
         } catch(_) {}
     }
 
@@ -1309,6 +1332,11 @@
         try {
             const res = await fetch(`${API}/models`);
             const models = await res.json();
+            window._modelsCache = models;  // AIStudio_969: for the \trace panel's size/param lookup
+
+            // AIStudio_967: fetch host RAM once so the picker can warn on models that won't fit
+            let _totalMem = 0;
+            try { const sysRes = await fetch(`${API}/system`); const sys = await sysRes.json(); _totalMem = sys.total_memory_bytes || 0; } catch {}
 
             // Filter out embedding-only models — they can't generate answers
             const EMBED_KEYWORDS = ['embed', 'bge', 'e5-', 'minilm', 'gte-'];
@@ -1328,7 +1356,14 @@
                 return;
             }
             modelSelect.innerHTML = chatModels
-                .map(m => `<option value="${m.id}" ${!m.available ? 'disabled' : ''}>${m.name}${!m.available ? ' (unavailable)' : ''}</option>`)
+                .map(m => {
+                    // AIStudio_967: warn when a model's disk footprint is a big fraction of RAM.
+                    const frac = (_totalMem && m.size_bytes) ? m.size_bytes / _totalMem : 0;
+                    const color = frac > 0.90 ? 'var(--danger)' : frac > 0.75 ? '#e08a1e' : '';
+                    const mark  = frac > 0.90 ? ' ⛔' : frac > 0.75 ? ' ⚠' : '';
+                    const style = color ? ` style="color:${color}"` : '';
+                    return `<option value="${m.id}"${style} ${!m.available ? 'disabled' : ''}>${m.name}${m.size_human ? ' (' + m.size_human + ')' : ''}${mark}${!m.available ? ' (unavailable)' : ''}</option>`;
+                })
                 .join('');
             // Default model (AIStudio_945): prefer the good llama (llama3.1:8b — clean [N] citations),
             // then gemma3:4b, then smallest available Gemma, then first available. Presence-aware —
@@ -1401,6 +1436,8 @@
                 alphaInput.value = info.default_hybrid_alpha;
                 alphaDisplay.textContent = parseFloat(info.default_hybrid_alpha).toFixed(2);
             }
+            if (info.default_timeout   != null) timeoutInput.value  = info.default_timeout;   // AIStudio_941
+            if (info.default_min_score != null) minScoreInput.value = info.default_min_score; // AIStudio_778 UI
         }).catch(() => {});
             chatInput.placeholder = `Ask a question about ${name}…`;
             chatInput.disabled = false;
@@ -1446,9 +1483,60 @@
         }
     }
 
+    // ── AIStudio_969: inline \trace panel ──────────────────────────
+    // Reuses /debug/prompt (the exact bytes sent to Ollama) + /system, so the panel is the real
+    // request, not a re-description. Rendered collapsed at the bottom of the answer.
+    async function _buildTracePanel(body, askData) {
+        let dbg = {}, sys = {};
+        try {
+            const r = await fetch(`${API}/debug/prompt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            dbg = await r.json();
+        } catch (e) { dbg = { _error: String(e) }; }
+        try { const r = await fetch(`${API}/system`); sys = await r.json(); } catch {}
+
+        const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const modelId = askData.model_used || body.model;
+        const mEntry = (window._modelsCache || []).find(m => m.id === modelId) || {};
+        const tier = dbg.prompt_tier || askData.system_prompt_tier || '?';
+        const tierLabel = tier === 'small' ? 'SMALL → slim prompt' : tier === 'full' ? 'LARGE → full prompt' : tier;
+        const pc = mEntry.param_count ? (mEntry.param_count / 1e9).toFixed(1) + 'B' : (mEntry.parameter_size || '?');
+        const numctx = dbg.num_ctx_set
+            ? 'yes (' + ((dbg.options || {}).num_ctx || '') + ')'
+            : '<span style="color:var(--danger)">NO — Ollama default (truncation risk)</span>';
+
+        const rows = [
+            ['query (raw)', esc(body.query)],
+            ['query (expanded)', esc(askData.retrieval_query || '— no expansion —')],
+            ['tier', `${tierLabel} · ${pc} params`],
+            ['model', `${esc(modelId)}${mEntry.size_human ? ' (' + mEntry.size_human + ')' : ''}`],
+            ['corpus', esc(body.corpus)],
+            ['top_k', esc(body.top_k)],
+            ['sources (deduped files)', esc(dbg.num_sources)],
+            ['hybrid_alpha', esc(body.hybrid_alpha)],
+            ['min_score', esc(dbg.min_score != null ? dbg.min_score : '— corpus/config —')],
+            ['temperature', esc((dbg.options || {}).temperature)],
+            ['num_ctx set?', numctx],
+            ['timeout (s)', esc(dbg.timeout_s != null ? dbg.timeout_s : '— corpus/config —')],
+            ['prompt chars', esc(dbg.prompt_chars)],
+            ['system chars', esc(dbg.system_chars)],
+            ['host RAM', esc(sys.total_memory_human || '?')],
+        ];
+        const table = rows.map(([k, v]) => `<tr><td style="color:var(--text-mid);padding:1px 12px 1px 0;white-space:nowrap;vertical-align:top;">${k}</td><td>${v}</td></tr>`).join('');
+        return `
+        <details class="trace-panel" style="margin-top:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;background:var(--bg-alt,#f6f5f3);border:1px solid var(--border,#e2e0dc);border-radius:8px;padding:8px 10px;">
+          <summary style="cursor:pointer;color:var(--text-mid);user-select:none;">🔍 trace</summary>
+          <table style="margin-top:6px;border-collapse:collapse;"><tbody>${table}</tbody></table>
+          <details style="margin-top:6px;"><summary style="cursor:pointer;color:var(--text-mid);">system prompt (${esc(dbg.system_chars)} chars)</summary><pre style="white-space:pre-wrap;margin:4px 0;font-size:11px;background:#faf9f7;color:#1a1a1a;border:1px solid #e2e0dc;border-radius:6px;padding:8px;overflow:auto;max-height:340px;">${esc(dbg.system)}</pre></details>
+          <details style="margin-top:4px;"><summary style="cursor:pointer;color:var(--text-mid);">full prompt (${esc(dbg.prompt_chars)} chars)</summary><pre style="white-space:pre-wrap;margin:4px 0;font-size:11px;background:#faf9f7;color:#1a1a1a;border:1px solid #e2e0dc;border-radius:6px;padding:8px;overflow:auto;max-height:340px;">${esc(dbg.prompt)}</pre></details>
+        </details>`;
+    }
+
     // ── Send message ───────────────────────────────────────────────
     async function sendMessage() {
-        const query = chatInput.value.trim();
+        // AIStudio_969: a trailing "\trace" flips on the inline trace panel (stripped from the query).
+        const _rawInput = chatInput.value.trim();
+        const traceMode = /\\trace\s*$/i.test(_rawInput);
+        const query = traceMode ? _rawInput.replace(/\\trace\s*$/i, '').trim() : _rawInput;
         if (!query || isLoading || !currentCorpus) return;
 
         hideEmpty();
@@ -1476,6 +1564,10 @@
                 top_k: parseInt(topKInput.value) || 10,
                 temperature: parseFloat(tempInput.value) || 0.3,
                 hybrid_alpha: 1 - parseFloat(alphaInput.value),
+                // AIStudio_941 / _778: send only when the field has a value; blank ⇒ omitted ⇒
+                // backend resolves per-corpus default → config (identical to inheriting the default).
+                timeout:   (timeoutInput.value  !== '' ? parseFloat(timeoutInput.value)  : undefined),
+                min_score: (minScoreInput.value !== '' ? parseFloat(minScoreInput.value) : undefined),
                 query_expansion: 1,
                 entity_filter_mode: 'auto',
                 keywords: (() => {
@@ -1494,6 +1586,7 @@
                     : null
             };
 
+            const _t0 = performance.now();  // AIStudio_968: round-trip timing
             const res = await fetch(`${API}/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1518,6 +1611,8 @@
                 html += renderFootnotes(data.citations, responseCounter);
             }
 
+            html += `<div class="resp-timing" style="font-size:11px;color:var(--text-mid);opacity:.6;margin-top:6px;">${((performance.now() - _t0) / 1000).toFixed(1)}s</div>`;  // AIStudio_968
+            if (traceMode) html += await _buildTracePanel(body, data);  // AIStudio_969
             addMessage('assistant', html, true);
             conversationHistory.push({ role: 'assistant', content: html, isHtml: true });
             _saveHistory();
@@ -1822,6 +1917,11 @@
                                 <input id="_editTemp" type="number" min="0" max="2" step="0.1"
                                     style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
                             </div>
+                            <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;" title="Ollama request timeout (s) for this corpus — how long to wait for the model. Raise for slow large models.">Timeout (s)</label>
+                                <input id="_editTimeout" type="number" min="1" max="900" step="10" title="Ollama request timeout (s) for this corpus."
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
                         </div>
                         <div style="margin-top:14px;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
@@ -1864,6 +1964,7 @@
             overlay.querySelector('#_editGuidance').value = data.search_guidance || '';
             if (data.default_top_k != null)        overlay.querySelector('#_editTopK').value  = data.default_top_k;
             if (data.default_temperature != null)  overlay.querySelector('#_editTemp').value  = data.default_temperature;
+            if (data.default_timeout != null)      overlay.querySelector('#_editTimeout').value = data.default_timeout;  // AIStudio_941
             // Retrieval Mix slider shows literalness (1 - hybrid_alpha), matching the main window.
             const _eAlpha = overlay.querySelector('#_editAlpha'), _eAlphaVal = overlay.querySelector('#_editAlphaVal');
             const _eMin = overlay.querySelector('#_editMinScore'), _eMinVal = overlay.querySelector('#_editMinScoreVal');
@@ -1882,9 +1983,11 @@
                     const guidance = overlay.querySelector('#_editGuidance').value.trim();
                     const _tk = overlay.querySelector('#_editTopK').value.trim();
                     const _tp = overlay.querySelector('#_editTemp').value.trim();
+                    const _to = overlay.querySelector('#_editTimeout').value.trim();  // AIStudio_941
                     const _payload = { short_description: sd, description: desc, search_guidance: guidance };
                     if (_tk !== '') _payload.default_top_k = parseInt(_tk);
                     if (_tp !== '') _payload.default_temperature = parseFloat(_tp);
+                    if (_to !== '') _payload.default_timeout = parseFloat(_to);  // AIStudio_941
                     // sliders are always present → always save; invert literalness back to hybrid_alpha
                     _payload.default_hybrid_alpha = 1 - parseFloat(overlay.querySelector('#_editAlpha').value);
                     _payload.default_min_score = parseFloat(overlay.querySelector('#_editMinScore').value);
@@ -2301,13 +2404,14 @@
     }
 
     // ── Create Corpus Modal ────────────────────────────────────────
-    // Demo corpus values used as placeholders
-    const DEMO_PLACEHOLDERS = {
+    // Generic hint text for the New Corpus form (shown as placeholders; fields save blank if left empty).
+    // A new corpus does NOT inherit the current corpus's identity — only Query Defaults are pre-filled.
+    const NEW_CORPUS_PLACEHOLDERS = {
         name: 'e.g. my_corpus',
-        short_description: '20 years of original thought leadership — architecture, strategy, AI',
-        description: 'A curated corpus of original thought leadership documents spanning 2003–2026, produced by Manuel Barbero and collaborators across senior technology roles at major financial institutions.',
-        content_summary: '9 documents covering enterprise architecture, IT strategy, financial services, cloud migration, data strategy, and agentic AI.',
-        search_guidance: 'Route questions to the most relevant document based on intent:\n- Architecture principles → Barbero 2006 document\n- CTO strategy → FS Journal Strategy volume\n- Cloud migration → Barbero 2020 document'
+        short_description: 'e.g. Quarterly earnings transcripts, 2020–2025',
+        description: 'What this corpus contains and why you created it — a sentence or two.',
+        content_summary: '',
+        search_guidance: 'Optional routing hints, e.g.:\n- Capital ratios → the annual-report filings\n- Risk factors → the 10-K risk section\nLeave blank if not needed — you can add this later.'
     };
 
     function showCreateCorpusModal() {
@@ -2317,7 +2421,7 @@
 
             overlay.innerHTML = `
                 <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
-                    border-radius:16px;padding:28px 32px;width:520px;max-height:85vh;overflow-y:auto;
+                    border-radius:16px;padding:28px 32px;width:520px;max-height:88vh;overflow-y:auto;
                     box-shadow:0 8px 32px rgba(0,0,0,0.18);">
                     <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:20px;
                         color:var(--text,#111);">New Corpus</div>
@@ -2326,7 +2430,7 @@
                     <div style="margin-bottom:16px;">
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Corpus Name</label>
                         <input id="_ccName" type="text" maxlength="40"
-                            placeholder="${DEMO_PLACEHOLDERS.name}"
+                            placeholder="${NEW_CORPUS_PLACEHOLDERS.name}"
                             style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Lowercase letters, numbers, hyphens and underscores only — e.g. my_corpus</div>
                         <div id="_ccNameError" style="font-size:11px;color:var(--danger,#dc2626);margin-top:3px;display:none;"></div>
@@ -2336,7 +2440,7 @@
                     <div style="margin-bottom:16px;">
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Short Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <input id="_ccShortDesc" type="text" maxlength="120"
-                            placeholder="${DEMO_PLACEHOLDERS.short_description}"
+                            placeholder="${NEW_CORPUS_PLACEHOLDERS.short_description}"
                             style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;font-family:inherit;background:#fff;">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Displayed in the header next to the corpus name. Max 80 characters.</div>
                     </div>
@@ -2345,7 +2449,7 @@
                     <div style="margin-bottom:16px;">
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Description <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <textarea id="_ccDesc" rows="4"
-                            placeholder="${DEMO_PLACEHOLDERS.description}"
+                            placeholder="${NEW_CORPUS_PLACEHOLDERS.description}"
                             style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">What this corpus contains and why it was created.</div>
                     </div>
@@ -2354,7 +2458,7 @@
                     <div style="margin-bottom:20px;">
                         <label style="display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Search Guidance <span style="font-weight:400;text-transform:none;font-size:11px;">(optional)</span></label>
                         <textarea id="_ccGuidance" rows="5"
-                            placeholder="${DEMO_PLACEHOLDERS.search_guidance}"
+                            placeholder="${NEW_CORPUS_PLACEHOLDERS.search_guidance}"
                             style="width:100%;padding:10px 14px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;line-height:1.5;background:#fff;"></textarea>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;font-style:italic;">Routing hints that tell the model which documents answer which types of questions. See the demo corpus for an example. You can add or edit this later.</div>
                     </div>
@@ -2374,6 +2478,11 @@
                                     style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
                             </div>
                             <div>
+                                <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;" title="Ollama request timeout (s) for this corpus.">Timeout (s)</label>
+                                <input id="_ccTimeout" type="number" min="1" max="900" step="10" title="Ollama request timeout (s) for this corpus."
+                                    style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
+                            </div>
+                            <div>
                                 <label style="font-size:11px;color:var(--text-mid);display:block;margin-bottom:4px;">Retrieval Mix (α)</label>
                                 <input id="_ccAlpha" type="number" min="0" max="1" step="0.05"
                                     style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid var(--border,#d0d5dd);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;">
@@ -2382,7 +2491,7 @@
                         <div style="font-size:11px;color:var(--text-dim);margin-top:4px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
                     </div>
 
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <div style="display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;margin:12px -32px -28px;padding:16px 32px;background:var(--bg-panel,white);border-top:1px solid var(--border,#e2e8f0);border-radius:0 0 16px 16px;">
                         <button id="_ccCancel" style="padding:9px 18px;border-radius:8px;
                             border:1.5px solid var(--border,#d0d5dd);background:transparent;
                             cursor:pointer;font-size:13px;font-weight:500;
@@ -2402,10 +2511,12 @@
                 const _sd = JSON.parse(localStorage.getItem('ais_defaults') || '{}');
                 overlay.querySelector('#_ccTopK').placeholder  = _sd.topK  ?? 10;
                 overlay.querySelector('#_ccTemp').placeholder  = _sd.temp  ?? 0.3;
+                overlay.querySelector('#_ccTimeout').placeholder = _sd.timeout ?? 300;  // AIStudio_941
                 overlay.querySelector('#_ccAlpha').placeholder = parseFloat(_sd.alpha ?? 0.5).toFixed(2);
             } catch(_) {
                 overlay.querySelector('#_ccTopK').placeholder  = 10;
                 overlay.querySelector('#_ccTemp').placeholder  = 0.3;
+                overlay.querySelector('#_ccTimeout').placeholder = 300;  // AIStudio_941
                 overlay.querySelector('#_ccAlpha').placeholder = '0.50';
             }
 
@@ -2435,6 +2546,7 @@
                     search_guidance: overlay.querySelector('#_ccGuidance').value.trim(),
                     default_top_k: parseInt(overlay.querySelector('#_ccTopK').value || overlay.querySelector('#_ccTopK').placeholder) || 10,
                     default_temperature: parseFloat(overlay.querySelector('#_ccTemp').value || overlay.querySelector('#_ccTemp').placeholder) || 0.3,
+                    default_timeout: parseFloat(overlay.querySelector('#_ccTimeout').value || overlay.querySelector('#_ccTimeout').placeholder) || 300,  // AIStudio_941
                     default_hybrid_alpha: parseFloat(overlay.querySelector('#_ccAlpha').value || overlay.querySelector('#_ccAlpha').placeholder) || 0.5,
                 });
             };
@@ -2554,7 +2666,10 @@
 
         // Send handler
         const sendHelp = async () => {
-            const q = input.value.trim();
+            // AIStudio_971: strip a trailing \trace here too — otherwise it leaks into the query and kills citations.
+            const _hraw = input.value.trim();
+            const _htrace = /\\trace\s*$/i.test(_hraw);
+            const q = (_htrace ? _hraw.replace(/\\trace\s*$/i, '') : _hraw).trim();
             if (!q) return;
             input.value = '';
             if (msgEl.querySelector('[style*="Ask a question"]')) msgEl.innerHTML = '';
@@ -2592,11 +2707,17 @@
                     data.citations.forEach(c => {
                         const fname = c.source.split('/').pop();
                         const pageStr = c.page ? ` p.${c.page}` : '';
-                        const url = `${API}/source?path=${encodeURIComponent(c.source)}${c.page ? '#page='+c.page : ''}`;
-                        html += `<div>[${c.index}] <a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;">${escapeHtml(fname)}</a>${pageStr}</div>`;
+                        // AIStudio_970: open via the Source Dive iframe (honors #page) instead of a new tab (Chrome ignores #page there).
+                        const isPdf = fname.toLowerCase().endsWith('.pdf');
+                        const safeSrc = c.source.replace(/'/g, "\\'");
+                        const link = isPdf
+                            ? `<a href="#" onclick="event.preventDefault();openSourceDive('${safeSrc}',${c.page||'null'})" style="color:var(--accent);text-decoration:none;cursor:pointer;">${escapeHtml(fname)}</a>`
+                            : `<a href="${API}/source?path=${encodeURIComponent(c.source)}" target="_blank" style="color:var(--accent);text-decoration:none;">${escapeHtml(fname)}</a>`;
+                        html += `<div>[${c.index}] ${link}${pageStr}</div>`;
                     });
                     html += '</div>';
                 }
+                if (_htrace) html += await _buildTracePanel(body, data);  // AIStudio_971: \trace in the help modal too
                 _helpAddMsg(msgEl, 'assistant', html, true);
                 _helpHistory.push({role:'assistant', content:html, isHtml:true});
             } catch(err) {
@@ -3563,6 +3684,8 @@
         const curTopK  = stored.topK  ?? topKInput.value;
         const curTemp  = stored.temp  ?? tempInput.value;
         const curAlpha = stored.alpha ?? alphaInput.value;
+        const curTimeout  = stored.timeout  ?? timeoutInput.value;    // AIStudio_941
+        const curMinScore = stored.minScore ?? minScoreInput.value;   // AIStudio_778
 
         overlay.innerHTML = `
         <div style="background:var(--bg-panel);border-radius:16px;padding:0;width:660px;min-width:360px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.22);">
@@ -3592,6 +3715,14 @@
                         <input id="_defAlpha" type="number" min="0" max="1" step="0.05" value="${parseFloat(curAlpha).toFixed(2)}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
                         <div style="font-size:11px;color:var(--text-mid);margin-top:4px;">0 = literal · 1 = conceptual</div>
                     </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Timeout (s)</label>
+                        <input id="_defTimeout" type="number" min="1" max="900" step="10" value="${curTimeout}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Threshold</label>
+                        <input id="_defMinScore" type="number" min="0" max="1" step="0.05" value="${parseFloat(curMinScore).toFixed(2)}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
+                    </div>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
                     <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text);">Cancel</button>
@@ -3618,14 +3749,20 @@
             const topK  = parseFloat(overlay.querySelector('#_defTopK').value);
             const temp  = parseFloat(overlay.querySelector('#_defTemp').value);
             const alpha = parseFloat(overlay.querySelector('#_defAlpha').value);
+            const timeout  = parseFloat(overlay.querySelector('#_defTimeout').value);   // AIStudio_941
+            const minScore = parseFloat(overlay.querySelector('#_defMinScore').value);  // AIStudio_778
             if (isNaN(topK) || isNaN(temp) || isNaN(alpha)) return;
             const d = { topK, temp, alpha };
+            if (!isNaN(timeout))  d.timeout  = timeout;
+            if (!isNaN(minScore)) d.minScore = minScore;
             try { localStorage.setItem('ais_defaults', JSON.stringify(d)); } catch(_) {}
             // Apply to current session fields too
             topKInput.value  = topK;
             tempInput.value  = temp;
             alphaInput.value = alpha;
             alphaDisplay.textContent = (1 - alpha).toFixed(2);
+            if (!isNaN(timeout))  timeoutInput.value  = timeout;
+            if (!isNaN(minScore)) minScoreInput.value = minScore;
             overlay.remove();
         };
 

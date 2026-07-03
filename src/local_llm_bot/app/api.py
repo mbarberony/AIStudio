@@ -1,3 +1,50 @@
+# Version: 1.16.2
+# Changelog: 1.16.2 — AIStudio_941 fix: default_timeout was dropped on corpus create/edit — the
+#   modal sent it but CreateCorpusRequest, the create-persist block, the PATCH editable list, and the
+#   /corpus/info return all lacked the field. Added to all four so per-corpus timeout actually persists
+#   + is served to the UI.
+# Version: 1.16.1
+# Changelog: 1.16.1 — AIStudio_942: /debug/prompt now echoes resolved `min_score` (parity with the
+#   timeout_s echo + /debug/retrieve's min_score_used) — so \\trace shows the server-resolved threshold
+#   and the wiring test can assert it. generate_answer_with_citations gained a min_score echo param.
+# Version: 1.16.0
+# Changelog: 1.16.0 — AIStudio_942: /debug/prompt retrieval now mirrors /ask EXACTLY — query-expansion,
+#   entity_filter_mode resolution (none/yaml/auto), min_score chain, keywords, allowed_source_paths.
+#   Previously raw retrieval (query/top_k/corpus/hybrid_alpha only) → \debug's source list + prompt-chars
+#   disagreed with /ask on entity-filtered queries (the curl-vs-UI drift). \debug is now fully faithful.
+# Version: 1.15.0
+# Changelog: 1.15.0 — AIStudio_941: `timeout` query knob (mirrors min_score). AskRequest.timeout;
+#   _read_corpus_meta_defaults returns default_timeout; /ask resolves per-request → corpus
+#   default_timeout → CONFIG.ollama.request_timeout_s and threads it to generate → ollama_generate;
+#   /debug/prompt resolves + echoes timeout_s so \debug stays faithful (transport-level, not an
+#   ollama option). UI + corpus-seed + docs owed per HOWTO_OPS recipe steps 7/8/9.
+# Version: 1.14.0
+# Changelog: 1.14.0 — AIStudio_967: model-info manifest cache (data/model_manifest.json, lazy,
+#            gitignored) — caches exact param_count (Ollama /api/show, fetched once) + usage
+#            timestamps. _is_small_model now uses param_count (name-parse fallback), killing the
+#            regex guess. New GET /system exposes hw.memsize (macOS) for the picker's memory
+#            warnings. /models merges manifest param_count/last_used_at; ollama_generate stamps
+#            last_used_at. Frontend (timing readout + orange/red memory colouring) lands next.
+# Version: 1.13.0
+# Changelog: 1.13.0 — AIStudio_966: /models now surfaces model disk size + param size (already
+#            present in ollama.list(), previously discarded). ModelInfo gains parameter_size /
+#            size_bytes / size_human; rag_studio.html shows "<model> (4.9 GB)" in the picker. Also
+#            sorted the ollama_client import (ruff I001). Phase 1 of model-info; the param_count
+#            cache (/api/show) + load-time manifest + classifier wiring is Phase 2.
+# Version: 1.12.0
+# Changelog: 1.12.0 — AIStudio_960: /debug/prompt endpoint — returns the exact prompt + Ollama
+#            options (via ollama_client.build_generate_kwargs, the single source of truth also used
+#            by the real call) WITHOUT invoking the model. generate_answer_with_citations gains a
+#            return_prompt_only flag. Surfaces num_ctx_set → makes the AIStudio_958 truncation gap
+#            visible (num_ctx is currently never set). No change to the /ask answer path.
+# Version: 1.11.0
+# Changelog: 1.11.0 — AIStudio_956: tiered system-prompt selection. Small / low-RAM models now get
+#            the slim prompts/system_small_model.txt; 27B-class models keep the full prompts/system.txt.
+#            Adds the _SYSTEM_PROMPT_SMALL cache, _read_prompt_file/_load_small_system_prompt, and
+#            _is_small_model() (parses model param-size vs CONFIG.rag.full_prompt_min_b; MoE 'NxMb' ->
+#            full; empty/unparseable -> slim fail-safe) + _select_system_prompt(model) -> (text, tier).
+#            /ask surfaces system_prompt_tier; /prompt/reload clears BOTH caches. Fixes the machine-
+#            dependent 0-citation failure (Suzanne 24GB 0/0/0 -> slim restores; Beast 128GB unaffected).
 # Version: 1.10.12
 # Changelog: 1.10.12 — AIStudio_888: /ask model-availability guard. Resolve the effective model
 #            (req.model or CONFIG.rag.default_model) and verify it is present in `ollama list` before
@@ -181,7 +228,7 @@ from pydantic import BaseModel
 from local_llm_bot.app.config import CONFIG
 from local_llm_bot.app.ingest.index_jsonl import read_jsonl
 from local_llm_bot.app.ingest.loaders import SUPPORTED_EXTS
-from local_llm_bot.app.ollama_client import ollama_generate
+from local_llm_bot.app.ollama_client import build_generate_kwargs, ollama_generate
 from local_llm_bot.app.rag_core import (
     RetrievedDoc,
     _detect_entities,
@@ -212,10 +259,11 @@ def _read_corpus_meta_defaults(corpus_name: str) -> dict:
                 "default_temperature":  meta.get("default_temperature"),
                 "default_hybrid_alpha": meta.get("default_hybrid_alpha"),
                 "default_min_score":    meta.get("default_min_score"),
+                "default_timeout":      meta.get("default_timeout"),
             }
     except Exception:
         pass
-    return {"default_top_k": None, "default_temperature": None, "default_hybrid_alpha": None, "default_min_score": None}
+    return {"default_top_k": None, "default_temperature": None, "default_hybrid_alpha": None, "default_min_score": None, "default_timeout": None}
 
 # ============================================================================
 # INLINE CITATION SUPPORT (embedded in API for simplicity)
@@ -383,37 +431,81 @@ def _auto_entity_filter(query: str, corpus_name: str) -> list[str] | None:
         return None
 
 
-# AIStudio_124 (partial): system prompt base loaded from prompts/system.txt
-# Memoized at module level — file is read once per process. Restart api.py
-# to pick up edits. Fallback to minimal inline string if file missing so
-# the system never breaks on a fresh install before prompts/ is provisioned.
-_SYSTEM_PROMPT_BASE: str | None = None
+# AIStudio_124 / AIStudio_956: system prompts loaded from prompts/ at repo root, memoized at
+# module level (read once per process; POST /prompt/reload or an api.py restart re-reads).
+# TWO tiers (AIStudio_956): the full system.txt for 27B-class models, and the slim
+# system_small_model.txt for small / low-RAM models — the full ~1,944-tok prompt competes with a
+# ~6,300-tok retrieval context and small models drop their [N] citations (machine-dependent:
+# Suzanne 24GB 0/0/0, Beast 128GB unaffected). Each tier caches independently; both fall back to a
+# minimal inline prompt so a fresh install never breaks before prompts/ is provisioned. The tier is
+# chosen per-query by _select_system_prompt(model) using CONFIG.rag.full_prompt_min_b.
+_SYSTEM_PROMPT_BASE: str | None = None   # full — prompts/system.txt
+_SYSTEM_PROMPT_SMALL: str | None = None  # slim — prompts/system_small_model.txt
+
+_PROMPT_FALLBACK = (
+    "You are a research assistant. Answer using the provided sources. "
+    "Cite every factual claim with [N] where N is the source number."
+)
+
+
+def _read_prompt_file(filename: str) -> str:
+    """Read prompts/<filename> at repo root; fall back to _PROMPT_FALLBACK if absent/unreadable.
+    The fallback is a tiny prompt that still cites — a small model must NEVER fall back to the full
+    prompt (that reintroduces the citation-dilution failure AIStudio_956 fixes)."""
+    try:
+        prompts_path = _get_repo_root() / "prompts" / filename
+        if prompts_path.exists():
+            return prompts_path.read_text(encoding="utf-8").rstrip()
+    except Exception:
+        pass
+    return _PROMPT_FALLBACK
 
 
 def _load_system_prompt() -> str:
-    """
-    Load base system prompt from prompts/system.txt at repo root.
-    Memoized after first call. Falls back to a minimal default if the file
-    is absent, ensuring the system never breaks on a fresh install.
-    """
+    """Full base prompt (prompts/system.txt), memoized. For 27B-class models."""
     global _SYSTEM_PROMPT_BASE
     if _SYSTEM_PROMPT_BASE is None:
-        try:
-            repo_root = _get_repo_root()
-            prompts_path = repo_root / "prompts" / "system.txt"
-            if prompts_path.exists():
-                _SYSTEM_PROMPT_BASE = prompts_path.read_text(encoding="utf-8").rstrip()
-            else:
-                _SYSTEM_PROMPT_BASE = (
-                    "You are a research assistant. Answer using the provided sources. "
-                    "Cite every factual claim with [N] where N is the source number."
-                )
-        except Exception:
-            _SYSTEM_PROMPT_BASE = (
-                "You are a research assistant. Answer using the provided sources. "
-                "Cite every factual claim with [N] where N is the source number."
-            )
+        _SYSTEM_PROMPT_BASE = _read_prompt_file("system.txt")
     return _SYSTEM_PROMPT_BASE
+
+
+def _load_small_system_prompt() -> str:
+    """Slim base prompt (prompts/system_small_model.txt), memoized. For small / low-RAM models."""
+    global _SYSTEM_PROMPT_SMALL
+    if _SYSTEM_PROMPT_SMALL is None:
+        _SYSTEM_PROMPT_SMALL = _read_prompt_file("system_small_model.txt")
+    return _SYSTEM_PROMPT_SMALL
+
+
+def _is_small_model(model_id: str | None) -> bool:
+    """True → serve this model the slim prompt. Prefers the exact param count from the manifest
+    cache (Ollama /api/show), comparing against CONFIG.rag.full_prompt_min_b (in billions). Falls
+    back to parsing the size token off the tag ('llama3.1:8b' → 8) when Ollama is unreachable. A MoE
+    tag ('mixtral:8x7b') is caught as large by the fallback (the manifest's total-param count handles
+    it correctly too). Empty / unparseable → fail-safe slim (AIStudio_956 / _967)."""
+    if not model_id:
+        return True
+    # AIStudio_967: ground truth first — exact params vs the threshold (billions → units).
+    pc = _model_param_count(model_id)
+    if pc is not None:
+        return pc < CONFIG.rag.full_prompt_min_b * 1_000_000_000
+    # Fallback: name parse (Ollama down / model not pulled).
+    tag = model_id.lower().rsplit(":", 1)[-1]      # portion after the last ':'
+    if re.search(r"\d+x\d+b", tag):                 # MoE (e.g. 8x7b) → large → full prompt
+        return False
+    m = re.search(r"(\d+)b", tag)                   # plain size (e.g. 8b, 27b, 70b)
+    if not m:
+        return True                                 # unparseable → fail-safe slim
+    return int(m.group(1)) < CONFIG.rag.full_prompt_min_b
+
+
+def _select_system_prompt(model: str | None) -> tuple[str, str]:
+    """Return (prompt_text, tier_label) for the effective model. tier_label ∈ {'small', 'full'}.
+    Resolves the effective model the same way generation does (per-request → config default)."""
+    effective = model or CONFIG.rag.default_model
+    if _is_small_model(effective):
+        return _load_small_system_prompt(), "small"
+    return _load_system_prompt(), "full"
 
 
 def generate_answer_with_citations(
@@ -423,8 +515,15 @@ def generate_answer_with_citations(
     corpus: str | None = None,
     model: str | None = None,
     temperature: float | None = None,
+    timeout: float | None = None,
+    min_score: float | None = None,
+    return_prompt_only: bool = False,
 ) -> dict[str, Any]:
-    """Generate answer with citation support"""
+    """Generate answer with citation support.
+
+    AIStudio_960: if return_prompt_only=True, return the EXACT payload that would be sent to Ollama
+    (via build_generate_kwargs — the same builder the real call uses) and skip the model call.
+    """
 
     if not docs:
         return {
@@ -489,7 +588,7 @@ def generate_answer_with_citations(
     # today rather than the most-recent retrieved chunk's date.
     # Corpus search_guidance injected below as a final per-corpus addendum.
     num_sources = len(docs)
-    base = _load_system_prompt()
+    base, _prompt_tier = _select_system_prompt(model)  # AIStudio_956: slim for small models, full for 27B-class
     system = (
         base
         + "\n\n"
@@ -524,8 +623,30 @@ def generate_answer_with_citations(
     else:
         prompt = f"Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
 
+    # AIStudio_960: /debug/prompt short-circuit — return the EXACT payload build_generate_kwargs
+    # produces (identical to what ollama_generate sends), without calling the model.
+    if return_prompt_only:
+        _gen_kwargs = build_generate_kwargs(
+            model=model or CONFIG.rag.default_model, prompt=prompt, system=system, temperature=temperature
+        )
+        _opts = _gen_kwargs.get("options", {})
+        return {
+            "model": _gen_kwargs["model"],
+            "system": _gen_kwargs.get("system", ""),
+            "prompt": _gen_kwargs["prompt"],
+            "options": _opts,
+            "num_ctx_set": "num_ctx" in _opts,  # AIStudio_958: False today → Ollama's default n_ctx applies (truncation risk)
+            "timeout_s": timeout,  # AIStudio_941: resolved request timeout (transport-level; not an ollama option)
+            "min_score": min_score,  # AIStudio_942: resolved retrieval threshold (echo for \debug parity with /debug/retrieve)
+            "prompt_tier": _prompt_tier,
+            "num_sources": num_sources,
+            "system_chars": len(system),
+            "prompt_chars": len(prompt),
+        }
+
     # Generate answer
-    answer = ollama_generate(model=model or CONFIG.rag.default_model, prompt=prompt, system=system, temperature=temperature)
+    record_model_used(model or CONFIG.rag.default_model)  # AIStudio_967: stamp last_used_at
+    answer = ollama_generate(model=model or CONFIG.rag.default_model, prompt=prompt, system=system, temperature=temperature, timeout=timeout)
 
     # Strip any trailing References/Sources block the LLM appended despite instructions.
     # Handles both newline-prefixed and inline variants (Mistral:7b appends inline).
@@ -626,7 +747,7 @@ def generate_answer_with_citations(
             c["index"] = appearance_order[c["index"]]
         citations.sort(key=lambda c: c["index"])
 
-    return {"answer": answer, "citations": citations, "has_citations": len(citations) > 0}
+    return {"answer": answer, "citations": citations, "has_citations": len(citations) > 0, "prompt_tier": _prompt_tier}
 
 
 @asynccontextmanager
@@ -669,6 +790,7 @@ class AskRequest(BaseModel):
     conversation_history: list[dict[str, str]] | None = None  # NEW: For follow-up questions
     hybrid_alpha: float | None = None  # M2.A: per-query override; None falls back to CONFIG.rag.hybrid_alpha
     min_score: float | None = None    # AIStudio_778: per-query min score threshold override
+    timeout: float | None = None      # AIStudio_941: per-query Ollama request timeout (s) override
     entity_filter: list[str] | None = None  # AIStudio_798: OR filter on source_path substrings
     allowed_source_paths: list[str] | None = None  # AIStudio_882: scope boundary, ANDed with entity_filter
     keywords: list[str] | None = None         # AIStudio_618: BM25 boost terms from UI KEYWORDS field
@@ -691,6 +813,7 @@ class AskResponse(BaseModel):
     has_citations: bool = False  # NEW: Flag indicating if citations are present
     retrieval_query: str | None = None   # AIStudio_841: expanded query actually sent to retrieve()
     model_used: str | None = None        # AIStudio_841: model actually used for generation
+    system_prompt_tier: str | None = None  # AIStudio_956: which system-prompt tier served this answer ('small' | 'full')
 
 
 class RetrieveRequest(BaseModel):
@@ -715,6 +838,126 @@ class ModelInfo(BaseModel):
     name: str
     provider: str
     available: bool = True
+    parameter_size: str | None = None  # AIStudio_966: e.g. "8.0B" (from ollama.list details)
+    size_bytes: int | None = None      # AIStudio_966: model disk size in bytes
+    size_human: str | None = None      # AIStudio_966: e.g. "4.9 GB" (for the UI label)
+    param_count: int | None = None     # AIStudio_967: exact params (manifest cache)
+    last_used_at: str | None = None    # AIStudio_967: when this model last generated
+
+
+class SystemInfo(BaseModel):
+    total_memory_bytes: int | None = None   # AIStudio_967: physical RAM (hw.memsize)
+    total_memory_human: str | None = None
+
+
+def _human_size(n: int | None) -> str | None:
+    """Bytes → a short human string ('4.9 GB'), matching `ollama list` style. AIStudio_966."""
+    if not n:
+        return None
+    gb = n / 1e9
+    if gb >= 1:
+        return f"{gb:.1f} GB"
+    return f"{n / 1e6:.0f} MB"
+
+
+# ── AIStudio_967: model manifest cache (data/model_manifest.json) ────────────────────────────
+# Regenerable runtime cache of per-model facts: exact param_count (fetched once from Ollama
+# /api/show), disk size, and usage timestamps. NOT governed state — gitignored, self-healing:
+# created lazily on first write, rebuilt if deleted. Feeds _is_small_model (replaces the name-parse
+# guess with ground truth) and the UI (size + last-used).
+_MODEL_MANIFEST: dict[str, Any] | None = None
+
+
+def _manifest_path() -> Path:
+    return _get_repo_root() / "data" / "model_manifest.json"
+
+
+def _get_manifest() -> dict[str, Any]:
+    global _MODEL_MANIFEST
+    if _MODEL_MANIFEST is None:
+        try:
+            p = _manifest_path()
+            _MODEL_MANIFEST = json.loads(p.read_text()) if p.exists() else {}
+        except Exception:
+            _MODEL_MANIFEST = {}
+    return _MODEL_MANIFEST
+
+
+def _save_manifest() -> None:
+    try:
+        p = _manifest_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(_MODEL_MANIFEST or {}, indent=2))
+    except Exception as e:
+        print(f"model_manifest save failed: {e}")
+
+
+def _model_param_count(model_id: str) -> int | None:
+    """Exact parameter count, cached in the manifest. First lookup queries Ollama /api/show
+    (general.parameter_count); afterwards it's a dict hit. None if Ollama is unreachable / model
+    not pulled — callers fall back to the name parse."""
+    if not model_id:
+        return None
+    m = _get_manifest()
+    entry = m.get(model_id) or {}
+    if entry.get("param_count") is not None:
+        return int(entry["param_count"])
+    try:
+        import ollama
+
+        info = ollama.show(model_id)
+        mi = getattr(info, "modelinfo", None)
+        if mi is None and isinstance(info, dict):
+            mi = info.get("model_info") or info.get("modelinfo") or {}
+        pc = None
+        for k, v in (mi.items() if hasattr(mi, "items") else []):
+            if str(k).endswith("parameter_count") and v:
+                pc = int(v)
+                break
+        details = getattr(info, "details", None)
+        if details is None and isinstance(info, dict):
+            details = info.get("details")
+        psize = None
+        if details is not None:
+            psize = details.get("parameter_size") if isinstance(details, dict) else getattr(details, "parameter_size", None)
+        entry.update(
+            {
+                "param_count": pc,
+                "parameter_size": psize,
+                "first_seen_at": entry.get("first_seen_at") or _dt.now().isoformat(timespec="seconds"),
+            }
+        )
+        m[model_id] = entry
+        _save_manifest()
+        return pc
+    except Exception as e:
+        print(f"param_count lookup failed for {model_id}: {e}")
+        return None
+
+
+def record_model_used(model_id: str) -> None:
+    """Stamp last_used_at (+ first_seen_at) in the manifest — the 'when was this model loaded' record."""
+    if not model_id:
+        return
+    m = _get_manifest()
+    entry = m.get(model_id) or {}
+    now = _dt.now().isoformat(timespec="seconds")
+    entry["last_used_at"] = now
+    entry.setdefault("first_seen_at", now)
+    m[model_id] = entry
+    _save_manifest()
+
+
+def _total_memory_bytes() -> int | None:
+    """Physical RAM in bytes via `sysctl -n hw.memsize` (macOS). None off-mac / on failure."""
+    try:
+        import subprocess
+
+        out = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=2)
+        v = out.stdout.strip()
+        return int(v) if v.isdigit() else None
+    except Exception:
+        return None
 
 
 @app.get("/health")
@@ -879,6 +1122,9 @@ async def ask(req: AskRequest) -> AskResponse:
     _corpus_min_score = _corpus_meta.get("default_min_score")
     _MIN_SCORE_FALLBACK = 0.5
     min_score = req.min_score if req.min_score is not None else (_corpus_min_score if _corpus_min_score is not None else _MIN_SCORE_FALLBACK)
+    # AIStudio_941: resolve timeout — per-request → corpus default_timeout → config (mirror of min_score)
+    _corpus_timeout = _corpus_meta.get("default_timeout")
+    _timeout = req.timeout if req.timeout is not None else (_corpus_timeout if _corpus_timeout is not None else CONFIG.ollama.request_timeout_s)
     docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=_effective_entity_filter, allowed_source_paths=req.allowed_source_paths or None, keywords=req.keywords or None)
 
     # Generate answer with citations
@@ -889,6 +1135,8 @@ async def ask(req: AskRequest) -> AskResponse:
         corpus=req.corpus,
         model=req.model or None,
         temperature=req.temperature if req.temperature is not None else None,
+        timeout=_timeout,
+        min_score=min_score,
     )
 
     # Convert to response format
@@ -902,6 +1150,53 @@ async def ask(req: AskRequest) -> AskResponse:
         has_citations=result["has_citations"],
         retrieval_query=retrieval_query,  # always return — shows query after entity expansion
         model_used=req.model or CONFIG.rag.default_model,
+        system_prompt_tier=result.get("prompt_tier"),  # AIStudio_956: 'small' | 'full'
+    )
+
+
+@app.post("/debug/prompt")
+async def debug_prompt(req: AskRequest) -> dict[str, Any]:
+    """AIStudio_960: return the EXACT prompt + Ollama options that /ask would send to the model,
+    WITHOUT calling the model. Reuses the real retrieve() + generate_answer_with_citations assembly
+    (return_prompt_only=True), so this is the actual payload, not a re-implementation. Retrieval
+    mirrors /ask's FULL knob set (query-expansion, entity_filter resolution, min_score, keywords) —
+    AIStudio_942 — so the source list and prompt-chars are faithful, not just the prompt text and
+    Ollama options (num_ctx / timeout)."""
+    top_k = req.top_k if req.top_k is not None else CONFIG.rag.top_k
+    hybrid_alpha = req.hybrid_alpha if req.hybrid_alpha is not None else CONFIG.rag.hybrid_alpha
+    # AIStudio_941: resolve the timeout the real /ask would use, so \debug echoes the true value.
+    _dbg_meta = _read_corpus_meta_defaults(req.corpus)
+    _dbg_corpus_to = _dbg_meta.get("default_timeout")
+    _dbg_timeout = req.timeout if req.timeout is not None else (_dbg_corpus_to if _dbg_corpus_to is not None else CONFIG.ollama.request_timeout_s)
+    # AIStudio_942: mirror /ask's retrieval EXACTLY so \debug's source list + prompt-chars are
+    # faithful. Previously this did raw retrieval (query/top_k/corpus/hybrid_alpha only), skipping
+    # query-expansion, entity_filter, min_score and keywords — so \debug disagreed with /ask on which
+    # firms/sources came back (the curl-vs-UI drift). Same chain as the /ask handler above.
+    retrieval_query = _expand_query_entities(req.query, req.corpus, repeat=req.query_expansion)
+    _dbg_mode = (req.entity_filter_mode or "auto").lower()
+    if _dbg_mode == "none":
+        _dbg_entity_filter = None
+    elif _dbg_mode == "yaml":
+        _dbg_entity_filter = req.entity_filter or None
+    else:  # auto
+        _dbg_entity_filter = req.entity_filter or _auto_entity_filter(req.query, req.corpus)
+    _dbg_corpus_min = _dbg_meta.get("default_min_score")
+    _dbg_min_score = req.min_score if req.min_score is not None else (_dbg_corpus_min if _dbg_corpus_min is not None else 0.5)
+    docs = retrieve(
+        query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha,
+        min_score=_dbg_min_score, entity_filter=_dbg_entity_filter,
+        allowed_source_paths=req.allowed_source_paths or None, keywords=req.keywords or None,
+    )
+    return generate_answer_with_citations(
+        query=req.query,
+        docs=docs,
+        conversation_history=req.conversation_history,
+        corpus=req.corpus,
+        model=req.model or None,
+        temperature=req.temperature if req.temperature is not None else None,
+        timeout=_dbg_timeout,
+        min_score=_dbg_min_score,
+        return_prompt_only=True,
     )
 
 
@@ -1014,6 +1309,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
     default_temperature = None
     default_hybrid_alpha = None
     default_min_score = None
+    default_timeout = None
     try:
         meta_path = paths["base"] / f"{corpus_name}_corpus_metadata.yaml"
         if meta_path.exists():
@@ -1035,6 +1331,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
             default_temperature = meta.get("default_temperature")
             default_hybrid_alpha = meta.get("default_hybrid_alpha")
             default_min_score = meta.get("default_min_score")
+            default_timeout = meta.get("default_timeout")
     except Exception:
         pass
 
@@ -1063,6 +1360,7 @@ async def get_corpus_info(corpus_name: str) -> dict[str, Any]:
         "default_temperature": default_temperature,
         "default_hybrid_alpha": default_hybrid_alpha,
         "default_min_score": default_min_score,
+        "default_timeout": default_timeout,
         "paths": {
             "base": str(paths["base"]),
             "uploads": str(paths["uploads"]),
@@ -1095,7 +1393,7 @@ async def update_corpus_metadata(corpus_name: str, request: Request) -> dict[str
     # Update only fields provided in request — text metadata + per-corpus query defaults
     editable = [
         "short_description", "description", "content_summary", "search_guidance",
-        "default_top_k", "default_temperature", "default_hybrid_alpha", "default_min_score",
+        "default_top_k", "default_temperature", "default_hybrid_alpha", "default_min_score", "default_timeout",
     ]
     for field in editable:
         if field in body:
@@ -1731,6 +2029,7 @@ class CreateCorpusRequest(BaseModel):
     default_temperature: float | None = None
     default_hybrid_alpha: float | None = None
     default_min_score: float | None = None
+    default_timeout: float | None = None    # AIStudio_941
 
 
 @app.get("/corpus/{corpus_name}/ingest-status")
@@ -1902,6 +2201,8 @@ async def create_corpus(request: CreateCorpusRequest) -> dict[str, Any]:
             _meta_content["default_hybrid_alpha"] = request.default_hybrid_alpha
         if request.default_min_score is not None:
             _meta_content["default_min_score"] = request.default_min_score
+        if request.default_timeout is not None:
+            _meta_content["default_timeout"] = request.default_timeout
         corpus_meta_path.write_text(
             f"# {name}_corpus_metadata.yaml\n"
             f"# Corpus metadata — loaded by api.py at query time\n"
@@ -2359,6 +2660,14 @@ async def get_howto() -> dict[str, Any]:
 # MODEL MANAGEMENT ENDPOINTS
 
 
+@app.get("/system")
+async def get_system() -> SystemInfo:
+    """AIStudio_967: host facts for the UI — total physical RAM, so the model picker can warn
+    (orange >75%, red >90%) when a model's footprint is a large fraction of memory."""
+    b = _total_memory_bytes()
+    return SystemInfo(total_memory_bytes=b, total_memory_human=_human_size(b))
+
+
 @app.get("/models")
 async def get_models() -> list[ModelInfo]:
     """
@@ -2395,8 +2704,35 @@ async def get_models() -> list[ModelInfo]:
                 # Show full name with tag for clarity (e.g. "llama3.1:8b" → "Llama3.1:8b")
                 # Capitalise only the first letter to avoid "Llama3.1" vs "llama3.1" confusion
                 display_name = full_name[0].upper() + full_name[1:]
+
+                # AIStudio_966: surface disk size + param size already present in ollama.list()
+                _size = getattr(model, "size", None)
+                if _size is None and isinstance(model, dict):
+                    _size = model.get("size")
+                _det = getattr(model, "details", None)
+                if _det is None and isinstance(model, dict):
+                    _det = model.get("details")
+                _psize = None
+                if _det is not None:
+                    _psize = _det.get("parameter_size") if isinstance(_det, dict) else getattr(_det, "parameter_size", None)
+                try:
+                    _size = int(_size) if _size is not None else None
+                except (TypeError, ValueError):
+                    _size = None
+
+                _entry = _get_manifest().get(full_name) or {}
                 available_models.append(
-                    ModelInfo(id=full_name, name=display_name, provider="Ollama", available=True)
+                    ModelInfo(
+                        id=full_name,
+                        name=display_name,
+                        provider="Ollama",
+                        available=True,
+                        parameter_size=_psize or _entry.get("parameter_size"),
+                        size_bytes=_size,
+                        size_human=_human_size(_size),
+                        param_count=_entry.get("param_count"),
+                        last_used_at=_entry.get("last_used_at"),
+                    )
                 )
 
             # If we got models, return them
@@ -2499,10 +2835,17 @@ async def reload_prompt() -> dict[str, Any]:
     Clear the cached system prompt and reload from prompts/system.txt.
     Allows live system prompt edits without restarting the backend.
     """
-    global _SYSTEM_PROMPT_BASE
+    global _SYSTEM_PROMPT_BASE, _SYSTEM_PROMPT_SMALL
     _SYSTEM_PROMPT_BASE = None
+    _SYSTEM_PROMPT_SMALL = None
     _load_system_prompt()
-    return {"status": "ok", "prompt_length": len(_SYSTEM_PROMPT_BASE)}
+    _load_small_system_prompt()
+    return {
+        "status": "ok",
+        "prompt_length": len(_SYSTEM_PROMPT_BASE),  # full — kept for back-compat with existing callers
+        "full_length": len(_SYSTEM_PROMPT_BASE),
+        "small_length": len(_SYSTEM_PROMPT_SMALL),
+    }
 
 
 @app.get("/prompt/text")
