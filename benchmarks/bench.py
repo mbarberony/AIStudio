@@ -209,11 +209,18 @@ import _scope_common as _scope  # noqa: E402
 #            --augment-from scaffold for the prior entity-isolation behavior. 'auto' forwards
 #            no hints and forces hybrid so server query-analysis (GLEIF/glossary) expansion
 #            fires. Verbose/config output reflects EFFECTIVE sent hints, not YAML values.
+# Changelog: 2.9.2 — AIStudio_941: batch runner reads a top-level `timeout:` in bench_canonical.yaml
+#            (mirrors top-level `model:`). Resolution per-run spec timeout → top-level spec timeout →
+#            parent --timeout → 120. A canonical run now carries its own timeout; no --timeout 300 needed.
+# Changelog: 2.9.1 — AIStudio_941: evaluate() failed-request branch now returns rating="RED" + the
+#            5 keys it previously omitted (score/keyword_pass/entity_coverage/entities_missing/rating),
+#            so timed-out questions score as RED instead of blank-undercounting, and the report renderer
+#            can't KeyError on a failed row (the mid-run crash noted in the 2.x history).
 # Changelog: 2.9.0 — AIStudio_940: --batch/--canonical now propagates --timeout to sub-runs (per-run
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.9.0"
+VERSION = "2.9.2"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -792,13 +799,18 @@ def evaluate(result: dict, expected_keywords: list[str],
     if not result["ok"]:
         return {
             "pass": False,
+            "rating": "RED",          # AIStudio_941: a failed/timed-out request is a RED, not a blank — the old branch omitted rating (+ score/keyword_pass/entity_coverage/entities_missing), so timeouts undercounted in reports and any renderer reading result["score"] KeyError'd
+            "score": 0.0,
             "reason": f"Request failed: {result['error']}",
+            "keyword_pass": False,
             "citation_count": 0,
             "citation_pass": False,
             "citation_density": 0.0,
             "low_citation_density": False,
             "no_info_signal": False,
             "missing_keywords": [],
+            "entity_coverage": None,
+            "entities_missing": [],
             "cited_sources": [],
         }
 
@@ -1105,6 +1117,7 @@ def run_canonical(args: argparse.Namespace) -> int:
     spec = yaml.safe_load(spec_path.read_text()) or {}
     runs = spec.get("runs", []) or []
     default_model = spec.get("model")
+    default_timeout = spec.get("timeout")   # AIStudio_941: top-level spec timeout default (mirrors default_model)
 
     if args.canonical_id is not None:
         runs = [r for r in runs if str(r.get("id")) == str(args.canonical_id)]
@@ -1142,11 +1155,12 @@ def run_canonical(args: argparse.Namespace) -> int:
             argv += ["--alpha", str(r["alpha"])]
         if r.get("min_score") is not None:
             argv += ["--min-score", str(r["min_score"])]
-        # AIStudio_940: propagate timeout to sub-runs. A bigger num_ctx (_958) slows generation, so
+        # AIStudio_940/_941: propagate timeout to sub-runs. A bigger num_ctx (_958) slows generation, so
         # the 120s default can time out heavy multi-firm questions → HTTP failure → mechanical fail
-        # (the likely cause of the Run C/D drop). Per-run spec `timeout` wins; else inherit the
-        # parent invocation's --timeout so `ais_bench --canonical --timeout 300` actually reaches children.
-        _run_timeout = r.get("timeout", args.timeout)
+        # (the likely cause of the Run C/D drop). Resolution mirrors model:: per-run spec `timeout:` wins,
+        # else the top-level spec `timeout:`, else the parent invocation's --timeout (default 120) — so a
+        # canonical run carries its own timeout without needing --timeout 300 on every invocation.
+        _run_timeout = r.get("timeout", default_timeout if default_timeout is not None else args.timeout)
         if _run_timeout is not None:
             argv += ["--timeout", str(_run_timeout)]
 
