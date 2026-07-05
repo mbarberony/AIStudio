@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.17.0 -->
+<!-- Changelog: 2.17.0 — A20 + A21(c) + A8. A20: Edit Corpus modal footer (Save/Cancel) was clipped below the fold on shorter viewports — the whole modal scrolled and the buttons scrolled out of view. Applied the same sticky-footer pattern the New Corpus modal already uses (position:sticky; bottom:0; pinned bg + top border), so Save/Cancel stay visible while the form scrolls. A21(c): Source Dive PDF panel now closes on an outside click, not only via the ✕ button. Refactored to a shared _closeSourceDive() (button + outside-click use identical iframe cleanup); the document click-handler ignores clicks inside the panel and on the opener links (.citation-ref / .footnote-open / .footnote-name / any onclick=openSourceDive) so the opening click doesn't immediately close it. A8: reingest time-estimate tier-3 seed is now CHUNK-based, not a flat 60s/file — ingest cost is per-chunk and chunks/file swings wildly (SEC ~970/file, ESEF ~2,500/file) so 60s/file over/under-shot 2-3x (SEC-107 predicted ~107min, actual 36.5). Seeds off recorded chunk count (data-chunks) × ~25ms/chunk, else estimates chunks from size (bytes ÷ ~1200 chars) × 25ms; flat 60s only when neither is known. Tiers 1 (recorded duration) + 2 (corpus avg) unchanged. A21(a) resizable chat + A21(b) collapsible left panel deferred to a UI session. -->
 <!-- Version: 2.15.0 -->
 <!-- Changelog: 2.15.0 — A6: empty/stub answers no longer render as a finished turn. The response handler wrapped data.answer unconditionally, so a blank/near-blank answer — which the backend can return during a cold model load (~20-50s after a model switch) or when retrieval finds nothing — showed as an empty completed assistant bubble (looked like a real but stub reply). Now: if the trimmed answer is empty, show an honest actionable message ("no answer returned — model may still be loading, try again; or no relevant sources found") and do NOT persist it to conversation history, so it can't be mistaken for a real answer on reload. Spinner already cleared before the guard; finally{} still resets isLoading. -->
 <!-- Version: 2.14.0 -->
@@ -1990,7 +1992,7 @@
                         <div style="font-size:11px;color:var(--text-dim);margin-top:10px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
                     </div>
 
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <div style="display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;margin:12px -32px -28px;padding:16px 32px;background:var(--bg-panel,white);border-top:1px solid var(--border,#e2e8f0);border-radius:0 0 16px 16px;">
                         <button id="_editCancel" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border,#d0d5dd);background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-mid,#555);">Cancel</button>
                         <button id="_editSave" style="padding:9px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
                     </div>
@@ -2122,6 +2124,8 @@
                     return '<div class="file-row" style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);">'
                         + '<input type="checkbox" class="file-select-cb" data-fname="' + fname + '" '
                         + 'data-dur="' + (fm.duration_sec != null ? fm.duration_sec : '') + '" '
+                        + 'data-chunks="' + (fm.chunks != null ? fm.chunks : '') + '" '   /* A8: chunk-based seed */
+                        + 'data-bytes="' + (fm.size_bytes != null ? fm.size_bytes : '') + '" '  /* A8: size fallback */
                         + 'style="flex-shrink:0;width:14px;height:14px;accent-color:var(--accent);cursor:pointer;" '
                         + 'onchange="updateDeleteBar()">'
                         + '<div style="flex:1;min-width:0;">'
@@ -2206,17 +2210,36 @@
     // Per-file reingest estimate — cascade (matches ais_ingest_sec_10k.sh logic):
     //   tier 1: this file's own recorded duration (data-dur, from files_meta.duration_sec)
     //   tier 2: the corpus avg_seconds_per_file (data-avg-secs on the toolbar, from /info)
-    //   tier 3: a 60s/file seed when neither is available
+    //   tier 3 (A8): CHUNK-based seed, not a flat 60s/file. Ingest cost is per-chunk, and
+    //     chunks/file swings wildly (SEC ~970/file, ESEF ~2,500/file), so a per-file constant
+    //     over/under-shoots by 2-3x (SEC-107 predicted ~107min, actual 36.5). We seed off the
+    //     file's recorded chunk count when known (data-chunks), else estimate chunks from size
+    //     (bytes ÷ ~1200 chars/chunk), × observed ~25ms/chunk. Falls to a flat per-file seed
+    //     only when neither chunks nor size is known. The live bar self-corrects regardless.
     // A < 2s/file value is rejected as skip-contaminated (SEC XBRL files are 14–37s each;
     // a sub-2s avg comes from a skip-heavy incremental run and is physically impossible),
-    // so tier 2 falls through to tier 3 in that case. The live bar self-corrects anyway —
-    // the seed only needs to be reasonable.
-    const REINGEST_SEED_SECS_PER_FILE = 60;     // tier 3
+    // so tier 2 falls through to tier 3 in that case.
+    const REINGEST_MS_PER_CHUNK = 25;           // A8: observed ~22–28ms/chunk (nomic-embed-text, M4)
+    const REINGEST_CHARS_PER_CHUNK = 1200;      // A8: chunk size — bytes→chunks estimate
+    const REINGEST_SEED_SECS_PER_FILE = 60;     // last-resort flat fallback (no chunks, no size)
     const REINGEST_MIN_PLAUSIBLE_SECS = 2.0;    // floor for trusting an avg
     function _corpusAvgSecs() {
         const tb = document.getElementById('file-select-toolbar');
         const v = tb ? parseFloat(tb.dataset.avgSecs) : NaN;
         return (Number.isFinite(v) && v >= REINGEST_MIN_PLAUSIBLE_SECS) ? v : null;
+    }
+    function _chunkSeedSecs(cb) {
+        // A8 chunk-based seed for one file: prefer recorded chunks, else estimate from bytes.
+        const chunks = parseFloat(cb.dataset.chunks);
+        if (Number.isFinite(chunks) && chunks > 0) {
+            return (chunks * REINGEST_MS_PER_CHUNK) / 1000;
+        }
+        const bytes = parseFloat(cb.dataset.bytes);
+        if (Number.isFinite(bytes) && bytes > 0) {
+            const estChunks = Math.max(1, bytes / REINGEST_CHARS_PER_CHUNK);
+            return (estChunks * REINGEST_MS_PER_CHUNK) / 1000;
+        }
+        return REINGEST_SEED_SECS_PER_FILE;     // neither known — flat fallback
     }
     function _estimateReingestSecs(checkedCbs) {
         if (!checkedCbs || !checkedCbs.length) return null;
@@ -2228,8 +2251,8 @@
                 total += d;
             } else if (corpusAvg) {                    // tier 2
                 total += corpusAvg;
-            } else {                                   // tier 3
-                total += REINGEST_SEED_SECS_PER_FILE;
+            } else {                                   // tier 3 (A8: chunk-based)
+                total += _chunkSeedSecs(cb);
             }
         }
         return Math.round(total);
@@ -3699,11 +3722,29 @@
         panel.classList.add('open');
     }
 
-    document.getElementById('sourceDiveClose').addEventListener('click', () => {
+    // A21(c) — shared close so the button and outside-click use identical cleanup.
+    function _closeSourceDive() {
         const panel = document.getElementById('sourceDivePanel');
+        if (!panel.classList.contains('open')) return;
         panel.classList.remove('open');
         // Clear iframe after transition to avoid keeping PDF in memory
         setTimeout(() => { document.getElementById('sourceDiveFrame').src = 'about:blank'; }, 250);
+    }
+
+    document.getElementById('sourceDiveClose').addEventListener('click', _closeSourceDive);
+
+    // A21(c) — click outside the panel closes it. Guard: ignore clicks INSIDE the panel,
+    // and ignore any element that OPENS Source Dive (else the opening click immediately
+    // closes it). Openers are <a> tags whose onclick calls openSourceDive — matched by class
+    // (.citation-ref / .footnote-open / .footnote-name) or by the onclick attribute itself
+    // (covers the unclassed help-modal link).
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('sourceDivePanel');
+        if (!panel.classList.contains('open')) return;
+        if (panel.contains(e.target)) return;                                   // inside the panel
+        const opener = e.target.closest('.citation-ref, .footnote-open, .footnote-name, [onclick*="openSourceDive"]');
+        if (opener) return;                                                     // the opener link
+        _closeSourceDive();
     });
 
     // ── Defaults Modal (AIStudio_755 v1) ──────────────────────────────
