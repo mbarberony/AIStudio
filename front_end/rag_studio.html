@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.15.0 -->
+<!-- Changelog: 2.15.0 — A6: empty/stub answers no longer render as a finished turn. The response handler wrapped data.answer unconditionally, so a blank/near-blank answer — which the backend can return during a cold model load (~20-50s after a model switch) or when retrieval finds nothing — showed as an empty completed assistant bubble (looked like a real but stub reply). Now: if the trimmed answer is empty, show an honest actionable message ("no answer returned — model may still be loading, try again; or no relevant sources found") and do NOT persist it to conversation history, so it can't be mistaken for a real answer on reload. Spinner already cleared before the guard; finally{} still resets isLoading. -->
 <!-- Version: 2.14.0 -->
 <!-- Changelog: 2.14.0 — Retrieval Mix (α) convention normalized to a SINGLE scale everywhere: Literal=0, Conceptual=1, raw with NO inversion at any boundary. Removed all four 1-x inversions (main-panel /ask send, Edit modal load + save, Defaults modal apply) and the resolver's per-source alpha handling from 2.13.0 — the file previously mixed a raw convention (New Corpus, display) with an inverting one (/ask, Edit, Defaults), so the same slider position could store/send opposite values depending on path. Now the slider value IS the stored default_hybrid_alpha IS what the backend receives. All existing corpora were at 0.5 (symmetric) so no data migration needed. Slider labels unchanged (already Literal↔Conceptual). -->
 <!-- Version: 2.13.0 -->
@@ -1626,6 +1628,20 @@
             // markdownToHtml handles escaping internally (inlineMarkdown calls escapeHtml).
             // AIS_02 — _wrapParagraphs gives every prose line its own <p> for one consistent
             // spacing model (no more \n\n-gaps vs single-\n wall); lists/code pass through.
+            // A6: guard against rendering an empty/whitespace answer as a completed turn.
+            // On a cold model load (~20-50s) or a retrieval-empty result, the backend can return
+            // a blank/near-blank `answer`. Rendering that as a normal assistant bubble looks like
+            // a finished (but empty/stub) reply. Instead surface an honest, actionable state and
+            // do NOT persist it to history (so it isn't mistaken for a real answer on reload).
+            const _ans = (data.answer || '').trim();
+            if (!_ans) {
+                addMessage('assistant',
+                    '<em style="color:var(--text-mid)">No answer was returned. If you just switched models, '
+                    + 'it may still be loading into memory (first query can take 20\u201350\u202fs) \u2014 try again in a moment. '
+                    + 'Otherwise, no relevant sources were found for this question in the current corpus.</em>',
+                    true);
+                return;   // finally{} still runs: resets isLoading + re-enables send
+            }
             let html = _wrapParagraphs(markdownToHtml(_collapseDupLines(data.answer)));
             if (data.citations && data.citations.length) {
                 responseCounter++;
