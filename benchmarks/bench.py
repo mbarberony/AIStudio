@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# Changelog: 2.9.3 — A2 fix: `--batch-id <ID>` alone now triggers batch mode. --batch-id sets
+#   dest `canonical_id`, but the dispatch gate only checked `canonical` (set by --batch) — so
+#   `ais_bench --batch-id D` (no --batch) silently fell through to a single run on the DEFAULT
+#   corpus (demo) instead of running canonical run D. Now the gate fires on either flag.
 # Changelog: 2.8.4 — Batch mode: child runs spawned by run_canonical now suppress their own
 #   [ais_bench v… ] header (env AIS_BENCH_CHILD=1 on the child; main() skips the header when set).
 #   The parent prints one header + the ▶ banner IDs each run — kills the N+1 header repetition in
@@ -220,7 +224,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.9.2"
+VERSION = "2.9.3"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -1188,8 +1192,12 @@ def main() -> None:
     if not os.environ.get("AIS_BENCH_CHILD"):
         print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
 
-    # AIStudio_931 — canonical mode short-circuits the single-run path.
-    if getattr(args, "canonical", False):
+    # AIStudio_931 — canonical/batch mode short-circuits the single-run path.
+    # A2 (2026-07-05): --batch-id alone must also trigger it. --batch-id sets
+    # `canonical_id` (a different dest than --batch's `canonical`), so `ais_bench
+    # --batch-id D` without --batch used to fall through to a single run on the
+    # DEFAULT corpus (demo) — a silent-wrong-result trap. Trigger on either.
+    if getattr(args, "canonical", False) or getattr(args, "canonical_id", None) is not None:
         raise SystemExit(run_canonical(args))
 
     # ── Scope (AIStudio_882): load + validate the firm-universe up front ─────────
