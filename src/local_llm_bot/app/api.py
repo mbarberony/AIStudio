@@ -1,3 +1,15 @@
+# Version: 1.16.3
+# Changelog: 1.16.3 — A3: fence conversation history as reference-only in the synthesis prompt.
+#            Prior-turn answers were bleeding into the current answer — when current retrieval is
+#            weak (notably non-English ESEF filings that parse poorly, the A4 collapse), the model
+#            reached into an earlier firm's answer sitting in history and lifted its figures (a BNP
+#            Paribas query returned HSBC's CET1 ratio). The prompt now labels history as
+#            "for context and follow-up resolution ONLY — do NOT use its facts", marks Available
+#            Sources as "the ONLY basis for facts", and instructs the model to say so rather than
+#            borrow from history when sources lack the answer. Full history retained ([-20:]) so
+#            follow-ups ("its Tier 1 ratio?") still resolve; only the fact-source contract changed.
+#            Partial by design: A3 stops the history-bleed PATH; A4 (retrieval abstain on empty)
+#            addresses the starvation that triggers it.
 # Version: 1.16.2
 # Changelog: 1.16.2 — AIStudio_941 fix: default_timeout was dropped on corpus create/edit — the
 #   modal sent it but CreateCorpusRequest, the create-persist block, the PATCH editable list, and the
@@ -619,7 +631,23 @@ def generate_answer_with_citations(
                 for msg in conversation_history[-20:]  # Last 10 exchanges (user+assistant = 20 msgs) — AIStudio_636 v1.7.2
             ]
         )
-        prompt = f"Conversation History:\n{history_text}\n\nCurrent Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
+        # A3 — fence the history as REFERENCE-ONLY, not a fact source. Prior-turn answers were
+        # bleeding into the current answer: when current retrieval is weak (notably non-English
+        # ESEF filings that parse poorly — the A4 collapse), the model reached back into an
+        # earlier firm's answer sitting in history and lifted its numbers (e.g. a BNP Paribas
+        # query returning HSBC's CET1 ratio). We KEEP full history (follow-ups like "its Tier 1
+        # ratio?" need it to resolve pronouns/context), but instruct the model to use it only for
+        # understanding the current question — never as source material. Facts come from
+        # Available Sources alone. Depth ([-20:]) and [N]-stripping unchanged.
+        prompt = (
+            f"Conversation History (for context and follow-up resolution ONLY — do NOT use any "
+            f"facts, figures, or claims from it as answer content; it may concern a DIFFERENT "
+            f"entity than the current question):\n{history_text}\n\n"
+            f"Current Question:\n{query}\n\n"
+            f"Available Sources (the ONLY basis for facts in your answer):\n{context}\n\n"
+            f"Answer the Current Question using ONLY the Available Sources. If the sources do not "
+            f"contain the answer, say so — do NOT borrow facts from the Conversation History.\n\nAnswer:"
+        )
     else:
         prompt = f"Question:\n{query}\n\nAvailable Sources:\n{context}\n\nAnswer:"
 
