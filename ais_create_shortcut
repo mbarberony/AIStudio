@@ -1,7 +1,21 @@
 #!/usr/bin/env zsh
 # ais_create_shortcut — Create AIStudio desktop shortcut on macOS
-# Version: 1.5.4
+# Version: 1.6.2
 # Changelog:
+#   1.6.2 — A1b: added `$HOME/bin` to the plist EnvironmentVariables PATH (and the .app exec
+#           PATH). launchd uses the plist PATH, not ~/.zshrc, so the desktop icon couldn't find
+#           the Qdrant binary (which QUICKSTART installs to ~/bin) → icon-launched start failed
+#           at "Qdrant binary not found" even though interactive `ais_start` worked.
+#   1.6.1 — Renamed the tracked backing → `scripts/ais_launcher.sh` (ais_* prefix per Naming;
+#           the interim aistudio_launcher.sh was non-conformant). Backing now carries a
+#           `# Version:`/`VERSION=` per CLI Output STD; plist repointed; calls `ais_start.sh`
+#           (the §7 wrapper), matching the retired _ops twin's original target.
+#   1.6.0 — A1 fix: the Launch Agent plist pointed at `_ais_create_shortcut_ops.sh`, a
+#           GITIGNORED operator twin → on a fresh public clone the target was missing and
+#           the Desktop icon opened a dead UI ("Ollama not running"). Gave the shortcut a
+#           TRACKED launcher backing so it ships on every clone; `_ops` twin retired. Also
+#           clears the FILE_GUIDE_OPS leading-underscore drift item.
+#   1.5.4 — (see prior working copy)
 #   1.4.3 — codesign --sign - (ad-hoc, removes lock icon); splash after 3s not 0s; Option 2 icon
 #   1.4.2 — Info.plist notification keys; splash dialog
 #   1.4.1 — add --remove flag
@@ -14,7 +28,7 @@
 # ── Source guard ──────────────────────────────────────────────────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.5.4"
+VERSION="1.6.2"
 SCRIPT_NAME="ais_create_shortcut"
 SCRIPT_DIR="${0:A:h}"
 REPO="$SCRIPT_DIR"
@@ -107,12 +121,12 @@ cat > "$PLIST" << PLIST_EOF
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>$REPO/_ais_create_shortcut_ops.sh</string>
+        <string>$REPO/scripts/ais_launcher.sh</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>HOME</key>
         <string>$HOME</string>
     </dict>
@@ -180,7 +194,7 @@ INFO_EOF
 # Shows splash notification, kickstarts Launch Agent, polls health, opens browser
 cat > "$APP_PATH/Contents/MacOS/AIStudio" << EXEC_EOF
 #!/bin/bash
-export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
+export PATH="$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
 FRONTEND="$FRONTEND"
 
 # Show splash immediately — user sees feedback right away

@@ -1,4 +1,15 @@
-# Version: 1.3.0
+# Version: 1.4.0
+# Changelog: 1.4.0 — (A1c) desktop-icon lifecycle: detach the three spawned services
+#            (Qdrant, Ollama, backend) with start_new_session=True. They were plain child
+#            Popens — fine in a terminal (they orphan-survive), but under launchd (the desktop
+#            icon's path) the agent job exits after ais_start returns and launchd REAPS its
+#            whole process tree, killing the just-started services. start_new_session puts each
+#            in its own session/process-group so the agent's exit no longer cascades. Safe for
+#            interactive stop: ais_stop/stop.sh kill by PORT (lsof -ti:8000/6333), not by parent.
+#            ALSO (takeover notice): when a start supersedes a stale backend on :8000, announce
+#            it in THIS window (pid + start time) and append a timestamped line to
+#            ~/Library/Logs/AIStudio/superseded.log — so an older terminal's stale "running"
+#            output no longer silently misleads, and the handoff is auditable.
 # Changelog: 1.3.0 — C18 / #888 model guard. (1) Zero chat models → graceful hard-fail
 #            referencing the RESOLVED default (was: stale `ollama pull llama3.1:8b`), with
 #            generic guidance for any model + the AISTUDIO_DEFAULT_MODEL override. (2) If the
@@ -47,13 +58,13 @@ import webbrowser
 from pathlib import Path
 
 SCRIPT_NAME = "ais_start"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
-BOLD = "\033[1m"
-DIM = "\033[2m"
+BOLD   = "\033[1m"
+DIM    = "\033[2m"
 ITALIC = "\033[3m"
-RESET = "\033[0m"
+RESET  = "\033[0m"
 
 
 def _sep(label: str, separator: bool = True) -> None:
@@ -106,7 +117,6 @@ def _resolve_default_model(repo: Path) -> str | None:
         return env
     try:
         from local_llm_bot.app.config import CONFIG
-
         return CONFIG.rag.default_model
     except Exception:
         return None
@@ -116,7 +126,10 @@ def _ollama_chat_model_count() -> int:
     try:
         with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3) as r:
             d = json.loads(r.read())
-        return sum(1 for m in d.get("models", []) if "embed" not in m.get("name", "").lower())
+        return sum(
+            1 for m in d.get("models", [])
+            if "embed" not in m.get("name", "").lower()
+        )
     except Exception:
         return 0
 
@@ -127,13 +140,13 @@ def main() -> int:
 
     # ── Parse args (--help handled by wrapper, not here) ──────────────────────
     parser = argparse.ArgumentParser(prog=SCRIPT_NAME, add_help=False)
-    parser.add_argument("--version", action="store_true")
-    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--version",      action="store_true")
+    parser.add_argument("--verbose",      action="store_true")
     parser.add_argument("--no-separator", action="store_true", dest="no_separator")
-    parser.add_argument("--show-log", action="store_true", dest="show_log")
-    parser.add_argument("--show-splash", action="store_true", dest="show_splash")
-    parser.add_argument("--no-open", action="store_true", dest="no_open")
-    parser.add_argument("--start_with", default="", metavar="CORPUS")
+    parser.add_argument("--show-log",     action="store_true", dest="show_log")
+    parser.add_argument("--show-splash",  action="store_true", dest="show_splash")
+    parser.add_argument("--no-open",      action="store_true", dest="no_open")
+    parser.add_argument("--start_with",   default="", metavar="CORPUS")
     args, _ = parser.parse_known_args()
 
     separator = not args.no_separator
@@ -146,18 +159,50 @@ def main() -> int:
     # ── Bold bracketed header (CLI Output STD §2) ─────────────────────────────
     print(f"{BOLD}[{SCRIPT_NAME} v{VERSION} — Start all AIStudio services]{RESET}")
 
-    frontend = repo / "front_end" / "rag_studio.html"
-    log_dir = Path.home() / "Library" / "Logs" / "AIStudio"
-    log_file = log_dir / "backend.log"
+    frontend       = repo / "front_end" / "rag_studio.html"
+    log_dir        = Path.home() / "Library" / "Logs" / "AIStudio"
+    log_file       = log_dir / "backend.log"
     qdrant_storage = Path.home() / "qdrant_storage"
-    api = "http://127.0.0.1:8000"
+    api            = "http://127.0.0.1:8000"
+
+    # ── Takeover detection (BEFORE Cleanup — stop.sh clears :8000, so we must capture first) ──
+    # If a backend is already live on :8000, THIS start supersedes it. We detect + stamp here,
+    # but PRINT inside the Cleanup bundle below (CLI Output STD §2 — a supersede is a Cleanup event).
+    _pre = subprocess.run(["lsof", "-ti:8000"], capture_output=True, text=True)
+    _stale_pids = _pre.stdout.strip().splitlines() if _pre.stdout.strip() else []
+    _superseded_msg = None
+    if _stale_pids:
+        _now = time.strftime("%Y-%m-%d %H:%M:%S")
+        _started = "unknown"
+        with contextlib.suppress(Exception):
+            _ps = subprocess.run(
+                ["ps", "-o", "lstart=", "-p", _stale_pids[0]],
+                capture_output=True, text=True,
+            )
+            _started = _ps.stdout.strip() or "unknown"
+        _pidlist = ", ".join(_stale_pids)
+        _superseded_msg = (_pidlist, _started)  # printed in Cleanup below (STD §2)
+        # (A) record the handoff, timestamped, for the record / ais_status
+        with contextlib.suppress(Exception):
+            log_dir.mkdir(parents=True, exist_ok=True)
+            with open(log_dir / "superseded.log", "a") as _sf:
+                _sf.write(
+                    f"{_now}  superseded pid(s) {_pidlist} (started {_started}) "
+                    f"by new start (pid {os.getpid()})\n"
+                )
 
     # ── Cleanup ───────────────────────────────────────────────────────────────
     _sep("Cleanup", separator)
+    # (B) supersede notice — belongs in the Cleanup bundle (STD §2). ⚠ ends with a period;
+    # the · sub-detail takes no trailing punctuation (STD §glyphs).
+    if _superseded_msg:
+        _pidlist, _started = _superseded_msg
+        print(f"⚠ Superseding a previous AIStudio backend (pid(s): {_pidlist}, started {_started}).")
+        print("· That other terminal's instance is now stale — this window is the live one")
     print("🛑 Stopping any running services...")
     subprocess.run(
         [str(repo / "scripts" / "stop.sh"), "--silent"],
-        capture_output=True,  # mask stop.sh banner — internal implementation detail
+        capture_output=True,   # mask stop.sh banner — internal implementation detail
     )
 
     # ── Ecosystem ─────────────────────────────────────────────────────────────
@@ -173,21 +218,17 @@ def main() -> int:
         # here with a raw FileNotFoundError; fail with actionable guidance instead.
         if shutil.which("qdrant") is None:
             print("❌ Qdrant binary not found on PATH.")
-            print(
-                "· Qdrant isn't a Homebrew package — it's a GitHub release binary (QUICKSTART §5)."
-            )
+            print("· Qdrant isn't a Homebrew package — it's a GitHub release binary (QUICKSTART §5).")
             print("· Install (Apple Silicon):")
             print("    mkdir -p ~/bin && cd ~/bin \\")
-            print(
-                "      && curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz \\"
-            )
+            print("      && curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz \\")
             print("      && chmod +x ~/bin/qdrant")
             print("· Then ensure ~/bin is on PATH (source ~/.zshrc) and re-run: ais_start")
             print("· (ais_restore auto-installs the binary if you're recovering from a backup.)")
             return 1
         qdrant_storage.mkdir(parents=True, exist_ok=True)
         qdrant_env = {**os.environ, "QDRANT__STORAGE__STORAGE_PATH": str(qdrant_storage)}
-        popen_kwargs: dict = dict(cwd=str(qdrant_storage), env=qdrant_env)
+        popen_kwargs: dict = dict(cwd=str(qdrant_storage), env=qdrant_env, start_new_session=True)
         if not args.verbose:
             popen_kwargs.update(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.Popen(["qdrant"], **popen_kwargs)
@@ -210,6 +251,7 @@ def main() -> int:
         popen_kwargs = {}
         if not args.verbose:
             popen_kwargs = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        popen_kwargs["start_new_session"] = True  # A1c: detach so launchd doesn't reap it when the agent exits
         subprocess.Popen(["ollama", "serve"], **popen_kwargs)
         for _ in range(15):
             time.sleep(1)
@@ -219,9 +261,7 @@ def main() -> int:
             _dm = _resolve_default_model(repo) or "gemma3:4b"
             print("❌ No chat models found in Ollama — AIStudio can't answer queries.")
             print(f"· Pull the default model:  ollama pull {_dm}")
-            print(
-                "· (First pull is a few-GB download; smaller models like gemma3:4b are quickest.)"
-            )
+            print("· (First pull is a few-GB download; smaller models like gemma3:4b are quickest.)")
             print("· Any Ollama chat model works — if you pull a different one, start with:")
             print("    AISTUDIO_DEFAULT_MODEL=<that-model> ais_start   (or export it in ~/.zshrc)")
             return 1
@@ -245,7 +285,8 @@ def main() -> int:
 
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Kill stale process on port 8000
+    # Kill stale process on port 8000 (belt-and-suspenders; Cleanup's stop.sh usually
+    # cleared it already. Takeover announcement/stamp happens BEFORE Cleanup — see top of main).
     result = subprocess.run(["lsof", "-ti:8000"], capture_output=True, text=True)
     if result.stdout.strip():
         for pid in result.stdout.strip().splitlines():
@@ -269,13 +310,13 @@ def main() -> int:
     cmd = ["uvicorn", "local_llm_bot.app.api:app", "--host", "0.0.0.0", "--port", "8000"]
 
     if args.verbose:
-        subprocess.Popen(cmd, env=backend_env, cwd=str(repo))
+        subprocess.Popen(cmd, env=backend_env, cwd=str(repo), start_new_session=True)
     else:
         # ExitStack lets us keep the log file open for the daemon's lifetime
         # without triggering SIM115 — context manager is present, just not closed.
         stack = contextlib.ExitStack()
         lf = stack.enter_context(open(log_file, "w"))  # noqa: SIM115 — intentional: fd kept open for daemon Popen
-        subprocess.Popen(cmd, env=backend_env, cwd=str(repo), stdout=lf, stderr=lf)
+        subprocess.Popen(cmd, env=backend_env, cwd=str(repo), stdout=lf, stderr=lf, start_new_session=True)
 
     # AIStudio_714: poll every 1s up to 60s — open browser on first healthy response.
     # Cold start takes ~20s (CrossEncoder reranker loads weights before first request).
@@ -299,9 +340,7 @@ def main() -> int:
                 print(f"⚠ Configured default '{_default}' is NOT installed.")
                 print(f"· Using '{_active_model}'{only} for THIS session so queries work.")
                 print(f"· Make it permanent — either install the default:  ollama pull {_default}")
-                print(
-                    f"  or set your model as the default:  export AISTUDIO_DEFAULT_MODEL={_active_model}  (add to ~/.zshrc)"
-                )
+                print(f"  or set your model as the default:  export AISTUDIO_DEFAULT_MODEL={_active_model}  (add to ~/.zshrc)")
             else:
                 print(f"· Default model: {_active_model}  (override: AISTUDIO_DEFAULT_MODEL)")
     else:
@@ -371,34 +410,25 @@ def main() -> int:
     # ── Show splash ───────────────────────────────────────────────────────────
     if args.show_splash:
         subprocess.run(
-            [
-                "osascript",
-                "-e",
-                f'display dialog "AIStudio is running.\\n\\nFrontend: file://{frontend}\\n'
-                f'Backend:  {api}" with title "AIStudio" buttons {{"OK"}} '
-                f'default button "OK" with icon note',
-            ],
+            ["osascript", "-e",
+             f'display dialog "AIStudio is running.\\n\\nFrontend: file://{frontend}\\n'
+             f'Backend:  {api}" with title "AIStudio" buttons {{"OK"}} '
+             f'default button "OK" with icon note'],
             capture_output=True,
         )
 
     # ── Show log tab (iTerm2) ─────────────────────────────────────────────────
     if args.show_log:
         subprocess.run(
-            [
-                "osascript",
-                "-e",
-                'tell application "iTerm2" to tell current window to create tab '
-                "with default profile",
-            ],
+            ["osascript", "-e",
+             'tell application "iTerm2" to tell current window to create tab '
+             'with default profile'],
             capture_output=True,
         )
         subprocess.run(
-            [
-                "osascript",
-                "-e",
-                f'tell application "iTerm2" to tell current window to tell current session '
-                f"to write text \"tail -f '{log_file}'\"",
-            ],
+            ["osascript", "-e",
+             f'tell application "iTerm2" to tell current window to tell current session '
+             f'to write text "tail -f \'{log_file}\'"'],
             capture_output=True,
         )
 
