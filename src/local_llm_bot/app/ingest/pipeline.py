@@ -1,3 +1,13 @@
+# Version: 1.8.38
+# Changelog: 1.8.38 — A9 + A10 (ingest enumeration). A9: the "N of T" progress denominator
+#            counted all supported files, including already-indexed ones that get skipped inside
+#            the loop — so an incremental ingest jumped ("7 of 12 → 10 of 12") and looked like it
+#            dropped files. _total_supported now counts only the to-process set (mirrors the loop's
+#            exact skip predicate: not force, no only_files, path already in Qdrant), and the run
+#            announces "N to ingest, M already indexed (skipped)" upfront. _supported_bytes aligned
+#            to the same set so the bar fill stays calibrated. A10: file enumeration sort is now
+#            case-insensitive (key=name.lower()) — was raw ASCII, sorting 'CME' before 'Cboe';
+#            this is the shared enumeration point, so download/ingest/UI now agree on order.
 # Version: 1.8.37
 # Changelog: 1.8.37 — AIStudio_NNN (2026-06-25): _selective_match no longer silently drops files
 #            whose basename contains regex-meta chars but is meant literally. A token with
@@ -919,7 +929,7 @@ def ingest_corpus(
     p_discover = None  # Discover is instant — no progress bar needed
 
     try:
-        for p in sorted(_iter_files(root), key=lambda x: x.name):
+        for p in sorted(_iter_files(root), key=lambda x: x.name.lower()):  # A10: case-insensitive (was ASCII: 'CME' sorted before 'Cboe')
             discovered.append(p)
             files_discovered += 1
             if max_files is not None and files_discovered >= int(max_files):
@@ -954,10 +964,36 @@ def ingest_corpus(
     # AIStudio_722b — pre-compute supported file count BEFORE the loop so N-of-T
     # denominator is fixed. Without this, files_supported increments during the loop
     # producing "1 of 1", "2 of 2" etc. in completion lines.
-    _total_supported = sum(
-        1 for f in discovered
-        if f.suffix.lower() in SUPPORTED_EXTS and not f.name.startswith("~$")
-    )
+    #
+    # A9 — the denominator must reflect files that will ACTUALLY be processed, not the full
+    # supported set. On an incremental ingest, already-indexed files are skipped inside the
+    # loop (Qdrant skip-check below), so counting them made the counter jump ("7 of 12 →
+    # 10 of 12", skipping the 2 already-done) and a correct run look like it dropped files.
+    # We mirror the loop's exact skip predicate here so "N of T" counts only the to-process set.
+    def _is_supported(f: Path) -> bool:
+        return f.suffix.lower() in SUPPORTED_EXTS and not f.name.startswith("~$")
+
+    def _will_skip(f: Path) -> bool:
+        # matches the in-loop skip: not force, no explicit allowlist, already in Qdrant
+        return (
+            not force
+            and only_files is None
+            and str(f.resolve()) in qdrant_source_paths
+        )
+
+    _supported_files = [f for f in discovered if _is_supported(f)]
+    _to_process = [f for f in _supported_files if not _will_skip(f)]
+    _total_supported = len(_to_process)          # A9: denominator = actual to-process count
+    _n_skip_preexisting = len(_supported_files) - _total_supported
+
+    # A9 — announce the process-set upfront so a skipped-file gap is expected, not alarming.
+    # (The tqdm Process bar isn't created until later, so pbar=None here — prints plain to
+    # stderr, which api.py's _stream_stderr also picks up.)
+    if _n_skip_preexisting > 0:
+        _tqdm_write(
+            None,
+            f"[ingest] plan: {_total_supported} to ingest, {_n_skip_preexisting} already indexed (skipped)",
+        )
 
     # Estimate total chunks for chunk-based bar fill.
     # D_SEED_BAR = 40 chunks/MB — slightly above observed ESEF/SEC ratio (~37/MB)
@@ -965,10 +1001,9 @@ def ingest_corpus(
     # Property of document type + chunk size (1,200 chars), not hardware.
     # Self-corrects to actual d_observed after file 1 completes.
     _D_SEED_BAR = 40.0 / (1024 * 1024)
-    _supported_bytes = sum(
-        f.stat().st_size for f in discovered
-        if f.suffix.lower() in SUPPORTED_EXTS and not f.name.startswith("~$")
-    )
+    # A9 — bytes from the to-process set (skipped/already-indexed files produce 0 chunks,
+    # so counting their bytes here would make the bar under-fill). Reuses _to_process.
+    _supported_bytes = sum(f.stat().st_size for f in _to_process if f.is_file())
     _est_total_chunks_bar = max(1, int(_D_SEED_BAR * _supported_bytes))
     _n_width = len(str(_total_supported))  # digit width for right-justify in label
 
