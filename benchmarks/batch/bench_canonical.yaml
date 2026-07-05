@@ -1,0 +1,68 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# bench_canonical.yaml — the pinned batch benchmark run spec
+# ═══════════════════════════════════════════════════════════════════════════════
+# Consumed by:    ais_bench --batch                 (runs all entries below)
+#                 ais_bench --batch-id C            (runs one)
+#                 (--canonical / --canonical-id are deprecated aliases)
+# Lives in:       benchmarks/batch/   (v3.58.86 relocation)
+# Requires:       bench.py >= 2.8.2
+# See:            TUTORIAL §5.9
+#
+# ── Current contents: the full A–D canonical set ────────────────────────────────
+# A/B (sec_10k) and C/D (esef_banks) — the four runs documented in the BENCH -
+# Canonical suite and referenced by README + BENCH_HARNESS as reproducible via
+# `ais_bench --batch`. C/D were validated 2026-06-27 (batch 2/2; reproduced the
+# 2026-06-26 audited numbers question-for-question, both Q5/Q6 calibrated pivots
+# confirmed in content). A/B restored here — per this file's own staging plan — so
+# `ais_bench --batch` regenerates the whole published suite, not just the esef half,
+# and the README/BENCH_HARNESS "four runs reproducible" claim is true again.
+#   A — sec_10k · default questions · default K            [below]
+#   B — sec_10k · frontier questions · default K           [below]
+#   C — esef_banks · full corpus · default questions       [below]
+#   D — esef_banks · lang_en scope + lang_en questions     [below]
+#
+# Defaults resolve: per-request → corpus metadata → backend. Entries carry only the
+# fields that DEVIATE from the corpus default (sparse form). top_k omitted → corpus
+# default (K=10). model omitted → the top-level model below.
+# ═══════════════════════════════════════════════════════════════════════════════
+version: 1.4.0
+model: gemma3:27b            # default synthesis model for all runs (slug: gemma3-27b)
+timeout: 300                 # default per-question HTTP timeout (s) for all runs — covers slow 27b/ESEF
+                            # questions the old 120s default cut off (Run C/D drop). Resolution (bench.py
+                            # v2.9.2): per-run `timeout:` → this top-level default → CLI --timeout → 120.
+                            # A run needing more can override with its own `timeout:` key (like `model:`).
+
+runs:
+  # A — sec_10k baseline: the FULL corpus (21 firms, 100+ filings), default question
+  #     set. The "dependable surface" run — qualitative cross-firm comparison,
+  #     disclosure-emergence narrative, single-cell numeric retrieval. Audited 9/10
+  #     calibrated; soft points are temporal label-binding, never fabrication.
+  - id: A
+    label: "sec_10k · full corpus · default questions · default K"
+    corpus: sec_10k
+
+  # B — sec_10k frontier: the same corpus pushed to the hard shapes Run A defers —
+  #     multi-year table synthesis, 2022-vs-2026 temporal contrasts, a premise-laden
+  #     question. The "mechanical pass ≠ correct" exhibit (mechanical 10/10, calibrated
+  #     ~6.5–7). Stem 'frontier' → benchmarks/sec_10k/questions/sec_10k_frontier_questions.yaml.
+  - id: B
+    label: "sec_10k · frontier questions · default K"
+    corpus: sec_10k
+    questions: frontier
+
+  # C — esef_banks baseline: the FULL corpus (all 12 firms), default question set.
+  #     The "does the whole corpus work" control for esef. Blends EN + non-EN, so its
+  #     number is read against D (the clean EN cut) to see the language drag.
+  - id: C
+    label: "esef_banks · full corpus · default questions · default K"
+    corpus: esef_banks
+
+  # D — esef_banks English, MATCHED: 5 verified-EN firms × 8 EN-firm questions.
+  #     scope lang_en bounds retrieval to the English filers; questions lang_en runs
+  #     only the questions whose firms are in that scope. The apples-to-apples EN
+  #     benchmark — the language-controlled cut of C.
+  - id: D
+    label: "esef_banks · lang_en scope + lang_en questions · default K"
+    corpus: esef_banks
+    scope: lang_en
+    questions: lang_en

@@ -82,7 +82,6 @@ benchmarks/*/reports/
 !benchmarks/docs/reports/*
 # AIStudio — canonical benchmark spec (WIP — insulated until finalized; un-ignore to ship)
 # (canonical reports themselves are already covered by benchmarks/*/reports/ above)
-benchmarks/batch/bench_canonical.yaml
 # AIStudio — operator docs (gitignored, travels via BUNDLE)
 DEMO_SCRIPT.md
 HOWTO_OPS.md
