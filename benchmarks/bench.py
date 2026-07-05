@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# Changelog: 2.9.4 — A18 (operator-workflow leaks in civilian output). (1) Report footer printed
+#   "Upload zip and say 'audit that report' for qualitative review" — a urCrew/Claude-session
+#   instruction meaningless to a public user; replaced with a real hint (open the .md report).
+#   (2) --scope --help string named _scope_common_ops (a gitignored operator file); dropped the
+#   operator-file name, kept the resolved-path explanation. Same reverse-leak class as A1/A2.
 # Changelog: 2.9.3 — A2 fix: `--batch-id <ID>` alone now triggers batch mode. --batch-id sets
 #   dest `canonical_id`, but the dispatch gate only checked `canonical` (set by --batch) — so
 #   `ais_bench --batch-id D` (no --batch) silently fell through to a single run on the DEFAULT
@@ -224,7 +229,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.9.3"
+VERSION = "2.9.4"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -241,7 +246,7 @@ def parse_args() -> argparse.Namespace:
         "--scope",
         default=None,
         help=(
-            "Scope stem naming a firm subset, resolved by _scope_common_ops to "
+            "Scope stem naming a firm subset, resolved to "
             "data/corpora/<corpus>/scopes/<corpus>_<scope>_scope.yaml (e.g. "
             "--scope esef_banks_lang_noen, or the bare stem 'lang_noen'). LOADED + "
             "validated at startup — a missing named scope is a hard error (AIStudio_882), "
@@ -1545,7 +1550,7 @@ HTML(filename={str(html_path)!r}).write_pdf({str(pdf_path)!r})
     if pdf_path.exists():
         print(f"  · {pdf_path.name}")
     print(f"  · Bundled: ~/Downloads/{zip_name} ({len(_files_to_zip)} files)")
-    print("  · Upload zip and say 'audit that report' for qualitative review")
+    print("  · Open the .md report for the full per-question breakdown and citations.")
 
 
 if __name__ == "__main__":
