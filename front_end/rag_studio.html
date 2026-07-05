@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.17.1 -->
+<!-- Changelog: 2.17.1 — A20 re-fix. The 2.17.0 sticky-footer approach still overlapped: the Score Threshold slider bled below/through the Cancel/Save row (the negative bottom margin on the sticky footer let the last slider paint into its zone). Replaced with the proven flex-column pattern used by the other modals: the Edit Corpus container is now display:flex; flex-direction:column; overflow:hidden, the form content lives in an inner overflow-y:auto; flex:1 body that scrolls, and the footer is a plain flex-shrink:0 child that never scrolls and always sits at the true bottom. No more sticky/negative-margin overlap. -->
 <!-- Version: 2.17.0 -->
 <!-- Changelog: 2.17.0 — A20 + A21(c) + A8. A20: Edit Corpus modal footer (Save/Cancel) was clipped below the fold on shorter viewports — the whole modal scrolled and the buttons scrolled out of view. Applied the same sticky-footer pattern the New Corpus modal already uses (position:sticky; bottom:0; pinned bg + top border), so Save/Cancel stay visible while the form scrolls. A21(c): Source Dive PDF panel now closes on an outside click, not only via the ✕ button. Refactored to a shared _closeSourceDive() (button + outside-click use identical iframe cleanup); the document click-handler ignores clicks inside the panel and on the opener links (.citation-ref / .footnote-open / .footnote-name / any onclick=openSourceDive) so the opening click doesn't immediately close it. A8: reingest time-estimate tier-3 seed is now CHUNK-based, not a flat 60s/file — ingest cost is per-chunk and chunks/file swings wildly (SEC ~970/file, ESEF ~2,500/file) so 60s/file over/under-shot 2-3x (SEC-107 predicted ~107min, actual 36.5). Seeds off recorded chunk count (data-chunks) × ~25ms/chunk, else estimates chunks from size (bytes ÷ ~1200 chars) × 25ms; flat 60s only when neither is known. Tiers 1 (recorded duration) + 2 (corpus avg) unchanged. A21(a) resizable chat + A21(b) collapsible left panel deferred to a UI session. -->
 <!-- Version: 2.15.0 -->
@@ -1917,8 +1919,10 @@
 
             overlay.innerHTML = `
                 <div style="background:var(--bg-panel,white);border:1px solid var(--border,#e2e8f0);
-                    border-radius:16px;padding:28px 32px;width:540px;max-height:88vh;overflow-y:auto;
+                    border-radius:16px;width:540px;max-height:88vh;overflow:hidden;
+                    display:flex;flex-direction:column;
                     box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+                    <div style="padding:28px 32px 12px;overflow-y:auto;flex:1;"><!-- A20: scrollable body -->
                     <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text,#111);">Edit Corpus: ${escapeHtml(data.name)}</div>
                     <div style="display:flex;gap:16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);">
                         <span><strong>${totalFiles}</strong> files · <strong>${typeof totalChunks === 'number' ? totalChunks.toLocaleString() : totalChunks}</strong> chunks · <strong>${totalSize}</strong> · last ingest: <strong>${ingestDur}</strong></span>
@@ -1991,8 +1995,9 @@
                         </div>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:10px;font-style:italic;">Applied when this corpus is selected. Override per-query in the left panel.</div>
                     </div>
+                    </div><!-- A20: end scrollable body -->
 
-                    <div style="display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;margin:12px -32px -28px;padding:16px 32px;background:var(--bg-panel,white);border-top:1px solid var(--border,#e2e8f0);border-radius:0 0 16px 16px;">
+                    <div style="display:flex;gap:10px;justify-content:flex-end;padding:16px 32px;background:var(--bg-panel,white);border-top:1px solid var(--border,#e2e8f0);border-radius:0 0 16px 16px;flex-shrink:0;">
                         <button id="_editCancel" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border,#d0d5dd);background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-mid,#555);">Cancel</button>
                         <button id="_editSave" style="padding:9px 18px;border-radius:8px;border:none;background:#2563eb;color:white;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
                     </div>
