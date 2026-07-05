@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Changelog: 2.9.5 — A19-adjacent: PDF generation weasyprint step made reliable. The html→pdf
+#   render previously wrote a temp .py and ran it via subprocess under sys.executable — if that
+#   interpreter differed from the one running bench.py (common: bench under venv, sys.executable
+#   pointing elsewhere), the weasyprint import failed and printed "install weasyprint" even when
+#   it WAS installed. Now imports weasyprint in-process (same env as bench.py), so a present
+#   weasyprint is always found; ImportError → the honest install hint, other errors → a distinct
+#   weasyprint-error message (no longer mislabeled as not-installed). pandoc step (md→html)
+#   unchanged; its FileNotFoundError → brew install pandoc hint unchanged. temp-file cleanup now
+#   in a finally so it runs on both success and failure.
 # Changelog: 2.9.4 — A18 (operator-workflow leaks in civilian output). (1) Report footer printed
 #   "Upload zip and say 'audit that report' for qualitative review" — a urCrew/Claude-session
 #   instruction meaningless to a public user; replaced with a real hint (open the .md report).
@@ -229,7 +238,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.9.4"
+VERSION = "2.9.5"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -1509,23 +1518,23 @@ def main() -> None:
         if r1.returncode != 0:
             print(f"  ⚠ PDF skipped: pandoc error: {r1.stderr.strip()[:80]}")
         else:
-            import tempfile
+            # Render HTML → PDF in-process. Previously this shelled out to a temp
+            # script under sys.executable, which could be a different interpreter than
+            # the one bench.py runs in — so a weasyprint installed in bench.py's env
+            # still reported "install weasyprint". Importing here uses the SAME env.
+            try:
+                from weasyprint import HTML
 
-            script = f"""
-from weasyprint import HTML
-HTML(filename={str(html_path)!r}).write_pdf({str(pdf_path)!r})
-"""
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
-                tmp.write(script)
-                tmp_name = tmp.name
-            r2 = subprocess.run([sys.executable, tmp_name], capture_output=True, text=True)
-            os.unlink(tmp_name)
-            if html_path.exists():
-                html_path.unlink()
-            if r2.returncode != 0:
+                HTML(filename=str(html_path)).write_pdf(str(pdf_path))
+            except ImportError:
                 print(
                     "  ⚠ PDF skipped — install weasyprint: pip3 install weasyprint --break-system-packages"
                 )
+            except Exception as e:
+                print(f"  ⚠ PDF skipped — weasyprint error: {str(e)[:80]}")
+            finally:
+                if html_path.exists():
+                    html_path.unlink()
     except FileNotFoundError:
         print("  ⚠ PDF skipped — install pandoc: brew install pandoc")
 
