@@ -1,8 +1,10 @@
 # help_corpus_metadata.yaml
+# Corpus metadata — loaded by api.py at query time
+
 schema_version: '2.0'
 corpus_name: help
 corpus_type: generated
-last_updated: '2026-07-04'
+last_updated: '2026-07-05'
 short_description: AIStudio documentation — commands, setup, architecture
 description: AIStudio user and developer documentation — installation, usage, architecture,
   benchmarks, roadmap, and file/command reference.
@@ -54,6 +56,12 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   - Known install issues, QA findings, friction points, fresh install problems → QA_TESTING_LESSONS_LEARNED.pdf
 
   - Python and system dependencies, version requirements → dependencies.pdf
+
+  - What EMBEDDING / indexing model AIStudio uses (nomic-embed-text, via Ollama) vs
+  the LANGUAGE / synthesis model (default llama3.1:8b; also gemma3:4b, gemma3:27b)
+  — these are TWO DIFFERENT models. The embedding/indexing model is nomic-embed-text.
+  Do NOT answer an embedding-model question with the language model. → QUICKSTART.pdf
+  (p.7) or dependencies.pdf
 
   - Product roadmap, Beta features, v2.0 plans → PRODUCT_ROADMAP.pdf
 
