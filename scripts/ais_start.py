@@ -50,10 +50,10 @@ SCRIPT_NAME = "ais_start"
 VERSION = "1.3.0"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
-BOLD   = "\033[1m"
-DIM    = "\033[2m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
 ITALIC = "\033[3m"
-RESET  = "\033[0m"
+RESET = "\033[0m"
 
 
 def _sep(label: str, separator: bool = True) -> None:
@@ -106,6 +106,7 @@ def _resolve_default_model(repo: Path) -> str | None:
         return env
     try:
         from local_llm_bot.app.config import CONFIG
+
         return CONFIG.rag.default_model
     except Exception:
         return None
@@ -115,10 +116,7 @@ def _ollama_chat_model_count() -> int:
     try:
         with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3) as r:
             d = json.loads(r.read())
-        return sum(
-            1 for m in d.get("models", [])
-            if "embed" not in m.get("name", "").lower()
-        )
+        return sum(1 for m in d.get("models", []) if "embed" not in m.get("name", "").lower())
     except Exception:
         return 0
 
@@ -129,13 +127,13 @@ def main() -> int:
 
     # ── Parse args (--help handled by wrapper, not here) ──────────────────────
     parser = argparse.ArgumentParser(prog=SCRIPT_NAME, add_help=False)
-    parser.add_argument("--version",      action="store_true")
-    parser.add_argument("--verbose",      action="store_true")
+    parser.add_argument("--version", action="store_true")
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--no-separator", action="store_true", dest="no_separator")
-    parser.add_argument("--show-log",     action="store_true", dest="show_log")
-    parser.add_argument("--show-splash",  action="store_true", dest="show_splash")
-    parser.add_argument("--no-open",      action="store_true", dest="no_open")
-    parser.add_argument("--start_with",   default="", metavar="CORPUS")
+    parser.add_argument("--show-log", action="store_true", dest="show_log")
+    parser.add_argument("--show-splash", action="store_true", dest="show_splash")
+    parser.add_argument("--no-open", action="store_true", dest="no_open")
+    parser.add_argument("--start_with", default="", metavar="CORPUS")
     args, _ = parser.parse_known_args()
 
     separator = not args.no_separator
@@ -148,18 +146,18 @@ def main() -> int:
     # ── Bold bracketed header (CLI Output STD §2) ─────────────────────────────
     print(f"{BOLD}[{SCRIPT_NAME} v{VERSION} — Start all AIStudio services]{RESET}")
 
-    frontend       = repo / "front_end" / "rag_studio.html"
-    log_dir        = Path.home() / "Library" / "Logs" / "AIStudio"
-    log_file       = log_dir / "backend.log"
+    frontend = repo / "front_end" / "rag_studio.html"
+    log_dir = Path.home() / "Library" / "Logs" / "AIStudio"
+    log_file = log_dir / "backend.log"
     qdrant_storage = Path.home() / "qdrant_storage"
-    api            = "http://127.0.0.1:8000"
+    api = "http://127.0.0.1:8000"
 
     # ── Cleanup ───────────────────────────────────────────────────────────────
     _sep("Cleanup", separator)
     print("🛑 Stopping any running services...")
     subprocess.run(
         [str(repo / "scripts" / "stop.sh"), "--silent"],
-        capture_output=True,   # mask stop.sh banner — internal implementation detail
+        capture_output=True,  # mask stop.sh banner — internal implementation detail
     )
 
     # ── Ecosystem ─────────────────────────────────────────────────────────────
@@ -175,10 +173,14 @@ def main() -> int:
         # here with a raw FileNotFoundError; fail with actionable guidance instead.
         if shutil.which("qdrant") is None:
             print("❌ Qdrant binary not found on PATH.")
-            print("· Qdrant isn't a Homebrew package — it's a GitHub release binary (QUICKSTART §5).")
+            print(
+                "· Qdrant isn't a Homebrew package — it's a GitHub release binary (QUICKSTART §5)."
+            )
             print("· Install (Apple Silicon):")
             print("    mkdir -p ~/bin && cd ~/bin \\")
-            print("      && curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz \\")
+            print(
+                "      && curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-aarch64-apple-darwin.tar.gz | tar xz \\"
+            )
             print("      && chmod +x ~/bin/qdrant")
             print("· Then ensure ~/bin is on PATH (source ~/.zshrc) and re-run: ais_start")
             print("· (ais_restore auto-installs the binary if you're recovering from a backup.)")
@@ -217,7 +219,9 @@ def main() -> int:
             _dm = _resolve_default_model(repo) or "gemma3:4b"
             print("❌ No chat models found in Ollama — AIStudio can't answer queries.")
             print(f"· Pull the default model:  ollama pull {_dm}")
-            print("· (First pull is a few-GB download; smaller models like gemma3:4b are quickest.)")
+            print(
+                "· (First pull is a few-GB download; smaller models like gemma3:4b are quickest.)"
+            )
             print("· Any Ollama chat model works — if you pull a different one, start with:")
             print("    AISTUDIO_DEFAULT_MODEL=<that-model> ais_start   (or export it in ~/.zshrc)")
             return 1
@@ -295,7 +299,9 @@ def main() -> int:
                 print(f"⚠ Configured default '{_default}' is NOT installed.")
                 print(f"· Using '{_active_model}'{only} for THIS session so queries work.")
                 print(f"· Make it permanent — either install the default:  ollama pull {_default}")
-                print(f"  or set your model as the default:  export AISTUDIO_DEFAULT_MODEL={_active_model}  (add to ~/.zshrc)")
+                print(
+                    f"  or set your model as the default:  export AISTUDIO_DEFAULT_MODEL={_active_model}  (add to ~/.zshrc)"
+                )
             else:
                 print(f"· Default model: {_active_model}  (override: AISTUDIO_DEFAULT_MODEL)")
     else:
@@ -365,25 +371,34 @@ def main() -> int:
     # ── Show splash ───────────────────────────────────────────────────────────
     if args.show_splash:
         subprocess.run(
-            ["osascript", "-e",
-             f'display dialog "AIStudio is running.\\n\\nFrontend: file://{frontend}\\n'
-             f'Backend:  {api}" with title "AIStudio" buttons {{"OK"}} '
-             f'default button "OK" with icon note'],
+            [
+                "osascript",
+                "-e",
+                f'display dialog "AIStudio is running.\\n\\nFrontend: file://{frontend}\\n'
+                f'Backend:  {api}" with title "AIStudio" buttons {{"OK"}} '
+                f'default button "OK" with icon note',
+            ],
             capture_output=True,
         )
 
     # ── Show log tab (iTerm2) ─────────────────────────────────────────────────
     if args.show_log:
         subprocess.run(
-            ["osascript", "-e",
-             'tell application "iTerm2" to tell current window to create tab '
-             'with default profile'],
+            [
+                "osascript",
+                "-e",
+                'tell application "iTerm2" to tell current window to create tab '
+                "with default profile",
+            ],
             capture_output=True,
         )
         subprocess.run(
-            ["osascript", "-e",
-             f'tell application "iTerm2" to tell current window to tell current session '
-             f'to write text "tail -f \'{log_file}\'"'],
+            [
+                "osascript",
+                "-e",
+                f'tell application "iTerm2" to tell current window to tell current session '
+                f"to write text \"tail -f '{log_file}'\"",
+            ],
             capture_output=True,
         )
 

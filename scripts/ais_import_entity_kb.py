@@ -129,9 +129,18 @@ _SCAN_SUFFIXES = (".htm", ".html", ".xhtml")
 
 # Persisted row fields, in a stable, human-readable order for the written full_scope.
 _ROW_ORDER = [
-    "label", "cik", "ticker", "lei",
-    "xbrl_name", "sec_xbrl_name", "gleif_name", "gleif_lei",
-    "expected_xbrl_name", "aliases", "files", "last_updated",
+    "label",
+    "cik",
+    "ticker",
+    "lei",
+    "xbrl_name",
+    "sec_xbrl_name",
+    "gleif_name",
+    "gleif_lei",
+    "expected_xbrl_name",
+    "aliases",
+    "files",
+    "last_updated",
 ]
 
 # Bare (user-authoritative) fields. Unknown ones are written as the fill-me sentinel so a
@@ -153,6 +162,7 @@ def _extract_xbrl_name(path: Path) -> str | None:
 
     try:
         from bs4 import BeautifulSoup
+
         soup = BeautifulSoup(text, "html.parser")
         for tag in _ENTITY_TAGS:
             el = soup.find(attrs={"name": tag})
@@ -166,7 +176,8 @@ def _extract_xbrl_name(path: Path) -> str | None:
     for tag in _ENTITY_TAGS:
         m = re.search(
             r'name="' + re.escape(tag) + r'"[^>]*>(.*?)</',
-            text, re.IGNORECASE | re.DOTALL,
+            text,
+            re.IGNORECASE | re.DOTALL,
         )
         if m:
             val = re.sub(r"<[^>]+>", " ", m.group(1))
@@ -197,15 +208,15 @@ def _link_files(corpus: str, rows: list[dict]) -> list[str]:
     uploads = _uploads_dir(corpus)
     if not uploads.exists():
         raise FileNotFoundError(f"Corpus uploads dir not found: {uploads}")
-    all_files = {p.name for p in uploads.iterdir()
-                 if p.is_file() and p.suffix.lower() in _SCAN_SUFFIXES}
+    all_files = {
+        p.name for p in uploads.iterdir() if p.is_file() and p.suffix.lower() in _SCAN_SUFFIXES
+    }
     bound: set[str] = set()
 
     total = len(rows)
     for i, r in enumerate(rows, 1):
         label = r.get("label", "")
-        print("\r" + f"  ▶ Linking {i}/{total} — {label}"[:100] + "\033[K",
-              end="", flush=True)
+        print("\r" + f"  ▶ Linking {i}/{total} — {label}"[:100] + "\033[K", end="", flush=True)
         # Corpus-agnostic: bind on the <label>_ filename prefix the downloader writes,
         # NOT a doctype infix. SEC writes <label>_10K_<date>.<ext>; ESEF writes
         # <label>_ESEF_<year>.xhtml — both share the <label>_ prefix and _safe_label is the
@@ -214,15 +225,16 @@ def _link_files(corpus: str, rows: list[dict]) -> list[str]:
         # longer label sharing a token: the trailing "_" + the firm-unique label prevents
         # "ABN AMRO" matching an "ABN AMRO Bank N.V." file and vice-versa.)
         prefix = f"{_safe_label(label)}_"
-        matches = sorted(f for f in all_files
-                         if f.startswith(prefix) and f.lower().endswith(_SCAN_SUFFIXES))
+        matches = sorted(
+            f for f in all_files if f.startswith(prefix) and f.lower().endswith(_SCAN_SUFFIXES)
+        )
         r["files"] = matches
         bound.update(matches)
         if matches:
             # Canonical = the FIRST (earliest, name-sorted) filing's self-reported tag.
             name = _extract_xbrl_name(uploads / matches[0])
             if name:
-                r["sec_xbrl_name"] = name                 # filing self-report (source)
+                r["sec_xbrl_name"] = name  # filing self-report (source)
                 # bare xbrl_name is a USER override; if empty/sentinel OR it merely echoes the
                 # self-report (old-schema residue), reset to the sentinel so it isn't mistaken
                 # for a deliberate override.
@@ -237,11 +249,10 @@ def _resolve_rows(rows: list[dict], metadata: dict) -> None:
     total = len(rows)
     for i, r in enumerate(rows, 1):
         label = r.get("label") or sc.clean(r.get("sec_xbrl_name")) or "?"
-        print("\r" + f"  ▶ Resolving {i}/{total} — {label}"[:100] + "\033[K",
-              end="", flush=True)
+        print("\r" + f"  ▶ Resolving {i}/{total} — {label}"[:100] + "\033[K", end="", flush=True)
 
         if not r.get("files"):
-            r["_status"] = "no_files"           # anomaly — every row should have a filing
+            r["_status"] = "no_files"  # anomaly — every row should have a filing
 
         # INPUT LEI only — the BARE `lei` (user-verified), legacy `lei_corrected` fallback.
         # NOT gleif_lei, which is a name-search GUESS and must never be promoted to verified.
@@ -260,7 +271,7 @@ def _resolve_rows(rows: list[dict], metadata: dict) -> None:
         if not name:
             r["_status"] = "no_identity"
             continue
-        if r.get("gleif_lei"):                   # cached name-search guess from a prior pass
+        if r.get("gleif_lei"):  # cached name-search guess from a prior pass
             r["_status"] = r.get("_status") or "guessed"
             continue
 
@@ -287,28 +298,45 @@ def _review(rows: list[dict], orphans: list[str]) -> None:
     # Map each status to the STD glyph: ✅ full (verified LEI); white-✓-on-yellow partial
     # (name-search-derived LEI, or no filing); white-✗-on-red fail (no usable identity);
     # yellow-✗ recoverable (no LEI but fixable via the bare `lei`).
-    glyph = {"resolved": cli.ok, "guessed": cli.partial, "no_files": cli.partial,
-             "unresolved": cli.fail_recover, "lei_invalid": cli.fail, "no_identity": cli.fail}
-    notes = {"guessed": " (name-search, not verified LEI)",
-             "lei_invalid": " — LEI not found in GLEIF",
-             "no_files": " — no filing in uploads/ for this row",
-             "no_identity": " — no sec_xbrl_name and no label",
-             "unresolved": " — no LEI; binds NAME-ONLY (weak, no aliases). Add a verified `lei`, re-run"}
+    glyph = {
+        "resolved": cli.ok,
+        "guessed": cli.partial,
+        "no_files": cli.partial,
+        "unresolved": cli.fail_recover,
+        "lei_invalid": cli.fail,
+        "no_identity": cli.fail,
+    }
+    notes = {
+        "guessed": " (name-search, not verified LEI)",
+        "lei_invalid": " — LEI not found in GLEIF",
+        "no_files": " — no filing in uploads/ for this row",
+        "no_identity": " — no sec_xbrl_name and no label",
+        "unresolved": " — no LEI; binds NAME-ONLY (weak, no aliases). Add a verified `lei`, re-run",
+    }
     for status in order:
         for r in by_status.get(status, []):
-            canon = r.get("gleif_name") or sc.clean(r.get("sec_xbrl_name")) or r.get("label") or "(unresolved)"
+            canon = (
+                r.get("gleif_name")
+                or sc.clean(r.get("sec_xbrl_name"))
+                or r.get("label")
+                or "(unresolved)"
+            )
             lei = sc.entity_lei(r) or r.get("gleif_lei") or "—"
             cli.step(f"{r.get('label', '?')} → {canon}", indent=2)
-            _xbrl = (r.get('sec_xbrl_name') or '')
-            _xbrl_display = (_xbrl[:97] + '…') if len(_xbrl) > 100 else _xbrl
+            _xbrl = r.get("sec_xbrl_name") or ""
+            _xbrl_display = (_xbrl[:97] + "…") if len(_xbrl) > 100 else _xbrl
             glyph.get(status, cli.partial)(
                 f"LEI {lei} · {len(r.get('files', []))} file(s) "
-                f"· sec_xbrl_name \"{_xbrl_display}\"{notes.get(status, '')}",
-                indent=4)
+                f'· sec_xbrl_name "{_xbrl_display}"{notes.get(status, "")}',
+                indent=4,
+            )
 
     if orphans:
-        cli.partial(f"{len(orphans)} file(s) in uploads/ with no matching full_scope row "
-                    f"(add a row or remove the file — not bound, not ingested):", indent=2)
+        cli.partial(
+            f"{len(orphans)} file(s) in uploads/ with no matching full_scope row "
+            f"(add a row or remove the file — not bound, not ingested):",
+            indent=2,
+        )
         for f in orphans[:6]:
             print(f"        {f}")
         if len(orphans) > 6:
@@ -321,19 +349,19 @@ def _write_scope(path: Path, rows: list[dict]) -> None:
     (the doc header), re-dump the entity rows. Transient `_`-prefixed keys dropped."""
     raw = path.read_text()
     m = re.search(r"^entities:\s*$", raw, re.MULTILINE)
-    header = raw[:m.start()] if m else ""
+    header = raw[: m.start()] if m else ""
     clean: list[dict] = []
     for r in rows:
-        kept = {k: v for k, v in r.items()
-                if not k.startswith("_") and k not in _LEGACY_DROP}
+        kept = {k: v for k, v in r.items() if not k.startswith("_") and k not in _LEGACY_DROP}
         ordered = {k: kept[k] for k in _ROW_ORDER if k in kept}
         ordered.update({k: v for k, v in kept.items() if k not in ordered})
-        for bf in _BARE_USER_FIELDS:           # ship unknown bare fields as the fill-me sentinel
+        for bf in _BARE_USER_FIELDS:  # ship unknown bare fields as the fill-me sentinel
             if not sc.clean(ordered.get(bf)):
                 ordered[bf] = sc.SENTINEL
         clean.append(ordered)
-    body = yaml.dump({"entities": clean}, allow_unicode=True,
-                     sort_keys=False, default_flow_style=False)
+    body = yaml.dump(
+        {"entities": clean}, allow_unicode=True, sort_keys=False, default_flow_style=False
+    )
     path.write_text(header + body)
 
 
@@ -355,18 +383,30 @@ def _rows_to_kb(rows: list[dict]):
     unbindable: list[dict] = []
     name_only: list[dict] = []
     for r in rows:
-        name = (sc.clean(r.get("xbrl_name"))                          # bare user override → filing self-report
-                 or sc.clean(r.get("sec_xbrl_name")) or "")  # scope_name = rag_core source_path token
+        name = (
+            sc.clean(r.get("xbrl_name"))  # bare user override → filing self-report
+            or sc.clean(r.get("sec_xbrl_name"))
+            or ""
+        )  # scope_name = rag_core source_path token
         lei = (sc.entity_lei(r) or "").strip()
-        canon = (sc.clean(r.get("xbrl_name")) or name                 # bare user override wins
-                 or r.get("gleif_name") or "").strip()
+        canon = (
+            sc.clean(r.get("xbrl_name"))
+            or name  # bare user override wins
+            or r.get("gleif_name")
+            or ""
+        ).strip()
         if not name or not canon:
-            unbindable.append(r)                 # no usable identity at all
+            unbindable.append(r)  # no usable identity at all
             continue
         if lei:
             if lei not in lei_groups:
-                lei_groups[lei] = {"canonical": canon, "lei": lei, "scope_name": name,
-                                   "aliases": [], "xbrl_names": []}
+                lei_groups[lei] = {
+                    "canonical": canon,
+                    "lei": lei,
+                    "scope_name": name,
+                    "aliases": [],
+                    "xbrl_names": [],
+                }
             lei_groups[lei]["xbrl_names"].append(name)
         else:
             name_only.append({"canonical": canon, "scope_name": name})  # bound on name alone
@@ -382,8 +422,9 @@ def _rows_to_kb(rows: list[dict]):
             manual = list(r.get("aliases") or [])
             if sc.clean(r.get("ticker")):
                 manual.append(sc.clean(r["ticker"]))
-            scope_entities.append({"name": nm, "aliases": manual,
-                                   "legal_name_hint": r.get("legal_name_hint")})
+            scope_entities.append(
+                {"name": nm, "aliases": manual, "legal_name_hint": r.get("legal_name_hint")}
+            )
         kb._enrich_aliases(list(lei_groups.values()), scope_entities)
 
     # Emit the engine schema: a flat `entities:` list. LEI-resolved records carry the
@@ -391,30 +432,35 @@ def _rows_to_kb(rows: list[dict]):
     # empty enrichment (the [canonical FYyear] fallback path).
     records: list[dict] = []
     for g in lei_groups.values():
-        records.append({
-            "canonical": g["canonical"],
-            "scope_name": g.get("scope_name", ""),
-            "lei": g.get("lei", ""),
-            "aliases": list(g.get("aliases", [])),
-            "wikidata_label": g.get("wikidata_label", ""),
-            "wikidata_short_name": g.get("wikidata_short_name", ""),
-            "wikidata_tickers": list(g.get("wikidata_tickers", [])),
-        })
+        records.append(
+            {
+                "canonical": g["canonical"],
+                "scope_name": g.get("scope_name", ""),
+                "lei": g.get("lei", ""),
+                "aliases": list(g.get("aliases", [])),
+                "wikidata_label": g.get("wikidata_label", ""),
+                "wikidata_short_name": g.get("wikidata_short_name", ""),
+                "wikidata_tickers": list(g.get("wikidata_tickers", [])),
+            }
+        )
     for n in name_only:
-        records.append({
-            "canonical": n["canonical"],
-            "scope_name": n["scope_name"],
-            "lei": "",
-            "aliases": [],
-            "wikidata_label": "",
-            "wikidata_short_name": "",
-            "wikidata_tickers": [],
-        })
+        records.append(
+            {
+                "canonical": n["canonical"],
+                "scope_name": n["scope_name"],
+                "lei": "",
+                "aliases": [],
+                "wikidata_label": "",
+                "wikidata_short_name": "",
+                "wikidata_tickers": [],
+            }
+        )
     return records, lei_groups, unbindable, name_only
 
 
-def _write_kb(corpus: str, records: list, lei_groups: dict,
-              unbindable: list, name_only: list) -> Path:
+def _write_kb(
+    corpus: str, records: list, lei_groups: dict, unbindable: list, name_only: list
+) -> Path:
     out_dir = kb.KNOWLEDGE_SOURCES_DIR / "gleif"
     out_dir.mkdir(parents=True, exist_ok=True)
     # gleif_ prefix held intentionally — the drop to <corpus>_full_entities.yaml rides
@@ -476,7 +522,8 @@ def _build(corpus: str, apply: bool) -> int:
         return 1
     linked = sum(1 for r in rows if r.get("files"))
     _link_msg = f"{linked}/{len(rows)} row(s) linked to filings" + (
-        f" · {len(orphans)} orphan file(s)" if orphans else "")
+        f" · {len(orphans)} orphan file(s)" if orphans else ""
+    )
     (cli.ok if linked == len(rows) and not orphans else cli.partial)(_link_msg)
 
     # 3. Resolve identity (LEI-is-input).
@@ -502,16 +549,22 @@ def _build(corpus: str, apply: bool) -> int:
     # 6. --apply: build the KB from whatever has an identity (report exclusions — never no-op).
     records, lei_groups, unbindable, name_only = _rows_to_kb(rows)
     if not records:
-        kb._err("Nothing bindable — no row has an xbrl_name. "
-                "Run the link step (downloaded filings in uploads/) and re-run.")
+        kb._err(
+            "Nothing bindable — no row has an xbrl_name. "
+            "Run the link step (downloaded filings in uploads/) and re-run."
+        )
         return 1
     path = _write_kb(corpus, records, lei_groups, unbindable, name_only)
     kb._update_catalog("gleif", corpus, "full", len(lei_groups), path)
-    msg = (f"✅ Wrote {path.relative_to(kb.REPO)} — {len(records)} entit(y/ies) "
-           f"[{len(lei_groups)} LEI-resolved")
+    msg = (
+        f"✅ Wrote {path.relative_to(kb.REPO)} — {len(records)} entit(y/ies) "
+        f"[{len(lei_groups)} LEI-resolved"
+    )
     if name_only:
-        msg += (f", ⚠ {len(name_only)} name-only (no LEI — weaker isolation, "
-                f"prefix degrades to [canonical FYyear], no aliases)")
+        msg += (
+            f", ⚠ {len(name_only)} name-only (no LEI — weaker isolation, "
+            f"prefix degrades to [canonical FYyear], no aliases)"
+        )
     msg += "]"
     if unbindable:
         msg += f"; {len(unbindable)} excluded (no identity)"

@@ -268,23 +268,29 @@ def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
         doc = yaml.safe_load(path.read_text()) or {}
         rows = doc.get("entities", []) or []
     by_cik = {str(r.get("cik", "")).zfill(10): r for r in rows if r.get("cik")}
-    stamp = datetime.now().isoformat(timespec="seconds")   # date+time, e.g. 2026-06-09T17:36:42
+    stamp = datetime.now().isoformat(timespec="seconds")  # date+time, e.g. 2026-06-09T17:36:42
     added = touched = 0
     for f in learned:
         cik = str(f["cik"]).zfill(10)
         if cik in by_cik:
             r = by_cik[cik]
             if f.get("label"):
-                r["label"] = f["label"]          # honor forced/scope label on re-download
+                r["label"] = f["label"]  # honor forced/scope label on re-download
             if f.get("ticker") and not r.get("ticker"):
                 r["ticker"] = f["ticker"]
-            r["last_updated"] = stamp            # lei/modified_lei + any enrichment preserved untouched
+            r["last_updated"] = stamp  # lei/modified_lei + any enrichment preserved untouched
             touched += 1
         else:
-            rows.append({
-                "label": f.get("label", ""), "cik": cik, "ticker": f.get("ticker", ""),
-                "lei": "", "modified_lei": "", "last_updated": stamp,
-            })
+            rows.append(
+                {
+                    "label": f.get("label", ""),
+                    "cik": cik,
+                    "ticker": f.get("ticker", ""),
+                    "lei": "",
+                    "modified_lei": "",
+                    "last_updated": stamp,
+                }
+            )
             by_cik[cik] = rows[-1]
             added += 1
     header = _read_inventory_header(path)
@@ -295,8 +301,14 @@ def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
 
 
 # ── EDGAR filing retrieval (unchanged proven logic) ─────────────────────────────
-def get_filings(cik: str, form_type: str = "10-K", *, max_results: int | None = None,
-                years: set[int] | None = None, delay: float = 0.5) -> list:
+def get_filings(
+    cik: str,
+    form_type: str = "10-K",
+    *,
+    max_results: int | None = None,
+    years: set[int] | None = None,
+    delay: float = 0.5,
+) -> list:
     """Fetch 10-K filing metadata from EDGAR for a CIK (recent block, then paginate).
 
     Exactly one selection mode:
@@ -405,7 +417,9 @@ def _pick_main_document(cik: str, accession: str, primary_doc: str, delay: float
     return max(html_docs, key=_safe_size).get("name", primary_doc)
 
 
-def download_filing(filing: dict, label: str, out_dir: Path, delay: float = 0.5) -> tuple[Path | None, int]:
+def download_filing(
+    filing: dict, label: str, out_dir: Path, delay: float = 0.5
+) -> tuple[Path | None, int]:
     """Download the main 10-K document.
 
     Returns (saved_path | None, fresh_bytes) — fresh_bytes is 0 on skip/fail, so the
@@ -472,8 +486,6 @@ def _verify_filing(html_path: Path) -> tuple[str | None, str | None]:
     return (_find(ENTITY_TAG_SUFFIX), _find(YEAR_TAG_SUFFIX))
 
 
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="ais_download_sec_10k",
@@ -503,30 +515,52 @@ def main() -> None:
     # Year selection — exactly one of --latest / --years (default: --latest 1).
     year_sel = parser.add_mutually_exclusive_group()
     year_sel.add_argument(
-        "--latest", "--max-results-per-firm",
-        dest="latest", nargs="?", const=1, type=int, default=None, metavar="N",
+        "--latest",
+        "--max-results-per-firm",
+        dest="latest",
+        nargs="?",
+        const=1,
+        type=int,
+        default=None,
+        metavar="N",
         help="The N most-recent 10-K filings per firm, by filing date. Bare --latest = 1. "
-             "Default when neither --latest nor --years is given: 1.",
+        "Default when neither --latest nor --years is given: 1.",
     )
     year_sel.add_argument(
         "--years",
-        dest="years", nargs="+", type=int, default=None, metavar="YYYY",
+        dest="years",
+        nargs="+",
+        type=int,
+        default=None,
+        metavar="YYYY",
         help="Explicit fiscal year(s), e.g. --years 2024  or  --years 2024 2025. Selects "
-             "filings by their fiscal period (reportDate). Mutually exclusive with --latest. "
-             "(Note: --years changed meaning in 1.3.0 — it used to mean 'latest N'; that is "
-             "now --latest N.)",
+        "filings by their fiscal period (reportDate). Mutually exclusive with --latest. "
+        "(Note: --years changed meaning in 1.3.0 — it used to mean 'latest N'; that is "
+        "now --latest N.)",
     )
     parser.add_argument("--delay", type=float, default=0.5, help="Request delay (min 0.1)")
-    parser.add_argument("--no-inventory", dest="no_inventory", action="store_true",
-                        help="Skip the *_full_scope inventory write-back (download files only; "
-                             "used by the test harness so throwaway runs don't touch the ledger).")
-    parser.add_argument("--no-verify", action="store_true", help="Skip the download-time iXBRL tag check")
-    parser.add_argument("--force_name", help="Assert entity name when the tag is absent (single-firm modes)")
-    parser.add_argument("--force_year", help="Assert fiscal year when the tag is absent (single-firm modes)")
+    parser.add_argument(
+        "--no-inventory",
+        dest="no_inventory",
+        action="store_true",
+        help="Skip the *_full_scope inventory write-back (download files only; "
+        "used by the test harness so throwaway runs don't touch the ledger).",
+    )
+    parser.add_argument(
+        "--no-verify", action="store_true", help="Skip the download-time iXBRL tag check"
+    )
+    parser.add_argument(
+        "--force_name", help="Assert entity name when the tag is absent (single-firm modes)"
+    )
+    parser.add_argument(
+        "--force_year", help="Assert fiscal year when the tag is absent (single-firm modes)"
+    )
     args = parser.parse_args()
 
     if (args.force_name or args.force_year) and args.scope:
-        parser.error("--force_name / --force_year apply to single-firm modes (--cik/--tkr), not --scope")
+        parser.error(
+            "--force_name / --force_year apply to single-firm modes (--cik/--tkr), not --scope"
+        )
 
     out_dir = Path(args.out).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -556,8 +590,11 @@ def main() -> None:
     if args.cik:
         # F-011: prefer --force_name label > CIK_ fallback.
         # CIK_ slug was confusing (e.g. CIK_0000886982 instead of Goldman_Sachs).
-        _cik_label = (args.force_name.strip() if getattr(args, "force_name", None)
-                      else f"CIK_{args.cik.zfill(10)}")
+        _cik_label = (
+            args.force_name.strip()
+            if getattr(args, "force_name", None)
+            else f"CIK_{args.cik.zfill(10)}"
+        )
         targets = [{"label": _cik_label, "cik": args.cik.zfill(10)}]
     elif args.tkr:
         hit = _resolve_ticker(args.tkr, delay=args.delay)
@@ -573,7 +610,8 @@ def main() -> None:
             if args.scope:
                 _is_stem = not any(c in args.scope for c in "/\\.")
                 scope_path = (
-                    _scope.resolve_scope_file("sec_10k", stem=args.scope) if _is_stem
+                    _scope.resolve_scope_file("sec_10k", stem=args.scope)
+                    if _is_stem
                     else _scope.resolve_scope_file("sec_10k", path=args.scope)
                 )
             else:
@@ -588,7 +626,7 @@ def main() -> None:
     total_ok = total_fail = total_fresh = 0
     total_bytes = 0
     t0 = time.time()
-    learned: list[dict] = []   # firms with >=1 file on disk this run → upserted into inventory
+    learned: list[dict] = []  # firms with >=1 file on disk this run → upserted into inventory
     for t in targets:
         label, cik = t["label"], t["cik"]
         print(f"▶ {label} (CIK: {cik})")
@@ -603,11 +641,16 @@ def main() -> None:
 
         # years mode: flag any requested year this firm didn't file.
         if sel_years:
-            _got = {int((f["report_date"] or f["date"])[:4]) for f in filings
-                    if (f["report_date"] or f["date"])[:4].isdigit()}
+            _got = {
+                int((f["report_date"] or f["date"])[:4])
+                for f in filings
+                if (f["report_date"] or f["date"])[:4].isdigit()
+            }
             _missing = sorted(sel_years - _got)
             if _missing:
-                print(f"   [warn] {label}: no 10-K for fiscal year(s) {', '.join(map(str, _missing))}")
+                print(
+                    f"   [warn] {label}: no 10-K for fiscal year(s) {', '.join(map(str, _missing))}"
+                )
 
         firm_ok = False
         verify_results: list[tuple[str, bool]] = []  # (date, has_entity_tag)
@@ -631,46 +674,68 @@ def main() -> None:
                 yr = year or "?"
                 cli.ok(f"verify: entity tag present ({entity} FY{yr})", indent=3)
             elif args.force_name:
-                cli.partial(f"forced: no entity tag — asserting '{args.force_name}'"
-                            + (f" FY{args.force_year}" if args.force_year else "")
-                            + " (recorded as the inventory row label)", indent=3)
+                cli.partial(
+                    f"forced: no entity tag — asserting '{args.force_name}'"
+                    + (f" FY{args.force_year}" if args.force_year else "")
+                    + " (recorded as the inventory row label)",
+                    indent=3,
+                )
             else:
                 cli.fail("verify: no dei:EntityRegistrantName tag", indent=3)
             time.sleep(args.delay)
 
         # Record for inventory write-back: forced label wins (operator's assertion).
         if firm_ok:
-            learned.append({
-                "label": args.force_name or label,
-                "cik": cik,
-                "ticker": t.get("ticker", ""),
-            })
+            learned.append(
+                {
+                    "label": args.force_name or label,
+                    "cik": cik,
+                    "ticker": t.get("ticker", ""),
+                }
+            )
 
         # Coaching: every downloaded filing for this firm lacks the entity tag, not forced.
         # This is the recoverable-failure case (yellow ✗): no automated fix, but the operator
         # has a documented override.
         if verify_results and not any(has for _, has in verify_results) and not args.force_name:
             years_str = ", ".join(d[:4] for d, _ in verify_results)
-            ident = f"--tkr {args.tkr}" if args.tkr else (f"--cik {cik}" if args.cik else f'--scope (entry "{label}")')
-            _yflag = ("--years " + " ".join(str(y) for y in sorted(sel_years))) if sel_years else f"--latest {latest_n}"
-            cli.fail_recover(f"{label}: none of the downloaded filings ({years_str}) carry an "
-                             f"iXBRL entity tag (dei:EntityRegistrantName) — ingest can't "
-                             f"auto-recognize them.", indent=3)
-            print(f"      Override:  ais_download_sec_10k {ident} {_yflag} "
-                  f'--force_name "<name to use>" [--force_year <YYYY>]')
+            ident = (
+                f"--tkr {args.tkr}"
+                if args.tkr
+                else (f"--cik {cik}" if args.cik else f'--scope (entry "{label}")')
+            )
+            _yflag = (
+                ("--years " + " ".join(str(y) for y in sorted(sel_years)))
+                if sel_years
+                else f"--latest {latest_n}"
+            )
+            cli.fail_recover(
+                f"{label}: none of the downloaded filings ({years_str}) carry an "
+                f"iXBRL entity tag (dei:EntityRegistrantName) — ingest can't "
+                f"auto-recognize them.",
+                indent=3,
+            )
+            print(
+                f"      Override:  ais_download_sec_10k {ident} {_yflag} "
+                f'--force_name "<name to use>" [--force_year <YYYY>]'
+            )
             print("      But find out *why* the tag is missing first — see Tutorial Annex 1.")
 
     elapsed = time.time() - t0
     mb = total_bytes / 1_048_576
     print()
     cli.section("Summary")
-    print(f"   · On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
-          f"{total_ok - total_fresh} already present")
+    print(
+        f"   · On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
+        f"{total_ok - total_fresh} already present"
+    )
     if total_fail:
         print(f"   · Failed:   {total_fail}")
     if total_fresh and elapsed > 0:
-        print(f"   · Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
-              f"{mb / total_fresh:.2f} MB/file avg")
+        print(
+            f"   · Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
+            f"{mb / total_fresh:.2f} MB/file avg"
+        )
     else:
         print(f"   · Elapsed:  {elapsed:.0f}s (no new downloads)")
     print(f"   · Output:   {out_dir}")

@@ -37,6 +37,7 @@ import yaml
 
 try:
     import certifi
+
     _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 except ImportError:
     _SSL_CONTEXT = None
@@ -49,11 +50,11 @@ CATALOG_PATH = KNOWLEDGE_SOURCES_DIR / "catalog.yaml"
 # ── Supported sources / output attribute type per source ─────────────────────
 SUPPORTED_SOURCES = ["gleif", "sec_edgar", "bis_basel", "nist_ai_rmf", "esrs"]
 SOURCE_ATTRIBUTE_TYPE = {
-    "gleif":       "entities",
-    "sec_edgar":   "companies",
-    "bis_basel":   "glossary",
+    "gleif": "entities",
+    "sec_edgar": "companies",
+    "bis_basel": "glossary",
     "nist_ai_rmf": "glossary",
-    "esrs":        "glossary",
+    "esrs": "glossary",
 }
 SCOPE_REQUIRED = {"gleif", "sec_edgar"}
 FULL_DOWNLOAD_SOURCES = {"bis_basel", "nist_ai_rmf", "esrs"}
@@ -76,15 +77,17 @@ def _api_get(url: str) -> dict:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception as e:
             if attempt < 2:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
             raise RuntimeError(str(e)) from e
 
 
 # ── Source handlers ───────────────────────────────────────────────────────────
 
-def _fetch_gleif_entity(name: str, metadata: dict, common_name: str | None = None,
-                        jurisdiction: str | None = None) -> dict | None:
+
+def _fetch_gleif_entity(
+    name: str, metadata: dict, common_name: str | None = None, jurisdiction: str | None = None
+) -> dict | None:
     """
     Search GLEIF API by legal name. Returns best match or None.
     name: primary search term (legal_name_hint if provided, else common name)
@@ -127,14 +130,35 @@ def _fetch_gleif_entity(name: str, metadata: dict, common_name: str | None = Non
 
         # Penalize funds, ETFs, trusts, subsidiaries, partnerships unless query implies them
         _SUBSIDIARY_MARKERS = {
-            "FUND", "FUNDS", "ETF", "ETFS", "TRUST", "TRUSTS",
-            "LLC", "L.L.C", "LP", "L.P", "LTD", "L.T.D",
-            "HOLDINGS", "PARTNERS", "PARTNERSHIP",
-            "CAPITAL", "SECURITIES", "BANK",
-            "VENTURES", "INVESTMENTS", "INVESTMENT",
-            "PORTFOLIOS", "PORTFOLIO",
-            "ASSOCIATES", "ADVISORY", "ADVISORS",
-            "SOLUTIONS", "SERVICES", "MANAGEMENT",
+            "FUND",
+            "FUNDS",
+            "ETF",
+            "ETFS",
+            "TRUST",
+            "TRUSTS",
+            "LLC",
+            "L.L.C",
+            "LP",
+            "L.P",
+            "LTD",
+            "L.T.D",
+            "HOLDINGS",
+            "PARTNERS",
+            "PARTNERSHIP",
+            "CAPITAL",
+            "SECURITIES",
+            "BANK",
+            "VENTURES",
+            "INVESTMENTS",
+            "INVESTMENT",
+            "PORTFOLIOS",
+            "PORTFOLIO",
+            "ASSOCIATES",
+            "ADVISORY",
+            "ADVISORS",
+            "SOLUTIONS",
+            "SERVICES",
+            "MANAGEMENT",
         }
         query_words = set(query_upper.split())
         canonical_words = set(canonical.split())
@@ -251,6 +275,7 @@ def _derive_aliases(canonical: str, scope_name: str, hint: str | None = None) ->
     Covers: case variants, punctuation stripping, legal suffix removal,
     accent normalization, ampersand expansion, THE/La prefix stripping.
     """
+
     def _normalize_accents(s: str) -> str:
         """Convert accented chars to ASCII equivalents."""
         return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
@@ -258,12 +283,27 @@ def _derive_aliases(canonical: str, scope_name: str, hint: str | None = None) ->
     def _strip_legal_suffixes(s: str) -> str:
         """Remove common legal entity suffixes."""
         suffixes = [
-            r"\bINC\.?$", r"\bCORP\.?$", r"\bLLC\.?$", r"\bLTD\.?$",
-            r"\bPLC\.?$", r"\bN\.V\.?$", r"\bS\.A\.?$", r"\bS\.P\.A\.?$",
-            r"\bABP\.?$", r"\bGMBH\.?$", r"\bAG\.?$", r"\bSE\.?$",
-            r"\bSOCIETA' PER AZIONI$", r"\bSPERSONEN AZIONI$",
-            r"\bCORPORATION$", r"\bCOMPANY$", r"\bGROUP$", r"\bGROEP$",
-            r"\bBANK$", r"\bFINANCIAL$", r"\bHOLDINGS?$",
+            r"\bINC\.?$",
+            r"\bCORP\.?$",
+            r"\bLLC\.?$",
+            r"\bLTD\.?$",
+            r"\bPLC\.?$",
+            r"\bN\.V\.?$",
+            r"\bS\.A\.?$",
+            r"\bS\.P\.A\.?$",
+            r"\bABP\.?$",
+            r"\bGMBH\.?$",
+            r"\bAG\.?$",
+            r"\bSE\.?$",
+            r"\bSOCIETA' PER AZIONI$",
+            r"\bSPERSONEN AZIONI$",
+            r"\bCORPORATION$",
+            r"\bCOMPANY$",
+            r"\bGROUP$",
+            r"\bGROEP$",
+            r"\bBANK$",
+            r"\bFINANCIAL$",
+            r"\bHOLDINGS?$",
         ]
         result = s.strip()
         for suffix in suffixes:
@@ -291,11 +331,11 @@ def _derive_aliases(canonical: str, scope_name: str, hint: str | None = None) ->
         if not seed:
             continue
         s = seed.strip()
-        aliases.add(s)                          # original
-        aliases.add(s.upper())                  # UPPER
-        aliases.add(s.lower())                  # lower
-        aliases.add(s.title())                  # Title Case
-        aliases.add(_normalize_accents(s))      # accent stripped
+        aliases.add(s)  # original
+        aliases.add(s.upper())  # UPPER
+        aliases.add(s.lower())  # lower
+        aliases.add(s.title())  # Title Case
+        aliases.add(_normalize_accents(s))  # accent stripped
         aliases.add(_normalize_accents(s).title())
 
         # Ampersand variants
@@ -335,11 +375,41 @@ def _derive_aliases(canonical: str, scope_name: str, hint: str | None = None) ->
     # stopword. Cross-firm collision is filtered later in _enrich_aliases (which has
     # the full roster) — a single word shared by two firms must NOT become an alias.
     _CORP_STOPWORDS = {
-        "the", "and", "for", "bank", "banco", "group", "groep", "groupe", "gruppo",
-        "holding", "holdings", "corp", "corporation", "inc", "incorporated", "ltd",
-        "plc", "company", "financial", "services", "capital", "partners", "trust",
-        "fund", "global", "markets", "national", "international", "general",
-        "société", "societe", "generale", "générale", "per", "azioni",
+        "the",
+        "and",
+        "for",
+        "bank",
+        "banco",
+        "group",
+        "groep",
+        "groupe",
+        "gruppo",
+        "holding",
+        "holdings",
+        "corp",
+        "corporation",
+        "inc",
+        "incorporated",
+        "ltd",
+        "plc",
+        "company",
+        "financial",
+        "services",
+        "capital",
+        "partners",
+        "trust",
+        "fund",
+        "global",
+        "markets",
+        "national",
+        "international",
+        "general",
+        "société",
+        "societe",
+        "generale",
+        "générale",
+        "per",
+        "azioni",
     }
     for seed in seeds:
         if not seed:
@@ -368,11 +438,16 @@ def _load_alias_sentinels() -> set[str]:
     """Null-sentinel tokens to drop from aliases — built-in defaults unioned with the shared
     stoplist file if present. scripts/ is parent.parent == repo root (see module docstring)."""
     sentinels = set(_BUILTIN_ALIAS_SENTINELS)
-    path = Path(__file__).resolve().parent.parent / "data" / "knowledge_sources" / "_alias_stoplist.yaml"
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "data"
+        / "knowledge_sources"
+        / "_alias_stoplist.yaml"
+    )
     try:
         if path.exists():
             doc = yaml.safe_load(path.read_text()) or {}
-            for s in (doc.get("sentinels") or []):
+            for s in doc.get("sentinels") or []:
                 sentinels.add(str(s).strip().lower())
     except Exception:
         pass
@@ -416,7 +491,9 @@ SELECT ?lei ?itemLabel ?shortName ?ticker WHERE {{
         + "&format=json"
     )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "AIStudio/1.0 ais_import_knowledge_base"})
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "AIStudio/1.0 ais_import_knowledge_base"}
+        )
         with urllib.request.urlopen(req, timeout=30, context=_SSL_CONTEXT) as r:
             data = json.loads(r.read())
     except Exception as e:
@@ -513,7 +590,8 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
 
     (cli.ok if n_miss == 0 else cli.partial)(
         f"Wikidata: {n_hit}/{len(records)} entit(y/ies) enriched"
-        + (f" · {n_miss} no match" if n_miss else ""))
+        + (f" · {n_miss} no match" if n_miss else "")
+    )
 
     # AIStudio_876 — cross-firm collision removal (the distinctiveness guard).
     # A single-token or any alias shared by two or more firms in this scope is
@@ -522,7 +600,9 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
     _alias_owners: dict[str, set[str]] = {}
     for rec in records:
         for a in rec["aliases"]:
-            _alias_owners.setdefault(a.lower(), set()).add(rec.get("scope_name", "") or rec.get("canonical", ""))
+            _alias_owners.setdefault(a.lower(), set()).add(
+                rec.get("scope_name", "") or rec.get("canonical", "")
+            )
     _ambiguous = {a for a, owners in _alias_owners.items() if len(owners) > 1}
     if _ambiguous:
         dropped_total = 0
@@ -530,12 +610,12 @@ def _enrich_aliases(records: list[dict], scope_entities: list[dict]) -> list[dic
             kept = [a for a in rec["aliases"] if a.lower() not in _ambiguous]
             dropped_total += len(rec["aliases"]) - len(kept)
             rec["aliases"] = kept
-        cli.info(f"Collision guard: dropped {dropped_total} ambiguous alias(es) "
-                 f"shared across firms ({len(_ambiguous)} distinct token(s))")
+        cli.info(
+            f"Collision guard: dropped {dropped_total} ambiguous alias(es) "
+            f"shared across firms ({len(_ambiguous)} distinct token(s))"
+        )
 
     return records
-
-
 
 
 def _load_metadata(source: str) -> dict:
@@ -547,8 +627,7 @@ def _load_metadata(source: str) -> dict:
         return yaml.safe_load(f)
 
 
-def _update_catalog(source: str, corpus: str, scope: str,
-                    count: int, output_path: Path) -> None:
+def _update_catalog(source: str, corpus: str, scope: str, count: int, output_path: Path) -> None:
     """Update catalog.yaml with this import record."""
     if CATALOG_PATH.exists():
         with open(CATALOG_PATH) as f:
@@ -563,13 +642,15 @@ def _update_catalog(source: str, corpus: str, scope: str,
     existing = catalog["sources"][source].get("imported", [])
     existing = [e for e in existing if not (e["corpus"] == corpus and e["scope"] == scope)]
 
-    existing.append({
-        "corpus": corpus,
-        "scope": scope,
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "count": count,
-        "file": str(output_path.relative_to(REPO)),
-    })
+    existing.append(
+        {
+            "corpus": corpus,
+            "scope": scope,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "count": count,
+            "file": str(output_path.relative_to(REPO)),
+        }
+    )
     catalog["sources"][source]["imported"] = existing
 
     CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -595,6 +676,8 @@ def cmd_list(script_name: str, version: str) -> int:
             print(f"  · {source}: no imports")
             continue
         for entry in imports:
-            print(f"  ✅ {source} | corpus: {entry['corpus']} | scope: {entry.get('scope', '-')} "
-                  f"| {entry['count']} records | {entry['date']}")
+            print(
+                f"  ✅ {source} | corpus: {entry['corpus']} | scope: {entry.get('scope', '-')} "
+                f"| {entry['count']} records | {entry['date']}"
+            )
     return 0

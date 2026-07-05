@@ -53,10 +53,10 @@ def _wrap(code: str, text: str) -> str:
 
 
 # Foreground glyph on the default (black) terminal background — no colored blocks except hard fail.
-GLYPH_OK = "✅"                                  # success, full / verified
-GLYPH_PARTIAL = _wrap("93", "✓")                 # bright-yellow ✓, no block (soft/degraded success)
-GLYPH_FAIL = _wrap("97;101", " ✗ ")              # bright-white ✗ on bright-red block (hard failure)
-GLYPH_FAIL_RECOVER = _wrap("93", "✗")            # bright-yellow ✗, no block (recoverable)
+GLYPH_OK = "✅"  # success, full / verified
+GLYPH_PARTIAL = _wrap("93", "✓")  # bright-yellow ✓, no block (soft/degraded success)
+GLYPH_FAIL = _wrap("97;101", " ✗ ")  # bright-white ✗ on bright-red block (hard failure)
+GLYPH_FAIL_RECOVER = _wrap("93", "✗")  # bright-yellow ✗, no block (recoverable)
 
 _TRIANGLE = "▶"
 
@@ -99,15 +99,16 @@ def fail_recover(msg: str, *, indent: int = 2) -> None:
 
 
 # ── Sub-item lists (STD - AIStudio - CLI Output §9) ─────────────────────────────
-def list_item(text: str, *, index: int | None = None, total: int | None = None,
-              indent: int = 2) -> None:
+def list_item(
+    text: str, *, index: int | None = None, total: int | None = None, indent: int = 2
+) -> None:
     """Render one aligned list line (STD §9). Ordered when `index` is given (renders
     "N."), unordered otherwise (renders "*"). The marker is right-aligned in a field
     sized by `total` (the largest index in the list), so the text column stays put as
     the count grows into multiple digits and ordered/unordered sibling lists share a
     text column. Pass `total` even for bullets so they align with a same-length
     numbered list."""
-    width = len(str(total)) if total else 1            # digit-width of the largest index
+    width = len(str(total)) if total else 1  # digit-width of the largest index
     marker = f"{index:>{width}}." if index is not None else f"{'*':>{width + 1}}"
     print(f"{' ' * indent}{marker} {text}")
 

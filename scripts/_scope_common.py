@@ -85,8 +85,9 @@ def scope_path(corpus: str, stem: str, *, full: bool = False) -> Path:
     return _corpus_dir(corpus) / SCOPES_SUBDIR / f"{corpus}_{stem}_scope.yaml"
 
 
-def resolve_scope_file(corpus: str, stem: str | None = None,
-                       path: str | None = None, *, full: bool = False) -> Path:
+def resolve_scope_file(
+    corpus: str, stem: str | None = None, path: str | None = None, *, full: bool = False
+) -> Path:
     """Resolve a scope reference to a concrete file.
     - path given        → that exact file (any name/location).
     - stem given        → scope_path(corpus, stem, full).
@@ -125,12 +126,16 @@ def discover_full(corpus: str) -> Path:
 
 
 # ── Load ────────────────────────────────────────────────────────────────────
-def load_scope(corpus: str, stem: str | None = None, path: str | None = None,
-               *, full: bool = False) -> dict:
+def load_scope(
+    corpus: str, stem: str | None = None, path: str | None = None, *, full: bool = False
+) -> dict:
     """Load a scope file → its parsed dict (with at least `entities`).
     No stem + no path → the corpus full inventory (discover_full)."""
-    p = discover_full(corpus) if (stem is None and path is None) else \
-        resolve_scope_file(corpus, stem, path, full=full)
+    p = (
+        discover_full(corpus)
+        if (stem is None and path is None)
+        else resolve_scope_file(corpus, stem, path, full=full)
+    )
     try:
         data = yaml.safe_load(p.read_text()) or {}
     except yaml.YAMLError as e:
@@ -142,8 +147,9 @@ def load_scope(corpus: str, stem: str | None = None, path: str | None = None,
     return data
 
 
-def load_entities(corpus: str, stem: str | None = None, path: str | None = None,
-                  *, full: bool = False) -> list[dict]:
+def load_entities(
+    corpus: str, stem: str | None = None, path: str | None = None, *, full: bool = False
+) -> list[dict]:
     """Convenience: just the entity rows."""
     return load_scope(corpus, stem, path, full=full).get("entities", []) or []
 
@@ -155,30 +161,46 @@ _SELECTOR_FIELDS = {
     "cik": ("cik",),
     "xbrl": ("xbrl_name", "sec_xbrl_name"),
     "gleif": ("gleif_lei",),
-    "lei": ("lei", "lei_corrected", "gleif_lei"),   # any LEI field may carry it (bare first)
+    "lei": ("lei", "lei_corrected", "gleif_lei"),  # any LEI field may carry it (bare first)
 }
 
 
-def select_entity(entities: list[dict], *, label: str | None = None,
-                  ticker: str | None = None, cik: str | None = None,
-                  xbrl: str | None = None, gleif: str | None = None,
-                  lei: str | None = None) -> dict:
+def select_entity(
+    entities: list[dict],
+    *,
+    label: str | None = None,
+    ticker: str | None = None,
+    cik: str | None = None,
+    xbrl: str | None = None,
+    gleif: str | None = None,
+    lei: str | None = None,
+) -> dict:
     """Return the single row matching exactly one provided selector.
     ScopeError on zero matches, multiple selectors, or ambiguous (>1) match."""
-    provided = {k: v for k, v in dict(
-        label=label, ticker=ticker, cik=cik, xbrl=xbrl, gleif=gleif, lei=lei
-    ).items() if v is not None}
+    provided = {
+        k: v
+        for k, v in dict(
+            label=label, ticker=ticker, cik=cik, xbrl=xbrl, gleif=gleif, lei=lei
+        ).items()
+        if v is not None
+    }
     if not provided:
-        raise ScopeError("select_entity: give exactly one selector "
-                         "(--label/--tkr/--cik/--xbrl/--gleif/--lei).")
+        raise ScopeError(
+            "select_entity: give exactly one selector (--label/--tkr/--cik/--xbrl/--gleif/--lei)."
+        )
     if len(provided) > 1:
-        raise ScopeError(f"select_entity: selectors are mutually exclusive — "
-                         f"got {', '.join('--' + k for k in provided)}.")
+        raise ScopeError(
+            f"select_entity: selectors are mutually exclusive — "
+            f"got {', '.join('--' + k for k in provided)}."
+        )
     key, want = next(iter(provided.items()))
     fields = _SELECTOR_FIELDS[key]
     norm = _norm(want)
-    hits = [e for e in entities
-            if any(_norm(clean(e.get(f))) == norm for f in fields if clean(e.get(f)))]
+    hits = [
+        e
+        for e in entities
+        if any(_norm(clean(e.get(f))) == norm for f in fields if clean(e.get(f)))
+    ]
     if not hits:
         raise ScopeError(f"No entity in scope matches --{key} {want!r}.")
     if len(hits) > 1:
@@ -203,8 +225,7 @@ def entity_name(row: dict) -> str | None:
     (filing self-report) → `canonical` (legacy) → `gleif_name` → `gleif_canonical`
     (legacy) → `label`. Bare user value wins; legacy fields kept for un-migrated
     scopes. Sentinel == empty."""
-    for f in ("xbrl_name", "sec_xbrl_name", "canonical",
-              "gleif_name", "gleif_canonical", "label"):
+    for f in ("xbrl_name", "sec_xbrl_name", "canonical", "gleif_name", "gleif_canonical", "label"):
         v = clean(row.get(f))
         if v:
             return v

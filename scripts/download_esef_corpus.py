@@ -91,6 +91,7 @@ import _scope_common as _scope  # noqa: E402
 
 try:
     import certifi
+
     _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 except ImportError:
     _SSL_CONTEXT = None
@@ -126,7 +127,7 @@ def _api_get(url: str) -> dict:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception as e:
             if attempt < 2:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
             raise RuntimeError(str(e)) from e
     return {}
@@ -139,12 +140,14 @@ def _find_filings(lei: str, *, max_results: int | None, years: set[int] | None) 
       - years={YYYY,…}: every filing whose period_end year is in the set.
     Returns a list of {name, period_end, year, report_url} dicts (newest first)."""
     filt = json.dumps([{"name": "fxo_id", "op": "like", "val": f"{lei}%"}])
-    params = urllib.parse.urlencode({
-        "filter": filt,
-        "include": "entity",
-        "sort": "-period_end",
-        "page[size]": "50",
-    })
+    params = urllib.parse.urlencode(
+        {
+            "filter": filt,
+            "include": "entity",
+            "sort": "-period_end",
+            "page[size]": "50",
+        }
+    )
     data = _api_get(f"{API_BASE}/api/filings?{params}")
 
     lei_to_name: dict[str, str] = {}
@@ -163,12 +166,14 @@ def _find_filings(lei: str, *, max_results: int | None, years: set[int] | None) 
         if years is not None and year not in years:
             continue
         ent_lei = filing["relationships"]["entity"]["links"]["related"].split("/")[-1]
-        out.append({
-            "name": lei_to_name.get(ent_lei, ent_lei),
-            "period_end": period,
-            "year": year,
-            "report_url": attrs["report_url"],
-        })
+        out.append(
+            {
+                "name": lei_to_name.get(ent_lei, ent_lei),
+                "period_end": period,
+                "year": year,
+                "report_url": attrs["report_url"],
+            }
+        )
         if max_results is not None and len(out) >= max_results:
             break
     return out
@@ -203,8 +208,11 @@ def _download_xhtml(report_url: str, dest: Path) -> int:
             mb = downloaded / (1024 * 1024)
             if content_length:
                 pct = downloaded / content_length * 100
-                print(f"  ↓ {mb:.1f} / {content_length / (1024 * 1024):.1f} MB ({pct:.0f}%)",
-                      end="\r", flush=True)
+                print(
+                    f"  ↓ {mb:.1f} / {content_length / (1024 * 1024):.1f} MB ({pct:.0f}%)",
+                    end="\r",
+                    flush=True,
+                )
             else:
                 print(f"  ↓ {mb:.1f} MB", end="\r", flush=True)
         print(" " * 60, end="\r")  # clear the live bar before the result glyph line
@@ -273,12 +281,14 @@ def _upsert_inventory(learned: list[dict]) -> tuple[Path, int, int]:
             r["last_updated"] = stamp  # lei_corrected/gleif_*/aliases preserved untouched
             touched += 1
         else:
-            rows.append({
-                "label": f.get("label", ""),
-                "lei": lei,
-                "xbrl_name": f.get("xbrl_name", ""),
-                "last_updated": stamp,
-            })
+            rows.append(
+                {
+                    "label": f.get("label", ""),
+                    "lei": lei,
+                    "xbrl_name": f.get("xbrl_name", ""),
+                    "last_updated": stamp,
+                }
+            )
             by_lei[lei] = rows[-1]
             added += 1
     header = _read_inventory_header(path)
@@ -299,8 +309,11 @@ def _resolve_targets(scope_arg: str | None, lei_arg: str | None) -> list[dict]:
         return [{"label": f"LEI_{lei_arg}", "lei": lei_arg.strip()}]
     if scope_arg:
         is_stem = not any(c in scope_arg for c in "/\\.")
-        scope_path = (_scope.resolve_scope_file(CORPUS, stem=scope_arg) if is_stem
-                      else _scope.resolve_scope_file(CORPUS, path=scope_arg))
+        scope_path = (
+            _scope.resolve_scope_file(CORPUS, stem=scope_arg)
+            if is_stem
+            else _scope.resolve_scope_file(CORPUS, path=scope_arg)
+        )
         rows = _scope.load_entities(CORPUS, path=str(scope_path))
     else:
         rows = _scope.load_entities(CORPUS)  # discover_full inventory
@@ -325,21 +338,41 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog=SCRIPT_NAME, add_help=False)
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--lei", help="Single firm by LEI")
-    mode.add_argument("--scope", default=None,
-                      help="Scope stem (scopes/esef_banks_<stem>_scope.yaml) or a path. "
-                           "Absence → the corpus inventory (esef_banks_full_scope.yaml).")
+    mode.add_argument(
+        "--scope",
+        default=None,
+        help="Scope stem (scopes/esef_banks_<stem>_scope.yaml) or a path. "
+        "Absence → the corpus inventory (esef_banks_full_scope.yaml).",
+    )
     p.add_argument("--out", default=None, help="Output directory")
     year_sel = p.add_mutually_exclusive_group()
-    year_sel.add_argument("--latest", dest="latest", nargs="?", const=1, type=int,
-                          default=None, metavar="N",
-                          help="The N most-recent filings per firm by period_end. "
-                               "Bare --latest = 1. Default when neither flag is given: 1.")
-    year_sel.add_argument("--years", dest="years", nargs="+", type=int, default=None,
-                          metavar="YYYY",
-                          help="Explicit fiscal year(s) by period_end, e.g. --years 2024 2025. "
-                               "Mutually exclusive with --latest.")
-    p.add_argument("--no-inventory", dest="no_inventory", action="store_true",
-                   help="Skip the *_full_scope inventory write-back (throwaway/test runs).")
+    year_sel.add_argument(
+        "--latest",
+        dest="latest",
+        nargs="?",
+        const=1,
+        type=int,
+        default=None,
+        metavar="N",
+        help="The N most-recent filings per firm by period_end. "
+        "Bare --latest = 1. Default when neither flag is given: 1.",
+    )
+    year_sel.add_argument(
+        "--years",
+        dest="years",
+        nargs="+",
+        type=int,
+        default=None,
+        metavar="YYYY",
+        help="Explicit fiscal year(s) by period_end, e.g. --years 2024 2025. "
+        "Mutually exclusive with --latest.",
+    )
+    p.add_argument(
+        "--no-inventory",
+        dest="no_inventory",
+        action="store_true",
+        help="Skip the *_full_scope inventory write-back (throwaway/test runs).",
+    )
     p.add_argument("--version", action="store_true")
     args = p.parse_args(argv)
 
@@ -356,8 +389,11 @@ def main(argv=None) -> int:
         latest_n = args.latest if args.latest is not None else 1
         sel_label = f"the {latest_n} most-recent filing(s)"
 
-    out_dir = (Path(args.out).expanduser() if args.out
-               else _repo_root() / "data/corpora/esef_banks/uploads")
+    out_dir = (
+        Path(args.out).expanduser()
+        if args.out
+        else _repo_root() / "data/corpora/esef_banks/uploads"
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cli.section("Preflight")
@@ -392,8 +428,11 @@ def main(argv=None) -> int:
             continue
 
         if not filings:
-            cli.fail_recover(f"{label}: no filing on filings.xbrl.org for {sel_label}. "
-                             f"Verify the LEI, or widen the year selection.", indent=2)
+            cli.fail_recover(
+                f"{label}: no filing on filings.xbrl.org for {sel_label}. "
+                f"Verify the LEI, or widen the year selection.",
+                indent=2,
+            )
             total_fail += 1
             continue
 
@@ -401,8 +440,10 @@ def main(argv=None) -> int:
             got = {f["year"] for f in filings}
             missing = sorted(sel_years - got)
             if missing:
-                cli.info(f"{label}: no ESEF filing for fiscal year(s) "
-                         f"{', '.join(map(str, missing))}", indent=2)
+                cli.info(
+                    f"{label}: no ESEF filing for fiscal year(s) {', '.join(map(str, missing))}",
+                    indent=2,
+                )
 
         firm_ok = False
         firm_name = ""
@@ -442,13 +483,17 @@ def main(argv=None) -> int:
     mb = total_bytes / 1_048_576
     print(f"\n{'=' * 50}")
     cli.section("Summary")
-    print(f"  On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
-          f"{total_ok - total_fresh} already present")
+    print(
+        f"  On disk:  {total_ok} filing(s)  ·  {total_fresh} newly fetched, "
+        f"{total_ok - total_fresh} already present"
+    )
     if total_fail:
         print(f"  Missing:  {total_fail} firm(s)/filing(s) not retrieved")
     if total_fresh and elapsed > 0:
-        print(f"  Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
-              f"{mb / total_fresh:.2f} MB/file avg")
+        print(
+            f"  Fetched:  {mb:.1f} MB in {elapsed:.0f}s  ·  {mb / elapsed:.2f} MB/s  ·  "
+            f"{mb / total_fresh:.2f} MB/file avg"
+        )
     else:
         print(f"  Elapsed:  {elapsed:.0f}s (no new downloads)")
     print(f"  Output:   {out_dir}")
@@ -461,8 +506,10 @@ def main(argv=None) -> int:
             rel = inv_path
         print(f"  Inventory: {rel}  (+{n_added} new, {n_touched} updated)")
 
-    print("\nTo ingest these files into AIStudio: create corpus 'esef_banks' in the UI, "
-          "then Upload the .xhtml files.")
+    print(
+        "\nTo ingest these files into AIStudio: create corpus 'esef_banks' in the UI, "
+        "then Upload the .xhtml files."
+    )
     return 0 if total_fail == 0 else 1
 
 
