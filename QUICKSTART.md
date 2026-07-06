@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-07-03*
+*Version: Beta | Updated: 2026-07-05*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -121,7 +121,7 @@ If you see a version number where the second part is 10 or higher — for exampl
 
 "3.10 or higher" means: look at the number after the first dot. If it is 10 or more, you are good.
 
-**Only if** you see `command not found` — Python is not installed. Install a current Python via Homebrew:
+**If** you see `command not found` **— or a version whose second number is less than 10** (for example `Python 3.9.x`, which ships on many Macs and is too old for AIStudio) — install a current Python via Homebrew:
 ```bash
 brew install python@3.13
 ```
@@ -186,19 +186,6 @@ When it asks **`Do you want to proceed with the installation? [y/n]`**, type **`
 
 ---
 
-### Install Pango (for PDF reports)
-
-**Pango** is a text-rendering library required for generating the benchmark PDF reports (Module 5 of the [Tutorial](TUTORIAL.md)). It installs via Homebrew regardless of how Ollama was installed — so run it even if you skipped the `brew services` line above:
-```bash
-brew install pango
-```
-
-When it asks **`Do you want to proceed with the installation? [y/n]`**, type **`y`** and press **Enter**.
-
-> **Why Pango?** AIStudio's benchmark runner generates PDF reports via weasyprint (the PDF engine), which depends on Pango. `brew install` handles it in under a minute. You won't need it until Module 5, but it's cleanest to install now.
-
----
-
 Verify Ollama is running:
 ```bash
 ollama list
@@ -213,6 +200,19 @@ ollama serve
 
 ---
 
+### Install Pango and pandoc (for PDF reports)
+
+The benchmark PDF reports (Module 5 of the [Tutorial](TUTORIAL.md)) need two Homebrew tools: **Pango** (a text-rendering library) and **pandoc** (a document converter). Install both:
+```bash
+brew install pango pandoc
+```
+
+When it asks **`Do you want to proceed with the installation? [y/n]`**, type **`y`** and press **Enter**.
+
+> **Why these two?** AIStudio's benchmark runner builds each PDF in two steps: `pandoc` converts the Markdown report to HTML, then `weasyprint` (which depends on Pango) renders the HTML to PDF. Missing either one just skips the PDF — the `.md` and `.json` reports are still written — but installing both now means Module 5 produces the full set. `brew install` handles them in under a minute.
+
+---
+
 ## 4. Pull Required Models
 
 AIStudio uses two kinds of model that do completely different jobs.
@@ -221,18 +221,20 @@ AIStudio uses two kinds of model that do completely different jobs.
 
 **The language model** reads the relevant passages found by the indexing model and writes a human-language answer with citations. This is what most people think of as "AI." AIStudio supports three open model families, each in a small (fast) and a large (highest-quality) size:
 
-| Family | Small — fast | Large — best quality |
-|--------|--------------|----------------------|
-| **Meta Llama** ⭐ | `llama3.1:8b` | `llama3.1:70b` |
-| Google Gemma | `gemma3:4b` | `gemma3:27b` |
-| Mistral AI | `mistral:7b` | `mixtral:8x7b` |
+| Family | Small — fast | Medium — balanced | Large — best quality |
+|--------|--------------|-------------------|----------------------|
+| **Meta Llama** ⭐ | `llama3.1:8b` | — | `llama3.1:70b` |
+| **Google Gemma** ★ | `gemma3:4b` | `gemma3:12b` | `gemma3:27b` |
+| Mistral AI | `mistral:7b` | — | `mixtral:8x7b` |
 
-**The default is `llama3.1:8b`** — Meta's Llama. It gives clean, well-grounded answers on the demo and help corpora out of the box and generally follows the citation format that keeps answers verifiable. Citation *rendering* can vary with your machine and retrieval load — see the [TUTORIAL §1.2 note](TUTORIAL.md) for when it fluctuates and the simple settings (lower Top K, the RAM-appropriate model) that keep it reliable. `gemma3:4b` is a lighter, faster alternative if you're tight on memory, and `gemma3:27b` is the high-quality model you'll switch to for the heavier SEC corpus (where it tops the AIStudio benchmark). You can switch models at any time in the UI.
+⭐ **default** (`llama3.1:8b`) — the fast first-impression model.  ★ **benchmark-normalized** (`gemma3:27b`) — the model AIStudio's published SEC/ESEF evidence suite runs on, and the one you switch to for those corpora.
+
+**The default is `llama3.1:8b`** — Meta's Llama. It gives clean, well-grounded answers on the demo and help corpora out of the box and generally follows the citation format that keeps answers verifiable. Citation *rendering* can vary with your machine and retrieval load — see the [TUTORIAL §1.2 note](TUTORIAL.md) for when it fluctuates and the simple settings (lower Top K, the RAM-appropriate model) that keep it reliable. **`gemma3:27b` is the model behind AIStudio's top benchmark results** — it binds citations cleanly and is what you'll switch to for the heavier SEC and ESEF corpora; **`gemma3:12b` (~8 GB)** is the natural middle pick for 24–32 GB machines, and `gemma3:4b` is a lighter, faster alternative if you're tight on memory. You can switch models at any time in the UI.
 
 **Which to download — based on your Mac's memory** (Apple menu → **About This Mac** → "Memory"):
 
 - **8–16 GB** — `llama3.1:8b` (the default). Comfortable on 16 GB; on 8 GB it runs but is tight — `gemma3:4b` is a lighter, faster fallback there if you want more headroom.
-- **32 GB** — also pull `gemma3:27b` for top-quality answers on heavier corpora.
+- **24–32 GB** — `gemma3:12b` (~8 GB) is the sweet spot: most of the quality of the 27B at a fraction of the footprint. On a solid 32 GB machine you can also pull `gemma3:27b` for top-quality answers on heavier corpora.
 - **64 GB or more** — `gemma3:27b` is excellent; pull `llama3.1:70b` or `mixtral:8x7b` only if you want the largest Meta / Mistral options.
 
 > **Don't run a "large" model on too little memory.** `gemma3:27b` and `mixtral:8x7b` want 32 GB+; **never** pull `llama3.1:70b` under 64 GB — it will download but won't fit in memory, and your Mac will become unresponsive when you try to use it.
@@ -334,7 +336,7 @@ git clone https://github.com/mbarberony/AIStudio.git
 cd AIStudio
 ```
 
-This downloads about 96 MB — expect under 2 minutes on a 100 Mbps connection. When complete you will see `Resolving deltas: 100% (...), done.` and land in the `AIStudio` folder.
+This downloads about 35 MB — usually well under a minute (around 10 seconds on a fast connection). The transfer size shows up in the `Receiving objects:` line as it runs. When complete you will see `Resolving deltas: 100% (...), done.` and land in the `AIStudio` folder.
 
 After the clone, AIStudio lives at `~/Developer/AIStudio` — the path every command in this guide assumes. Your prompt will now end in `AIStudio %` (it shows the current folder's name, not the full path) — that's how you know you're inside the cloned folder.
 
@@ -349,12 +351,21 @@ After the clone, AIStudio lives at `~/Developer/AIStudio` — the path every com
 
 `./ais_install` does two things: it creates the Python environment and installs all dependencies, then makes the `ais_*` commands available in your Terminal.
 
+Run the install:
 ```bash
 cd ~/Developer/AIStudio
 ./ais_install
+```
+
+When it finishes, load the new commands into your current Terminal, **then** verify — run these on separate lines (don't paste them together; the verify can fire before the load finishes):
+```bash
 source ~/.zshrc
+```
+```bash
 ais_help
 ```
+
+If `ais_help` returns `command not found`, the install still succeeded — just run `source ~/.zshrc` once more, then `ais_help` again.
 
 The `ais_*` notation is shorthand for *all the commands that begin with* `ais_` — like `ais_start`, `ais_stop`, `ais_bench`; the `*` is a wildcard standing in for the rest of each name. `ais_help` prints the full list by category, and `ais_help <command>` gives detailed help on any one.
 
@@ -368,17 +379,17 @@ This takes 2–3 minutes. You'll see progress messages as dependencies install.
 
 ---
 
-## 9. Activate the Virtual Environment
+## 9. Activate the Virtual Environment (Optional — skip this)
 
-A virtual environment is an isolated Python workspace that keeps AIStudio's dependencies separate from the rest of your system. After this session you'll rarely touch it — especially if you add a Desktop shortcut in Step 12.
+A virtual environment is an isolated Python workspace that keeps AIStudio's dependencies separate from the rest of your system. **You do not need to activate it manually** — `ais_start` handles that for you every time. This step is here only for reference.
+
+You'd run this *only* if you want to use other `ais_*` commands from a fresh terminal tab before `ais_start` has run in that tab:
 
 ```bash
 source ~/Developer/AIStudio/.venv/bin/activate
 ```
 
-This command returns no output — silence means success. Your prompt will show `(.venv)`, confirming the environment is active.
-
-> You do **not** need to activate the virtual environment manually before `ais_start` — it handles that automatically. You only need this if you run other `ais_*` commands from a fresh terminal tab before `ais_start` has run.
+This command returns no output — silence means success. Your prompt will show `(.venv)`, confirming the environment is active. (Note: this activates the Python environment but does **not** load the `ais_*` aliases — that's `source ~/.zshrc`.)
 
 ---
 
@@ -406,13 +417,11 @@ Expected: `{"status": "ok"}`. If you get an error or no response instead, the ba
 
 ## 11. What You're Looking At — and Your First Query
 
-When AIStudio opens in your browser, you'll see three main areas:
+When AIStudio opens in your browser, you'll see two main areas:
 
-**On the left** — the corpus selector. This is where you choose which document collection to query. The **demo** corpus is already loaded — original documents spanning 2003–2026, covering enterprise architecture, IT strategy, financial services, and agentic AI.
+**On the left** — the control sidebar. Everything that shapes a query lives here: the **corpus selector** at the top (choose which document collection to query — the **demo** corpus is already loaded, original documents spanning 2003–2026 covering enterprise architecture, IT strategy, financial services, and agentic AI), the **Model** dropdown, and the **query settings** (Top K, Temperature, Timeout, Score Threshold, Retrieval Mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
 
-**In the center** — the chat area. Type a question, get a cited answer. References below each answer show exactly which document and page the answer came from. Click **Open ↗** to see the source.
-
-**On the right** — the settings sidebar. It controls how AIStudio retrieves and generates answers (model, Top K, temperature, timeout, threshold, retrieval mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
+**On the right** — the chat area. Type a question, get a cited answer. References below each answer show exactly which document and page the answer came from. Click **Source Dive ↗** to open the source PDF at the cited page.
 
 The **Model** is set to `llama3.1:8b` by default — small, fast, and reliably cited, ideal for the demo. (For the heavier SEC 10-K corpus in the [Tutorial](TUTORIAL.md), switch it to `gemma3:27b`.)
 
@@ -474,7 +483,7 @@ For a full guided walkthrough — including the SEC 10-K at-scale exercise and b
 
 *For experienced users who already live in a terminal. This skips every explanation above — you'll get a running instance, but you'll miss the understanding of how a RAG system is built. If anything here is unfamiliar, use the full guide instead.*
 
-**Prereqs:** Apple Silicon Mac, **and a zsh shell** (the macOS default — if your prompt ends in `$` rather than `%`, run `chsh -s /bin/zsh`, quit Terminal with ⌘Q, and reopen before pasting; see [Step 0](#0-confirm-your-shell-is-zsh)). The steps below install Homebrew, Python, Ollama, Pango, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
+**Prereqs:** Apple Silicon Mac, **and a zsh shell** (the macOS default — if your prompt ends in `$` rather than `%`, run `chsh -s /bin/zsh`, quit Terminal with ⌘Q, and reopen before pasting; see [Step 0](#0-confirm-your-shell-is-zsh)). The steps below install Homebrew, Python, Ollama, Pango, pandoc, Qdrant, and git. Each `brew install` is a no-op for anything you already have, so the block is safe to run as-is on a fully-configured machine or a freshly-wiped one.
 
 **Run it in three parts.** Two of them need a key-press: **Part 0** (Homebrew) triggers the macOS *"install command line developer tools"* dialog, and **Part 1** (`brew install`) asks `[y/n]`. The big paste — **Parts 2–5** — has no prompts, so it runs unattended. Pasting a `brew install` *inside* a block doesn't work: brew stops to ask `[y/n]` and reads the lines pasted behind it as (rejected) answers, so the block must keep that one line separate.
 
@@ -486,7 +495,7 @@ brew --version    # must print a version before you proceed
 
 **Part 1 — the toolchain (interactive: press `y`).** Run this line on its own; when brew asks `Do you want to proceed with the installation? [y/n]`, type **`y`** and **Enter**. (Each formula is a no-op if already present.)
 ```bash
-brew install python@3.13 ollama pango git
+brew install python@3.13 ollama pango pandoc git
 ```
 
 **Parts 2–5 — everything else, one uninterrupted paste (no prompts):**
@@ -530,6 +539,7 @@ First run auto-indexes the **demo** and **help** corpora (~60s) and opens the UI
 | Python | Programming language AIStudio runs on | https://www.python.org |
 | Ollama | Local AI model runtime | https://ollama.com |
 | Pango | Text-rendering library for PDF benchmark reports | https://pango.gnome.org |
+| pandoc | Document converter (Markdown → HTML) for PDF benchmark reports | https://pandoc.org |
 | Qdrant | Vector database for document storage | https://qdrant.tech |
 | GitHub / git | Code hosting and version control | https://github.com |
 

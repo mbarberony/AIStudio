@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: Beta | Updated: 2026-07-03*
+*Version: Beta | Updated: 2026-07-05*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -17,6 +17,8 @@ Get the most out of AIStudio with four guided modules — from your first query,
 ### 1.1 Your First Query
 
 AIStudio ships with a **demo** corpus — original documents spanning enterprise architecture, IT strategy, financial-services technology, and agentic AI. It's already indexed and ready.
+
+Open the **Terminal** app first (press **⌘ Space**, type `Terminal`, press **Enter**), then start AIStudio. The `ais_*` commands work from anywhere once installed, so you don't need to `cd` into the repo for `ais_start` — but if a command ever reports it can't find the project, run it from inside `~/Developer/AIStudio`.
 
 Open AIStudio:
 ```bash
