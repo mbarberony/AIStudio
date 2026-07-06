@@ -133,8 +133,11 @@ Options:
   --version      Show script version
   --out <dir>    Output directory (default: ~/Downloads/sec_10k_corpus/)
 
-· After downloading: ingest via the UI — select sec_10k corpus, Add files
-· Or use: ais_ingest_sec_10k
+· Next steps (all in the Terminal — see TUTORIAL Module 2):
+·   1. ais_import_entity_kb --corpus sec_10k --apply   (build the entity KB)
+·   2. ais_import_glossary_kb --source bis_basel        (build the glossary KB)
+·   3. ais_ingest_sec_10k                               (ingest into AIStudio)
+· Then query it in the AIStudio UI, or benchmark with ais_bench --corpus sec_10k.
 
 ---
 
@@ -182,7 +185,11 @@ Options:
   --no-inventory    Skip the *_full_scope write-back (throwaway/test runs)
 
 · Source: filings.xbrl.org (XBRL International public ESEF repository)
-· Next step: create corpus 'esef_banks' in the UI, then ingest via Upload
+· Next steps (all in the Terminal — see TUTORIAL Module 3):
+·   1. ais_import_entity_kb --corpus esef_banks --apply   (build the entity KB)
+·   2. ais_import_glossary_kb --source bis_basel          (build the glossary KB)
+·   3. ais_ingest_esef                                    (ingest into AIStudio)
+· Then query it in the AIStudio UI, or benchmark with ais_bench --corpus esef_banks.
 
 ---
 
