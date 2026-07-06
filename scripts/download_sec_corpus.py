@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 AIStudio — SEC 10-K Corpus Downloader
-Version 1.7.2
+Version 1.7.3
 
-VERSION = "1.7.2"  # authoritative version — read by deploy_ops extract_version
+VERSION = "1.7.3"  # authoritative version — read by deploy_ops extract_version
 
 Downloads 10-K annual filings from SEC EDGAR. Membership is no longer hardcoded:
 the firm set comes from a scope file (default sec_10k_full_scope.yaml), or a single
@@ -751,7 +751,13 @@ def main() -> None:
             _rel = inv_path
         print(f"   · Inventory: {_rel}  (+{n_added} new, {n_touched} updated)")
 
-    print("\nTo ingest these files into AIStudio, run:\n   ais_ingest_sec_10k")
+    print(
+        "\nNext steps (all in the Terminal — see TUTORIAL Module 2):"
+        "\n   1. ais_import_entity_kb --corpus sec_10k --apply    (build the entity KB)"
+        "\n   2. ais_import_glossary_kb --source bis_basel         (build the glossary KB)"
+        "\n   3. ais_ingest_sec_10k                                (ingest into AIStudio)"
+        "\nThen query the corpus in the AIStudio UI, or benchmark it with ais_bench --corpus sec_10k."
+    )
 
 
 if __name__ == "__main__":

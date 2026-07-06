@@ -1,6 +1,10 @@
 #!/usr/bin/env zsh
 # ais_download_esef.sh — Download ESEF iXBRL annual reports from filings.xbrl.org
-# Version: 1.5.1
+# Version: 1.5.2
+# v1.5.2 (2026-07-05): A17 — --help "next step" said "create corpus in the UI, then ingest via
+#   Upload", which contradicted the actual TUTORIAL Module 3 flow (all Terminal) and the SEC twin.
+#   ais_ingest_esef builds the corpus directly from uploads/, so the real next step is the
+#   Terminal chain: ais_import_entity_kb → ais_import_glossary_kb → ais_ingest_esef.
 # v1.1.0 (2026-06-10): Ported to the download_esef_corpus.py 1.5.0 architecture. Added a
 #   dynamic backing-version banner (greps the .py `Version:` line, mirrors the SEC wrapper)
 #   + a --version const + the source guard. Flag surface is now resolver-driven: the script
@@ -13,7 +17,7 @@
 SCRIPT_DIR="${0:A:h}"
 HELP_FILE="$SCRIPT_DIR/ais_command_help.txt"
 SCRIPT_NAME="ais_download_esef"
-VERSION="1.5.1"
+VERSION="1.5.2"
 
 _show_help() {
     if [[ -f "$HELP_FILE" ]]; then
@@ -35,7 +39,8 @@ _show_help() {
         echo ""
         echo "- Streams the primary XHTML report per firm (~50-200MB each) with a live progress bar."
         echo "- Source: filings.xbrl.org (XBRL International public ESEF repository)."
-        echo "- Next step: create corpus 'esef_banks' in the UI, then ingest via Upload."
+        echo "- Next step (in the Terminal): ais_import_entity_kb --corpus esef_banks --apply,"
+        echo "  then ais_import_glossary_kb --source bis_basel, then ais_ingest_esef. See TUTORIAL Module 3."
     fi
 }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 download_esef_corpus.py — Download ESEF iXBRL annual reports from filings.xbrl.org
-Version: 1.5.1
+Version: 1.5.2
 
 Membership is no longer a bespoke loader: the firm set comes from the corpus scope via
 the shared _scope_common_ops resolver (the SAME resolver the SEC downloader, ingest, and
@@ -96,7 +96,7 @@ try:
 except ImportError:
     _SSL_CONTEXT = None
 
-VERSION = "1.5.0"
+VERSION = "1.5.2"
 SCRIPT_NAME = "ais_download_esef"
 CORPUS = "esef_banks"
 API_BASE = "https://filings.xbrl.org"
@@ -507,8 +507,11 @@ def main(argv=None) -> int:
         print(f"  Inventory: {rel}  (+{n_added} new, {n_touched} updated)")
 
     print(
-        "\nTo ingest these files into AIStudio: create corpus 'esef_banks' in the UI, "
-        "then Upload the .xhtml files."
+        "\nNext steps (all in the Terminal — see TUTORIAL Module 3):"
+        "\n   1. ais_import_entity_kb --corpus esef_banks --apply    (build the entity KB)"
+        "\n   2. ais_import_glossary_kb --source bis_basel           (build the glossary KB)"
+        "\n   3. ais_ingest_esef                                     (ingest into AIStudio)"
+        "\nThen query the corpus in the AIStudio UI, or benchmark it with ais_bench --corpus esef_banks."
     )
     return 0 if total_fail == 0 else 1
 

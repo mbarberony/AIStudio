@@ -38,6 +38,8 @@ Run via the wrapper (cd repo, venv) or directly:
     python3 scripts/ais_import_entity_kb.py --corpus sec_10k --apply    # build the KB
 
 Changelog
+  1.6.5 — A17: --apply success footer now names the next chain step (glossary_kb, then the
+          corpus-correct ingest command) so the workflow does not dead-end. Terminal-labeled.
   1.6.4 — CLI: the no-`--apply` "Next steps" reminder is now bold-red — the KB is NOT written
            until --apply; makes the dry-run unmistakable (TTY-aware, plain when piped). Also bumped
            the VERSION constant, stuck at 1.6.2 while the changelog/docstring read 1.6.3 (printed version lagged).
@@ -116,7 +118,7 @@ import _kb_common as kb  # shared lib (underscore = not a command; no alias)
 import _scope_common as sc  # shared scope resolver (the full_scope IS the worksheet)
 import yaml
 
-VERSION = "1.6.4"
+VERSION = "1.6.5"
 SCRIPT_NAME = "ais_import_entity_kb"
 
 # iXBRL self-reported-name tags, in priority order (SEC, ESEF, UK GAAP).
@@ -569,6 +571,15 @@ def _build(corpus: str, apply: bool) -> int:
     if unbindable:
         msg += f"; {len(unbindable)} excluded (no identity)"
     print(msg + f". Catalog updated: {kb.CATALOG_PATH.relative_to(kb.REPO)}")
+    # A17: point to the next step in the chain (Terminal). Map corpus → its ingest command.
+    _ingest_cmd = {"sec_10k": "ais_ingest_sec_10k", "esef_banks": "ais_ingest_esef"}.get(
+        corpus, f"ais_ingest_{corpus}"
+    )
+    print(
+        "\nNext steps (in the Terminal):"
+        "\n   1. ais_import_glossary_kb --source bis_basel    (build the glossary KB, if not done)"
+        f"\n   2. {_ingest_cmd}                          (ingest into AIStudio)"
+    )
     return 0
 
 

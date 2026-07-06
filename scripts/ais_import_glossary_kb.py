@@ -23,6 +23,8 @@ sibling library scripts/_kb_common_ops.py (underscore = not a command; no alias,
 install:none — exempt from help-conformance by construction).
 
 Changelog
+  1.0.3 — A17: write-success footer now points to the ingest step (Terminal) so the chain
+          does not dead-end after the glossary build.
   1.0.2 — CLI-output pass: added `--- Preflight` (source recognized + catalog presence)
           and `--- Import` sections; removed the blank-line skips; the version banner is
           now wrapper-only (dropped from runtime output per Manuel).
@@ -46,7 +48,7 @@ import _kb_common as kb  # shared library (underscore = not a command; no alias,
 import yaml
 
 SCRIPT_NAME = "ais_import_glossary_kb"  # F-024: use civilian name (not _ops) in user-visible output
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 # Glossary sources this command knows how to build. bis_basel is live; the other
 # two are registered in the shared SOURCE_ATTRIBUTE_TYPE map but have no handler yet.
@@ -363,6 +365,12 @@ def _cmd_import(source: str, corpus: str, scope: str) -> int:
     kb._update_catalog(source, corpus, scope, len(records), out)
     cli.ok(f"wrote {len(records)} terms → {out.relative_to(kb.REPO)}")
     cli.ok(f"catalog updated → {kb.CATALOG_PATH.relative_to(kb.REPO)}")
+    # A17: point to the next step in the chain (Terminal). Glossary is corpus-agnostic, so name
+    # the ingest command generically — sec_10k → ais_ingest_sec_10k, esef_banks → ais_ingest_esef.
+    print(
+        "\nNext step (in the Terminal): ingest the corpus — ais_ingest_sec_10k or ais_ingest_esef "
+        "(see TUTORIAL Module 2 / 3). Then query it in the AIStudio UI."
+    )
     return 0
 
 
