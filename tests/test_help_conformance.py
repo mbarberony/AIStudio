@@ -412,6 +412,20 @@ def _is_passthrough(script_content: str) -> bool:
     - exec ... "$PYTHON" path/to/foo.py ... "$@"    variable-invoked python script
     - exec "$SCRIPT_DIR/scripts/foo.sh" "$@"        delegated shell script
     """
+    # Guard (AIStudio_1027): a script is only "self-handling" (NOT a pass-through) when it
+    # BOTH parses its own domain flags AND does not forward "$@" to Python. A script that
+    # peeks at an arg for routing (e.g. ais_bench reads --corpus/--batch) but still ends in
+    # `python3 backing.py "$@"` IS a pass-through — its flag surface lives in argparse.
+    # Only a script that consumes its flags in-shell and exits without forwarding "$@"
+    # (e.g. ais_update_help_ops --meta-only) owns its flags. Termination beats flag-presence.
+    _forwards = bool(
+        _re.search(r'python3[^\n]*"\$@"', script_content)
+        or _re.search(r'"?\$\{?PYTHON\}?"?[^\n]*"\$@"', script_content)
+    )
+    _domain_flags = {f for f in _extract_script_flags(script_content)
+                     if f not in ("--help", "--version")}
+    if _domain_flags and not _forwards:
+        return False
     return bool(
         _re.search(r'python3.*"\$@"', script_content)
         or _re.search(r'exec.*python3.*"\$@"', script_content)
