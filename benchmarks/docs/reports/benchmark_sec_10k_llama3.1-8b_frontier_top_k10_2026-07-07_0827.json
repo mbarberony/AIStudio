@@ -1,0 +1,945 @@
+{
+  "run_at": "2026-07-07T08:35:52.404856",
+  "config": {
+    "corpus": "sec_10k",
+    "scope": null,
+    "scope_firms": [],
+    "top_k": 10,
+    "temperature": 0.3,
+    "alpha": 0.5,
+    "min_score": 0.5,
+    "model": "llama3.1:8b",
+    "api": "http://localhost:8000",
+    "questions_file": "frontier",
+    "questions_sha8": "\u2014"
+  },
+  "summary": {
+    "total": 10,
+    "passed": 7,
+    "avg_latency_sec": 53.01
+  },
+  "results": [
+    {
+      "question": {
+        "id": "ai_disclosure_evolution",
+        "description": "When did JPMorgan and Bank of America first start disclosing AI as a specific risk factor in their 10-K filings, and what language do they use in their most recent filings?",
+        "query": "When did JPMorgan and Bank of America first start disclosing AI as a specific risk factor in their 10-K filings, and what language do they use in their most recent filings?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "AI",
+          "risk",
+          "JPMorgan",
+          "Bank of America"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Bank_of_America"
+        ],
+        "notes": "Emergence-of-AI-risk-language framing; answerable with current corpus.",
+        "topic": "AI Risk & Governance",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 2
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 57.55,
+        "data": {
+          "answer": "JPMorgan Chase first started disclosing AI as a specific risk factor in their 10-K filings in FY2023 [1]. In the most recent filing (FY2025), JPMorgan Chase mentions that the rapid development and deployment of advanced technologies, including generative and agentic AI systems, present a range of risks to its businesses and operations [1].\n\nBank of America first started disclosing AI as a specific risk factor in their 10-K filings in FY2025 [2]. In the most recent filing (FY2025), Bank of America mentions that expanded use of AI, including emerging third-party AI services and autonomous AI agents, may result in increased data risk, unpredictable system interactions, inadequate controls or safeguards, AI failure, or produce unintended operations or consequences [2].\n\nIn their FY2026 10-K filings, both JPMorgan Chase and Bank of America continue to discuss the risks associated with AI. JPMorgan Chase mentions that AI system failures, inappropriate use of AI systems, lack of transparency in AI systems, or inaccurate or biased output from AI systems could disrupt operations, cause erroneous transactions, compromise data privacy, infringe on intellectual property, harm clients and customers, or impair its ability to make sound business decisions [1]. Bank of America mentions that the proliferation of third-party financial data aggregators and emerging technologies, including AI (such as machine learning and generative AI) and robotics, increases their cybersecurity risks and exposure [3].\n\nIn terms of language used in recent filings, JPMorgan Chase uses phrases such as \"rapid development and deployment of advanced technologies, including generative and agentic AI systems\" to describe the risks associated with AI [1]. Bank of America uses phrases such as \"expanded use of AI, including emerging third-party AI services and autonomous AI agents\" to describe the risks associated with AI [2].\n\nIt is worth noting that neither JPMorgan Chase nor Bank of America mentions AI as a specific risk factor in their FY2021 or FY2022 10-K filings.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm::chunk-147",
+              "score": 0.22256166
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2026-02-25.htm::chunk-47",
+              "score": 0.21961324999999998
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm::chunk-101",
+              "score": 0.22087723000000004
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "When did JPMorgan and Bank of America first start disclosing AI as a specific risk factor in their 10-K filings, and what language do they use in their most recent filings? JPMorgan Chase & Co Bank of America Corporation",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "citation_density": 0.3,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2026-02-13.htm",
+          "Bank_of_America_10K_2026-02-25.htm",
+          "Bank_of_America_10K_2025-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "ai_governance_committees_comparison",
+        "description": "Which of JPMorgan, Bank of America, or Citigroup have established dedicated AI governance committees, and how do their oversight structures differ?",
+        "query": "Which of JPMorgan, Bank of America, or Citigroup have established dedicated AI governance committees, and how do their oversight structures differ?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "AI",
+          "governance",
+          "committee",
+          "JPMorgan"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Bank_of_America",
+          "Citigroup"
+        ],
+        "notes": "3-firm comparison. 2026-06-02 audit AMBER \u2014 answers drift to general risk committees; missing 'AI' is a genuine drift signal, not a phrasing artifact. Keyword retained deliberately.",
+        "topic": "AI Risk & Governance",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 3
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 37.91,
+        "data": {
+          "answer": "JPMorgan Chase has established a dedicated AI governance committee, the Board Risk Committee [1]. The Board Risk Committee assists the Board in its oversight of management's responsibility to implement a global risk management framework reasonably designed to identify, assess, and manage the Firm's risks.\n\nBank of America has not explicitly mentioned establishing a dedicated AI governance committee. However, it mentions that the Corporation has policies and procedures to help facilitate oversight of cybersecurity risk [2], which includes the use of AI technologies.\n\nCitigroup has established a Transformation Oversight Committee, but its primary focus is on overseeing the actions of Citi's management to develop and execute a transformation of Citi's risk and control environment pursuant to the FRB and OCC Consent Orders [3]. It does not appear to have a dedicated AI governance committee.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm::chunk-382",
+              "score": 0.26547319999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm::chunk-553",
+              "score": 0.26377740000000005
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm::chunk-327",
+              "score": 0.2410314
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "Which of JPMorgan, Bank of America, or Citigroup have established dedicated AI governance committees, and how do their oversight structures differ? JPMorgan Chase & Co Citigroup Inc Bank of America Corporation",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "citation_density": 0.5,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2022-02-22.htm",
+          "Bank_of_America_10K_2025-02-25.htm",
+          "Citigroup_10K_2026-02-20.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cyber_disclosure_2022_vs_2026",
+        "description": "Compare how JPMorgan and Citigroup describe their cybersecurity risk management framework in their 2022 versus 2026 annual reports. What concrete changes have emerged?",
+        "query": "Compare how JPMorgan and Citigroup describe their cybersecurity risk management framework in their 2022 versus 2026 annual reports. What concrete changes have emerged?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "cybersecurity",
+          "JPMorgan",
+          "Citigroup",
+          "risk management"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Citigroup"
+        ],
+        "notes": "Explicit 2022-vs-2026 temporal contrast across two firms.",
+        "topic": "Cybersecurity",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 2
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 44.52,
+        "data": {
+          "answer": "JPMorgan Chase's description of its cybersecurity risk management framework remains largely consistent between the 2022 and 2026 annual reports. However, there are some subtle changes:\n\n* The 2026 report emphasizes the importance of third-party assessors or auditing firms with industry-recognized expertise on cybersecurity matters to review specific aspects of the Firm's cybersecurity risk management framework, processes, and controls [1].\n* The 2026 report also highlights the role of the Corporate Third-Party Oversight group in managing risks associated with third-party outsourcing, including data loss and business disruptions [1].\n\nIn contrast, Citigroup's description of its cybersecurity risk management framework undergoes significant changes between the 2022 and 2026 annual reports:\n\n* The 2026 report introduces a Cybersecurity Risk Appetite Statement, which is used to measure Citi's performance quarterly [2].\n* The 2026 report also emphasizes the importance of contemporaneous reporting on significant cyber events, including incident response, legal obligations (including disclosure), and outreach and notification to regulators and customers when needed [2].\n* In contrast, the 2022 report focuses on Citi's intelligence-led strategy to protect against, detect, and respond to, and recover from cyber attacks [3].\n\nOverall, while both firms continue to emphasize the importance of cybersecurity risk management, Citigroup's approach appears to have become more formalized and structured in its 2026 annual report.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm::chunk-652",
+              "score": 0.18858313999999998
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm::chunk-614",
+              "score": 0.18638030000000005
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2022-02-28.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2022-02-28.htm::chunk-618",
+              "score": 0.18649039999999995
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "Compare how JPMorgan and Citigroup describe their cybersecurity risk management framework in their 2022 versus 2026 annual reports. What concrete changes have emerged? JPMorgan Chase & Co Citigroup Inc",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "citation_density": 0.429,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2026-02-13.htm",
+          "Citigroup_10K_2026-02-20.htm",
+          "Citigroup_10K_2022-02-28.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "climate_risk_evolution",
+        "description": "How has climate risk disclosure evolved since 2022 at Bank of America and Citigroup? Which firm has the most detailed Net Zero or transition risk framework?",
+        "query": "How has climate risk disclosure evolved since 2022 at Bank of America and Citigroup? Which firm has the most detailed Net Zero or transition risk framework?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "climate",
+          "risk",
+          "Bank of America",
+          "Citigroup",
+          "Net Zero"
+        ],
+        "entity_filter": [
+          "Bank_of_America",
+          "Citigroup"
+        ],
+        "notes": "Two-firm climate evolution since 2022.",
+        "topic": "Climate Risk",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 2
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 48.77,
+        "data": {
+          "answer": "Climate Risk Disclosure Evolution:\n\nBank of America's climate risk disclosure has evolved since 2022. In FY2022, Bank of America publicly announced its commitment to achieve net zero emissions in its financing activities, operations, and supply chain before 2050 [1]. The company also set 2030 emissions targets for its operations and supply chain [2]. However, the disclosure did not provide detailed information on how these goals would be achieved.\n\nIn FY2023, Bank of America created an internal Climate Risk Framework that addresses various global climate-related laws, rules, regulations, and guidance [3]. The framework describes how the Corporation identifies, measures, monitors, and controls climate risk by enhancing existing risk management processes. This indicates a more detailed approach to managing climate risks.\n\nCitigroup's climate risk disclosure has also evolved since 2022. In FY2023, Citigroup continued to enhance its methodologies for quantifying how climate risks could impact individual credit profiles of clients across various sectors [4]. The company developed and embedded sector-specific climate risk assessments in its credit underwriting process for certain sectors identified as higher climate risk.\n\nComparison:\n\nBank of America's Climate Risk Framework is more detailed than Citigroup's approach. Bank of America's framework addresses various global climate-related laws, rules, regulations, and guidance, whereas Citigroup's framework focuses on developing globally consistent principles and approaches for managing climate risk across the Company [5].\n\nNet Zero or Transition Risk Framework:\n\nBank of America has a more detailed Net Zero or transition risk framework than Citigroup. Bank of America's Climate Risk Framework addresses how the Corporation identifies, measures, monitors, and controls climate risk by enhancing existing risk management processes [3]. In contrast, Citigroup's approach focuses on developing globally consistent principles and approaches for managing climate risk across the Company [5].\n\nNote: The above answer is based solely on the provided sources and does not contain any external information or inferences.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2022-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2022-02-22.htm::chunk-581",
+              "score": 0.1966696
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2023-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2023-02-22.htm::chunk-576",
+              "score": 0.19386833999999997
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm::chunk-561",
+              "score": 0.19617766000000003
+            },
+            {
+              "index": 4,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm::chunk-674",
+              "score": 0.16187346000000002
+            },
+            {
+              "index": 5,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm::chunk-624",
+              "score": 0.15669880000000003
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How has climate risk disclosure evolved since 2022 at Bank of America and Citigroup? Which firm has the most detailed Net Zero or transition risk framework? Citigroup Inc Bank of America Corporation",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 5,
+        "citation_density": 0.312,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "Bank_of_America_10K_2022-02-22.htm",
+          "Bank_of_America_10K_2023-02-22.htm",
+          "Bank_of_America_10K_2025-02-25.htm",
+          "Citigroup_10K_2025-02-21.htm",
+          "Citigroup_10K_2026-02-20.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "capital_ratios_trend",
+        "description": "How have CET1 capital ratios and total revenues trended at JPMorgan, Bank of America, and Citigroup from FY2021 through FY2025? Identify any consistent leaders or laggards.",
+        "query": "How have CET1 capital ratios and total revenues trended at JPMorgan, Bank of America, and Citigroup from FY2021 through FY2025? Identify any consistent leaders or laggards.",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CET1",
+          "capital",
+          "JPMorgan",
+          "Bank of America",
+          "revenue"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Bank_of_America",
+          "Citigroup"
+        ],
+        "notes": "The stacked case \u2014 3 firms \u00d7 FY2021-FY2025 \u00d7 quantitative table. Heaviest question (~114s).",
+        "topic": "Capital & Financial Position",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_and_table",
+        "section_count": null,
+        "data_type": "quantitative",
+        "difficulty": null,
+        "entity_count": 3
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 89.95,
+        "data": {
+          "answer": "CET1 capital ratios:\n\n* Citigroup:\n\t+ FY2021: 12.2% [1]\n\t+ FY2022: 13.0% [1]\n\t+ FY2023: 13.4% [2]\n\t+ FY2024: 13.6% [3]\n\t+ FY2025: 13.2% [4]\n* Bank of America:\n\t+ FY2021: Not available\n\t+ FY2022: Not available\n\t+ FY2023: 11.8% [5]\n\t+ FY2024: Not available\n\t+ FY2025: Not available\n* JPMorgan Chase:\n\t+ FY2021: CET1 capital ratio (Basel III Advanced, JPMorgan Chase & Co.): 13.8% [6]\n\t+ FY2022: CET1 capital ratio (Basel III Advanced, JPMorgan Chase & Co.): 15.9% [7]\n\t+ FY2023: CET1 capital ratio (Basel III Advanced, JPMorgan Chase & Co.): 15.3% [8]\n\t+ FY2024: Not available\n\t+ FY2025: Not available\n\nTotal revenues:\n\n* Citigroup:\n\t+ FY2021: Not available\n\t+ FY2022: $19,102 (Services) + $18,649 (Markets) + $4,715 (Banking) = $42,466 [3]\n\t+ FY2023: $19,649 (Services) + $19,836 (Markets) + $6,201 (Banking) = $45,686 [3]\n\t+ FY2024: Not available\n\t+ FY2025: $19,649 (Services) + $19,836 (Markets) + $6,201 (Banking) = $45,686 [3]\n* Bank of America:\n\t+ FY2021: Not available\n\t+ FY2022: Not available\n\t+ FY2023: Not available\n\t+ FY2024: $272,400 (Total common shareholders' equity) + $263,249 (Total common shareholders' equity) = $535,649 [9]\n\t+ FY2025: $277,251 (Total common shareholders' equity) + $270,804 (Total common shareholders' equity) = $548,055 [10]\n* JPMorgan Chase:\n\t+ FY2021: Not available\n\t+ FY2022: Not available\n\t+ FY2023: Not available\n\t+ FY2024: Not available\n\t+ FY2025: Not available\n\nConsistent leaders or laggards:\n\n* Citigroup's CET1 capital ratio has been consistently above 13% from FY2021 to FY2025.\n* Bank of America's CET1 capital ratio was below the required regulatory minimum in FY2022, but increased to 11.8% in FY2023 and remained relatively stable in FY2024 and FY2025.\n* JPMorgan Chase's CET1 capital ratio has been consistently above 13% from FY2021 to FY2023, but decreased to 15.3% in FY2023.\n\nNote: The total revenues for Citigroup are only available for FY2022 and FY2023, as the other years do not provide this information.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2023-02-27.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2023-02-27.htm::chunk-15",
+              "score": 0.1844958
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2024-02-23.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2024-02-23.htm::chunk-183",
+              "score": 0.19258904
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm::chunk-64",
+              "score": 0.1947856
+            },
+            {
+              "index": 4,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm::chunk-29",
+              "score": 0.18009925000000004
+            },
+            {
+              "index": 5,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2024-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2024-02-20.htm::chunk-346",
+              "score": 0.24612880000000004
+            },
+            {
+              "index": 6,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm::chunk-1379",
+              "score": 0.19911784
+            },
+            {
+              "index": 7,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2023-02-21.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2023-02-21.htm::chunk-1387",
+              "score": 0.19940429999999998
+            },
+            {
+              "index": 8,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2024-02-16.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2024-02-16.htm::chunk-1458",
+              "score": 0.19930493999999999
+            },
+            {
+              "index": 9,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm::chunk-348",
+              "score": 0.2475927
+            },
+            {
+              "index": 10,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2026-02-25.htm::chunk-341",
+              "score": 0.24404499999999996
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How have CET1 capital ratios and total revenues trended at JPMorgan, Bank of America, and Citigroup from FY2021 through FY2025? Identify any consistent leaders or laggards. JPMorgan Chase & Co Citigroup Inc Bank of America Corporation",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 10,
+        "citation_density": 0.556,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "Citigroup_10K_2023-02-27.htm",
+          "Citigroup_10K_2024-02-23.htm",
+          "Citigroup_10K_2025-02-21.htm",
+          "Citigroup_10K_2026-02-20.htm",
+          "Bank_of_America_10K_2024-02-20.htm",
+          "JPMorgan_Chase_10K_2022-02-22.htm",
+          "JPMorgan_Chase_10K_2023-02-21.htm",
+          "JPMorgan_Chase_10K_2024-02-16.htm",
+          "Bank_of_America_10K_2025-02-25.htm",
+          "Bank_of_America_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "digital_banking_strategy",
+        "description": "How have JPMorgan, Bank of America, and Citigroup described their digital banking strategy and technology investment priorities over the last 5 years? What major themes emerge?",
+        "query": "How have JPMorgan, Bank of America, and Citigroup described their digital banking strategy and technology investment priorities over the last 5 years? What major themes emerge?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "digital",
+          "technology",
+          "JPMorgan",
+          "Bank of America",
+          "Citigroup"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Bank_of_America",
+          "Citigroup"
+        ],
+        "notes": "Three-firm digital strategy over a relative 5-year window.",
+        "topic": "Digital Banking",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 3
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 85.5,
+        "data": {
+          "answer": "JPMorgan Chase has described its digital banking strategy and technology investment priorities over the last 5 years. According to their filings:\n\n* In FY2021 [1], JPMorgan Chase noted that new technologies have required and could require them to spend more to modify or adapt their products to attract and retain clients and customers or to match products and services offered by its competitors, including technology companies.\n* In FY2022 [2], they stated that technological advances and the growth of e-commerce have made it possible for non-depository institutions to offer products and services that traditionally were banking products. They also noted that new technologies may be used by customers, or breached or infiltrated by third parties, in unexpected ways.\n* In FY2023 [3], JPMorgan Chase mentioned that ongoing or increased competition may put pressure on the pricing for their products and services or may cause them to lose market share, particularly with respect to traditional banking products.\n* In FY2024 [2], they noted that new technologies have required and could require them to spend more to modify or adapt their products to attract and retain clients and customers or to match products and services offered by its competitors, including technology companies.\n* In FY2025 [4], JPMorgan Chase stated that the use of new technologies, such as cryptocurrencies and other applications using secure distributed ledgers, may not require intermediation. They also noted that failure to keep pace with rapidly changing technological advances could result in a loss of clients and market share.\n\nBank of America has described its digital banking strategy and technology investment priorities over the last 5 years. According to their filings:\n\n* In FY2021 [5], Bank of America stated that the widespread adoption and rapid evolution of new technologies, including analytic capabilities, self-service digital trading platforms, and automated trading markets, internet services, and digital assets, create additional strategic risks.\n* In FY2023 [6], they noted that the widespread adoption and rapid evolution of emerging technologies, including analytic capabilities, AI (including machine learning and generative AI), automated decision-making, self-service digital trading platforms, and automated trading markets, internet services, and digital assets, as well as payment, clearing, and settlement processes that use distributed ledger technology, create additional strategic risks.\n* In FY2024 [6], Bank of America stated that the widespread adoption and rapid evolution of emerging technologies, including analytic capabilities, AI (including machine learning and generative AI), automated decision-making, self-service digital trading platforms, and automated trading markets, internet services, and digital assets, as well as payment, clearing, and settlement processes that use distributed ledger technology, create additional strategic risks.\n* In FY2025 [6], they noted that the widespread adoption and rapid evolution of emerging technologies, including analytic capabilities, AI (including machine learning and generative AI), automated decision-making, self-service digital trading platforms, and automated trading markets, internet services, and digital assets, as well as payment, clearing, and settlement processes that use distributed ledger technology, create additional strategic risks.\n\nCitigroup has described its digital banking strategy and technology investment priorities over the last 5 years. According to their filings:\n\n* In FY2021 [7], Citigroup stated that emerging technologies have the potential to intensify competition and accelerate disruption in the financial services industry.\n* In FY2022 [8], they noted that non-traditional financial services firms, such as financial technology companies, have begun to offer services traditionally provided by financial institutions, and have sought bank charters to provide these services.\n* In FY2023 [9], Citigroup stated that emerging technologies have the potential to accelerate disruption and intensify competition in the financial services industry.\n* In FY2025 [10], they noted that increased competition and emerging technologies could require Citi to change or adapt its products and services, as well as invest in and develop related infrastructure.\n\nMajor themes that emerge from these descriptions include:\n\n* The increasing importance of digital technologies and their potential to disrupt traditional banking business models.\n* The need for financial institutions to adapt quickly to changing technological advances and consumer preferences.\n* The emergence of new competitors, including non-traditional financial services firms, which are using technology to offer innovative products and services.\n* The risk that payments processing and other products and services could be significantly disrupted by the use of new technologies, such as cryptocurrencies and other applications using secure distributed ledgers.\n* The need for financial institutions to invest in emerging technologies, such as AI and blockchain, to remain competitive.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2022-02-22.htm::chunk-150",
+              "score": 0.22914504999999996
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2025-02-14.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2025-02-14.htm::chunk-156",
+              "score": 0.21794709999999995
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2024-02-16.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2024-02-16.htm::chunk-156",
+              "score": 0.22907823000000005
+            },
+            {
+              "index": 4,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm::chunk-142",
+              "score": 0.23116314000000004
+            },
+            {
+              "index": 5,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2022-02-22.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2022-02-22.htm::chunk-162",
+              "score": 0.26112199999999997
+            },
+            {
+              "index": 6,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Bank_of_America_10K_2025-02-25.htm::chunk-152",
+              "score": 0.26517975000000005
+            },
+            {
+              "index": 7,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2022-02-28.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2022-02-28.htm::chunk-260",
+              "score": 0.2421624
+            },
+            {
+              "index": 8,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2023-02-27.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2023-02-27.htm::chunk-232",
+              "score": 0.24230903000000004
+            },
+            {
+              "index": 9,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2026-02-20.htm::chunk-253",
+              "score": 0.24211013000000003
+            },
+            {
+              "index": 10,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2023-02-21.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2023-02-21.htm::chunk-148",
+              "score": 0.23867930000000004
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How have JPMorgan, Bank of America, and Citigroup described their digital banking strategy and technology investment priorities over the last 5 years? What major themes emerge? JPMorgan Chase & Co Citigroup Inc Bank of America Corporation",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 10,
+        "citation_density": 0.435,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2022-02-22.htm",
+          "JPMorgan_Chase_10K_2025-02-14.htm",
+          "JPMorgan_Chase_10K_2024-02-16.htm",
+          "JPMorgan_Chase_10K_2026-02-13.htm",
+          "Bank_of_America_10K_2022-02-22.htm",
+          "Bank_of_America_10K_2025-02-25.htm",
+          "Citigroup_10K_2022-02-28.htm",
+          "Citigroup_10K_2023-02-27.htm",
+          "Citigroup_10K_2026-02-20.htm",
+          "JPMorgan_Chase_10K_2023-02-21.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "regulatory_burden_evolution",
+        "description": "What new regulatory burdens and capital rules have JPMorgan and Citigroup disclosed in their 2025 and 2026 filings compared to 2022? Are there themes both firms agree are most challenging?",
+        "query": "What new regulatory burdens and capital rules have JPMorgan and Citigroup disclosed in their 2025 and 2026 filings compared to 2022? Are there themes both firms agree are most challenging?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "regulatory",
+          "capital",
+          "JPMorgan",
+          "Citigroup"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase",
+          "Citigroup"
+        ],
+        "notes": "'compliance' keyword removed 2026-05-30 (AIStudio_850) as a false negative.",
+        "topic": "Regulatory Environment",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "mixed",
+        "difficulty": null,
+        "entity_count": 2
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 65.52,
+        "data": {
+          "answer": "JPMorgan Chase disclosed that it is monitoring developments and potential impacts related to an updated proposal to amend the U.S. risk-based capital framework, which may be issued in early 2026 [1]. \n\nCitigroup disclosed that it faces regulatory and legislative uncertainties and changes, including potential changes to various aspects of the U.S. regulatory capital framework and requirements applicable to Citi, including significant revisions to the U.S. Basel III rules [2].\n\nJPMorgan Chase did not disclose new regulatory burdens or capital rules in its 2025 filing compared to 2022. However, it noted that the Federal Reserve's Vice Chair for Supervision indicated that U.S. banking regulators may issue an updated proposal to amend the U.S. risk-based capital framework in early 2026 [1].\n\nCitigroup disclosed that it is required to interpret and implement extensive and frequently changing regulatory and legislative requirements in the U.S. and other jurisdictions, which may overlap or conflict across jurisdictions, resulting in substantial compliance, regulatory, and other risks and costs [3]. \n\nJPMorgan Chase did not disclose new regulatory burdens or capital rules in its 2025 filing compared to 2022. However, it noted that regulators have finalized the rules implementing their Basel III frameworks in the EU and U.K., with market risk aspects expected to be delayed until January 1, 2027 [1].\n\nCitigroup disclosed that it is continually required to interpret and implement extensive and frequently changing regulatory and legislative requirements in the U.S. and other jurisdictions, which may overlap or conflict across jurisdictions, resulting in substantial compliance, regulatory, and other risks and costs [3]. \n\nJPMorgan Chase did not disclose new regulatory burdens or capital rules in its 2025 filing compared to 2022. However, it noted that regulators have finalized the rules implementing their Basel III frameworks in the EU and U.K., with market risk aspects expected to be delayed until January 1, 2027 [1].\n\nThere is no information on themes both firms agree are most challenging.\n\nJPMorgan Chase did not disclose new regulatory burdens or capital rules in its 2025 filing compared to 2022. However, it noted that regulators have finalized the rules implementing their Basel III frameworks in the EU and U.K., with market risk aspects expected to be delayed until January 1, 2027 [1].\n\nCitigroup disclosed that it is required to interpret and implement extensive and frequently changing regulatory and legislative requirements in the U.S. and other jurisdictions, which may overlap or conflict across jurisdictions, resulting in substantial compliance, regulatory, and other risks and costs [3].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2026-02-13.htm::chunk-16",
+              "score": 0.19185439999999998
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2024-02-23.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2024-02-23.htm::chunk-250",
+              "score": 0.19029534000000004
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Citigroup_10K_2025-02-21.htm::chunk-328",
+              "score": 0.17132616
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "What new regulatory burdens and capital rules have JPMorgan and Citigroup disclosed in their 2025 and 2026 filings compared to 2022? Are there themes both firms agree are most challenging? JPMorgan Chase & Co Citigroup Inc",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "AMBER",
+        "score": 0.85,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "citation_density": 0.083,
+        "low_citation_density": true,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2026-02-13.htm",
+          "Citigroup_10K_2024-02-23.htm",
+          "Citigroup_10K_2025-02-21.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cyber_goldman",
+        "description": "How does Goldman Sachs describe its cybersecurity risk-management framework and board-level oversight in its most recent 10-K?",
+        "query": "How does Goldman Sachs describe its cybersecurity risk-management framework and board-level oversight in its most recent 10-K?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "cybersecurity",
+          "Goldman Sachs",
+          "risk management",
+          "oversight"
+        ],
+        "entity_filter": [
+          "Goldman_Sachs"
+        ],
+        "notes": "L1 baseline. 2026-06-02 audit GREEN \u2014 Goldman-only, substantive. Token verified on Beast.",
+        "topic": "Ladder L1 \u2014 single-firm prose baseline",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "qualitative",
+        "difficulty": null,
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 33.39,
+        "data": {
+          "answer": "Goldman Sachs describes its cybersecurity risk-management framework as including critical components of its risk management framework, such as training and education, identity and access management, application and software security, infrastructure security, mobile security, data security, cloud computing, and technology operations [1]. The firm's process for managing cybersecurity risk also includes periodic review and modification of the Cybersecurity Program to respond to changing threats and conditions [2].\n\nThe Board oversees Goldman Sachs' risk management policies and practices, including cybersecurity risks, through its committees, such as the Risk Committee and Technology Risk Subcommittee [3]. The chief risk officer, chief information officer, and chief technology officer periodically brief the Board on operational and technology risks, including cybersecurity risks [4]. The CISO also provides regular briefings to senior management on a range of cybersecurity-related topics [4].\n\nGoldman Sachs has emphasized phishing and cybersecurity training for employees in response to AI-enabled fraud and ransomware attacks [1,3]. Despite these efforts, the firm cannot eliminate all cybersecurity risks or provide assurances that it has not had occurrences of undetected cybersecurity incidents [1,3].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/GOLDMAN_SACHS_GROUP_INC_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/GOLDMAN_SACHS_GROUP_INC_10K_2026-02-25.htm::chunk-646",
+              "score": 0.11413306000000001
+            },
+            {
+              "index": 2,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2024-02-23.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2024-02-23.htm::chunk-621",
+              "score": 0.12677669999999996
+            },
+            {
+              "index": 3,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2025-02-27.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2025-02-27.htm::chunk-626",
+              "score": 0.1261021
+            },
+            {
+              "index": 4,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2026-02-25.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/Goldman_Sachs_10K_2026-02-25.htm::chunk-646",
+              "score": 0.11413306000000001
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How does Goldman Sachs describe its cybersecurity risk-management framework and board-level oversight in its most recent 10-K? The Goldman Sachs Group, Inc.",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": false,
+        "rating": "AMBER",
+        "score": 0.85,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "oversight"
+        ],
+        "citation_count": 4,
+        "citation_density": 0.571,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "GOLDMAN_SACHS_GROUP_INC_10K_2026-02-25.htm",
+          "Goldman_Sachs_10K_2024-02-23.htm",
+          "Goldman_Sachs_10K_2025-02-27.htm",
+          "Goldman_Sachs_10K_2026-02-25.htm"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "revenue_sources_blackrock",
+        "description": "What does BlackRock identify as its principal sources of revenue in its most recent 10-K?",
+        "query": "What does BlackRock identify as its principal sources of revenue in its most recent 10-K?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "BlackRock",
+          "revenue",
+          "investment advisory",
+          "fees"
+        ],
+        "entity_filter": [
+          "BlackRock"
+        ],
+        "notes": "L1 baseline. 2026-06-02 audit GREEN \u2014 BlackRock-only. Token verified on Beast.",
+        "topic": "Ladder L1 \u2014 single-firm prose baseline",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": null,
+        "data_type": "mixed",
+        "difficulty": null,
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 24.77,
+        "data": {
+          "answer": "BlackRock does not appear in the provided sources. The question asks about BlackRock's principal sources of revenue in its most recent 10-K, but none of the sources pertain to BlackRock.",
+          "citations": null,
+          "has_citations": false,
+          "retrieval_query": "What does BlackRock identify as its principal sources of revenue in its most recent 10-K?",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": false,
+        "rating": "RED",
+        "score": 0.0,
+        "keyword_pass": false,
+        "citation_pass": false,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "investment advisory",
+          "fees"
+        ],
+        "citation_count": 0,
+        "citation_density": 0.0,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": []
+      }
+    },
+    {
+      "question": {
+        "id": "net_revenue_jpm",
+        "description": "What was JPMorgan Chase's total net revenue for fiscal 2024 as reported in its consolidated statements of income?",
+        "query": "What was JPMorgan Chase's total net revenue for fiscal 2024 as reported in its consolidated statements of income?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "JPMorgan",
+          "net revenue"
+        ],
+        "entity_filter": [
+          "JPMorgan_Chase"
+        ],
+        "notes": "L2 \u2014 the table-location \u2202. 2026-06-02 audit AMBER\u2192fixed \u2014 pulled $177.6B FY2024 from the income-statement table; keyword 'total revenue' \u2192 'net revenue' (answer says \"total net revenue\"). derived=false (figure is stated, not computed \u2014 contrast L7).",
+        "topic": "Ladder L2 \u2014 single-firm table-located fact",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "table_only",
+        "section_count": null,
+        "data_type": "quantitative",
+        "difficulty": null,
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 42.25,
+        "data": {
+          "answer": "Total net revenue for fiscal 2024 was $177.6 billion [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2025-02-14.htm",
+              "page": null,
+              "chunk_id": "/Users/suzannebarbero/Developer/AIStudio/data/corpora/sec_10k/uploads/JPMorgan_Chase_10K_2025-02-14.htm::chunk-238",
+              "score": 0.16266860000000005
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "What was JPMorgan Chase's total net revenue for fiscal 2024 as reported in its consolidated statements of income? JPMorgan Chase & Co",
+          "model_used": "llama3.1:8b",
+          "system_prompt_tier": "small"
+        }
+      },
+      "eval": {
+        "pass": false,
+        "rating": "AMBER",
+        "score": 0.85,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "JPMorgan"
+        ],
+        "citation_count": 1,
+        "citation_density": 0.5,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "JPMorgan_Chase_10K_2025-02-14.htm"
+        ]
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-07-03*
+*Version: Beta | Updated: 2026-07-07*
 
 ---
 
@@ -75,31 +75,27 @@ ais_bench --help
 
 **How do I upgrade AIStudio when a new version is released?**
 
-Pull the latest code from GitHub:
+Pull the latest code, re-run the installer, reload your shell, then restart:
 ```bash
 cd ~/Developer/AIStudio && git pull
-```
-
-Then update Python dependencies in case new packages were added:
-```bash
-source .venv/bin/activate && pip install -r requirements.txt
-```
-
-Then restart:
-```bash
+./ais_install
+source ~/.zshrc
 ais_start
 ```
+
+Why these four steps (not just `git pull` + `pip install`):
+- `git pull` fetches the new code.
+- `./ais_install` re-links any **new** `ais_*` commands into your shell **and** syncs Python dependencies in one pass. A bare `pip install -r requirements.txt` updates packages but leaves newly added commands unavailable — an upgrade can ship new commands.
+- `source ~/.zshrc` reloads your shell so the refreshed aliases take effect. Without it, a newly added or changed command returns `command not found` until you open a new Terminal window.
+- `ais_start` boots the backend on the updated code.
 
 **Does upgrading delete my corpus data?**
 No. Your corpus data lives in `~/qdrant_storage/` on disk — completely separate from the AIStudio codebase. It persists across upgrades, restarts, and reboots. You never need to re-ingest after a routine upgrade.
 
 **When would I need to re-ingest after an upgrade?**
-Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, re-ingest from the UI: open the corpus, **Delete Corpus**, recreate it with the same name, and re-upload your files with **Add** — AIStudio rebuilds it cleanly in one pass.
-There is no **Force** button in the UI — that Delete-and-recreate flow *is* the clean rebuild, and it's all you need. (A `--force` flag exists only for operators re-ingesting from the terminal; it is not part of the UI workflow.)
+Only if the release notes say the chunk format changed. This is rare and always announced. When it happens, re-ingest from the UI: open the corpus, **Delete Corpus**, recreate it with the same name, and re-upload your files with **Add** — AIStudio rebuilds it cleanly in one pass. There is no **Force** button in the UI — that Delete-and-recreate flow *is* the clean rebuild.
 
 **The demo corpus re-ingests automatically** on first `ais_start` after an upgrade if needed.
-
----
 
 ## Corpus Management
 
