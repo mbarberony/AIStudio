@@ -1,6 +1,6 @@
 # AIStudio — Product Roadmap
 
-*Version: 1.1.0 | Updated: 2026-05-22*
+*Version: 1.2.0 | Updated: 2026-07-12*
 
 > A product-level view of where AIStudio is, where it is going, and why.
 
@@ -48,15 +48,28 @@ explicitly documented as a known limitation.
 - Conversation memory within a session, persisted across page refresh
 - Per-corpus routing guidance to steer retrieval toward the right documents
 - Hybrid retrieval (M2.A) — Retrieval Mix slider blends vector semantic search with BM25 keyword matching; tunable per query
-- Benchmark harness with YAML question files and timestamped pass/fail reports
-- REST API exposing all capabilities for scripted access
-- Full documentation: QUICKSTART, HOWTO, architecture decisions, benchmark guide
+- Firm isolation with grounded no-answer — a question about one firm is answered only from that firm's documents; when the corpus doesn't cover a firm, AIStudio says so (and names what it does cover) rather than answering from the wrong company
+- Memory-fit guard — models are checked against the machine's available RAM before use; the UI's model picker shows a fit verdict and disables a model too large to run, so an oversized model is caught rather than silently loaded-then-hung
+- Benchmark harness with YAML question files and timestamped pass/fail reports — memory-aware, with `--fit-policy` (skip / downshift / force) and a `--dry-run` preview so a run on a memory-constrained Mac won't stall on an oversized model
+- REST API exposing all capabilities for scripted access, documented for integrators (including MCP builders)
+- Full documentation: QUICKSTART, HOWTO, TUTORIAL, architecture decisions, benchmark guide
 
 **Known limitations at Beta:**
 - Apple Silicon only (Intel Mac, Windows, Linux: post-Beta)
 - Single-user, local only (multi-user: future)
 - Source Dive (click citation → scroll to exact page in PDF viewer): post-Beta
 - Corpus metadata entered manually via YAML file (UI entry: post-Beta)
+
+---
+
+## Near-Term Quality Work — In Progress
+
+Retrieval-quality improvements underway within Beta — not new milestones, but the
+work that most improves answer accuracy on dense financial corpora:
+
+- **Entity name-resolution** — bind every ingested filing to a canonical firm identity (keyed on the filer's registration number, not the filename) so a firm is recognized and isolated regardless of how a document names itself.
+- **Table-aware chunking** — multi-cell numeric tables (e.g. a metric × firm × year grid) retrieve poorly today and can be misread by smaller models; chunking that preserves table structure keeps those figures attributable.
+- **Per-entity retrieval floor** — guarantee thinly-represented firms (a firm with only one or two filings) still rank into the retrieved set under blended retrieval, so a sparse firm isn't crowded out.
 
 ---
 

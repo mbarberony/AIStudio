@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.8.1
+# Version: 1.9.0
+# Changelog: 1.9.0 — AIStudio_1019: export PYTHONUNBUFFERED=1 (right after the source guard) so a
+#   `... | tee report.md` run streams live per-question progress without the caller prepending
+#   PYTHONUNBUFFERED=1 every time. Passthrough behavior otherwise unchanged.
 # Changelog: 1.8.1 — Command Dev STD §7: remove the wrapper's bold [ais_bench v… ] header.
 #   bench.py now prints the single identity header (it was a double-header: wrapper v1.8.0
 #   then bench.py v2.8.x). Fix stale comment path benchmarks/ → benchmarks/batch/.
@@ -23,7 +26,10 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.8.1"
+# AIStudio_1019: line-buffer Python so a tee'd long run shows live progress. Harmless if already set.
+export PYTHONUNBUFFERED=1
+
+VERSION="1.9.0"
 
 SCRIPT_NAME="ais_bench"
 REPO="${0:A:h}"

@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-07-05*
+*Version: Beta | Updated: 2026-07-12*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -238,6 +238,8 @@ AIStudio uses two kinds of model that do completely different jobs.
 - **64 GB or more** — `gemma3:27b` is excellent; pull `llama3.1:70b` or `mixtral:8x7b` only if you want the largest Meta / Mistral options.
 
 > **Don't run a "large" model on too little memory.** `gemma3:27b` and `mixtral:8x7b` want 32 GB+; **never** pull `llama3.1:70b` under 64 GB — it will download but won't fit in memory, and your Mac will become unresponsive when you try to use it.
+>
+> **AIStudio guards against this for you.** The model picker checks each model against your machine's available memory: one that won't fit is marked and **disabled**, with a one-click recommendation of the largest model that *does* fit, and a query against a too-large model is refused with a clear message rather than left to silently load and hang. (The same check runs in the API and the benchmark, so a `curl` or `ais_bench` call gets the same protection — see `ais_bench --fit-policy`.)
 
 **Step 1 — Download the indexing model (required for everyone):**
 ```bash
@@ -257,6 +259,8 @@ ollama pull gemma3:27b
 Prefer a lighter model or another family? Small: `ollama pull gemma3:4b` (lighter, faster) or `ollama pull mistral:7b`. Large: `ollama pull llama3.1:70b` or `ollama pull mixtral:8x7b`.
 
 > **You'll switch to `gemma3:27b` later — on purpose.** The demo corpus runs beautifully on the default `llama3.1:8b`. When you reach the SEC 10-K corpus in the [Tutorial](TUTORIAL.md), it prompts you to switch to `gemma3:27b` in the model dropdown — the heavier corpus rewards the larger model (it's the model behind AIStudio's top benchmark). Fast first impression now; full power when it counts.
+
+> **The same rule applies when you benchmark.** `ais_bench` (Module 5 of the [Tutorial](TUTORIAL.md)) runs whatever model you point it at, so on a memory-constrained Mac benchmark with a model that *fits* — `gemma3:12b` on a 24–32 GB machine — rather than the 27B the published suite uses, which needs 32 GB+. `ais_bench --fit-policy downshift` auto-picks the largest fitting model for you; leave the flag off and a benchmark on a too-large model **stops and asks first** — it never silently hangs your Mac.
 
 > **Download times** depend on your internet speed (check yours at [fast.com](https://fast.com)). On a 100 Mbps connection, expect about 5 minutes for `llama3.1:8b` (or ~2 minutes for the lighter `gemma3:4b`) and 10 minutes for `gemma3:27b`. The estimate shown during download may fluctuate — starting at hours, then dropping to minutes.
 
@@ -419,7 +423,7 @@ Expected: `{"status": "ok"}`. If you get an error or no response instead, the ba
 
 When AIStudio opens in your browser, you'll see two main areas:
 
-**On the left** — the control sidebar. Everything that shapes a query lives here: the **corpus selector** at the top (choose which document collection to query — the **demo** corpus is already loaded, original documents spanning 2003–2026 covering enterprise architecture, IT strategy, financial services, and agentic AI), the **Model** dropdown, and the **query settings** (Top K, Temperature, Timeout, Score Threshold, Retrieval Mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
+**On the left** — the control sidebar. Everything that shapes a query lives here: the **corpus selector** at the top (choose which document collection to query — the **demo** corpus is already loaded, original documents spanning 2003–2026 covering enterprise architecture, IT strategy, financial services, and agentic AI), the **Model** dropdown, and the **query settings** (Top K, Temperature, Timeout, Relevance Threshold, Retrieval Mix). See **[Annex 3 — Tuning Parameters](#annex-3--tuning-parameters)** for what each control does.
 
 **On the right** — the chat area. Type a question, get a cited answer. References below each answer show exactly which document and page the answer came from. Click **Source Dive ↗** to open the source PDF at the cited page.
 
@@ -601,10 +605,10 @@ The settings sidebar (Step 11) controls retrieval and generation. Defaults are t
 | Top K | 10 | Chunks retrieved per query. Higher = more context, slightly slower. **10 is the default** — the demo has small documents (as few as 20 chunks) that only surface reliably at K=10, and the SEC corpus needs K=10 for cross-firm multi-source queries. |
 | Temperature | 0.3 | LLM creativity. Lower = more factual. Keep at 0.3 for document Q&A. |
 | Retrieval Mix | 0.5 | Blends keyword matching with semantic understanding. Drag left toward **Literal** (exact word matching) or right toward **Conceptual** (related meaning even when exact terms differ). Center (0.5) works well for most queries; try full Conceptual for thematic questions, center-to-Literal for specific entity or term lookups. |
-| Score Threshold | 0.3–0.5 | Filters out retrieved chunks that scored too low to be useful. Low-score chunks cause hedged or incorrect answers. Set lower (0.3) for corpora with small documents; higher (0.5) for large uniform corpora like SEC 10-K. Configured per-corpus — the demo uses 0.3, sec_10k uses 0.5. |
+| Relevance Threshold | 0.3–0.5 | Filters out retrieved chunks that scored too low to be useful. Low-score chunks cause hedged or incorrect answers. Set lower (0.3) for corpora with small documents; higher (0.5) for large uniform corpora like SEC 10-K. Configured per-corpus — the demo uses 0.3, sec_10k uses 0.5. |
 | Timeout (s) | 300 | How long AIStudio waits for the model before giving up. The default is deliberately generous — it covers slow, large models (a 70B answer can take ~140–170s; cutting it off mid-generation wastes the whole run). Raise it only if you switch to a very large model and hit timeouts; there's rarely a reason to lower it. Configured per-corpus, overridable per-query in the left panel. |
 
-Each of Top K, Score Threshold, and Timeout resolves the same way: the value in the left panel wins; leave it blank and AIStudio uses the corpus's saved default; if the corpus has none, it falls back to the system default. So you can tune once per corpus (in **Edit Corpus**) or ad-hoc per query.
+Each of Top K, Relevance Threshold, and Timeout resolves the same way: the value in the left panel wins; leave it blank and AIStudio uses the corpus's saved default; if the corpus has none, it falls back to the system default. So you can tune once per corpus (in **Edit Corpus**) or ad-hoc per query.
 
 > For more on query settings, see [HOWTO.md](HOWTO.md).
 

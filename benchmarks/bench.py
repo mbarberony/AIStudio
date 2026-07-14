@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Changelog: 2.11.0 — AIStudio_1012: --dry-run. With --batch, prints the resolved run set (id · corpus
+#   · model · scope · questions · top_k · timeout) from bench_canonical.yaml and EXITS without running
+#   the multi-hour suite. Guarded: --dry-run WITHOUT --batch stops with a notice rather than silently
+#   executing a single run (anti-silent-failure). Preview → stdout; the notice → stderr.
+# Changelog: 2.10.0 — AIStudio_1020: --fit-policy {skip,downshift,force}. Before a run dispatches a
+#   model, bench asks the API's /models `fit` field (the ONE guard policy in app/model_fit.py — no
+#   divergent bench-side arithmetic) whether it fits this box. On a BLOCK (e.g. 27b on 24GB, which
+#   loads then hangs): skip → don't run, log a loud partial SKIP (never a silent gap in the summary);
+#   downshift → auto-switch to the recommended fitting model, annotated; force → run anyway with a
+#   warning. If --fit-policy is ABSENT and a run is BLOCKed, bench STOPS and confirms [YES/n] before
+#   continuing (per Manuel) — TTY-gated on stdin: with no terminal to answer (fully non-interactive)
+#   it FAILS CLOSED (❌, exit 1) rather than guess. FIT/WARN/unknown and unspecified --model run as
+#   before. Conforms to STD - AIStudio - CLI Output (⚠/❌/·/ℹ symbols, prompt+warnings to stderr so a
+#   tee'd report stays clean). NOTE: the [YES/n] gate has no CLI-Output-STD precedent — flagged.
 # Changelog: 2.9.5 — A19-adjacent: PDF generation weasyprint step made reliable. The html→pdf
 #   render previously wrote a temp .py and ran it via subprocess under sys.executable — if that
 #   interpreter differed from the one running bench.py (common: bench under venv, sys.executable
@@ -238,7 +252,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.9.5"
+VERSION = "2.11.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -408,6 +422,35 @@ def parse_args() -> argparse.Namespace:
         default=None,
         metavar="ID",
         help="With --batch, run only the single run whose id matches (e.g. --batch-id C).",
+    )
+
+    p.add_argument(
+        "--fit-policy",
+        dest="fit_policy",
+        default=None,
+        choices=["skip", "downshift", "force"],
+        help=(
+            "AIStudio_1020 — what to do when a run's model WON'T FIT this machine's memory (the API "
+            "fit guard returns BLOCK; e.g. gemma3:27b on a 24GB box loads then hangs). "
+            "skip = do not run it (logged as a loud SKIP, never a silent gap); "
+            "downshift = auto-switch to the recommended fitting model; "
+            "force = run anyway (you accept the wedge risk). "
+            "If OMITTED and a run is BLOCKed, bench stops and asks [YES/n] before continuing "
+            "(requires a terminal; a fully non-interactive run fails closed). FIT/WARN models, and "
+            "runs with no explicit --model, are unaffected."
+        ),
+    )
+
+    p.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help=(
+            "AIStudio_1012 — with --batch, print the resolved run set (corpus × model × scope × "
+            "questions) from bench_canonical.yaml and exit WITHOUT executing the suite. Use it to "
+            "confirm what a batch will run before committing the hours. (Without --batch it stops "
+            "with a notice rather than running a single job.)"
+        ),
     )
 
     return p.parse_args()
@@ -1147,9 +1190,30 @@ def run_canonical(args: argparse.Namespace) -> int:
         print(f"❌ No runs defined in {spec_path.name}")
         return 1
 
+    # AIStudio_1012 — --dry-run: show the resolved run set and exit without executing the suite.
+    if getattr(args, "dry_run", False):
+        print(f"· dry-run — {len(runs)} run(s) resolved from {spec_path.name} (NOT executed):")
+        for r in runs:
+            _rid = r.get("id", "?")
+            _m = r.get("model", default_model) or "API default"
+            _bits = [f"corpus={r.get('corpus', '?')}", f"model={_m}"]
+            if r.get("scope"):
+                _bits.append(f"scope={r['scope']}")
+            if r.get("questions"):
+                _bits.append(f"questions={r['questions']}")
+            if r.get("top_k") is not None:
+                _bits.append(f"top_k={r['top_k']}")
+            _t = r.get("timeout", default_timeout if default_timeout is not None else args.timeout)
+            if _t is not None:
+                _bits.append(f"timeout={_t}")
+            print(f"  · {_rid}: " + "  ".join(_bits))
+        print(f"\n· {len(runs)} run(s) would execute → benchmarks/<corpus>/reports/. Re-run without --dry-run to execute.")
+        return 0
+
     print(f"· batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/")
 
     failures = 0
+    skipped = 0
     for r in runs:
         rid = r.get("id", "?")
         corpus = r.get("corpus")
@@ -1159,10 +1223,22 @@ def run_canonical(args: argparse.Namespace) -> int:
             continue
         model = r.get("model", default_model)
 
+        # AIStudio_1020: memory-fit gate per run. The PARENT owns the decision (skip / downshift /
+        # force / confirm) so the run is resolved once; the child then runs the resolved model with
+        # --fit-policy force so it does not re-evaluate or re-prompt.
+        if model:
+            _fit_action, _fit_model = _resolve_fit_policy(args.api, str(model), args.fit_policy, context=f"run {rid}")
+            if _fit_action == "skip":
+                print(f"  ⚠ run {rid}: SKIPPED — {model} won't fit this machine (--fit-policy).", file=sys.stderr)
+                skipped += 1
+                continue
+            model = _fit_model
+
         # Build the single-run argv — reuses the full single-run path verbatim.
         argv = [sys.executable, str(Path(__file__).resolve()), "--corpus", str(corpus)]
         if model:
             argv += ["--model", str(model)]
+            argv += ["--fit-policy", "force"]  # AIStudio_1020: parent already applied the policy — child must not re-gate
         if r.get("top_k") is not None:
             argv += ["--top-k", str(r["top_k"])]
         if r.get("questions"):
@@ -1193,10 +1269,100 @@ def run_canonical(args: argparse.Namespace) -> int:
             continue
         print(f"  ✅ {rid} done → benchmarks/{corpus}/reports/")
 
-    ok = len(runs) - failures
+    ok = len(runs) - failures - skipped
     mark = "✅" if failures == 0 else "⚠"
-    print(f"\n{mark} batch: {ok}/{len(runs)} run(s) ok → benchmarks/<corpus>/reports/")
+    _skip_note = f", {skipped} skipped (won't fit)" if skipped else ""
+    print(f"\n{mark} batch: {ok}/{len(runs)} run(s) ok{_skip_note} → benchmarks/<corpus>/reports/")
     return 1 if failures else 0
+
+
+# ── AIStudio_1020: memory-fit policy for bench runs ──────────────────────────────────────────
+# bench asks the API's /models for the model's fit verdict (the ONE guard policy lives in
+# app/model_fit.py — bench never re-derives the threshold) and applies --fit-policy. All advisory
+# output goes to stderr so a `... | tee report.md` capture stays clean (CLI-Output STD precedent).
+def _fetch_model_fit(api: str, model: str) -> dict | None:
+    """The server-computed fit verdict {verdict, recommendation, reason} for `model`, or None when
+    the API is unreachable / the model isn't listed / fit wasn't evaluated (guard then no-ops)."""
+    if not model:
+        return None
+    try:
+        import json as _json
+        import urllib.request
+
+        with urllib.request.urlopen(f"{api}/models", timeout=5) as resp:
+            models = _json.loads(resp.read())
+        for m in models:
+            if m.get("id") == model:
+                return m.get("fit")
+    except Exception:
+        return None
+    return None
+
+
+def _fit_err(msg: str) -> None:
+    print(f"❌ {msg}.", file=sys.stderr)
+
+
+def _fit_warn(msg: str) -> None:
+    print(f"⚠ {msg}.", file=sys.stderr)
+
+
+def _fit_info(msg: str) -> None:
+    print(f"ℹ {msg}", file=sys.stderr)
+
+
+def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: str = "") -> tuple[str, str | None]:
+    """Decide whether/how a run proceeds given its model's fit verdict and --fit-policy.
+
+    Returns (action, effective_model): action 'run' → proceed (model may be a downshift substitute);
+    action 'skip' → do not run this one. Only BLOCK triggers policy/gate; FIT/unknown → run; WARN →
+    run with an advisory. Absent policy + BLOCK → [YES/n] gate on stdin; no terminal → fail closed.
+    """
+    fit = _fetch_model_fit(api, model)
+    verdict = (fit or {}).get("verdict")
+    if verdict == "WARN":
+        _fit_warn(f"{model} is a tight fit for this machine's memory{(' (' + context + ')') if context else ''}; may slow or swap")
+        return ("run", model)
+    if verdict != "BLOCK":
+        return ("run", model)  # FIT or unknown — fail-open; the API's own /ask preflight still backstops
+
+    rec = (fit or {}).get("recommendation")
+    reason = (fit or {}).get("reason") or "won't fit this machine's memory"
+    label = f"{model}{(' [' + context + ']') if context else ''}"
+
+    if policy == "force":
+        _fit_warn(f"{label} {reason}; --fit-policy force → running anyway (may hang)")
+        return ("run", model)
+    if policy == "skip":
+        _fit_warn(f"{label} {reason}; --fit-policy skip → SKIPPED")
+        return ("skip", None)
+    if policy == "downshift":
+        if rec:
+            _fit_info(f"{label} {reason}; --fit-policy downshift → running on {rec} instead")
+            return ("run", rec)
+        _fit_warn(f"{label} {reason}, and no smaller model fits; --fit-policy downshift → SKIPPED")
+        return ("skip", None)
+
+    # policy is None → confirm gate (Manuel item 3). Needs a terminal to answer.
+    _fit_warn(f"{label} {reason}, and --fit-policy was not set")
+    if rec:
+        print(f"· Recommended: run on {rec} instead (it fits).", file=sys.stderr)
+    if not sys.stdin.isatty():
+        _fit_err("no terminal to confirm — pass --fit-policy {skip,downshift,force} for non-interactive runs")
+        sys.exit(1)
+    prompt = f"Continue on {rec} instead? [YES/n] " if rec else f"Continue and force {model} anyway? [YES/n] "
+    try:
+        ans = input(prompt).strip()
+    except EOFError:
+        ans = ""
+    if ans == "YES":
+        if rec:
+            _fit_info(f"confirmed → running on {rec}")
+            return ("run", rec)
+        _fit_warn(f"confirmed → forcing {model} (may hang)")
+        return ("run", model)
+    _fit_err("aborted (answer was not YES)")
+    sys.exit(1)
 
 
 def main() -> None:
@@ -1213,6 +1379,12 @@ def main() -> None:
     # DEFAULT corpus (demo) — a silent-wrong-result trap. Trigger on either.
     if getattr(args, "canonical", False) or getattr(args, "canonical_id", None) is not None:
         raise SystemExit(run_canonical(args))
+
+    # AIStudio_1012: --dry-run only previews a --batch run set. Without --batch there is nothing to
+    # preview, and silently executing a single run would defeat the flag — stop with a notice instead.
+    if getattr(args, "dry_run", False):
+        print("⚠ --dry-run applies to --batch (it previews the resolved run set). Add --batch, or drop --dry-run to run a single job.", file=sys.stderr)
+        return
 
     # ── Scope (AIStudio_882): load + validate the firm-universe up front ─────────
     # --scope names a firm subset; the resolver hard-errors on a missing named scope
@@ -1260,6 +1432,16 @@ def main() -> None:
         args.alpha = _corpus_alpha
     if args.min_score is None and _corpus_min is not None:
         args.min_score = _corpus_min
+
+    # AIStudio_1020: memory-fit gate for this single run. Only when an explicit --model was given
+    # (a default-model run is backstopped by the API's own /ask preflight). May skip the run or
+    # downshift args.model to a model that fits.
+    if args.model:
+        _fit_action, _fit_model = _resolve_fit_policy(args.api, args.model, args.fit_policy)
+        if _fit_action == "skip":
+            _fit_warn(f"ais_bench: run skipped — {args.model} won't fit this machine")
+            return
+        args.model = _fit_model
 
     # Resolve paths — output to benchmarks/{corpus}/reports/ with timestamp
     script_dir = Path(__file__).parent

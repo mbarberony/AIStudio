@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2.18.3 -->
+<!-- Changelog: 2.18.3 — AIStudio_948/_727 (help answers: inline bullet runs not rendering as a list). Small models (llama3.1:8b) sometimes emit a list as ONE line with inline "•" separators ("intro: • a • b • c") instead of newline-separated markdown, so markdownToHtml had nothing to turn into <li> and it rendered as a dense run-on paragraph. Added a preprocessor at the top of markdownToHtml that splits any line with ≥2 "•" into an intro line + one "- item" per bullet (guarded ≥3 parts so a lone "•" in prose is never split; indented/code lines skipped), and taught the ul matcher + look-ahead to also recognize a line-leading "•". Now the "what commands does AIStudio provide?" answer renders as a proper bulleted list. -->
+<!-- Version: 2.18.2 -->
+<!-- Changelog: 2.18.2 — AIStudio_948 (help-modal overflow). The help assistant bubble renders markdownToHtml <pre><code> without the .bubble .text class, so code blocks fell back to the browser default white-space:pre — long lines (e.g. the lifecycle-test YAML example) ran off the right edge of the 600px panel and spawned a horizontal scrollbar that read as a dark band above the input. Added a scoped #_helpMessages pre/code style (white-space:pre-wrap; word-break:break-word; max-width:100%; light background) so answers wrap inside the panel; the main chat's dark code blocks are untouched. Fixes the off-screen text AND the dark band (same root cause). NOTE: the _948(b) &lt;name&gt; escape-leak did not reproduce (placeholders like <name>/<corpus> render correctly) — left as watch-only. -->
+<!-- Version: 2.18.1 -->
+<!-- Changelog: 2.18.1 — AIStudio_1015 (label half): the min_score control is relabeled "Relevance Threshold" across all three surfaces (main query panel, Edit Corpus modal, Defaults modal) + tooltip reworded to "Relevance threshold — the minimum relevance score…". The internal field name (min_score / default_min_score / API) is UNCHANGED — a config/API rename is the parked bigger refactor. Prose in README/QUICKSTART/HOWTO/TUTORIAL + help-corpus regen remain (the doc-batch half). -->
+<!-- Version: 2.18.0 -->
+<!-- Changelog: 2.18.0 — AIStudio_1020 (memory-fit guard, UI enforcement). The model picker now renders the SERVER-computed fit verdict from /models `m.fit` (one policy, app/model_fit.py) instead of re-deriving a disk-fraction-of-total threshold in JS — the _967 heuristic under-warned 27b (~16GB disk / 24GB total ≈ 0.70, below its 0.75 line). FIT = normal · WARN = amber ⚠ · BLOCK = red ⛔ + the option is DISABLED. New _applyFitGuard(): on BLOCK it shows a red banner under the picker with the recommended fitting model and disables Send (and the change-handler skips prewarm — prewarming a BLOCK model would itself wedge); WARN shows an amber advisory, Send stays on. sendMessage() has a _modelBlocked backstop so a query never fires into a load-then-hang. Default-model selection now excludes BLOCK candidates so a fresh 24GB load never auto-picks a wedge. Fallback estimate (old backend without `fit`) now uses AVAILABLE memory × 1.2 runtime-footprint, not raw disk/total. -->
 <!-- Version: 2.17.1 -->
 <!-- Changelog: 2.17.1 — A20 re-fix. The 2.17.0 sticky-footer approach still overlapped: the Score Threshold slider bled below/through the Cancel/Save row (the negative bottom margin on the sticky footer let the last slider paint into its zone). Replaced with the proven flex-column pattern used by the other modals: the Edit Corpus container is now display:flex; flex-direction:column; overflow:hidden, the form content lives in an inner overflow-y:auto; flex:1 body that scrolls, and the footer is a plain flex-shrink:0 child that never scrolls and always sits at the true bottom. No more sticky/negative-margin overlap. -->
 <!-- Version: 2.17.0 -->
@@ -684,6 +692,32 @@
             word-break: normal;
         }
 
+        /* Help modal (AIStudio_948): the assistant bubble renders markdownToHtml <pre><code> WITHOUT
+           the .bubble .text class, so code blocks fell back to default white-space:pre — long lines ran
+           off the 600px panel and spawned a horizontal scrollbar (the "dark band" above the input).
+           Scope a wrapping style to #_helpMessages so answers wrap instead of overflowing; the main
+           chat's dark code blocks are untouched. */
+        #_helpMessages pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+            background: #f4f2ef;
+            color: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin: 6px 0;
+        }
+        #_helpMessages pre code {
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #1a1a1a;
+            font-size: 0.85em;
+        }
+        #_helpMessages code { word-break: break-word; }
+
         /* Loading dots */
         .loading-dots {
             display: flex;
@@ -995,6 +1029,8 @@
             <div class="section">
                 <div class="section-label" title="The language model that writes answers. Small &amp; fast (gemma3:4b) for the demo; switch to gemma3:27b for the SEC 10-K corpus.">Model</div>
                 <select id="modelSelect" title="The language model that writes answers. Small &amp; fast (gemma3:4b) for the demo; switch to gemma3:27b for the SEC 10-K corpus."><option value="">Loading…</option></select>
+                <!-- AIStudio_1020: memory-fit guard banner — shown when the selected model won't fit this machine's RAM. -->
+                <div id="modelFitBanner" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.45;background:#fbeaea;border:1px solid var(--danger,#c0392b);color:#7a1f1f;"></div>
             </div>
 
             <!-- Corpus -->
@@ -1051,8 +1087,8 @@
                     <input type="number" id="timeout" min="1" max="900" step="10" value="300" title="Ollama request timeout in seconds — how long to wait for the model before giving up. Raise for slow large models. Blank = inherit the corpus/config default.">
                 </div>
                 <div class="param-row">
-                    <span class="param-label" title="Minimum similarity score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Skipped automatically when an entity filter is active. Blank = inherit the corpus/config default.">Threshold</span>
-                    <input type="number" id="minScore" min="0" max="1" step="0.05" value="0.5" title="Minimum similarity score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Blank = inherit the corpus/config default.">
+                    <span class="param-label" title="Relevance threshold — the minimum relevance score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Skipped automatically when an entity filter is active. Blank = inherit the corpus/config default.">Relevance Threshold</span>
+                    <input type="number" id="minScore" min="0" max="1" step="0.05" value="0.5" title="Relevance threshold — the minimum relevance score (0–1) a chunk must clear to be retrieved. Higher = stricter / fewer chunks; lower = more permissive. Blank = inherit the corpus/config default.">
                 </div>
                 <div class="slider-row">
                     <div class="slider-row-header">
@@ -1350,9 +1386,10 @@
             const models = await res.json();
             window._modelsCache = models;  // AIStudio_969: for the \trace panel's size/param lookup
 
-            // AIStudio_967: fetch host RAM once so the picker can warn on models that won't fit
-            let _totalMem = 0;
-            try { const sysRes = await fetch(`${API}/system`); const sys = await sysRes.json(); _totalMem = sys.total_memory_bytes || 0; } catch {}
+            // AIStudio_967/_1020: fetch host memory once. total for display; available (psutil minus
+            // reserve) is the fallback fit denominator when the backend didn't attach a `fit` object.
+            let _totalMem = 0, _availMem = 0;
+            try { const sysRes = await fetch(`${API}/system`); const sys = await sysRes.json(); _totalMem = sys.total_memory_bytes || 0; _availMem = sys.available_memory_bytes || 0; } catch {}
 
             // Filter out embedding-only models — they can't generate answers
             const EMBED_KEYWORDS = ['embed', 'bge', 'e5-', 'minilm', 'gte-'];
@@ -1373,26 +1410,42 @@
             }
             modelSelect.innerHTML = chatModels
                 .map(m => {
-                    // AIStudio_967: warn when a model's disk footprint is a big fraction of RAM.
-                    const frac = (_totalMem && m.size_bytes) ? m.size_bytes / _totalMem : 0;
-                    const color = frac > 0.90 ? 'var(--danger)' : frac > 0.75 ? '#e08a1e' : '';
-                    const mark  = frac > 0.90 ? ' ⛔' : frac > 0.75 ? ' ⚠' : '';
+                    // AIStudio_1020: render the server-computed fit verdict (ONE policy, app/model_fit.py).
+                    // FIT = normal · WARN = orange ⚠ (tight) · BLOCK = red ⛔ + DISABLED (won't fit — would
+                    // load then hang). Fallback to a local estimate against AVAILABLE memory (not the _967
+                    // disk-fraction-of-total that under-warned 27b) when an old backend omits `fit`.
+                    let verdict = m.fit && m.fit.verdict;
+                    if (!verdict) {
+                        const denom = _availMem || _totalMem;
+                        const frac = (denom && m.size_bytes) ? (m.size_bytes * 1.2) / denom : 0;  // ×1.2 ≈ runtime footprint
+                        verdict = frac >= 0.92 ? 'BLOCK' : frac >= 0.80 ? 'WARN' : 'FIT';
+                    }
+                    const color = verdict === 'BLOCK' ? 'var(--danger)' : verdict === 'WARN' ? '#e08a1e' : '';
+                    const mark  = verdict === 'BLOCK' ? ' ⛔' : verdict === 'WARN' ? ' ⚠' : '';
                     const style = color ? ` style="color:${color}"` : '';
-                    return `<option value="${m.id}"${style} ${!m.available ? 'disabled' : ''}>${m.name}${m.size_human ? ' (' + m.size_human + ')' : ''}${mark}${!m.available ? ' (unavailable)' : ''}</option>`;
+                    const blocked = verdict === 'BLOCK' || !m.available;
+                    const tail = !m.available ? ' (unavailable)' : (verdict === 'BLOCK' ? ' (won’t fit)' : '');
+                    return `<option value="${m.id}"${style} ${blocked ? 'disabled' : ''}>${m.name}${m.size_human ? ' (' + m.size_human + ')' : ''}${mark}${tail}</option>`;
                 })
                 .join('');
             // Default model (AIStudio_945): prefer the good llama (llama3.1:8b — clean [N] citations),
             // then gemma3:4b, then smallest available Gemma, then first available. Presence-aware —
             // every candidate is filtered to m.available, so a cold install without llama falls back
             // safely (no 500); gemma3:4b drops citations so it is no longer the preferred default.
-            const avail = chatModels.filter(m => m.available);
+            // AIStudio_1020: a default model must never be one that won't fit — exclude BLOCK from the
+            // default candidates so a fresh load on a 24GB box never auto-selects a model that wedges.
+            const _fitOk = m => !(m.fit && m.fit.verdict === 'BLOCK');
+            const avail = chatModels.filter(m => m.available && _fitOk(m));
             const gemmas = avail.filter(m => /gemma/i.test(m.id));
             const sizeOf = id => { const x = id.match(/(\d+(?:\.\d+)?)b/i); return x ? parseFloat(x[1]) : Infinity; };
             const goodLlama = avail.find(m => m.id === 'llama3.1:8b');
             const gemmaCanon = gemmas.find(m => m.id === 'gemma3:4b');
             const smallestGemma = gemmas.slice().sort((a, b) => sizeOf(a.id) - sizeOf(b.id))[0];
-            const first = goodLlama || gemmaCanon || smallestGemma || avail[0];
+            // Last resort: if literally everything is BLOCK, fall back to any available model so the UI
+            // still functions (the /ask preflight will then explain the block on send).
+            const first = goodLlama || gemmaCanon || smallestGemma || avail[0] || chatModels.filter(m => m.available)[0];
             if (first) modelSelect.value = first.id;
+            _applyFitGuard();  // AIStudio_1020: reflect the selected model's fit into the banner + send button
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';
         }
@@ -1498,6 +1551,36 @@
         }
     }
 
+    // ── AIStudio_1020: memory-fit guard (UI enforcement) ──────────────────────────
+    // Reads the selected model's server-computed fit verdict from the models cache and, on BLOCK,
+    // shows the red banner + disables send with a recommendation — the query never fires into a wedge.
+    // WARN shows an amber advisory but leaves send enabled. Module flag _modelBlocked backstops send.
+    let _modelBlocked = false;
+    function _applyFitGuard() {
+        const banner = document.getElementById('modelFitBanner');
+        const sel = modelSelect.value;
+        const m = (window._modelsCache || []).find(x => x.id === sel);
+        const fit = m && m.fit;
+        _modelBlocked = false;
+        if (!banner) return;
+        if (fit && fit.verdict === 'BLOCK') {
+            _modelBlocked = true;
+            const rec = fit.recommendation ? ` Use <b>${fit.recommendation}</b>, which fits.` : ' Free up memory or pick a smaller model.';
+            banner.innerHTML = `⛔ <b>${sel}</b> won’t fit in this machine’s memory — it would load and then hang.${rec}`;
+            banner.style.display = 'block';
+            banner.style.background = '#fbeaea'; banner.style.borderColor = 'var(--danger,#c0392b)'; banner.style.color = '#7a1f1f';
+            if (currentCorpus) sendBtn.disabled = true;
+        } else if (fit && fit.verdict === 'WARN') {
+            banner.innerHTML = `⚠ <b>${sel}</b> is a tight fit for this machine’s memory — it may slow down or swap.`;
+            banner.style.display = 'block';
+            banner.style.background = '#fdf3e3'; banner.style.borderColor = '#e08a1e'; banner.style.color = '#7a4a12';
+            if (currentCorpus) sendBtn.disabled = false;
+        } else {
+            banner.style.display = 'none';
+            if (currentCorpus) sendBtn.disabled = false;
+        }
+    }
+
     // ── Prewarm ──────────────────────────────────────────────
     async function prewarmModel() {
         const model = modelSelect.value;
@@ -1568,6 +1651,9 @@
         const traceMode = /\\trace\s*$/i.test(_rawInput);
         const query = traceMode ? _rawInput.replace(/\\trace\s*$/i, '').trim() : _rawInput;
         if (!query || isLoading || !currentCorpus) return;
+        // AIStudio_1020: send-time backstop — never fire a query into a model that won't fit (the
+        // banner already explains it; this catches a send that slips through while blocked).
+        if (_modelBlocked) { _applyFitGuard(); return; }
 
         hideEmpty();
         _lastQuery = query;
@@ -1983,7 +2069,7 @@
                         </div>
                         <div style="margin-top:14px;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                                <label style="font-size:11px;color:var(--text-mid);" title="Relevance floor — chunks scoring below it are dropped before the model sees them. Lower (~0.3) for small-doc corpora, higher (0.5) for large uniform ones.">Score Threshold</label>
+                                <label style="font-size:11px;color:var(--text-mid);" title="Relevance floor — chunks scoring below it are dropped before the model sees them. Lower (~0.3) for small-doc corpora, higher (0.5) for large uniform ones.">Relevance Threshold</label>
                                 <span id="_editMinScoreVal" style="font-size:11px;color:var(--accent);font-weight:600;">0.50</span>
                             </div>
                             <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">Relevance floor — chunks scoring below this are dropped before the model sees them. Lower it (≈0.2–0.3) if good answers come back empty or hedged.</div>
@@ -3497,6 +3583,22 @@
     function markdownToHtml(text) {
         if (!text) return '';
 
+        // AIStudio_948/_727: normalize inline bullet runs. Small models (llama3.1:8b) sometimes emit a
+        // list as ONE line with inline "•" separators ("intro: • a • b • c") instead of newline-
+        // separated markdown — so the line-based parser below has nothing to turn into <li>. Split any
+        // line carrying ≥2 "•" into an intro line + one "- item" per bullet, so it becomes a real <ul>.
+        // Guarded to ≥3 parts (intro + 2 items) so a lone "•" in prose is never mis-split.
+        text = text.split('\n').map(line => {
+            if (line.startsWith('    ') || line.startsWith('\t')) return line;  // leave indented/code lines alone
+            const parts = line.split(/\s*•\s+/);
+            if (parts.length >= 3) {
+                const intro = parts.shift().trim();
+                const items = parts.map(p => '- ' + p.trim()).join('\n');
+                return (intro ? intro + '\n' : '') + items;
+            }
+            return line;
+        }).join('\n');
+
         // Split into lines for list detection
         const lines = text.split('\n');
         const out = [];
@@ -3532,8 +3634,8 @@
                 continue;
             }
 
-            // Detect unordered list item: "* text" or "- text" or "+ text"
-            const ulMatch = line.match(/^[\*\-\+]\s+(.+)/);
+            // Detect unordered list item: "* text" or "- text" or "+ text" or "• text"
+            const ulMatch = line.match(/^[\*\-\+•]\s+(.+)/);
             // Detect ordered list item: "1. text" or "1) text"
             const olMatch = line.match(/^(\d+)[.)]\s+(.+)/);
 
@@ -3553,7 +3655,7 @@
                 for (let j = i + 1; j < lines.length; j++) {
                     const peek = lines[j].trim();
                     if (peek === '') continue;
-                    if (peek.match(/^[\*\-\+]\s+/) || peek.match(/^\d+[.)]\s+/)) nextListItem = true;
+                    if (peek.match(/^[\*\-\+•]\s+/) || peek.match(/^\d+[.)]\s+/)) nextListItem = true;
                     break;
                 }
                 if (nextListItem) continue;
@@ -3657,7 +3759,8 @@
         // AIStudio_NNN: clear conversation on model switch so the new model can't echo the
         // previous model's in-context answer (memory carryover — 2026-06-02 gemma-echoes-mistral).
         if (conversationHistory.length) clearConversation('model');
-        prewarmModel();
+        _applyFitGuard();                       // AIStudio_1020: reflect fit on the new selection
+        if (!_modelBlocked) prewarmModel();      // never prewarm a BLOCK model — the prewarm itself would wedge
     });
 
     document.getElementById('addFileBtn').addEventListener('click', openUpload);
@@ -3806,7 +3909,7 @@
                         <input id="_defTimeout" type="number" min="1" max="900" step="10" value="${curTimeout}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
                     </div>
                     <div>
-                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Threshold</label>
+                        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:6px;">Relevance Threshold</label>
                         <input id="_defMinScore" type="number" min="0" max="1" step="0.05" value="${parseFloat(curMinScore).toFixed(2)}" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;">
                     </div>
                 </div>

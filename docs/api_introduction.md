@@ -1,6 +1,6 @@
 # AIStudio — API Introduction
 
-*Version: 1.0.0*
+*Version: 1.1.1*
 
 *How to drive AIStudio from your own code: the local HTTP API, what it exposes, and the handful of behaviors a client must understand to use it correctly. Written for anyone building an integration on top of AIStudio — including a Model Context Protocol (MCP) server that lets other AI clients use AIStudio as an intelligent searcher over a private document set.*
 
@@ -32,7 +32,7 @@ Request fields:
 | `corpus` | which corpus to search |
 | `top_k` | how many chunks to return |
 | `hybrid_alpha` | literal ↔ conceptual balance (0 = exact terms, 1 = meaning; omit for the corpus default) |
-| `min_score` | relevance floor; chunks below it are dropped |
+| `min_score` | relevance floor; chunks below it are dropped (the UI surfaces this field as **Relevance Threshold**) |
 | `entity_filter` | restrict to one or more firms, by display name (e.g. `["BlackRock, Inc."]`) |
 | `allowed_source_paths` | restrict to specific files |
 | `keywords` | extra terms to boost on the literal channel |
@@ -51,6 +51,8 @@ Use this when you want AIStudio's local model to compose the answer rather than 
 | `query_expansion` | whether to widen the query with the recognized firm's names |
 
 It returns a natural-language answer, a list of citations, and the query that was actually run.
+
+Two guards can short-circuit an ask before generation. If the requested model won't fit the machine's memory, *ask* returns immediately with an explanatory answer and a `fit` object (a `verdict` plus a recommended model that *does* fit) instead of dispatching into a silent load-and-hang. And if an active firm filter matched nothing, it returns an honest no-information answer with `no_info: true` rather than answering from the wrong firm (§4).
 
 ---
 
@@ -74,6 +76,8 @@ On a multi-firm corpus, the most important behavior is **isolation**: making sur
 
 The catch worth internalizing: **a firm the corpus doesn't recognize won't be auto-detected.** If you add documents for a firm that isn't part of the corpus's entity data, its chunks are still tagged and searchable — but automatic detection and isolation will skip it. For such firms, pass `entity_filter` explicitly and isolation works.
 
+When a filter (or an auto-detected firm) matches **zero** in-scope chunks, *ask* stops rather than backfilling: it returns an honest no-information answer (`no_info: true`) naming what the corpus *does* cover, so a firm the corpus lacks is never answered from a different one. A client can surface that roster on demand — asking *"which companies are covered?"* is answered deterministically from the corpus metadata, with no model call.
+
 Why this matters: without isolation, a firm query falls back to broad similarity, where other firms that discuss the same topic densely crowd out the one you asked about. Isolation is what turns "the right topic, the wrong company" into the right answer.
 
 ---
@@ -90,7 +94,7 @@ Why this matters: without isolation, a firm query falls back to broad similarity
 Beyond retrieve, ask, and discovery, the API covers the full corpus lifecycle:
 
 - **Health and warm-up** — a liveness check, and a *prewarm* call that loads a model into memory. The first call to a cold model is slow (tens of seconds); prewarm before your first ask.
-- **Models** — list available models and select the active one.
+- **Models and system** — list available models, each annotated with whether it **fits this machine's memory** (a `fit` verdict — FIT / WARN / BLOCK — plus a recommended tier when it doesn't); and a *system* call reporting total and available RAM. A well-behaved client offers only fitting models, or warns before running a BLOCK one — the same policy the *ask* preflight enforces.
 - **Corpus management** — create, rename, and delete corpora; edit a corpus's description and routing guidance.
 - **Ingestion** — upload a file (which does not ingest it), run an ingest pass over a subset or the whole corpus, poll its progress, or cancel it.
 - **File maintenance** — verify an indexed file by hash, wipe one file's chunks for re-ingest, or remove a file entirely.

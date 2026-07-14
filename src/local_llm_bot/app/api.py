@@ -1,3 +1,21 @@
+# Version: 1.17.1
+# Changelog: 1.17.1 — AIStudio_1013 (coverage-query UX, Manuel option iii). Instead of dumping the
+#   covered-company list inline on an entity miss (can be long), the miss message now points the user
+#   to ask "which companies are covered?" — and /ask answers that meta-query directly from the corpus
+#   (helper _is_coverage_query → _corpus_covered_entities, bulleted). Keeps the wrong-firm hard-stop.
+# Changelog: 1.17.0 — AIStudio_1020 + AIStudio_1013.
+#   _1020 (memory-fit guard, API layer): new GET /system now also returns available_memory_bytes
+#     (psutil, minus CONFIG.fit.reserve_bytes) — the honest fit denominator, not the nameplate total.
+#     GET /models attaches a per-model `fit` object {verdict FIT|WARN|BLOCK, recommendation, reason}
+#     computed server-side by app/model_fit.py, so the UI stops re-deriving the threshold in JS (the
+#     _967 drift). POST /ask gains a preflight: if the effective model is BLOCK it returns immediately
+#     with an explanatory answer + `fit` (mirrors the _888 unavailable-model guard) instead of
+#     dispatching into the silent 27b-on-24GB wedge — closing the curl/bench bypass. Helpers
+#     _available_memory_bytes / _list_model_dicts / _fit_for.
+#   _1013 (entity-filter-miss hard-stop): /ask detects an active entity_filter that retrieved 0
+#     in-scope chunks and returns an honest no-info answer rather than proceeding — retrieve() already
+#     refuses the unfiltered backfill (_800 v2), this stops generation answering the wrong firm.
+#   AskResponse gains `fit` + `no_info`; ModelInfo gains `fit`; SystemInfo gains available_memory_bytes.
 # Version: 1.16.3
 # Changelog: 1.16.3 — A3: fence conversation history as reference-only in the synthesis prompt.
 #            Prior-turn answers were bleeding into the current answer — when current retrieval is
@@ -842,6 +860,8 @@ class AskResponse(BaseModel):
     retrieval_query: str | None = None   # AIStudio_841: expanded query actually sent to retrieve()
     model_used: str | None = None        # AIStudio_841: model actually used for generation
     system_prompt_tier: str | None = None  # AIStudio_956: which system-prompt tier served this answer ('small' | 'full')
+    fit: dict[str, Any] | None = None    # AIStudio_1020: set when a preflight BLOCK short-circuited the answer
+    no_info: bool = False                # AIStudio_1013: True when an entity-filter miss hard-stopped the answer
 
 
 class RetrieveRequest(BaseModel):
@@ -871,11 +891,14 @@ class ModelInfo(BaseModel):
     size_human: str | None = None      # AIStudio_966: e.g. "4.9 GB" (for the UI label)
     param_count: int | None = None     # AIStudio_967: exact params (manifest cache)
     last_used_at: str | None = None    # AIStudio_967: when this model last generated
+    fit: dict[str, Any] | None = None  # AIStudio_1020: {verdict, recommendation, reason, ...} vs this host
 
 
 class SystemInfo(BaseModel):
     total_memory_bytes: int | None = None   # AIStudio_967: physical RAM (hw.memsize)
     total_memory_human: str | None = None
+    available_memory_bytes: int | None = None   # AIStudio_1020: psutil available minus reserve — the fit denominator
+    available_memory_human: str | None = None
 
 
 def _human_size(n: int | None) -> str | None:
@@ -988,6 +1011,112 @@ def _total_memory_bytes() -> int | None:
         return None
 
 
+# ── AIStudio_1020: memory-fit guard (API layer) ──────────────────────────────────────────────
+# The guard's single policy lives in app/model_fit.py; the helpers below feed it live host facts.
+def _available_memory_bytes() -> int | None:
+    """Available RAM for a model load, in bytes, MINUS the configured reserve (headroom for OS + other
+    apps). Uses psutil.virtual_memory().available — the honest denominator, not the nameplate total the
+    _967 warn used. Falls back to a fraction of physical RAM when psutil is absent. None if unknowable."""
+    reserve = CONFIG.fit.reserve_bytes
+    try:
+        import psutil
+
+        avail = int(psutil.virtual_memory().available)
+    except Exception:
+        tot = _total_memory_bytes()
+        if not tot:
+            return None
+        # psutil unavailable: assume ~30% of RAM is already committed at model-load time.
+        avail = int(tot * 0.70)
+    return max(0, avail - reserve)
+
+
+def _list_model_dicts() -> list[dict[str, Any]]:
+    """[{id, size_bytes, param_count, available}] from ollama.list() + the manifest — the input the
+    fit recommender ranks over. [] when Ollama is unreachable (guard then no-ops, fail-open)."""
+    out: list[dict[str, Any]] = []
+    try:
+        import ollama
+
+        r = ollama.list()
+        ms = r.models if hasattr(r, "models") else r.get("models", [])
+        for m in ms:
+            name = getattr(m, "model", None) or getattr(m, "name", None) or (
+                m.get("name") if isinstance(m, dict) else None
+            )
+            if not name:
+                continue
+            size = getattr(m, "size", None)
+            if size is None and isinstance(m, dict):
+                size = m.get("size")
+            try:
+                size = int(size) if size is not None else None
+            except (TypeError, ValueError):
+                size = None
+            entry = _get_manifest().get(name) or {}
+            out.append(
+                {"id": name, "size_bytes": size, "param_count": entry.get("param_count"), "available": True}
+            )
+    except Exception:
+        pass
+    return out
+
+
+def _fit_for(model_id: str, model_dicts: list[dict[str, Any]] | None = None):
+    """FitVerdict for `model_id` on this host, or None when memory is unknowable (guard disabled).
+    Resolves the recommendation against the full installed set."""
+    from local_llm_bot.app import model_fit as _mf
+
+    avail = _available_memory_bytes()
+    if avail is None:
+        return None
+    dicts = model_dicts if model_dicts is not None else _list_model_dicts()
+    target = next((d for d in dicts if d.get("id") == model_id), None)
+    if target is None:
+        target = {"id": model_id, "size_bytes": None, "param_count": _model_param_count(model_id), "available": True}
+    return _mf.evaluate(
+        target,
+        dicts,
+        available_bytes=avail,
+        warn_frac=CONFIG.fit.warn_frac,
+        block_frac=CONFIG.fit.block_frac,
+        footprint_mult=CONFIG.fit.footprint_mult,
+    )
+
+
+def _corpus_covered_entities(corpus_name: str, limit: int = 25) -> list[str]:
+    """Distinct firm/entity names present in a corpus (from index.jsonl), for the AIStudio_1013
+    entity-miss message ('this corpus covers: …'). Best-effort — [] if unreadable; the message then
+    degrades to the actions-only form."""
+    try:
+        paths = corpus_paths(repo_root=_get_repo_root(), corpus=corpus_name)
+        idx = paths["index"]
+        if not idx.exists():
+            return []
+        firms: set[str] = set()
+        for row in read_jsonl(idx):
+            meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+            f = (row.get("firm") or meta.get("firm") or "").strip()
+            if f:
+                firms.add(f)
+        return sorted(firms)[:limit]
+    except Exception:
+        return []
+
+
+# AIStudio_1013 (Manuel option iii): detect a "what does this corpus cover?" meta-query so we can
+# answer it with the entity list on demand — instead of dumping a (possibly long) list into every
+# entity-miss message. Deliberately requires BOTH a company-ish noun AND a coverage/availability cue,
+# so a real content question ("which companies had the highest revenue") does NOT trip it.
+_COVERAGE_SUBJECT_RE = re.compile(r"(which|what|list|show|name)\b.{0,40}\b(compan|firm|entit|bank|filer|issuer|ticker)", re.I)
+_COVERAGE_CUE_RE = re.compile(r"(cover|coverage|includ|available|contain|do you (have|cover|know)|in (the|this|your) (corpus|data|knowledge|dataset|kb)|are there|list of)", re.I)
+
+
+def _is_coverage_query(query: str) -> bool:
+    q = query or ""
+    return bool(_COVERAGE_SUBJECT_RE.search(q) and _COVERAGE_CUE_RE.search(q))
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -1084,6 +1213,24 @@ async def ask(req: AskRequest) -> AskResponse:
         raise HTTPException(status_code=400, detail="query must not be empty")
     _require_corpus(req.corpus)
 
+    # AIStudio_1013 (Manuel option iii) — answer the "which companies are covered?" meta-query
+    # directly from the corpus, so the entity-miss message can point here instead of listing inline.
+    if _is_coverage_query(req.query):
+        _cov = _corpus_covered_entities(req.corpus, limit=200)
+        if _cov:
+            _noun = "company" if len(_cov) == 1 else "companies"
+            _cov_body = f"The {req.corpus} corpus covers {len(_cov)} {_noun}:\n\n" + "\n".join(f"• {c}" for c in _cov)
+        else:
+            _cov_body = f"I couldn't read the company list for the {req.corpus} corpus (it may not tag chunks by firm)."
+        return AskResponse(
+            answer=_cov_body,
+            citations=None,
+            has_citations=False,
+            retrieval_query=req.query,
+            model_used=(req.model or CONFIG.rag.default_model),
+            no_info=True,
+        )
+
     # AIStudio_888 — model-availability guard. Resolve the effective model the same way the
     # generation path does (per-request override → config default) and confirm it is actually
     # pulled in Ollama before we try to use it. Without this, an unpulled model (the stale default
@@ -1116,6 +1263,39 @@ async def ask(req: AskRequest) -> AskResponse:
     except Exception:
         # Ollama unreachable or list() failed — don't block here; the normal generation path
         # will surface any real connection error exactly as it did before this guard.
+        pass
+
+    # AIStudio_1020 — memory-fit preflight. Before dispatching generation, check whether the effective
+    # model actually fits in available RAM on THIS machine. A BLOCK (e.g. 27b on a 24GB box) otherwise
+    # loads toward memory, the HTTP call hangs, RSS stays tiny, and nothing errors — the silent wedge.
+    # Return immediately with an explanatory answer + structured `fit` (mirrors the _888 guard above),
+    # so the curl/bench/API caller gets the SAME loud refusal the UI picker shows. FIT/WARN fall
+    # through and generate normally; unknowable memory (psutil absent, Ollama down) → no block.
+    try:
+        _fit = _fit_for(_effective_model)
+        if _fit is not None and _fit.verdict == "BLOCK":
+            _rec = _fit.recommendation
+            _need = _human_size(_fit.footprint_bytes)
+            _free = _human_size(_fit.available_bytes)
+            _msg = (
+                f"The model '{_effective_model}' won't fit in memory on this machine — it needs about "
+                f"{_need} but only about {_free} is free, so it would load and then hang rather than answer. "
+            )
+            _msg += (
+                f"Switch to '{_rec}', which fits, and ask again."
+                if _rec
+                else "No installed model fits comfortably here — free up memory or pull a smaller model."
+            )
+            return AskResponse(
+                answer=_msg,
+                citations=None,
+                has_citations=False,
+                retrieval_query=req.query,
+                model_used=_effective_model,
+                fit=_fit.to_dict(),
+            )
+    except Exception:
+        # Never let the guard itself break a query — if fit evaluation errors, proceed as before.
         pass
 
     # Use provided top_k or default from config
@@ -1154,6 +1334,33 @@ async def ask(req: AskRequest) -> AskResponse:
     _corpus_timeout = _corpus_meta.get("default_timeout")
     _timeout = req.timeout if req.timeout is not None else (_corpus_timeout if _corpus_timeout is not None else CONFIG.ollama.request_timeout_s)
     docs = retrieve(query=retrieval_query, top_k=top_k, corpus=req.corpus, hybrid_alpha=hybrid_alpha, min_score=min_score, entity_filter=_effective_entity_filter, allowed_source_paths=req.allowed_source_paths or None, keywords=req.keywords or None)
+
+    # AIStudio_1013 — entity-filter-miss hard-stop. When an entity_filter was active but retrieval
+    # returned 0 in-scope chunks, retrieve() already refuses the unfiltered lexical backfill (_800 v2)
+    # — but if we now hand 0 docs to generation, the model can still answer the WRONG firm from its
+    # own memory / conversation history (BlackRock asked → Goldman/Raymond James answered). For a
+    # grounded-answers product, confidently citing the wrong company is the most damaging failure, so
+    # we stop here and explain the miss + what the corpus DOES cover + the next actions, rather than
+    # generate. (auto-mode where a named entity never resolved to a filter is a separate, entity-KB
+    # completeness problem — _1021/faithful-add — not reachable from a 0-doc signal.)
+    if _effective_entity_filter and not docs:
+        _asked = ", ".join(_effective_entity_filter)
+        # Manuel option (iii): don't dump the (possibly long) covered list here — point the user to
+        # the coverage meta-query, which /ask answers on demand (handled at the top of this endpoint).
+        _lines = [
+            f'No information on "{_asked}" was found in the {req.corpus} corpus.',
+            "",
+            'To see every company this corpus covers, ask: "which companies are covered?"',
+            "You can also check the spelling or alias of your query, or add its filings and ask again.",
+        ]
+        return AskResponse(
+            answer="\n".join(_lines),
+            citations=None,
+            has_citations=False,
+            retrieval_query=retrieval_query,
+            model_used=_effective_model,
+            no_info=True,
+        )
 
     # Generate answer with citations
     result = generate_answer_with_citations(
@@ -2693,7 +2900,13 @@ async def get_system() -> SystemInfo:
     """AIStudio_967: host facts for the UI — total physical RAM, so the model picker can warn
     (orange >75%, red >90%) when a model's footprint is a large fraction of memory."""
     b = _total_memory_bytes()
-    return SystemInfo(total_memory_bytes=b, total_memory_human=_human_size(b))
+    avail = _available_memory_bytes()  # AIStudio_1020: psutil available minus reserve — the fit denominator
+    return SystemInfo(
+        total_memory_bytes=b,
+        total_memory_human=_human_size(b),
+        available_memory_bytes=avail,
+        available_memory_human=_human_size(avail),
+    )
 
 
 @app.get("/models")
@@ -2762,6 +2975,29 @@ async def get_models() -> list[ModelInfo]:
                         last_used_at=_entry.get("last_used_at"),
                     )
                 )
+
+            # AIStudio_1020: attach a per-model fit verdict computed server-side (ONE policy, in
+            # app/model_fit.py), so the picker renders block/warn/recommend from ground truth instead
+            # of re-deriving a disk-fraction threshold in JS (the _967 drift that under-warned 27b).
+            if available_models:
+                _avail_mem = _available_memory_bytes()
+                if _avail_mem is not None:
+                    from local_llm_bot.app import model_fit as _mf
+
+                    _dicts = [
+                        {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count, "available": mi.available}
+                        for mi in available_models
+                    ]
+                    for mi in available_models:
+                        _target = {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count, "available": mi.available}
+                        mi.fit = _mf.evaluate(
+                            _target,
+                            _dicts,
+                            available_bytes=_avail_mem,
+                            warn_frac=CONFIG.fit.warn_frac,
+                            block_frac=CONFIG.fit.block_frac,
+                            footprint_mult=CONFIG.fit.footprint_mult,
+                        ).to_dict()
 
             # If we got models, return them
             if available_models:

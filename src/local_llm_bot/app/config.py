@@ -1,4 +1,11 @@
 # src/local_llm_bot/app/config.py
+# Version: 1.7.0
+# Changelog: 1.7.0 — AIStudio_1020: ModelFitConfig — the memory-fit guard's four calibration
+#   constants (reserve_bytes, footprint_mult, warn_frac, block_frac), env-overridable
+#   (AISTUDIO_FIT_*). Consumed by app/model_fit.py, wired into the /ask preflight + /models `fit`
+#   field + bench --fit-policy. Values are PROVISIONAL pending 24GB-tier ESEF calibration
+#   (NOTES - AIStudio - Model-Size Guard Re-Scope and Design - 2026-07-12 §3): whether 12b-on-ESEF
+#   runs clean on 24GB sets warn_frac/block_frac. Code is stable; only these four numbers move.
 # Version: 1.6.0
 # Changelog: 1.6.0 — AIStudio_941: ollama.request_timeout_s default 60→300 and now actually APPLIED
 #   (ollama_client v1.3.0). Was a dormant field; a bigger _958 window pushed heavy questions past the
@@ -118,6 +125,22 @@ class OllamaConfig(BaseModel):
     request_timeout_s: float = Field(default=300.0, ge=1.0)  # AIStudio_941: Ollama HTTP request timeout, now APPLIED in ollama_client. 300s covers slow local models (gemma3:27b ~110s, 70b ~166s); overridable per-request / per-corpus. Env AISTUDIO_OLLAMA_TIMEOUT_S.
 
 
+class ModelFitConfig(BaseModel):
+    # AIStudio_1020 — memory-fit guard. The guard estimates a model's RUNTIME footprint and compares
+    # it to post-reserve available RAM, returning FIT / WARN / BLOCK + a recommended tier. These four
+    # constants are the ONLY thing that moves between machine classes or after calibration; the policy
+    # code (app/model_fit.py) is fixed. PROVISIONAL — finalize from the 24GB-tier ESEF runs.
+    #   • reserve_bytes  — headroom held back from psutil.available (OS + other apps); NOT the nameplate.
+    #   • footprint_mult — disk→runtime scalar (weights + KV cache + overhead) over Ollama's on-disk size.
+    #   • warn_frac      — FIT→WARN band edge (footprint/available).
+    #   • block_frac     — WARN→BLOCK band edge; must land 27b-on-24GB firmly in BLOCK (the confirmed wedge).
+    # Env: AISTUDIO_FIT_RESERVE_BYTES / _FOOTPRINT_MULT / _WARN_FRAC / _BLOCK_FRAC.
+    reserve_bytes: int = Field(default=3_000_000_000, ge=0)
+    footprint_mult: float = Field(default=1.2, ge=1.0)
+    warn_frac: float = Field(default=0.80, ge=0.0, le=2.0)
+    block_frac: float = Field(default=0.92, ge=0.0, le=2.0)
+
+
 @dataclass(frozen=True)
 class VectorstoreConfig:
     embed_batch_size: int = 32
@@ -130,6 +153,7 @@ class AppConfig(BaseModel):
     ingest: IngestConfig = Field(default_factory=IngestConfig)
     chroma: ChromaConfig = Field(default_factory=ChromaConfig)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    fit: ModelFitConfig = Field(default_factory=ModelFitConfig)  # AIStudio_1020
     stats: dict[str, Any] = Field(default_factory=lambda: {})
     # Vector Store
     # vectorstore : str | None = Field(default=None)
@@ -187,6 +211,12 @@ def load_config_from_env() -> AppConfig:
     cfg.ollama.request_timeout_s = _env_float(
         "AISTUDIO_OLLAMA_TIMEOUT_S", cfg.ollama.request_timeout_s
     )
+
+    # Model-fit guard (AIStudio_1020)
+    cfg.fit.reserve_bytes = _env_int("AISTUDIO_FIT_RESERVE_BYTES", cfg.fit.reserve_bytes)
+    cfg.fit.footprint_mult = _env_float("AISTUDIO_FIT_FOOTPRINT_MULT", cfg.fit.footprint_mult)
+    cfg.fit.warn_frac = _env_float("AISTUDIO_FIT_WARN_FRAC", cfg.fit.warn_frac)
+    cfg.fit.block_frac = _env_float("AISTUDIO_FIT_BLOCK_FRAC", cfg.fit.block_frac)
 
     return cfg
 

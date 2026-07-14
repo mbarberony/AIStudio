@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-07-03*
+*Version: Beta | Updated: 2026-07-12*
 
 # AIStudio
 
@@ -324,8 +324,16 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - Relevance threshold — low-scoring chunks discarded at the vector layer ✅
 - Per-query timeout & threshold — the Ollama request timeout and the relevance floor (`min_score`) are tunable per query (left panel), per corpus (Edit Corpus), or by config default; the generous default keeps slow large models (70B ~140–170s) from being cut off mid-answer ✅
 - XBRL noise stripping in HTML ingestion ✅
+- **Memory-fit guard** — the model picker, API, and benchmark each check a model against the machine's available RAM before running it; a model too large is blocked (never left to silently load-and-hang) with a one-click recommendation of the tier that does fit ✅
+- **Benchmark tooling** — `ais_bench --batch --dry-run` previews the resolved run set without executing it; `--fit-policy {skip,downshift,force}` makes a batch memory-aware ✅
 
-**What's next:** the Post-Beta and Future phases — Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).
+**What's next — near term:**
+
+- **Entity name-resolution at ingest** — a firm's identity keyed to its CIK/LEI with a user-authoritative name override, so the same company always reads as one firm regardless of how each filing self-reports
+- **Table-aware chunking** — binding each number to its row, year, and basis (the multi-cell financial-table frontier where a small model will otherwise fabricate)
+- **Per-entity retrieval guarantees** for thinly-covered firms
+
+Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).
 
 > AIStudio is intentionally in a state of permanent Beta — not as a disclaimer, but as a design principle: the proof point is a living system, always being improved, never declared finished. Versioning marks milestones, not completion.
 

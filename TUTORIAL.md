@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: Beta | Updated: 2026-07-05*
+*Version: Beta | Updated: 2026-07-12*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -63,11 +63,11 @@ In the **Query Settings** section of the sidebar — just below the CORPUS area 
 
 **Retrieval Mix** is a slider that runs **left → right = literal → conceptual**. Drag **left** for literal matching — exact terms, tickers, defined phrases, names; drag **right** for conceptual matching — themes and ideas where the wording varies; the **middle (default) blends both**. (Under the hood the slider blends keyword/BM25 and semantic/vector retrieval; the panel shows it in plain literal↔conceptual terms.) Lean **literal** for exact terms, tickers, and acronyms (CET1, firm names); lean **conceptual** for paraphrased or thematic questions — see **Annex 5 (BM25)** for the mechanics.
 
-**Score Threshold** is a relevance floor — retrieved chunks scoring below it are dropped before the model sees them, which suppresses weak, off-topic context. The default is **0.5**, and **each corpus can set its own** (demo ships at 0.3) — you change it per corpus in the corpus **Edit** panel (§4.6). **When to lower it:** the embedding model (`nomic-embed-text`) often scores genuinely-relevant chunks below 0.5, so if good answers come back hedged or empty, drop the floor toward **~0.2–0.3** and re-ask.
+**Relevance Threshold** is a relevance floor — retrieved chunks scoring below it are dropped before the model sees them, which suppresses weak, off-topic context. The default is **0.5**, and **each corpus can set its own** (demo ships at 0.3) — you change it per corpus in the corpus **Edit** panel (§4.6). **When to lower it:** the embedding model (`nomic-embed-text`) often scores genuinely-relevant chunks below 0.5, so if good answers come back hedged or empty, drop the floor toward **~0.2–0.3** and re-ask.
 
-**Timeout** is how long AIStudio waits for the model to answer before giving up — the default is **300 seconds**, deliberately generous because large models are slow (a 70B answer can take ~140–170s, and cutting it off mid-generation wastes the whole run). Like Score Threshold, **each corpus can set its own** (in the **Edit** panel), and you can override it per query in the left panel. **When to change it:** raise it only if you switch to a very large model and see timeouts; there's rarely a reason to lower it. Most users never touch this one — it exists so a slow-but-valid answer on a heavy model isn't cut off.
+**Timeout** is how long AIStudio waits for the model to answer before giving up — the default is **300 seconds**, deliberately generous because large models are slow (a 70B answer can take ~140–170s, and cutting it off mid-generation wastes the whole run). Like Relevance Threshold, **each corpus can set its own** (in the **Edit** panel), and you can override it per query in the left panel. **When to change it:** raise it only if you switch to a very large model and see timeouts; there's rarely a reason to lower it. Most users never touch this one — it exists so a slow-but-valid answer on a heavy model isn't cut off.
 
-All three of these — Top K, Score Threshold, Timeout — follow the same resolution: the left-panel value wins for that query; leave it as-is (or blank) and the corpus's saved default applies; if the corpus stored none, the system default takes over. Tune once per corpus in **Edit**, or ad-hoc per query.
+All three of these — Top K, Relevance Threshold, Timeout — follow the same resolution: the left-panel value wins for that query; leave it as-is (or blank) and the corpus's saved default applies; if the corpus stored none, the system default takes over. Tune once per corpus in **Edit**, or ad-hoc per query.
 
 ### 1.5 The Help Corpus — AIStudio Answering About Itself
 
@@ -212,6 +212,8 @@ If you know which firms you care about, **name them** — that gives retrieval a
 At Top K = 20 this now surfaces **all three**, each with its own distinct framework (JPMorgan's Climate, Nature and Social Risk Management function; Citigroup's Climate Risk Management Framework; Goldman's Firmwide Enterprise Risk Committee), and it even flags where a firm's disclosure is less explicit. Naming the entities turned an open question that starved into a precise one that delivered.
 
 > **The takeaway — match Top K to the question.** Named, single-firm or few-firm questions work at **K=10**. Open "which firms…" questions need **K=20+** *and* will still under-cover a large corpus — so for a real comparison, **name the firms**. For your own corpora later, this is the main retrieval knob to tune (see §1.4 and the annexes): raise K for breadth, lower it for precision, and anchor cross-entity questions with explicit names. AIStudio is exploring [query understanding](https://en.wikipedia.org/wiki/Query_understanding) so that an open "which firms…" question can fan out across entities automatically — for now, naming them is the reliable path. The annexes cover why this happens (entity coverage vs. lexical density) and the directions being explored.
+
+> **See what a corpus covers — and what it doesn't.** Ask *"which companies are covered?"* and AIStudio lists the corpus's firms straight from its own metadata — a deterministic answer, not a model guess. And if you ask about a firm the corpus *doesn't* hold, you get an honest **"No information on X was found in this corpus"** that names what *is* covered — never a confident answer stitched together from the wrong company. For a product whose whole thesis is grounded, cited answers, confidently citing the wrong firm would be the worst failure available, so AIStudio refuses it by design.
 
 > **Switching models keeps your conversation.** Once you've added more than one model, re-ask the same question on each from the dropdown and compare. AIStudio prints a brief *"Changed to &lt;model&gt;"* line, and your **↑ / ↓** question history works across the switch, so you can recall a question and send it to the new model without retyping.
 
@@ -431,7 +433,7 @@ The settings that move the result, and why each sits where it does:
 
 - **Top K = 10** for multi-firm financial corpora — fewer slots drop firms from a comparison; 5 is fine for small single-topic corpora.
 - **Retrieval Mix (α) = 0.5.** Pure conceptual retrieval loses the *named firm*: the query embedding is dominated by the shared concept (every bank discusses "CET1"), so the firm names barely move it and retrieval latches onto whoever wrote most densely about the topic. Blending in literal matching restores the names. 0.5 is the locked default.
-- **Score Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so ~0.2 is the working value for these corpora.
+- **Relevance Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so ~0.2 is the working value for these corpora.
 - **Entity handling — isolation, not expansion.** The central lesson: recognizing a firm and *appending* its name to the query does **not** stop the wrong firms' chunks from being retrieved. Only a retrieval-time **filter** keyed to the recognized firm isolates correctly — and AIStudio builds that filter automatically. Expansion decorates the query; the filter excludes the contaminants. Conflating the two once produced answers that cited the wrong companies while scoring 100% mechanically.
 - **Model.** When retrieval is the bottleneck, model size barely moves the score — a small local model matches a large one on retrieval-limited questions; the larger model pulls ahead only on dense multi-firm synthesis. Either way, a model handed a chunk that lacks the fact will *fabricate* rather than abstain — which is exactly why the audit reads the cited chunk, not the answer's confidence.
 
@@ -515,6 +517,8 @@ ais_bench --batch
 ```
 
 > Run these (or `ais_bench --batch`) and read each report in `benchmarks/docs/` alongside the analysis below — the point of §5 is reading a run honestly, not the headline number.
+
+> **Don't benchmark a model that's too big for your Mac.** A benchmark run is just a series of queries, so the same memory-fit guard applies: point `ais_bench` at a model too large for your machine — `gemma3:27b` on a 24 GB Mac, which is the model the canonical `--batch` suite uses — and it will load and then *hang*, not error. AIStudio catches this: pass **`--fit-policy`** to say what should happen — `skip` (don't run it, logged loudly), `downshift` (auto-switch to the largest model that *does* fit), or `force` (run anyway, at your own risk) — and if you omit it on a run that won't fit, `ais_bench` **stops and asks** before continuing. So on a memory-constrained box, benchmark with `--model gemma3:12b` (or `--fit-policy downshift`) rather than the 27B canonical model. Check the fit of any installed model against your RAM in the UI's model picker, or `curl localhost:8000/models`.
 
 **Run A — the calibrated baseline.** Mechanically 10/10; the audit calibrates it to ~9. The two soft spots are both **temporal label-binding** on multi-firm, multi-year questions — the answer is right in substance but binds a value to the wrong year-label — and critically, where coverage is thin the model **abstains and says so** rather than inventing (one question openly states the sources don't cover the asked 2024→2025 change). No fabrication; honest abstention. This is the *dependable surface* — the questions are framed (BIC) to the shapes the system reliably answers, with the hard table/temporal shapes deliberately deferred to B. **Direction:** the temporal-binding edge is what the verify-the-chunk discipline (§5.6) and the entity-KB work keep tightening; on the larger synthesis model these questions ground more firmly, so model choice is the near-term lever.
 
@@ -760,7 +764,7 @@ At query time, AIStudio looks up each glossary term in your question and widens 
 
 ## Annex 3 — When the portfolio isn't in English
 
-A US-only corpus hides a problem that the European set surfaces on the first query: **retrieval quality is not language-neutral.** Everything in Modules 2–3 — embeddings, BM25, the glossary, the score threshold — was tuned against English text, and each one degrades differently when the filing isn't in English. This annex is the honest account of where the language ceiling is, what we can do about it, and what we can't.
+A US-only corpus hides a problem that the European set surfaces on the first query: **retrieval quality is not language-neutral.** Everything in Modules 2–3 — embeddings, BM25, the glossary, the relevance threshold — was tuned against English text, and each one degrades differently when the filing isn't in English. This annex is the honest account of where the language ceiling is, what we can do about it, and what we can't.
 
 ### A3.1 — Why a European portfolio is harder than a US one
 

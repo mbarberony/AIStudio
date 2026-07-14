@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-07-07*
+*Version: Beta | Updated: 2026-07-12*
 
 ---
 
@@ -204,6 +204,8 @@ On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 
+AIStudio checks whether a model fits your machine's memory before running it: the UI's model picker shows a fit verdict (and disables a model too large to run), and an oversized model is caught rather than silently loaded-then-hung. See "Don't benchmark a model that's too big for your Mac" in TUTORIAL §5.9 for the benchmark equivalent (`ais_bench --fit-policy`).
+
 ***How do I remove a model I no longer need?***
 ```bash
 ollama rm mistral:7b
@@ -263,7 +265,7 @@ Controls how the system finds relevant passages in your corpus.
 
 Adjust using the **Retrieval Mix** slider in the Query Settings sidebar.
 
-**Score Threshold** — *Relevance floor*
+**Relevance Threshold** — *Relevance floor*
 Chunks scoring below this are dropped before the model ever sees them. Default `0.50`. Lower it (≈`0.2–0.3`) if good answers come back empty or hedged; raise it to cut noise.
 Set it **per query** in the **Threshold** field in the sidebar, or **per corpus** in **Edit → Query Defaults** (where it applies whenever that corpus is queried). The per-query field wins; leave it blank and the corpus default applies.
 
@@ -299,7 +301,7 @@ The benchmark harness serves two purposes:
 ```bash
 ais_bench
 ```
-Parameters (Top K, Temperature, Retrieval Mix, Score Threshold) are read automatically from corpus metadata — no flags needed for built-in corpora.
+Parameters (Top K, Temperature, Retrieval Mix, Relevance Threshold) are read automatically from corpus metadata — no flags needed for built-in corpora.
 
 ***How do I benchmark a different corpus?***
 ```bash

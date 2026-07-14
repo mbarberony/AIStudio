@@ -74,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--batch] [--batch-id <id>]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--dry-run] [--batch] [--batch-id <id>]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -94,11 +94,16 @@ Options:
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
+  --fit-policy <mode>    What to do when a model won't fit this machine's memory (skip | downshift |
+                         force). Omitted + a model that won't fit → bench asks [YES/n] before running
+                         (needs a terminal; non-interactive runs fail closed). (AIStudio_1020)
   --batch                Run the pinned batch set from benchmarks/batch/bench_canonical.yaml
                          (the canonical runs in TUTORIAL §5.9); each writes a standard report
                          into benchmarks/<corpus>/reports/
   --batch-id <id>        With --batch, run only the run with this id (e.g. A)
   --canonical            [deprecated alias for --batch; --canonical-id → --batch-id]
+  --dry-run              With --batch, print the resolved run set and exit WITHOUT executing
+                         (preview a batch before committing the hours). (AIStudio_1012)
 
 Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --scope big_banks

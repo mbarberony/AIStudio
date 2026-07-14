@@ -1,7 +1,9 @@
 #!/usr/bin/env zsh
 # ais_ingest_sec_10k.sh — Ingest the SEC 10-K corpus into AIStudio
-# Version: 1.4.5
+# Version: 1.5.0
 # Changelog:
+#   1.5.0 — AIStudio_1019: export PYTHONUNBUFFERED=1 (after the source guard) so a tee'd ingest
+#           streams live progress without the caller prepending it. No other behavior change.
 #   1.4.5 — AIS_17 (backend-kill observability, 2026-06-14): preflight now records the PID serving
 #           the API port (lsof -nP -iTCP:<port> -sTCP:LISTEN), so a backend that dies mid-ingest
 #           isn't silent — you can see what held the port and confirm a restart's new PID. Pairs
@@ -57,7 +59,10 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="1.4.5"
+# AIStudio_1019: line-buffer Python so a tee'd ingest shows live progress. Harmless if already set.
+export PYTHONUNBUFFERED=1
+
+VERSION="1.5.0"
 
 SCRIPT_NAME="ais_ingest_sec_10k"
 REPO="${0:A:h}"

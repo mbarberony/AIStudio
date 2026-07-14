@@ -43,6 +43,11 @@ Options:
   --api URL             Backend URL (default: http://localhost:8000)
   --no-markdown         Skip writing .md report
   --full                Include full answers in report (default: first 4 paragraphs)
+  --fit-policy MODE     What to do when a model won't fit this machine's memory (skip | downshift |
+                        force). Omitted + a model that won't fit → bench asks [YES/n] before running
+                        (needs a terminal; a fully non-interactive run fails closed). (AIStudio_1020)
+  --dry-run             With --batch, print the resolved run set and exit WITHOUT executing the suite.
+                        Without --batch it stops with a notice rather than running a single job. (AIStudio_1012)
   --help                Show this help message
   --version             Show version
 
