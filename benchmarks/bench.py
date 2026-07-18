@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Changelog: 2.19.0 — AIStudio_1014 + _1041. (1) GROUNDEDNESS: now that _1039 captures the retrieved
+#   chunks, a zero-citation RED is checked against them. High lexical overlap (>=70%) re-rates to
+#   AMBER 'uncited but grounded' — an attribution failure, not a content one; low overlap (<40%) is
+#   flagged as possible fabrication. Proven necessary by `digital_banking_strategy`, scored RED on
+#   two Beast runs while every distinctive phrase in its answer appeared verbatim in the context.
+#   Crude by design (lexical, not entailment): it cannot prove faithfulness, but it separates
+#   'built from the context' from 'built from nowhere', which is the distinction that changes the
+#   rating. (2) _1041: after a --fit-policy force, warn that a wedged model stays resident and give
+#   the `ollama stop` line — otherwise the NEXT run silently sees a starved machine.
 # Changelog: 2.18.1 — AIStudio_1039: the JSON report now carries the retrieved context per question
 #   (api.py >=1.18.0 returns it by default), so faithfulness can be audited offline.
 # Changelog: 2.18.0 — AIStudio_1038: a fit-guard BLOCK is now its own rating (⚫ BLOCKED), not 🔴.
@@ -351,7 +360,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.18.1"
+VERSION = "2.19.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -973,6 +982,35 @@ def _normalize_text(s: str) -> str:
     # Normalize hyphens to spaces
     s = s.replace("-", " ")
     return s.lower()
+
+
+def _groundedness(answer: str, context: list[dict] | None) -> float | None:
+    """Fraction of the answer's distinctive words that actually appear in the retrieved chunks.
+
+    AIStudio_1014 / _1038 follow-up. A zero-citation answer is currently scored RED, which reads as
+    "wrong" — but `digital_banking_strategy` (2026-07-18, Beast) proved that shape can be fully
+    grounded and merely un-tagged: every distinctive phrase in the answer appeared verbatim in the
+    18 retrieved chunks. Conflating "forgot to attribute" with "invented it" overstates the failure
+    and is exactly what BENCH_HARNESS §179 warns against.
+
+    Deliberately crude — a lexical overlap, not entailment. It cannot prove faithfulness; it CAN
+    separate an answer built from the context from one built from nowhere, which is the distinction
+    that changes the rating. None when there is no context to check against.
+    """
+    if not context or not answer:
+        return None
+    blob = " ".join((c.get("content") or "") for c in context).lower()
+    if not blob:
+        return None
+    # content words only: short/common tokens carry no evidence either way
+    words = [w for w in re.findall(r"[a-z]{5,}", answer.lower()) if w not in _STOPISH]
+    if not words:
+        return None
+    return round(sum(1 for w in set(words) if w in blob) / len(set(words)), 3)
+
+
+_STOPISH = {"their", "these", "those", "which", "there", "where", "would", "could", "should",
+            "about", "other", "using", "based", "while", "during", "across", "within", "through"}
 
 
 def _is_guard_block(result: dict) -> bool:
@@ -1680,6 +1718,10 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
 
     if policy == "force":
         _fit_warn(f"{label} {reason}; --fit-policy force → running anyway (may hang)")
+        # AIStudio_1041: a forced oversize model usually wedges with its weights still resident, so
+        # the NEXT run sees a machine with far less free memory and honestly skips everything. Say so
+        # up front — the cleanup is one command and nobody guesses it from a downstream SKIP.
+        print(f"  · If it wedges, the model stays resident: `ollama stop {model}` before the next run.", file=sys.stderr)
         return ("run", model)
     if policy == "skip":
         _fit_warn(f"{label} {reason}; --fit-policy skip → SKIPPED")
@@ -2034,11 +2076,30 @@ def main() -> None:
 
         ev = evaluate(result, q.get("expected_keywords", []) or q.get("keywords", []),
                       entity_filter=_eff_ef)
+
+        # AIStudio_1014: a RED with zero citations but a substantive, GROUNDED answer is an
+        # attribution failure, not a content failure. Re-rate it AMBER and say which it is — the
+        # published numbers should not call "forgot to cite" the same thing as "made it up".
+        _ctx = ((result.get("data") or {}).get("context")) if result.get("ok") else None
+        _g = _groundedness((result.get("data") or {}).get("answer", "") if result.get("ok") else "", _ctx)
+        ev["groundedness"] = _g
+        if ev.get("rating") == "RED" and ev.get("citation_count") == 0 and _g is not None:
+            if _g >= 0.70:
+                ev["rating"] = "AMBER"
+                ev["uncited_but_grounded"] = True
+                ev["reason"] = f"Answer is grounded in the retrieved context ({_g:.0%} lexical overlap) but emitted no citations."
+            elif _g < 0.40:
+                ev["ungrounded"] = True
+                ev["reason"] = f"Answer shows little overlap with the retrieved context ({_g:.0%}) — possible fabrication."
         status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         _lang = q.get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         _missing_str = f" | missing: {', '.join(ev['missing_keywords'])}" if ev.get("missing_keywords") else ""
         _density_str = f" | density: {ev['citation_density']}⚠" if ev.get("low_citation_density") else ""
+        if ev.get("uncited_but_grounded"):
+            _density_str += f" | grounded {ev['groundedness']:.0%}, uncited"
+        elif ev.get("ungrounded"):
+            _density_str += f" | ⚠ only {ev['groundedness']:.0%} grounded"
         # AIStudio_1037: memory at question boundaries — the curve that reveals sweep starvation.
         _mem_after = _free_memory_pct()
         _mem_str = ""

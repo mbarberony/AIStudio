@@ -1,4 +1,17 @@
-# Version: 1.18.0
+# Version: 1.19.3
+# Changelog: 1.19.3 — ruff I001: `sys` now sits in the real top-level import block (alphabetical,
+#   between shutil and time) rather than mid-file. Third
+#   lint error from one 6-line addition — the lesson is to run the linter's own reasoning (what does
+#   this module import, and where do imports belong here) before adding to an unfamiliar file.
+# Changelog: 1.19.2 — ruff F821 (again): api.py has no top-level `sys` import either; the _1042
+#   warning now imports it locally. Two lint errors from one 6-line addition — a reminder to check
+#   what a module actually imports rather than assuming the usual suspects.
+# Changelog: 1.19.1 — ruff F821: api.py has no logger; the _1042 warning uses the module's existing
+#   stderr-print pattern instead.
+# Changelog: 1.19.0 — AIStudio_1042: an implausible fit reserve (>50% of physical RAM) is now
+#   warned about and IGNORED rather than applied. A stale AISTUDIO_FIT_RESERVE_BYTES made a 128 GB
+#   machine report 'no model fits' and silently block 9 of 10 benchmark questions — valid arithmetic,
+#   absurd result, nothing questioned it. Also exposes the effective reserve in /system.
 # Changelog: 1.18.0 — AIStudio_1039: /ask returns the retrieved chunks it answered from
 #   (`context`: chunk_id, source, page, score, content), ON BY DEFAULT — opt out with
 #   `include_context: false`. Without this an uncited or suspect answer cannot be checked against
@@ -256,6 +269,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime as _dt
@@ -919,6 +933,7 @@ class SystemInfo(BaseModel):
     total_memory_bytes: int | None = None   # AIStudio_967: physical RAM (hw.memsize)
     total_memory_human: str | None = None
     available_memory_bytes: int | None = None   # AIStudio_1020: psutil available minus reserve — the fit denominator
+    fit_reserve_bytes: int | None = None        # AIStudio_1042: the reserve actually applied — visible, not implicit
     available_memory_human: str | None = None
 
 
@@ -1079,6 +1094,9 @@ def _total_memory_bytes() -> int | None:
 
 # ── AIStudio_1020: memory-fit guard (API layer) ──────────────────────────────────────────────
 # The guard's single policy lives in app/model_fit.py; the helpers below feed it live host facts.
+_RESERVE_WARNED = False   # AIStudio_1042: warn once per process, not per request
+
+
 def _available_memory_bytes() -> int | None:
     """Available RAM for a model load, in bytes, MINUS the configured reserve. On macOS,
     psutil.virtual_memory().available OMITS purgeable/file-backed reclaimable pages, under-reporting
@@ -1089,6 +1107,25 @@ def _available_memory_bytes() -> int | None:
     reserve = CONFIG.fit.reserve_bytes
     total = _total_memory_bytes()
     avail: int | None = None
+
+    # AIStudio_1042 — refuse to trust an implausible reserve. A stale
+    # AISTUDIO_FIT_RESERVE_BYTES left exported from a test session made a 128 GB machine report
+    # "5.7 GB free, no model fits" and silently BLOCK 9 of 10 benchmark questions; the arithmetic was
+    # valid, so nothing questioned it. A reserve consuming more than half of physical RAM is
+    # configuration error, not intent — warn loudly (once) and ignore it rather than propagate a
+    # number that will block everything. Validate at the point of derivation, not the point of use.
+    if total and reserve and reserve > total * 0.5:
+        global _RESERVE_WARNED
+        if not _RESERVE_WARNED:
+            _RESERVE_WARNED = True
+            print(
+                f"[backend] ⚠ Fit reserve is {reserve / 1e9:.0f} GB of {total / 1e9:.0f} GB total RAM "
+                f"(>50%) — almost certainly a stale AISTUDIO_FIT_RESERVE_BYTES. Ignoring it; every "
+                f"model would otherwise be blocked. `unset AISTUDIO_FIT_RESERVE_BYTES` and restart "
+                f"to silence this.",
+                file=sys.stderr, flush=True,
+            )
+        reserve = 0
 
     # macOS: memory_pressure reports free + purgeable + file-backed reclaimable, which psutil misses.
     if total:
@@ -3013,6 +3050,7 @@ async def get_system() -> SystemInfo:
         total_memory_bytes=b,
         total_memory_human=_human_size(b),
         available_memory_bytes=avail,
+        fit_reserve_bytes=CONFIG.fit.reserve_bytes,   # AIStudio_1042: make the operative number visible
         available_memory_human=_human_size(avail),
     )
 
