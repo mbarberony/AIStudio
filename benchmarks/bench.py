@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Changelog: 2.18.1 — AIStudio_1039: the JSON report now carries the retrieved context per question
+#   (api.py >=1.18.0 returns it by default), so faithfulness can be audited offline.
+# Changelog: 2.18.0 — AIStudio_1038: a fit-guard BLOCK is now its own rating (⚫ BLOCKED), not 🔴.
+#   Detection needs BOTH the advisory phrasing AND sub-1s latency, so a fast real answer is never
+#   misclassified. Blocked questions are excluded from the pass-rate denominator AND from the
+#   latency average (a 0.02s non-run used to drag it — 'avg 6.6s' on a run whose only real question
+#   took 66s), and the summary names them explicitly with the remedy. Rationale: the machine
+#   declining to run a question is a memory event, not a quality defect; conflating them made
+#   constrained-box pass rates uninterpretable.
 # Changelog: 2.17.0 — review pass: (1) the corpus-failure usage line now points at `ais_bench --help`;
 #   (2) 'passed (binary)' → 'passed (binary test)'; (3) Query-expansion renders on/off, not 1/0;
 #   (4) NEW --mem-track / --no-mem-track (default ON while _1037 is open) gates the PER-QUESTION
@@ -342,7 +351,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.17.0"
+VERSION = "2.18.1"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -966,8 +975,43 @@ def _normalize_text(s: str) -> str:
     return s.lower()
 
 
+def _is_guard_block(result: dict) -> bool:
+    """True when /ask returned the fit guard's advisory INSTEAD of running the model.
+
+    AIStudio_1038. The guard answers `ok: true` in near-zero time with a fixed advisory text — so
+    a naive grader scores it RED and it reads as a quality failure when the model never ran at all.
+    Two independent signals, both required, so a genuinely fast real answer is never misclassified:
+    the advisory phrasing, AND a latency no generation could achieve.
+    """
+    if not result.get("ok"):
+        return False
+    ans = ((result.get("data") or {}).get("answer") or "")
+    if "won't fit in memory" not in ans:
+        return False
+    return (result.get("elapsed_sec") or 0) < 1.0
+
+
 def evaluate(result: dict, expected_keywords: list[str],
              entity_filter: list[str] | None = None) -> dict:
+    if _is_guard_block(result):
+        # AIStudio_1038 — the machine declined to run this question. Not a model failure; scoring it
+        # RED conflates a memory event with a quality defect and makes the pass rate meaningless.
+        return {
+            "pass": False,
+            "rating": "BLOCKED",
+            "score": None,
+            "reason": "Fit guard declined to run: not enough free memory for this model.",
+            "keyword_pass": False,
+            "citation_count": 0,
+            "citation_pass": False,
+            "citation_density": 0.0,
+            "low_citation_density": False,
+            "no_info_signal": False,
+            "missing_keywords": [],
+            "entity_coverage": None,
+            "entities_missing": [],
+            "cited_sources": [],
+        }
     if not result["ok"]:
         return {
             "pass": False,
@@ -1140,7 +1184,7 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         q = r["question"]
         ev = r["eval"]
         res = r["result"]
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         latency = f"{res['elapsed_sec']}s"
         cites = ", ".join(ev.get("cited_sources", []))[:40] or "—"
         _lang = q.get("language", "en")
@@ -1990,7 +2034,7 @@ def main() -> None:
 
         ev = evaluate(result, q.get("expected_keywords", []) or q.get("keywords", []),
                       entity_filter=_eff_ef)
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         _lang = q.get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         _missing_str = f" | missing: {', '.join(ev['missing_keywords'])}" if ev.get("missing_keywords") else ""
@@ -2038,6 +2082,8 @@ def main() -> None:
             _ans = (_data.get("answer") or "").strip()
             print(f"    · answer:           {_ans[:200]}{'...' if len(_ans) > 200 else ''}")
 
+        # AIStudio_1039: keep the retrieved context in the artifact — it is the only thing that makes
+        # a RED-uncited answer auditable after the fact (grounded-but-untagged vs fabricated).
         results.append({"question": q, "result": result, "eval": ev,
                         "memory": {"free_pct_before": _mem_before,  # AIStudio_1037
                                    "free_pct_after": _mem_after}})
@@ -2045,15 +2091,23 @@ def main() -> None:
     # Summary
     passed = sum(1 for r in results if r["eval"]["pass"])
     total = len(results)
-    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(
-        1, total
-    )
+    # AIStudio_1038: a BLOCKED question never ran, so its ~0.02s must not drag the average — that
+    # is how "avg latency 6.6s" happened on a run where the one real question took 66s.
+    _timed = [r for r in results if r["result"]["ok"] and r["eval"].get("rating") != "BLOCKED"]
+    avg_latency = sum(r["result"]["elapsed_sec"] for r in _timed) / max(1, len(_timed))
 
     _sep("Summary")
     _greens = sum(1 for r in results if r["eval"].get("rating") == "GREEN")
     _ambers = sum(1 for r in results if r["eval"].get("rating") == "AMBER")
     _reds = sum(1 for r in results if r["eval"].get("rating") == "RED")
-    print(f"• {passed}/{total} passed (binary test) | 🟢 {_greens}  🟡 {_ambers}  🔴 {_reds} | avg latency: {round(avg_latency, 1)}s")
+    _blocked = sum(1 for r in results if r["eval"].get("rating") == "BLOCKED")
+    _scored = total - _blocked
+    _blk_str = f"  ⚫ {_blocked}" if _blocked else ""
+    print(f"• {passed}/{_scored} passed (binary test) | 🟢 {_greens}  🟡 {_ambers}  🔴 {_reds}{_blk_str} | avg latency: {round(avg_latency, 1)}s")
+    if _blocked:
+        # Say it plainly: these were never asked, so they are excluded from the denominator.
+        print(f"• {_blocked} question(s) BLOCKED by the fit guard — not scored, excluded from the pass rate.")
+        print("  · The model did not run on these. Free memory (`ollama stop <model>`) or use a smaller model, then re-run.")
 
     # AIStudio_1037: sweep memory drift — the headline diagnostic for self-starvation.
     # A sweep should hold memory roughly constant; a monotonic slide means per-question working
@@ -2087,7 +2141,7 @@ def main() -> None:
             f"({_drift:+.0f} points over {_n_after} question(s) after load){_flag}"
         )
     for r in results:
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
         _lang = r["question"].get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         print(f"  {status} {r['question']['id']}{_lang_marker}")

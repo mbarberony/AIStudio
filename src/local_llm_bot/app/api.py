@@ -1,4 +1,10 @@
-# Version: 1.17.2
+# Version: 1.18.0
+# Changelog: 1.18.0 — AIStudio_1039: /ask returns the retrieved chunks it answered from
+#   (`context`: chunk_id, source, page, score, content), ON BY DEFAULT — opt out with
+#   `include_context: false`. Without this an uncited or suspect answer cannot be checked against
+#   what the model was actually shown, so BENCH_HARNESS §179's contract ('verify the cited chunk,
+#   never the colour alone') was un-executable from a saved report. Default-on deliberately: the run
+#   you most need to audit is the one nobody thought to flag.
 # Changelog: 1.17.2 — AIStudio_1020 follow-up (verified Suzanne 24GB 2026-07-16). Fit denominator:
 #   _available_memory_bytes now reads macOS `memory_pressure` free% x physical RAM (the OS aggregate
 #   incl. purgeable/file-backed) instead of psutil.virtual_memory().available, which under-reports
@@ -850,6 +856,8 @@ class AskRequest(BaseModel):
     model: str | None = None                   # Per-request model override; falls back to CONFIG.rag.default_model
     query_expansion: int = 1                    # AIStudio_875: entity-name expansion repeat count (0=off, 1=once, N=weighted)
     entity_filter_mode: str = "auto"            # AIStudio_875: none | yaml | auto. 'auto' self-populates entity_filter from detected entities when none supplied.
+    include_context: bool = True   # AIStudio_1039: return the retrieved chunks (default ON — see AskResponse.context)
+
 
 
 class CitationResponse(BaseModel):
@@ -869,6 +877,11 @@ class AskResponse(BaseModel):
     system_prompt_tier: str | None = None  # AIStudio_956: which system-prompt tier served this answer ('small' | 'full')
     fit: dict[str, Any] | None = None    # AIStudio_1020: set when a preflight BLOCK short-circuited the answer
     no_info: bool = False                # AIStudio_1013: True when an entity-filter miss hard-stopped the answer
+    context: list[dict[str, Any]] | None = None  # AIStudio_1039: the chunks actually retrieved for
+    # this answer — id, source, score, and the text. Returned BY DEFAULT: without it, an uncited or
+    # suspect answer cannot be checked against what the model was actually shown, which is exactly
+    # the audit BENCH_HARNESS §179 requires ("verify the cited chunk, never the colour alone").
+    # Suppress with `include_context: false` on the request when payload size matters.
 
 
 class RetrieveRequest(BaseModel):
@@ -1457,6 +1470,22 @@ async def ask(req: AskRequest) -> AskResponse:
         [CitationResponse(**c) for c in result["citations"]] if result["citations"] else None
     )
 
+    # AIStudio_1039: hand back what the model was actually shown. A report that stores the answer
+    # but not its context cannot be audited later for faithfulness — the failure mode this closes is
+    # a confident, uncited answer that nobody can classify as grounded-but-untagged vs fabricated.
+    _context = None
+    if getattr(req, "include_context", True):
+        _context = [
+            {
+                "chunk_id": getattr(d, "id", None),
+                "source": getattr(d, "source", None),
+                "page": getattr(d, "page", None),
+                "score": round(getattr(d, "score", 0.0) or 0.0, 4),
+                "content": getattr(d, "content", "") or "",
+            }
+            for d in docs
+        ]
+
     return AskResponse(
         answer=result["answer"],
         citations=citation_responses,
@@ -1464,6 +1493,7 @@ async def ask(req: AskRequest) -> AskResponse:
         retrieval_query=retrieval_query,  # always return — shows query after entity expansion
         model_used=req.model or CONFIG.rag.default_model,
         system_prompt_tier=result.get("prompt_tier"),  # AIStudio_956: 'small' | 'full'
+        context=_context,
     )
 
 
