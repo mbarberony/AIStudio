@@ -130,9 +130,9 @@ The process has four moves, run for each corpus:
 1. **A fixed question set.** Each corpus has a versioned YAML of questions with expected-content keywords — the inputs are pinned so a run is reproducible, not ad-hoc.
 2. **A mechanical pass.** The harness (`ais_bench`) runs every question, checks three conditions — keywords present, at least one citation, no hedging — and scores each 🟢/🟡/🔴. This is cheap, automatic, and *deliberately naive*: it measures surface signals, not truth.
 3. **A calibrated audit.** Because the mechanical score rewards confident-looking output, every run is then read against the **primary source** — the actual filing — and re-scored: correct-and-grounded, partial, miss, or grading-artifact. The gap between mechanical and calibrated is itself a finding [1].
-4. **A pinned canonical suite.** A small set of runs — across both corpora, at the canonical depth — is fixed so the headline numbers can be regenerated on demand with `ais_bench --batch`, the same way the help corpus is rebuilt on each release.
+4. **A pinned canonical suite.** A small set of runs — across both corpora, at the canonical depth — is fixed so the headline numbers can be regenerated on demand with `ais_bench --canonical`, the same way the help corpus is rebuilt on each release. A companion verb, `ais_bench --batch`, runs the same sets against whatever models the *current* machine can actually hold — the pinned model is what makes numbers comparable, but it does not fit every Mac, and a suite nobody can run is not reproducible in any useful sense.
 
-The design intent mirrors the rest of the architecture: **measure honestly, show the failures, make it reproducible.** The two frontiers the suite surfaces — multi-year/table synthesis on English text, and the language ceiling on non-English filings — are documented openly rather than hidden, because a system whose limits are known is more trustworthy than one whose limits are unstated [2]. The harness flags (`--corpus`, `--scope`, `--questions`, `--top-k`, `--batch`) and how to read a report are covered in the harness manual [3]; the audited evidence and its synthesis are the canonical suite [4].
+The design intent mirrors the rest of the architecture: **measure honestly, show the failures, make it reproducible.** The two frontiers the suite surfaces — multi-year/table synthesis on English text, and the language ceiling on non-English filings — are documented openly rather than hidden, because a system whose limits are known is more trustworthy than one whose limits are unstated [2]. The harness flags (`--corpus`, `--scope`, `--questions`, `--top-k`, `--canonical`, `--batch`) and how to read a report are covered in the harness manual [3]; the audited evidence and its synthesis are the canonical suite [4].
 
 ---
 
@@ -157,7 +157,7 @@ The references below point into the rest of the AIStudio document corpus; bracke
 
 [2] **TUTORIAL.md** Annex 3 (the language ceiling) and Annex 4 (the table-cell frontier) — the two failure mechanisms, worked end to end.
 
-[3] **BENCH_HARNESS.md** — https://github.com/mbarberony/AIStudio/blob/main/benchmarks/docs/BENCH_HARNESS.md — the harness manual: `ais_bench` flags, question-file format, reading a report, reproducing `--batch`.
+[3] **BENCH_HARNESS.md** — https://github.com/mbarberony/AIStudio/blob/main/benchmarks/docs/BENCH_HARNESS.md — the harness manual: `ais_bench` flags, question-file format, reading a report, reproducing the suite with `--canonical`.
 
 [4] **BENCH - Canonical Suite - README and Synthesis** — https://github.com/mbarberony/AIStudio/blob/main/benchmarks/docs/ — the audited evidence across all four canonical runs, with the cross-corpus synthesis.
 

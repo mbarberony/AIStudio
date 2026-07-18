@@ -204,7 +204,7 @@ On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 
-AIStudio checks whether a model fits your machine's memory before running it: the UI's model picker shows a fit verdict (and disables a model too large to run), and an oversized model is caught rather than silently loaded-then-hung. See "Don't benchmark a model that's too big for your Mac" in TUTORIAL §5.9 for the benchmark equivalent (`ais_bench --fit-policy`).
+AIStudio checks whether a model fits your machine's memory before running it: the UI's model picker shows a fit verdict (and disables a model too large to run), `ais_start` lists what is installed and what can actually run, and an oversized model is caught rather than silently loaded-then-hung. Note that *fitting* and *sustaining a long run* are different things — a model that loads fine can still exhaust memory part-way through a multi-question benchmark sweep, so a model near your machine's ceiling is better for single questions than for unattended runs. Benchmarks follow the same rule: `ais_bench --batch` picks models that fit the current machine, while `ais_bench --canonical` reproduces the published runs on their pinned model. See "Don't benchmark a model that's too big for your Mac" in TUTORIAL §5.9 (`ais_bench --fit-policy`).
 
 ***How do I remove a model I no longer need?***
 ```bash
