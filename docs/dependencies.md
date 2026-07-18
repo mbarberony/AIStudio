@@ -164,6 +164,35 @@ package. Will be essential for the v1.0 one-click installer.
 
 ---
 
+## System Dependencies (Homebrew, not pip)
+
+Three tools AIStudio uses are **not Python packages** and cannot arrive via `requirements.txt`.
+They are installed with Homebrew during QUICKSTART, and `ais_install` verifies them.
+
+| Tool | Purpose | Install | Missing means |
+|---|---|---|---|
+| `ollama` | Runs the local models | `brew install ollama` | Nothing works — this is the engine |
+| `pango` | Text-rendering library `weasyprint` links against | `brew install pango` | PDF reports skipped |
+| `pandoc` | Converts report Markdown → HTML | `brew install pandoc` | PDF reports skipped |
+
+**Why the PDF path needs two of them.** A benchmark PDF is built in two hops: `pandoc` turns the
+`.md` report into HTML, then `weasyprint` (a pip package, but one that links to Pango's C library)
+renders that HTML to PDF. Miss either and the `.md` and `.json` reports are still written — only the
+`.pdf` companion is skipped. On macOS this also needs `DYLD_LIBRARY_PATH=/opt/homebrew/lib`, which
+`ais_install` writes into the venv activate script, because dyld does not search Homebrew's lib
+directory by default and `import weasyprint` otherwise fails on `libgobject`.
+
+**Transitive dependencies are deliberately not listed.** `brew install pandoc` may pull `gmp` and
+others; Homebrew resolves those itself. Pinning them here would go stale on the next formula bump
+and give a false impression of precision. Only direct requirements belong in this table.
+
+**Verification, not documentation, is what catches a miss.** This page existing was never enough:
+`pandoc` was absent on the primary development machine for months while `pango` was present, and the
+only signal was a `⚠ PDF skipped` line on every benchmark run. `ais_install` now checks both at
+install time and says so once (AIStudio_1043).
+
+---
+
 ## Deliberately Excluded
 
 ### ~~`langchain`~~

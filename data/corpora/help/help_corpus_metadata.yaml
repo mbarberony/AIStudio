@@ -74,18 +74,18 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   gets its own line.
 
   '
-last_ingested_at: '2026-07-18T18:29:18'
-last_ingest_chunks: 299
+last_ingested_at: '2026-07-18T18:34:14'
+last_ingest_chunks: 301
 last_ingest_files: 15
-ingest_duration_seconds: 15.7
-avg_seconds_per_file: 1.05
+ingest_duration_seconds: 15.51
+avg_seconds_per_file: 1.03
 files:
   about.pdf:
     file_type: PDF
     size_bytes: 21628
     chunks: 2
-    duration_sec: 1.45
-    ingested_at: '2026-07-18T22:29:04+00:00'
+    duration_sec: 1.431
+    ingested_at: '2026-07-18T22:34:00+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -94,18 +94,18 @@ files:
     file_type: PDF
     size_bytes: 41091
     chunks: 9
-    duration_sec: 0.58
-    ingested_at: '2026-07-18T22:29:05+00:00'
+    duration_sec: 0.472
+    ingested_at: '2026-07-18T22:34:00+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   architecture_decisions.pdf:
     file_type: PDF
-    size_bytes: 107139
+    size_bytes: 107138
     chunks: 22
-    duration_sec: 0.94
-    ingested_at: '2026-07-18T22:29:06+00:00'
+    duration_sec: 0.925
+    ingested_at: '2026-07-18T22:34:01+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -114,8 +114,8 @@ files:
     file_type: PDF
     size_bytes: 174665
     chunks: 17
-    duration_sec: 0.783
-    ingested_at: '2026-07-18T22:29:06+00:00'
+    duration_sec: 0.786
+    ingested_at: '2026-07-18T22:34:02+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -124,8 +124,8 @@ files:
     file_type: PDF
     size_bytes: 303737
     chunks: 10
-    duration_sec: 0.573
-    ingested_at: '2026-07-18T22:29:07+00:00'
+    duration_sec: 0.576
+    ingested_at: '2026-07-18T22:34:03+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -134,8 +134,8 @@ files:
     file_type: PDF
     size_bytes: 74199
     chunks: 13
-    duration_sec: 0.681
-    ingested_at: '2026-07-18T22:29:08+00:00'
+    duration_sec: 0.786
+    ingested_at: '2026-07-18T22:34:04+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -144,18 +144,18 @@ files:
     file_type: PDF
     size_bytes: 29980
     chunks: 4
-    duration_sec: 0.285
-    ingested_at: '2026-07-18T22:29:08+00:00'
+    duration_sec: 0.293
+    ingested_at: '2026-07-18T22:34:04+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   dependencies.pdf:
     file_type: PDF
-    size_bytes: 139115
-    chunks: 7
-    duration_sec: 0.45
-    ingested_at: '2026-07-18T22:29:08+00:00'
+    size_bytes: 174818
+    chunks: 9
+    duration_sec: 0.584
+    ingested_at: '2026-07-18T22:34:04+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -164,8 +164,8 @@ files:
     file_type: PDF
     size_bytes: 97545
     chunks: 15
-    duration_sec: 0.829
-    ingested_at: '2026-07-18T22:29:09+00:00'
+    duration_sec: 0.849
+    ingested_at: '2026-07-18T22:34:05+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -174,8 +174,8 @@ files:
     file_type: PDF
     size_bytes: 186159
     chunks: 20
-    duration_sec: 1.013
-    ingested_at: '2026-07-18T22:29:10+00:00'
+    duration_sec: 0.921
+    ingested_at: '2026-07-18T22:34:06+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -184,18 +184,18 @@ files:
     file_type: PDF
     size_bytes: 32447
     chunks: 8
-    duration_sec: 0.546
-    ingested_at: '2026-07-18T22:29:11+00:00'
+    duration_sec: 0.473
+    ingested_at: '2026-07-18T22:34:07+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   QA_TESTING_LESSONS_LEARNED.pdf:
     file_type: PDF
-    size_bytes: 365561
+    size_bytes: 365559
     chunks: 11
-    duration_sec: 0.668
-    ingested_at: '2026-07-18T22:29:11+00:00'
+    duration_sec: 0.607
+    ingested_at: '2026-07-18T22:34:07+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -204,8 +204,8 @@ files:
     file_type: PDF
     size_bytes: 303405
     chunks: 40
-    duration_sec: 1.784
-    ingested_at: '2026-07-18T22:29:13+00:00'
+    duration_sec: 1.794
+    ingested_at: '2026-07-18T22:34:09+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -214,8 +214,8 @@ files:
     file_type: PDF
     size_bytes: 237172
     chunks: 24
-    duration_sec: 1.13
-    ingested_at: '2026-07-18T22:29:14+00:00'
+    duration_sec: 1.119
+    ingested_at: '2026-07-18T22:34:10+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -224,8 +224,8 @@ files:
     file_type: PDF
     size_bytes: 608516
     chunks: 97
-    duration_sec: 3.906
-    ingested_at: '2026-07-18T22:29:18+00:00'
+    duration_sec: 3.803
+    ingested_at: '2026-07-18T22:34:14+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
