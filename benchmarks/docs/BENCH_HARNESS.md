@@ -34,7 +34,10 @@ Options:
   --questions STEM      Named question subset by STEM (not a path). Empty = the flat
                         default set; a STEM resolves to questions/<corpus>_<stem>_questions.yaml.
                         An unknown STEM is a HARD ERROR (no silent fallback).
-  --batch               Run the pinned canonical suite from benchmarks/batch/bench_canonical.yaml
+  --canonical           Reproduce the audited runs EXACTLY — every run on its PINNED model
+  --batch               Run the reference sets against THIS machine: bare = every run twice
+                        (smallest installed + largest that fits); narrow with
+                        --model <name|largest|smallest>
                         (multiple corpus/scope/question combinations in one invocation).
   --top-k INT           Chunks retrieved per query (default: 10 for the financial corpora;
                         a corpus with no stored default falls back to the system default of 5)
@@ -46,12 +49,14 @@ Options:
   --fit-policy MODE     What to do when a model won't fit this machine's memory (skip | downshift |
                         force). Omitted + a model that won't fit → bench asks [YES/n] before running
                         (needs a terminal; a fully non-interactive run fails closed). (AIStudio_1020)
-  --dry-run             With --batch, print the resolved run set and exit WITHOUT executing the suite.
-                        Without --batch it stops with a notice rather than running a single job. (AIStudio_1012)
+  --dry-run             With --batch/--canonical, print the resolved run set + runtime estimate and
+                        exit WITHOUT executing. Without either it stops with a notice. (AIStudio_1012)
+  --mem-track           Per-question free-memory column (default on). --no-mem-track hides the column;
+                        the run-tail recap and the JSON record are always written. (AIStudio_1037)
   --help                Show this help message
   --version             Show version
 
-(`--canonical` is kept as a silent deprecated alias of `--batch`.)
+(`--canonical` and `--batch` are now **different verbs**: `--canonical` reproduces the audited runs on their pinned models; `--batch` adapts to the machine it runs on. `--canonical` is no longer an alias.)
 ```
 
 **Question sets — one home.** The default set is the flat file
@@ -107,15 +112,20 @@ Reports are written to `benchmarks/my_corpus/reports/`.
 
 ## Running Systematic Benchmarks
 
-### The canonical suite (`--batch`)
+### The reference suite — `--canonical` vs `--batch`
 
-The pinned, reproducible benchmark set lives at `benchmarks/batch/bench_canonical.yaml` and runs with:
+The reference set lives at `benchmarks/batch/bench_canonical.yaml`. There are two ways to run it, because reproducibility and machine-characterisation are different jobs:
 
 ```bash
-ais_bench --batch
+ais_bench --canonical      # exact reproduction — every run on its pinned model
+ais_bench --batch          # this machine — every run on smallest-installed AND largest-fitting
 ```
 
-It executes the canonical runs — across both shipped corpora, at the canonical depth — in one invocation, writing each run's report to its corpus `reports/`. This is how the headline numbers in `BENCH - Canonical Suite - README and Synthesis` are regenerated. Use it to reproduce the published evidence; use the individual flags below to explore.
+`--canonical` executes the runs exactly as specified — same corpora, same depth, same **pinned model** — which is what makes the numbers comparable across time and machines. This is how the headline figures in `BENCH - Canonical Suite - README and Synthesis` are regenerated.
+
+`--batch` answers a different question: *what does this machine do?* It runs every set twice — once on the smallest model you have installed, once on the largest that currently fits — producing the 4x2 matrix that characterises a machine across its own tier range. Narrow it with `--model largest`, `--model smallest`, or a model name. This exists because the pinned model is not universal: `gemma3:27b` will not load on a 24 GB Mac, so a constrained machine could not run the reference set at all. Bare `--batch` is 8 runs and can take hours — it prints an order-of-magnitude estimate first, and `--dry-run` previews the resolved set without executing.
+
+Use the individual flags below to explore.
 
 
 ### Compare models

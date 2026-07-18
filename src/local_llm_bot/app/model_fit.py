@@ -1,5 +1,11 @@
 # src/local_llm_bot/app/model_fit.py
-# Version: 1.0.0
+# Version: 1.1.1
+# Changelog: 1.1.1 — reason text: "will load and then hang" → "would" (conditional — it does not run).
+# Changelog: 1.1.0 — AIStudio_1020 follow-up (verified Suzanne 2026-07-16): recommend_model now
+#   excludes embedding-only models (they report tiny footprints, always "fit", and were being
+#   offered as chat fallbacks — nomic-embed-text was recommended when 27b BLOCKed). Filters on the
+#   `is_generative` capability fact carried on each model dict (sourced from Ollama in api.py), with
+#   a conservative id-pattern fallback only when the capability is unknown.
 # Changelog: 1.0.0 — AIStudio_1020: shared model-memory-fit service. ONE policy, imported by the API
 #   preflight (/ask), the model list (/models `fit` field), and bench.py (--fit-policy) so no surface
 #   re-implements the arithmetic (the _967 UI heuristic drifted from reality precisely because it did).
@@ -105,7 +111,7 @@ def _gb(n: int | float) -> str:
 
 def _reason(verdict: str, footprint: int, available: int, rec: str | None) -> str:
     if verdict == BLOCK:
-        base = f"needs ~{_gb(footprint)} but only ~{_gb(available)} is free; it will load and then hang"
+        base = f"needs ~{_gb(footprint)} but only ~{_gb(available)} is free; it would load and then hang"
         return f"{base}; switch to {rec}, which fits" if rec else base
     if verdict == WARN:
         return f"needs ~{_gb(footprint)} against ~{_gb(available)} free — tight; may swap or slow"
@@ -130,6 +136,17 @@ def recommend_model(
     best_footprint = -1
     for m in models:
         if m.get("available") is False:
+            continue
+        # AIStudio_1020 follow-up: never recommend an embedding-only model as a chat fallback
+        # (nomic-embed-text was offered when 27b BLOCKed). Prefer Ollama's capability fact
+        # (is_generative, sourced in api._model_param_count); fall back to an id check only when
+        # the capability is unknown (model not yet probed / older Ollama without capabilities).
+        is_gen = m.get("is_generative")
+        if is_gen is False:
+            continue
+        if is_gen is None and any(
+            k in (m.get("id") or "").lower() for k in ("embed", "bge-", "gte-", "minilm")
+        ):
             continue
         fp = estimate_footprint_bytes(
             size_bytes=m.get("size_bytes"), param_count=m.get("param_count"), mult=footprint_mult

@@ -1,4 +1,11 @@
-# Version: 1.17.1
+# Version: 1.17.2
+# Changelog: 1.17.2 — AIStudio_1020 follow-up (verified Suzanne 24GB 2026-07-16). Fit denominator:
+#   _available_memory_bytes now reads macOS `memory_pressure` free% x physical RAM (the OS aggregate
+#   incl. purgeable/file-backed) instead of psutil.virtual_memory().available, which under-reports
+#   ~2.5x on macOS and made the guard BLOCK models that fit; psutil retained for non-macOS; fail-open
+#   preserved. Embedding-only exclusion: new _model_is_generative helper reads Ollama capabilities and
+#   caches/backfills is_generative in the manifest; ModelInfo gains the field and /models threads it
+#   into the fit dicts so recommend_model never offers an embedding-only model as a chat fallback.
 # Changelog: 1.17.1 — AIStudio_1013 (coverage-query UX, Manuel option iii). Instead of dumping the
 #   covered-company list inline on an entity miss (can be long), the miss message now points the user
 #   to ask "which companies are covered?" — and /ask answers that meta-query directly from the corpus
@@ -891,6 +898,7 @@ class ModelInfo(BaseModel):
     size_human: str | None = None      # AIStudio_966: e.g. "4.9 GB" (for the UI label)
     param_count: int | None = None     # AIStudio_967: exact params (manifest cache)
     last_used_at: str | None = None    # AIStudio_967: when this model last generated
+    is_generative: bool | None = None  # AIStudio_1020: can generate (vs embedding-only); Ollama capabilities
     fit: dict[str, Any] | None = None  # AIStudio_1020: {verdict, recommendation, reason, ...} vs this host
 
 
@@ -971,10 +979,24 @@ def _model_param_count(model_id: str) -> int | None:
         psize = None
         if details is not None:
             psize = details.get("parameter_size") if isinstance(details, dict) else getattr(details, "parameter_size", None)
+        # AIStudio_1020 follow-up: capture whether the model can generate (vs embedding-only) from the
+        # same ollama.show() fetch — cached beside param_count, no extra round-trip. Used by the fit
+        # recommender so an embedding-only model is never offered as a chat fallback.
+        is_gen = None
+        try:
+            caps = getattr(info, "capabilities", None)
+            if caps is None and isinstance(info, dict):
+                caps = info.get("capabilities")
+            if caps:
+                caps_l = [str(c).lower() for c in caps]
+                is_gen = ("completion" in caps_l or "chat" in caps_l) and "embedding" not in caps_l
+        except Exception:
+            is_gen = None
         entry.update(
             {
                 "param_count": pc,
                 "parameter_size": psize,
+                "is_generative": is_gen,
                 "first_seen_at": entry.get("first_seen_at") or _dt.now().isoformat(timespec="seconds"),
             }
         )
@@ -983,6 +1005,37 @@ def _model_param_count(model_id: str) -> int | None:
         return pc
     except Exception as e:
         print(f"param_count lookup failed for {model_id}: {e}")
+        return None
+
+
+def _model_is_generative(model_id: str) -> bool | None:
+    """Whether the model can generate text (vs embedding-only), from Ollama capabilities, cached in
+    the manifest. Backfills cached entries that predate this field (unlike param_count, an existing
+    cache entry without is_generative must still trigger the fetch). None if Ollama unreachable /
+    capabilities not reported — callers fall back to an id-pattern check."""
+    if not model_id:
+        return None
+    m = _get_manifest()
+    entry = m.get(model_id) or {}
+    if entry.get("is_generative") is not None:
+        return bool(entry["is_generative"])
+    try:
+        import ollama
+
+        info = ollama.show(model_id)
+        caps = getattr(info, "capabilities", None)
+        if caps is None and isinstance(info, dict):
+            caps = info.get("capabilities")
+        if not caps:
+            return None
+        caps_l = [str(c).lower() for c in caps]
+        is_gen = ("completion" in caps_l or "chat" in caps_l) and "embedding" not in caps_l
+        entry["is_generative"] = is_gen
+        m[model_id] = entry
+        _save_manifest()
+        return is_gen
+    except Exception as e:
+        print(f"is_generative lookup failed for {model_id}: {e}")
         return None
 
 
@@ -1014,20 +1067,44 @@ def _total_memory_bytes() -> int | None:
 # ── AIStudio_1020: memory-fit guard (API layer) ──────────────────────────────────────────────
 # The guard's single policy lives in app/model_fit.py; the helpers below feed it live host facts.
 def _available_memory_bytes() -> int | None:
-    """Available RAM for a model load, in bytes, MINUS the configured reserve (headroom for OS + other
-    apps). Uses psutil.virtual_memory().available — the honest denominator, not the nameplate total the
-    _967 warn used. Falls back to a fraction of physical RAM when psutil is absent. None if unknowable."""
+    """Available RAM for a model load, in bytes, MINUS the configured reserve. On macOS,
+    psutil.virtual_memory().available OMITS purgeable/file-backed reclaimable pages, under-reporting
+    ~2.5x (read ~6 GB on a 24 GB box the OS reports ~57% free ~= 14 GB) — which made the fit guard
+    BLOCK models that actually fit (AIStudio_1020 follow-up, verified Suzanne 24GB 2026-07-16). Prefer
+    the OS aggregate via `memory_pressure` free% x physical RAM; psutil on other platforms; then 70%
+    of RAM. None = fail-open (guard disables rather than false-blocks)."""
     reserve = CONFIG.fit.reserve_bytes
-    try:
-        import psutil
+    total = _total_memory_bytes()
+    avail: int | None = None
 
-        avail = int(psutil.virtual_memory().available)
-    except Exception:
-        tot = _total_memory_bytes()
-        if not tot:
+    # macOS: memory_pressure reports free + purgeable + file-backed reclaimable, which psutil misses.
+    if total:
+        try:
+            import re
+            import subprocess
+
+            out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=3)
+            m = re.search(r"free percentage:\s*(\d+)\s*%", out.stdout)
+            if m:
+                avail = int(total * int(m.group(1)) / 100)
+        except Exception:
+            pass
+
+    # Non-macOS / memory_pressure unavailable: psutil.available is correct off-Darwin.
+    if avail is None:
+        try:
+            import psutil
+
+            avail = int(psutil.virtual_memory().available)
+        except Exception:
+            pass
+
+    # Last resort: assume ~30% of RAM is already committed at model-load time.
+    if avail is None:
+        if not total:
             return None
-        # psutil unavailable: assume ~30% of RAM is already committed at model-load time.
-        avail = int(tot * 0.70)
+        avail = int(total * 0.70)
+
     return max(0, avail - reserve)
 
 
@@ -1055,7 +1132,8 @@ def _list_model_dicts() -> list[dict[str, Any]]:
                 size = None
             entry = _get_manifest().get(name) or {}
             out.append(
-                {"id": name, "size_bytes": size, "param_count": entry.get("param_count"), "available": True}
+                {"id": name, "size_bytes": size, "param_count": entry.get("param_count"),
+                 "is_generative": entry.get("is_generative"), "available": True}
             )
     except Exception:
         pass
@@ -2985,11 +3063,15 @@ async def get_models() -> list[ModelInfo]:
                     from local_llm_bot.app import model_fit as _mf
 
                     _dicts = [
-                        {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count, "available": mi.available}
+                        {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count,
+                         "is_generative": _model_is_generative(mi.id), "available": mi.available}
                         for mi in available_models
                     ]
+                    _gen_by_id = {d["id"]: d["is_generative"] for d in _dicts}
                     for mi in available_models:
-                        _target = {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count, "available": mi.available}
+                        mi.is_generative = _gen_by_id.get(mi.id)
+                        _target = {"id": mi.id, "size_bytes": mi.size_bytes, "param_count": mi.param_count,
+                                   "is_generative": _gen_by_id.get(mi.id), "available": mi.available}
                         mi.fit = _mf.evaluate(
                             _target,
                             _dicts,

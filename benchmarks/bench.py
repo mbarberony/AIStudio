@@ -1,4 +1,92 @@
 #!/usr/bin/env python3
+# Changelog: 2.17.0 — review pass: (1) the corpus-failure usage line now points at `ais_bench --help`;
+#   (2) 'passed (binary)' → 'passed (binary test)'; (3) Query-expansion renders on/off, not 1/0;
+#   (4) NEW --mem-track / --no-mem-track (default ON while _1037 is open) gates the PER-QUESTION
+#   memory column only — the run-tail recap and the JSON record are unconditional, because a memory
+#   warning must never hide behind a flag nobody passed; (5) the recap now reports the LOWEST point
+#   seen during the run, not just the end value — a transient dip is what trips the guard mid-sweep
+#   and it can recover before the run ends.
+# Changelog: 2.16.4 — removed an orphaned blank-line print before the fit check: it dated from when
+#   the fit gate opened its OWN --- Preflight bundle, and after the sections were unified it left a
+#   gap in the middle of the checks.
+# Changelog: 2.16.3 — Preflight's informational lines moved from stderr to stdout. Mixing streams
+#   inside one section interleaved unpredictably (a phantom blank line after the corpus check) and
+#   non-error output does not belong on stderr. Errors still go to stderr.
+# Changelog: 2.16.2 — batch output polish: `--- Batch` section header re-homed here (it was the
+#   wrapper's until v1.10.1); the run-count line uses `•` (section-level) with no leading blank;
+#   the runtime estimate now prints INSIDE --dry-run, which is when the hours are being decided.
+# Changelog: 2.16.1 — ruff SIM102: flatten the nested preflight guard into one condition.
+# Changelog: 2.16.0 — AIStudio_1040: --batch is now machine-adaptive and --canonical is the exact
+#   reproduction verb (they were the same flag; --canonical was a deprecated alias).
+#     --canonical            reproduce the audited runs with their PINNED models (comparability)
+#     --batch                every set twice: smallest INSTALLED + largest that FITS (the 4x2)
+#     --batch --model X      X for every set (per-run fit gate still applies)
+#     --batch --model largest|smallest   explicit tier selection
+#   Rationale: a 24GB box could not run the reference suite AT ALL (pinned 27b wedges), while the
+#   pinned spec is exactly what makes published numbers comparable — so the two needs got two verbs.
+#   Adds an order-of-magnitude runtime estimate before execution (bare --batch is 8 runs = hours)
+#   and reports the resolved model set; --dry-run shows the expanded run list.
+# Changelog: 2.15.0 — (1) BUG: Preflight lived inside _resolve_fit_policy(), which only runs when
+#   --model is passed — so `ais_bench --corpus nonexistent` ran EIGHT default questions against a
+#   corpus that does not exist instead of aborting. Preflight now opens in main() right after the
+#   banner, unconditionally. (2) The 'no questions file — using defaults' line is now a `·`
+#   sub-detail under ▶ Checking questions..., not a stray pre-section print. (3) Bullet split per
+#   CLI-Output review: `•` = section-level supplementary info, `·` = indented sub-detail.
+# Changelog: 2.14.1 — (1) reverted the blank line before each section separator (reviewed live:
+#   denser reads better). (2) The corpus/questions preflight MOVED here from ais_bench.sh: the
+#   wrapper aborted before python ran, so a bad --corpus printed ❌ with NO identity banner,
+#   violating CLI-Output STD §2 ('very first line, unconditionally'). bench.py now owns banner +
+#   every check, and failures render as ❌ + guidance inside --- Preflight. (3) pandoc note back
+#   to ⚠ per Manuel (the real fix is install-side: weasyprint is pip-installable, pandoc is brew).
+# Changelog: 2.14.0 — CLI-Output conformance pass (Manuel review 2026-07-18): (a)(d) `_sep()` now
+#   emits a blank line before every section separator except the first, so the banner and each
+#   block get air; (b) write_markdown no longer prints the .md filename mid-Summary (it was
+#   duplicating the --- Reports listing); (e) NEW `--- Reports` section with an `✅` parent line;
+#   (c) the pandoc nag is no longer a per-run `⚠` — a missing optional PDF toolchain is not a
+#   warning, and months of crying wolf trains the eye to skip real ones. It is now a neutral `·`
+#   sub-detail inside --- Reports.
+# Changelog: 2.13.1 — AIStudio_1037: the drift footer no longer counts the one-time MODEL LOAD as
+#   accumulation. Q1's before-sample precedes residency, so an 8B on 128GB showed a fixed ~-5 that
+#   looked like a leak. Now reports `load -5 · steady 91% → 91% at end (+0 over N questions after
+#   load)` and only warns on a post-load slide (>=2 measured questions, <=-10 points).
+# Changelog: 2.13.0 — AIStudio_1037 INSTRUMENTATION: per-question free-memory sampling.
+#   Each question now prints `mem <before>%→<after>%` and the run tail prints the total drift
+#   (`52% at start → 23% at end (-29 points)`) with a warning when the slide is large or the
+#   run ends low on headroom. Both values persist to the JSON (`memory.free_pct_before/after`).
+#   Reads macOS `memory_pressure` — the same source api._available_memory_bytes uses, so the
+#   printed number is what the fit guard decides on. Diagnostic only: no behaviour change, and
+#   it degrades silently (None) off-macOS. Purpose: distinguish a genuine content miss from a
+#   fit-guard BLOCK caused by the sweep starving itself, and to choose between the candidate
+#   fixes (release per-question KV vs clean baseline at launch) from data rather than guesswork.
+# Changelog: 2.12.4 — fixed double period ("hang..", "right now..") — _fit_warn/_fit_err already
+#   append the period; callers no longer pass their own. (Text-only.)
+# Changelog: 2.12.3 — Fit gate rebuilt as a count-based picker (Manuel, 2026-07-17), conforming to
+#   CLI Output STD §10.3-D. When the chosen model is BLOCKed and --fit-policy is absent, the gate now
+#   branches on how many OTHER models fit: 0 → dead-end (free memory / Tutorial §2.5 / restart);
+#   1 → lettered inline "(r)un <model>, (f)ree memory & restart, (Enter) cancel"; ≥2 → uniform numbered
+#   list (models largest-fitting-first with "run on this", then Free-memory-&-restart, then Cancel;
+#   Enter = Cancel). New _fetch_fitting_models() returns the FIT/WARN generative set from /models. The
+#   old (r)etry-that-re-polls-in-process is GONE — "free memory" now directs to ais_restart (state
+#   change realized by restart, not a live poll). All non-run exits end "❌ Stopped — no benchmark run."
+# Changelog: 2.12.2 — CLI Output STD §10 conformance: options comma-separated (not 3-space), cursor is
+#   ❯ (U+276F) inline, unrecognized input reprompts once ("· didn't catch that") then falls to the Enter
+#   default. No logic change.
+# Changelog: 2.12.1 — Fit-gate polish (Manuel, 2026-07-16): (a) fixed double-period ("hang..") by
+#   stripping the trailing "." from the server reason before formatting; (b) retry no longer restates
+#   the full warning — it prints one concise "still doesn't fit — <reason>" line; (c) NO-MODEL-FITS
+#   dead-end: when nothing generative fits (rec is None), the gate says "No model fits this machine
+#   right now / free memory or see Tutorial §2.5 / then restart: ais_start" instead of offering a
+#   downgrade that doesn't exist. No logic change to the fit decision.
+# Changelog: 2.12.0 — Interactive fit gate reworked (Manuel, 2026-07-16): when --fit-policy is absent
+#   and a run is BLOCKed, bench no longer offers a [YES/n] "proceed anyway" — it never silently runs
+#   the too-big model. Instead: `(r)etry after closing other apps` (re-reads free memory and
+#   re-evaluates — the run proceeds if it now fits), `(d)owngrade to <rec>` (run the fitting model),
+#   or Enter/anything-else → stop (fail-closed). Retry loops until fit, downgrade, or stop. This makes
+#   the memory-headroom path actionable (close apps → retry) rather than binary. --help updated.
+# Changelog: 2.11.1 — CLI Output STD §2 conformance for the fit gate: _resolve_fit_policy now emits a
+#   `--- Preflight` section label + a `▶ Checking model fit...` action line, with the verdict/skip as
+#   `⚠`/`ℹ` detail lines under it (was two bare `⚠` lines with no section header). Single-run site drops
+#   its redundant post-skip warning (the resolver already prints the reason). No fit-logic change.
 # Changelog: 2.11.0 — AIStudio_1012: --dry-run. With --batch, prints the resolved run set (id · corpus
 #   · model · scope · questions · top_k · timeout) from bench_canonical.yaml and EXITS without running
 #   the multi-hour suite. Guarded: --dry-run WITHOUT --batch stops with a notice rather than silently
@@ -177,6 +265,8 @@ import argparse
 import hashlib
 import json
 import os
+import re
+import subprocess
 import time
 
 try:
@@ -252,7 +342,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.11.0"
+VERSION = "2.17.0"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -403,16 +493,25 @@ def parse_args() -> argparse.Namespace:
     )
 
     p.add_argument(
-        "--batch",
         "--canonical",
+        dest="canonical_exact",
+        action="store_true",
+        help=(
+            "EXACT REPRODUCTION of the audited reference runs: every run in "
+            "benchmarks/batch/bench_canonical.yaml with its PINNED model, unchanged. This is the "
+            "comparability path — use it to reproduce or extend published numbers. On a machine that "
+            "cannot fit the pinned model the fit gate applies (see --fit-policy)."
+        ),
+    )
+    p.add_argument(
+        "--batch",
         dest="canonical",
         action="store_true",
         help=(
-            "Run the pinned batch benchmark set from benchmarks/batch/bench_canonical.yaml "
-            "(the runs referenced in TUTORIAL §5.9). Each run executes via the normal single-run "
-            "path and writes its standard timestamped report into benchmarks/<corpus>/reports/. All other "
-            "run flags are ignored in this mode. Exits cleanly with a message if the spec yaml is absent. "
-            "(--canonical is a deprecated alias for --batch.)"
+            "Run the reference question sets against THIS machine. Bare --batch runs every set twice "
+            "— once on the smallest installed model and once on the largest that fits — so a machine "
+            "is characterised across its own tier range. Narrow it with --model <name|largest|smallest>. "
+            "Reports are written per run into benchmarks/<corpus>/reports/ and name their model."
         ),
     )
     p.add_argument(
@@ -425,6 +524,17 @@ def parse_args() -> argparse.Namespace:
     )
 
     p.add_argument(
+        "--mem-track",
+        dest="mem_track",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Show free memory per question (`mem 91%%=91%%`). Default ON while AIStudio_1037 (sweep "
+            "self-starvation) is open; --no-mem-track hides the column. The run-tail memory recap and "
+            "the JSON record are written regardless — a memory warning must never hide behind a flag."
+        ),
+    )
+    p.add_argument(
         "--fit-policy",
         dest="fit_policy",
         default=None,
@@ -435,7 +545,8 @@ def parse_args() -> argparse.Namespace:
             "skip = do not run it (logged as a loud SKIP, never a silent gap); "
             "downshift = auto-switch to the recommended fitting model; "
             "force = run anyway (you accept the wedge risk). "
-            "If OMITTED and a run is BLOCKed, bench stops and asks [YES/n] before continuing "
+            "If OMITTED and a run is BLOCKed, bench stops and offers (r)etry-after-freeing-memory, "
+            "(d)owngrade-to-a-fitting-model, or Enter=stop — it never silently runs the too-big model "
             "(requires a terminal; a fully non-interactive run fails closed). FIT/WARN models, and "
             "runs with no explicit --model, are unaffected."
         ),
@@ -609,7 +720,7 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
             path = str(found)
             pass  # path shown in header
         else:
-            print(f"   No questions file found for corpus '{corpus}' — using defaults")
+            _QUESTIONS_NOTE.append(f"No questions file for '{corpus}' — using built-in defaults.")
             return DEFAULT_QUESTIONS
 
     if path is None:
@@ -1089,7 +1200,8 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
 
     with open(md_path, "w") as f:
         f.write("\n".join(lines))
-    print(f"  · {md_path.name}")
+    # (No print here — the file is listed once, in the --- Reports section at the end.
+    #  It used to print its own name mid-Summary, duplicating that listing.)
 
 
 # ── Question filtering ────────────────────────────────────────────────────────
@@ -1146,6 +1258,75 @@ def filter_questions(
 
 
 
+def _installed_generative(api: str) -> list[dict]:
+    """Every installed generative model, largest-footprint first, each annotated with its fit verdict.
+
+    Superset of _fetch_fitting_models: this one keeps models that do NOT fit, because `smallest`
+    is defined as the smallest INSTALLED model (the floor tier we want to measure), not the
+    smallest that happens to fit right now.
+    """
+    try:
+        import json as _json
+        import urllib.request
+
+        with urllib.request.urlopen(f"{api}/models", timeout=5) as resp:
+            models = _json.loads(resp.read())
+    except Exception:
+        return []
+    out = []
+    for m in models:
+        mid = m.get("id", "")
+        if m.get("is_generative") is False or "embed" in mid.lower():
+            continue
+        fit = m.get("fit") or {}
+        fp = fit.get("footprint_bytes") or 0
+        out.append({"id": mid, "gb": (fp / 1e9 if fp else None), "verdict": fit.get("verdict")})
+    out.sort(key=lambda x: (x["gb"] or 0), reverse=True)
+    return out
+
+
+def _resolve_batch_models(api: str, selector: str | None) -> list[str]:
+    """Which model(s) a --batch invocation should run on. AIStudio_1040.
+
+    None      → the 4x2 matrix: [smallest installed, largest that fits] (deduped if they coincide)
+    'largest' → largest generative model that fits now
+    'smallest'→ smallest INSTALLED generative model (deliberately not smallest-that-fits)
+    <name>    → that model, verbatim; the existing per-run fit gate still applies
+    """
+    if selector and selector not in ("largest", "smallest"):
+        return [selector]
+    installed = _installed_generative(api)
+    if not installed:
+        return []
+    fitting = [m for m in installed if m.get("verdict") in ("FIT", "WARN")]
+    largest = fitting[0]["id"] if fitting else None
+    smallest = installed[-1]["id"]
+    if selector == "largest":
+        return [largest] if largest else []
+    if selector == "smallest":
+        return [smallest]
+    picks = [m for m in (smallest, largest) if m]
+    return list(dict.fromkeys(picks))   # dedupe, preserve order
+
+
+def _announce_runtime(n_runs: int, models: list[str], api: str) -> None:
+    """Order-of-magnitude runtime estimate before committing hours. AIStudio_1040.
+
+    ~10 s/question on a small model, ~60 s on a large one. Real spread is wide (retrieval size,
+    thermal state, what else is resident), so this is announced as a RANGE (50-200%) and framed as
+    an order of magnitude — the point is 'minutes or hours?', not a promise.
+    """
+    _sizes = {m["id"]: (m["gb"] or 0) for m in _installed_generative(api)}
+    per_q = sum(60.0 if _sizes.get(m, 0) >= 9 else 10.0 for m in models) / max(len(models), 1)
+    total_s = per_q * 10 * n_runs          # ~10 questions per run
+    lo, hi = total_s * 0.5, total_s * 2.0
+
+    def _fmt(sec: float) -> str:
+        return f"{sec / 60:.0f} min" if sec < 5400 else f"{sec / 3600:.1f} h"
+
+    print(f"• Estimated runtime: {_fmt(lo)}-{_fmt(hi)} (order of magnitude, ~10 questions/run).")
+
+
 def run_canonical(args: argparse.Namespace) -> int:
     """Run the pinned canonical benchmark set (AIStudio_931).
 
@@ -1190,9 +1371,38 @@ def run_canonical(args: argparse.Namespace) -> int:
         print(f"❌ No runs defined in {spec_path.name}")
         return 1
 
+    # AIStudio_1040 — model resolution.
+    #   --canonical : reproduce EXACTLY (each run keeps its pinned model). Comparability path.
+    #   --batch     : characterise THIS machine — bare = every run twice (smallest installed +
+    #                 largest that fits); --model narrows it (name | largest | smallest).
+    _sep("Batch")
+    _exact = getattr(args, "canonical_exact", False)
+    _batch_models: list[str] = []
+    if not _exact:
+        _batch_models = _resolve_batch_models(args.api, getattr(args, "model", None))
+        if not _batch_models:
+            print("❌ No generative model available to run the batch.")
+            print("· Free memory, or install one:  ollama pull gemma3:4b")
+            return 1
+        _expanded = []
+        for _r in runs:
+            for _m in _batch_models:
+                _rr = dict(_r)
+                _rr["model"] = _m
+                _rr["id"] = f"{_r.get('id', '?')}·{_m}"
+                _expanded.append(_rr)
+        runs = _expanded
+        if len(_batch_models) == 1:
+            _sel = getattr(args, "model", None)
+            if _sel is None:
+                print("• Smallest and largest resolve to the same model — running each set once.")
+            print(f"• Model: {_batch_models[0]}")
+        else:
+            print(f"• Models: {' · '.join(_batch_models)}  (smallest installed + largest that fits)")
+
     # AIStudio_1012 — --dry-run: show the resolved run set and exit without executing the suite.
     if getattr(args, "dry_run", False):
-        print(f"· dry-run — {len(runs)} run(s) resolved from {spec_path.name} (NOT executed):")
+        print(f"• dry-run — {len(runs)} run(s) resolved from {spec_path.name} (NOT executed):")
         for r in runs:
             _rid = r.get("id", "?")
             _m = r.get("model", default_model) or "API default"
@@ -1207,10 +1417,14 @@ def run_canonical(args: argparse.Namespace) -> int:
             if _t is not None:
                 _bits.append(f"timeout={_t}")
             print(f"  · {_rid}: " + "  ".join(_bits))
-        print(f"\n· {len(runs)} run(s) would execute → benchmarks/<corpus>/reports/. Re-run without --dry-run to execute.")
+        if not _exact and _batch_models:
+            _announce_runtime(len(runs), _batch_models, args.api)
+        print(f"• {len(runs)} run(s) would execute → benchmarks/<corpus>/reports/. Re-run without --dry-run to execute.")
         return 0
 
-    print(f"· batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/")
+    print(f"• batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/")
+    if not _exact and _batch_models:
+        _announce_runtime(len(runs), _batch_models, args.api)
 
     failures = 0
     skipped = 0
@@ -1299,6 +1513,87 @@ def _fetch_model_fit(api: str, model: str) -> dict | None:
     return None
 
 
+def _fetch_fitting_models(api: str, exclude: str = "") -> list[dict]:
+    """Generative models that currently FIT (or WARN) this machine, largest-footprint first —
+    the candidate set for the fit gate's downgrade picker. Each dict: {id, gb}. Embedding-only
+    models and the too-big model itself (`exclude`) are omitted. [] on any API failure."""
+    try:
+        import json as _json
+        import urllib.request
+
+        with urllib.request.urlopen(f"{api}/models", timeout=5) as resp:
+            models = _json.loads(resp.read())
+    except Exception:
+        return []
+    out = []
+    for m in models:
+        mid = m.get("id", "")
+        if mid == exclude or m.get("is_generative") is False or "embed" in mid.lower():
+            continue
+        fit = m.get("fit") or {}
+        if fit.get("verdict") in ("FIT", "WARN"):
+            fp = fit.get("footprint_bytes") or 0
+            out.append({"id": mid, "gb": fp / 1e9 if fp else None})
+    out.sort(key=lambda x: (x["gb"] or 0), reverse=True)  # largest-fitting-first
+    return out
+
+
+def _free_memory_pct() -> float | None:
+    """System-wide free memory as a percentage, or None when unavailable.
+
+    AIStudio_1037 instrumentation. Reads macOS `memory_pressure` — the SAME source the API's
+    fit guard uses (api._available_memory_bytes), so the number printed here is the number the
+    guard will decide on. Deliberately NOT psutil: psutil.available under-reports ~2.5x on
+    macOS, which is the bug that made the guard false-block in the first place.
+
+    Cheap enough to call per question (one subprocess, ~10ms). Returns None off-macOS or on any
+    failure — instrumentation must never break a benchmark run.
+    """
+    try:
+        out = subprocess.run(
+            ["memory_pressure"], capture_output=True, text=True, timeout=5
+        ).stdout
+        m = re.search(r"free percentage:\s*(\d+)%", out, re.IGNORECASE)
+        return float(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+_QUESTIONS_NOTE: list[str] = []   # deferred note, rendered under ▶ Checking questions...
+
+
+def _preflight_corpus(corpus: str) -> None:
+    """Corpus + questions-file checks, INSIDE the Preflight section.
+
+    These used to live in the wrapper (ais_bench.sh), which meant a failure aborted before
+    bench.py ever ran — so the identity banner never printed, violating CLI-Output STD §2
+    ("the very first line, unconditionally"). Owning them here keeps one banner, one
+    Preflight section, and gives failures the same ❌ + guidance treatment as any other check.
+    """
+    repo = Path(__file__).resolve().parent.parent
+    print("▶ Checking corpus...")
+    uploads = repo / "data" / "corpora" / corpus / "uploads"
+    if not uploads.is_dir():
+        print(f"  ❌ Corpus '{corpus}' has no uploads/ directory — not yet ingested.", file=sys.stderr)
+        print("  · Ingest documents first via the UI, then re-run.", file=sys.stderr)
+        print("  · Usage: ais_bench --corpus <name> [--model <name>]  ·  ais_bench --help for all options", file=sys.stderr)
+        sys.exit(1)
+    docs = [f for f in uploads.iterdir() if f.is_file() and not f.name.startswith(".")]
+    if not docs:
+        print(f"  ❌ Corpus '{corpus}' has no documents in uploads/.", file=sys.stderr)
+        print("  · Ingest documents first via the UI or an ais_ingest_* command.", file=sys.stderr)
+        sys.exit(1)
+    qfile = repo / "benchmarks" / corpus / f"{corpus}_questions.yaml"
+    if not qfile.is_file():
+        print(f"  ❌ No questions file for corpus '{corpus}'.", file=sys.stderr)
+        print(f"  · Expected: benchmarks/{corpus}/{corpus}_questions.yaml", file=sys.stderr)
+        _avail = sorted({p.parent.name for p in (repo / "benchmarks").glob("**/*_questions.yaml")})
+        if _avail:
+            print(f"  · Corpora with question sets: {', '.join(_avail)}", file=sys.stderr)
+        sys.exit(1)
+    print(f"  ✅ {corpus} ready — {len(docs)} document(s).")
+
+
 def _fit_err(msg: str) -> None:
     print(f"❌ {msg}.", file=sys.stderr)
 
@@ -1317,17 +1612,26 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
     Returns (action, effective_model): action 'run' → proceed (model may be a downshift substitute);
     action 'skip' → do not run this one. Only BLOCK triggers policy/gate; FIT/unknown → run; WARN →
     run with an advisory. Absent policy + BLOCK → [YES/n] gate on stdin; no terminal → fail closed.
+
+    Output conforms to STD - AIStudio - CLI Output §2 (Activity Bundles): a `--- Preflight` section
+    label, a `▶` action line, then `⚠`/`·`/`ℹ`/`❌` detail lines under it.
     """
+    # --- Preflight  (section label per CLI Output STD §2). The wrapper (ais_bench.sh v1.10.0)
+    # runs the corpus/questions checks SILENTLY and exports the resolved facts, so this single
+    # section owns the whole preflight rather than the wrapper printing a competing one before
+    # the identity banner.
+    print(f"▶ Checking model fit ({model} vs available memory)...")
     fit = _fetch_model_fit(api, model)
     verdict = (fit or {}).get("verdict")
     if verdict == "WARN":
         _fit_warn(f"{model} is a tight fit for this machine's memory{(' (' + context + ')') if context else ''}; may slow or swap")
         return ("run", model)
     if verdict != "BLOCK":
+        print(f"  ✅ {model} fits.")
         return ("run", model)  # FIT or unknown — fail-open; the API's own /ask preflight still backstops
 
     rec = (fit or {}).get("recommendation")
-    reason = (fit or {}).get("reason") or "won't fit this machine's memory"
+    reason = ((fit or {}).get("reason") or "won't fit this machine's memory").rstrip(".")
     label = f"{model}{(' [' + context + ']') if context else ''}"
 
     if policy == "force":
@@ -1343,26 +1647,102 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
         _fit_warn(f"{label} {reason}, and no smaller model fits; --fit-policy downshift → SKIPPED")
         return ("skip", None)
 
-    # policy is None → confirm gate (Manuel item 3). Needs a terminal to answer.
-    _fit_warn(f"{label} {reason}, and --fit-policy was not set")
-    if rec:
-        print(f"· Recommended: run on {rec} instead (it fits).", file=sys.stderr)
+    # policy is None → interactive gate. Needs a terminal to answer.
+    # The form depends on how many OTHER models currently fit (STD §10.3):
+    #   0 fit  → dead-end: free memory / Tutorial / restart
+    #   1 fit  → lettered inline: (r)un <model>, (f)ree memory & restart, (Enter) cancel
+    #   ≥2 fit → uniform numbered list: 1..N models (largest-first) + Free-memory + Cancel
+    # A "retry" that needs the operator to free memory does NOT re-poll in-process — it directs
+    # to ais_restart (state change realized by the restart, not a racing live poll). STD §10.5.
     if not sys.stdin.isatty():
+        _fit_warn(f"{label} {reason}, and --fit-policy was not set")
         _fit_err("no terminal to confirm — pass --fit-policy {skip,downshift,force} for non-interactive runs")
         sys.exit(1)
-    prompt = f"Continue on {rec} instead? [YES/n] " if rec else f"Continue and force {model} anyway? [YES/n] "
-    try:
-        ans = input(prompt).strip()
-    except EOFError:
-        ans = ""
-    if ans == "YES":
-        if rec:
-            _fit_info(f"confirmed → running on {rec}")
-            return ("run", rec)
-        _fit_warn(f"confirmed → forcing {model} (may hang)")
-        return ("run", model)
-    _fit_err("aborted (answer was not YES)")
-    sys.exit(1)
+
+    fitting = _fetch_fitting_models(api, exclude=model)
+
+    # Reply helpers shared by both forms (STD §10.5).
+    def _reply_run(chosen: str) -> tuple[str, str]:
+        print(f"  \u00b7 Running on {chosen}...", file=sys.stderr)
+        return ("run", chosen)
+
+    def _reply_free_and_stop() -> None:
+        print('  \u00b7 Close the apps you don\'t need, then run: ais_restart in Terminal '
+              '(Cmd+Space \u2192 "Terminal") before choosing a model.', file=sys.stderr)
+        _fit_err("Stopped — no benchmark run.")
+        sys.exit(1)
+
+    def _reply_cancel() -> None:
+        _fit_err("Stopped — no benchmark run.")
+        sys.exit(1)
+
+    # 0 fit → dead-end.
+    if not fitting:
+        _fit_warn(f"{label} {reason}")
+        _fit_err("No model fits this machine right now")
+        print("  \u00b7 Free memory (close other apps), or see the Tutorial (Module 2.5) for options.", file=sys.stderr)
+        print("  \u00b7 Then restart: ais_start", file=sys.stderr)
+        sys.exit(1)
+
+    _fit_warn(f"{label} {reason}")
+
+    # 1 fit → lettered inline (STD §10.3-A).
+    if len(fitting) == 1:
+        only = fitting[0]
+        gb = f" (~{only['gb']:.0f} GB)" if only["gb"] else ""
+        reprompted = False
+        while True:
+            print(f"  (r)un {only['id']}{gb}, (f)ree memory & restart, (Enter) cancel \u276f ",
+                  file=sys.stderr, end="")
+            try:
+                ans = input().strip().lower()
+            except EOFError:
+                ans = ""
+            if ans == "r":
+                return _reply_run(only["id"])
+            if ans == "f":
+                _reply_free_and_stop()
+            if ans == "":
+                _reply_cancel()
+            if not reprompted:
+                print("  \u00b7 didn't catch that — enter r, f, or press Enter to cancel", file=sys.stderr)
+                reprompted = True
+                continue
+            _reply_cancel()
+
+    # ≥2 fit → uniform numbered list (STD §10.3-D).
+    n = len(fitting)
+    free_idx = n + 1   # "Free memory & restart"
+    cancel_idx = n + 2  # "Cancel"
+    total = n + 2
+    reprompted = False
+    while True:
+        print(f"  Choose an option [1-{total}], or (Enter) to cancel:", file=sys.stderr)
+        for i, m in enumerate(fitting, start=1):
+            gb = f"(~{m['gb']:.0f} GB)" if m["gb"] else ""
+            print(f"    {i}. {m['id']:<14} {gb:<10} run on this", file=sys.stderr)
+        print(f"    {free_idx}. Free memory & restart", file=sys.stderr)
+        print(f"    {cancel_idx}. Cancel", file=sys.stderr)
+        print("  \u276f ", file=sys.stderr, end="")
+        try:
+            ans = input().strip()
+        except EOFError:
+            ans = ""
+        if ans == "":
+            _reply_cancel()
+        if ans.isdigit():
+            choice = int(ans)
+            if 1 <= choice <= n:
+                return _reply_run(fitting[choice - 1]["id"])
+            if choice == free_idx:
+                _reply_free_and_stop()
+            if choice == cancel_idx:
+                _reply_cancel()
+        if not reprompted:
+            print(f"  \u00b7 didn't catch that — enter 1-{total}, or press Enter to cancel", file=sys.stderr)
+            reprompted = True
+            continue
+        _reply_cancel()
 
 
 def main() -> None:
@@ -1372,12 +1752,22 @@ def main() -> None:
     if not os.environ.get("AIS_BENCH_CHILD"):
         print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
 
+    # --- Preflight opens HERE, unconditionally. It used to live inside _resolve_fit_policy(),
+    # which only runs when --model is given — so `ais_bench --corpus nonexistent` skipped every
+    # check and happily benchmarked 8 default questions against a corpus that does not exist.
+    _is_batch = (getattr(args, "canonical", False) or getattr(args, "canonical_exact", False)
+                 or getattr(args, "canonical_id", None) is not None)
+    if not _is_batch and not os.environ.get("AIS_BENCH_CHILD"):
+        _sep("Preflight")
+        _preflight_corpus(getattr(args, "corpus", None) or "demo")
+
     # AIStudio_931 — canonical/batch mode short-circuits the single-run path.
     # A2 (2026-07-05): --batch-id alone must also trigger it. --batch-id sets
     # `canonical_id` (a different dest than --batch's `canonical`), so `ais_bench
     # --batch-id D` without --batch used to fall through to a single run on the
     # DEFAULT corpus (demo) — a silent-wrong-result trap. Trigger on either.
-    if getattr(args, "canonical", False) or getattr(args, "canonical_id", None) is not None:
+    if (getattr(args, "canonical", False) or getattr(args, "canonical_exact", False)
+            or getattr(args, "canonical_id", None) is not None):
         raise SystemExit(run_canonical(args))
 
     # AIStudio_1012: --dry-run only previews a --batch run set. Without --batch there is nothing to
@@ -1435,12 +1825,13 @@ def main() -> None:
 
     # AIStudio_1020: memory-fit gate for this single run. Only when an explicit --model was given
     # (a default-model run is backstopped by the API's own /ask preflight). May skip the run or
-    # downshift args.model to a model that fits.
+    # downshift args.model to a model that fits. Emits its own `--- Preflight` bundle (CLI Output §2).
     if args.model:
+        # (No separator print here: Preflight is now one unified section opened in main(), so the
+        #  blank line this used to emit orphaned itself in the middle of the checks.)
         _fit_action, _fit_model = _resolve_fit_policy(args.api, args.model, args.fit_policy)
         if _fit_action == "skip":
-            _fit_warn(f"ais_bench: run skipped — {args.model} won't fit this machine")
-            return
+            return  # skip reason already printed under --- Preflight by _resolve_fit_policy
         args.model = _fit_model
 
     # Resolve paths — output to benchmarks/{corpus}/reports/ with timestamp
@@ -1513,26 +1904,46 @@ def main() -> None:
             print(f"❌ No questions matched filters: {', '.join(applied_filters)}")
             print(f"   Loaded {total_loaded} from {questions_label}, filtered to 0.")
             return
-        print(
-            f"✅ Questions loaded: {len(questions)}/{total_loaded} after filters "
-            f"({', '.join(applied_filters)}) from {questions_label}"
-        )
+        print("▶ Checking questions...")
+        for _n in _QUESTIONS_NOTE:
+            print(f"  · {_n}")
+        print(f"  ✅ {len(questions)} of {total_loaded} loaded after filters.")
+        _q_filter_note = f"{questions_label} ({', '.join(applied_filters)})"
     else:
-        print(f"✅ Questions loaded: {len(questions)} ({questions_label})")
+        print("▶ Checking questions...")
+        for _n in _QUESTIONS_NOTE:
+            print(f"  · {_n}")
+        print(f"  ✅ {len(questions)} loaded.")
+        _q_filter_note = str(questions_label)
 
     model_label = args.model if args.model else "API default (llama3.1:8b)"
-    _alpha_label = f"  |  Alpha: {args.alpha}" if args.alpha is not None else ""
-    _min_label   = f"  |  Min Score: {args.min_score}" if args.min_score is not None else ""
-    _scope_label = f"  |  Scope: {args.scope} ({len(scope_firms)} firms)" if args.scope else ""
-    print(
-        f"· Corpus: {args.corpus}  |  Top K: {args.top_k}  |  Temperature: {args.temperature}"
-        f"{_alpha_label}{_min_label}  |  Model: {model_label}  |  Query-expansion: {args.query_expansion}"
-        f"  |  Entity-filter: {args.entity_filter_mode}  |  Keywords: {args.keywords}{_scope_label}"
-    )
+    # --- Input Parameters (after Preflight: only worth printing for a run that will happen)
+    _sep("Input Parameters")
+    _params: list[tuple[str, str]] = [
+        ("Questions", _q_filter_note),
+        ("Corpus", str(args.corpus)),
+        ("Model", model_label),
+        ("Top K", str(args.top_k)),
+        ("Temperature", str(args.temperature)),
+    ]
+    if args.alpha is not None:
+        _params.append(("Alpha", str(args.alpha)))
+    if args.min_score is not None:
+        _params.append(("Min Score", str(args.min_score)))
+    if args.scope:
+        _params.append(("Scope", f"{args.scope} ({len(scope_firms)} firms)"))
+    _params += [
+        ("Query-expansion", "on" if args.query_expansion else "off"),
+        ("Entity-filter", str(args.entity_filter_mode)),
+        ("Keywords", str(args.keywords)),
+    ]
+    _w = max(len(k) for k, _ in _params)
+    for _k, _v in _params:
+        print(f"• {_k.ljust(_w)} : {_v}")
 
     # --- Firm override message
     if args.firm:
-        print(f"· --firm '{args.firm}' active — applied to all queries (overriding YAML firm fields)")
+        print(f"• --firm '{args.firm}' active — applied to all queries (overriding YAML firm fields)")
 
     # --- Running
     _sep("Running")
@@ -1543,6 +1954,7 @@ def main() -> None:
         # CLI --firm overrides per-question firm field; otherwise use YAML's firm
         effective_firm = args.firm if args.firm else q.get("firm")
         print(f"▶ [{i}/{len(questions)}] {q['description']}...")
+        _mem_before = _free_memory_pct()  # AIStudio_1037
 
         # AIStudio_875: --query-expansion and --entity-filter map directly to server request
         # fields. --entity-filter yaml forwards the question's entity_filter; none/auto leave it
@@ -1583,8 +1995,18 @@ def main() -> None:
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         _missing_str = f" | missing: {', '.join(ev['missing_keywords'])}" if ev.get("missing_keywords") else ""
         _density_str = f" | density: {ev['citation_density']}⚠" if ev.get("low_citation_density") else ""
+        # AIStudio_1037: memory at question boundaries — the curve that reveals sweep starvation.
+        _mem_after = _free_memory_pct()
+        _mem_str = ""
+        if not getattr(args, "mem_track", True):
+            _mem_before = _mem_before  # still recorded to JSON, just not displayed
+        elif _mem_before is not None and _mem_after is not None:
+            _arrow = "→" if _mem_after != _mem_before else "="
+            _mem_str = f" | mem {_mem_before:.0f}%{_arrow}{_mem_after:.0f}%"
+        elif getattr(args, "mem_track", True) and _mem_after is not None:
+            _mem_str = f" | mem {_mem_after:.0f}%"
         print(
-            f"  {status} {result['elapsed_sec']}s | {ev['citation_count']} citation(s){_missing_str}{_density_str}{_lang_marker}"
+            f"  {status} {result['elapsed_sec']}s | {ev['citation_count']} citation(s){_missing_str}{_density_str}{_lang_marker}{_mem_str}"
         )
 
         # AIStudio_841: --verbose and --super-verbose output
@@ -1616,7 +2038,9 @@ def main() -> None:
             _ans = (_data.get("answer") or "").strip()
             print(f"    · answer:           {_ans[:200]}{'...' if len(_ans) > 200 else ''}")
 
-        results.append({"question": q, "result": result, "eval": ev})
+        results.append({"question": q, "result": result, "eval": ev,
+                        "memory": {"free_pct_before": _mem_before,  # AIStudio_1037
+                                   "free_pct_after": _mem_after}})
 
     # Summary
     passed = sum(1 for r in results if r["eval"]["pass"])
@@ -1629,7 +2053,39 @@ def main() -> None:
     _greens = sum(1 for r in results if r["eval"].get("rating") == "GREEN")
     _ambers = sum(1 for r in results if r["eval"].get("rating") == "AMBER")
     _reds = sum(1 for r in results if r["eval"].get("rating") == "RED")
-    print(f"· {passed}/{total} passed (binary) | 🟢 {_greens}  🟡 {_ambers}  🔴 {_reds} | avg latency: {round(avg_latency, 1)}s")
+    print(f"• {passed}/{total} passed (binary test) | 🟢 {_greens}  🟡 {_ambers}  🔴 {_reds} | avg latency: {round(avg_latency, 1)}s")
+
+    # AIStudio_1037: sweep memory drift — the headline diagnostic for self-starvation.
+    # A sweep should hold memory roughly constant; a monotonic slide means per-question working
+    # memory (KV cache / retrieval context) is not being released, and on a constrained box the
+    # /ask fit guard will start BLOCKing the tail of the run (0.02s + 0 citations).
+    # The FIRST question's drop is dominated by loading the model into memory (a one-time cost,
+    # e.g. ~5 points for an 8B on 128GB), which is NOT accumulation. Report it separately and
+    # measure drift from the post-load steady state (after Q1) so the warning tracks the real
+    # signal — memory that keeps sliding once the model is already resident.
+    _mem_pts = [(r.get("memory") or {}).get("free_pct_after") for r in results]
+    _mem_pts = [m for m in _mem_pts if m is not None]
+    _mem_pre = (results[0].get("memory") or {}).get("free_pct_before") if results else None
+    if _mem_pts:
+        _mem_end = _mem_pts[-1]
+        _load_cost = (_mem_pre - _mem_pts[0]) if _mem_pre is not None else None
+        _steady = _mem_pts[0]
+        _drift = _mem_end - _steady          # post-load drift — the accumulation signal
+        _n_after = max(len(_mem_pts) - 1, 0)  # questions measured after the load
+        _flag = ""
+        if _n_after >= 2 and _drift <= -10:
+            _flag = "  ⚠ memory keeps sliding after load — suspect sweep accumulation (AIStudio_1037)"
+        elif _mem_end <= 25:
+            _flag = "  ⚠ low headroom at run end — later questions may have been fit-guard BLOCKED"
+        _load_str = f"load {_load_cost:+.0f} · " if _load_cost is not None else ""
+        # The LOWEST point matters more than the end value: a transient dip is what actually trips
+        # the fit guard mid-sweep, and it can recover before the run finishes.
+        _low = min(_mem_pts)
+        _low_str = f" · low {_low:.0f}%" if _low < _steady else ""
+        print(
+            f"• memory: {_load_str}steady {_steady:.0f}% → {_mem_end:.0f}% at end{_low_str} "
+            f"({_drift:+.0f} points over {_n_after} question(s) after load){_flag}"
+        )
     for r in results:
         status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
         _lang = r["question"].get("language", "en")
@@ -1683,6 +2139,7 @@ def main() -> None:
     if not args.no_markdown:
         write_markdown(results, args, output_path, **_wm_kwargs)
 
+    _pdf_note: list[str] = []   # (c) deferred, non-nagging PDF notes — surfaced in --- Reports
     # Write PDF via pandoc (always attempted)
     if args.no_markdown:
         write_markdown(results, args, output_path, **_wm_kwargs)
@@ -1718,7 +2175,10 @@ def main() -> None:
                 if html_path.exists():
                     html_path.unlink()
     except FileNotFoundError:
-        print("  ⚠ PDF skipped — install pandoc: brew install pandoc")
+        # (c) The PDF step is optional. Nagging every run for months trained the eye to skip
+        # warnings, which is exactly how a real ⚠ gets missed. State it once per run as a
+        # neutral sub-detail, not a warning, and only when a PDF was actually wanted.
+        _pdf_note.append("⚠ PDF skipped — pandoc not installed: brew install pandoc")
 
     # Bundle reports as zip for upload + audit workflow (AIStudio_829)
     # zip contains: json + md + pdf (if exists). Copied to ~/Downloads/.
@@ -1734,7 +2194,8 @@ def main() -> None:
         for fpath in _files_to_zip:
             zf.write(fpath, fpath.name)
 
-    print(f"\n· Reports written to {reports_dir}/")
+    _sep("Reports")
+    print(f"✅ Reports written to {reports_dir}/")
     print(f"  · {output_path.name}")
     if md_path.exists():
         print(f"  · {md_path.name}")
@@ -1742,6 +2203,8 @@ def main() -> None:
         print(f"  · {pdf_path.name}")
     print(f"  · Bundled: ~/Downloads/{zip_name} ({len(_files_to_zip)} files)")
     print("  · Open the .md report for the full per-question breakdown and citations.")
+    for _n in _pdf_note:
+        print(f"  {_n}")
 
 
 if __name__ == "__main__":

@@ -28,7 +28,10 @@ python-pptx
 beautifulsoup4
 
 # PDF generation (operator tooling — ais_update_help, PDF companions for docs)
-# Requires system dependency: brew install pango
+# Requires TWO Homebrew system dependencies, neither installable by pip:
+#   brew install pango pandoc
+# The path is: pandoc (.md → .html) then weasyprint/pango (.html → .pdf). Missing either one
+# silently skips the PDF; .md and .json reports are unaffected. Verified by ais_install (_1043).
 weasyprint
 markdown
 

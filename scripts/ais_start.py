@@ -1,4 +1,21 @@
-# Version: 1.4.0
+# Version: 1.5.2
+# Changelog: 1.5.2 — Models footer header wording: "Checking what runs on this machine" →
+#            "Checking what's installed and can run" (clearer: installed AND fits, not just fits).
+# Changelog: 1.5.1 — Name the embedding model at backend load (Manuel, 2026-07-17): the "loading
+#            model weights" wait now reads "Loading the embedding model (nomic-embed-text) + reranker"
+#            — it's the embedder, not a chat model, that gates /health. On backend-not-healthy, if free
+#            memory is <15% the failure names the embedder OOM as the likely cause with a free-and-retry
+#            direction (new _free_memory_pct via memory_pressure). Complements the predictive show-stopper
+#            in the Models bundle (which reads /models before the fact).
+# Changelog: 1.5.0 — Models footer + fit show-stoppers (AIStudio_1020 follow-up, 2026-07-17). New
+#            `--- Models` bundle before Reporting: queries the backend /models (ONE fit policy,
+#            app/model_fit.py — no divergent arithmetic) and prints what's installed vs. what can
+#            actually run on this machine's memory (✅ fits · ⚠ tight · ⛔ won't fit), sorted by
+#            footprint, with default + "N of M runnable". Two hard-fails now guard the "running"
+#            claim: (1) the embedding model (nomic-embed-text) won't fit → AIStudio can't index or
+#            search; (2) no chat model fits → every query would load-then-hang. Both exit 1 with
+#            actionable guidance. nomic-embed-text is never listed as a choice (infrastructure, not
+#            a chat model). Degrades gracefully to one · line if /models is unreachable.
 # Changelog: 1.4.0 — (A1c) desktop-icon lifecycle: detach the three spawned services
 #            (Qdrant, Ollama, backend) with start_new_session=True. They were plain child
 #            Popens — fine in a terminal (they orphan-survive), but under launchd (the desktop
@@ -58,7 +75,7 @@ import webbrowser
 from pathlib import Path
 
 SCRIPT_NAME = "ais_start"
-VERSION = "1.4.0"
+VERSION = "1.5.2"
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 BOLD   = "\033[1m"
@@ -132,6 +149,46 @@ def _ollama_chat_model_count() -> int:
         )
     except Exception:
         return 0
+
+
+def _free_memory_pct() -> int | None:
+    """macOS free-memory percentage via `memory_pressure` ("System-wide memory free percentage: NN%").
+    None off-mac / on failure — callers treat None as 'unknown, don't assert a cause'."""
+    try:
+        import re
+        out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=3)
+        m = re.search(r"free percentage:\s*(\d+)\s*%", out.stdout)
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+def _model_fit_rows(api: str) -> tuple[list[dict], str | None] | None:
+    """Fetch per-model fit from the backend /models (ONE policy, app/model_fit.py — no divergent
+    arithmetic here). Returns (rows, embed_verdict): rows = chat models with id/gb/verdict, sorted
+    by footprint; embed_verdict = the fit verdict of the embedding model (nomic-embed-text) or None.
+    Returns None on any failure so the caller degrades gracefully (footer becomes one · line)."""
+    try:
+        with urllib.request.urlopen(f"{api}/models", timeout=5) as r:
+            data = json.loads(r.read())
+        models = data if isinstance(data, list) else data.get("models", [])
+    except Exception:
+        return None
+    rows, embed_verdict = [], None
+    for m in models:
+        mid = m.get("id", "")
+        fit = m.get("fit") or {}
+        verdict = fit.get("verdict")
+        # The embedder is infrastructure, not a chat choice: judge it separately, never list it.
+        if m.get("is_generative") is False or "embed" in mid.lower():
+            if "embed" in mid.lower():
+                embed_verdict = verdict
+            continue
+        fp = fit.get("footprint_bytes") or 0
+        rows.append({"id": mid, "gb": fp / 1e9 if fp else None, "verdict": verdict,
+                     "reason": (fit.get("reason") or "").rstrip(".")})
+    rows.sort(key=lambda x: (x["gb"] or 0))
+    return rows, embed_verdict
 
 
 def main() -> int:
@@ -320,7 +377,10 @@ def main() -> int:
 
     # AIStudio_714: poll every 1s up to 60s — open browser on first healthy response.
     # Cold start takes ~20s (CrossEncoder reranker loads weights before first request).
-    print("  · Waiting for backend (loading model weights, up to 60s)...")
+    # The backend can't serve /health until the EMBEDDING model (nomic-embed-text) + the
+    # CrossEncoder reranker are loaded — name it so a stall/OOM here is legible (it's the
+    # embedder, not a chat model, that gates startup).
+    print("  · Loading the embedding model (nomic-embed-text) + reranker, up to 60s...")
     backend_ready = False
     for i in range(60):
         time.sleep(1)
@@ -344,8 +404,16 @@ def main() -> int:
             else:
                 print(f"· Default model: {_active_model}  (override: AISTUDIO_DEFAULT_MODEL)")
     else:
-        # AIStudio_715: do NOT open browser if backend failed to start
+        # AIStudio_715: do NOT open browser if backend failed to start.
+        # The most common non-obvious cause is the embedder failing to load under memory
+        # pressure — name it and check free memory so the operator isn't left guessing.
         print("❌ Backend did not start after 60s.")
+        _free_pct = _free_memory_pct()
+        if _free_pct is not None and _free_pct < 15:
+            print(f"· Likely cause: not enough memory to load the embedding model (nomic-embed-text) — only ~{_free_pct}% free.")
+            print("· Free memory (close other apps), then re-run: ais_start")
+        else:
+            print("· If it stalled loading the embedding model (nomic-embed-text), free memory and retry.")
         print("· Check logs: ais_log")
         print("· To retry: ais_start")
         return 1
@@ -374,6 +442,48 @@ def main() -> int:
                 print(f"  · {corpus} indexing started — UI will show progress.")
             except Exception as e:
                 print(f"  ⚠ Could not trigger {corpus} ingest: {e}")
+
+    # ── Models ────────────────────────────────────────────────────────────────
+    # What's installed vs. what can actually RUN on this machine's memory right now.
+    # Visible when the operator flips back to Terminal. Two hard-fails guard the
+    # "AIStudio is running" claim: the embedder must load (else no index/search), and
+    # at least one chat model must fit (else every query would load-then-hang).
+    _sep("Models", separator)
+    _fit = _model_fit_rows(api)
+    if _fit is None:
+        print("· Model fit unavailable (backend /models not reachable) — skipping check.")
+    else:
+        _rows, _embed_verdict = _fit
+        print("▶ Checking what's installed and can run...")
+        # SHOW-STOPPER 1: the embedding model is infrastructure the whole RAG depends on.
+        if _embed_verdict == "BLOCK":
+            print("❌ The embedding model (nomic-embed-text) won't fit in memory — AIStudio can't index or search.")
+            print("· Free memory (close other apps) and re-run: ais_start")
+            return 1
+        _runnable = 0
+        for row in _rows:
+            gb = f"(~{row['gb']:.0f} GB)" if row["gb"] else ""
+            if row["verdict"] == "BLOCK":
+                mark = "⛔"
+                note = f"won't fit — {row['reason']}" if row["reason"] else "won't fit"
+            elif row["verdict"] == "WARN":
+                mark = "⚠"
+                note = "tight — may swap under load"
+                _runnable += 1
+            else:
+                mark = "✅"
+                note = "fits"
+                _runnable += 1
+            print(f"  {mark} {row['id']:<18} {gb:<10} {note}")
+        # SHOW-STOPPER 2: no chat model fits → every query would wedge. Fail before "running".
+        if _rows and _runnable == 0:
+            print("❌ No installed model fits this machine right now.")
+            print("· Free memory (close other apps), or install a smaller model:  ollama pull gemma3:4b")
+            print("· Then re-run: ais_start")
+            return 1
+        if _rows:
+            _dm = _active_model or "?"
+            print(f"· Default: {_dm} · {_runnable} of {len(_rows)} runnable")
 
     # ── Reporting ─────────────────────────────────────────────────────────────
     _sep("Reporting", separator)

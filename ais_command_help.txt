@@ -23,7 +23,7 @@ Stops any running services first — safe to run even if already running.
 Services: Qdrant (vector store), Ollama (LLM host), FastAPI backend.
 On first run, automatically indexes the demo and help corpora (tracked in git;
 Qdrant collections are empty until indexed). Backend health is polled every
-second for up to 30s — browser only opens once the backend is confirmed healthy.
+second for up to 60s — browser only opens once the backend is confirmed healthy.
 
 Implementation: ais_start.sh (wrapper) → scripts/ais_start.py (logic). Both tracked in git.
 
@@ -74,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--dry-run] [--batch] [--batch-id <id>]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--mem-track] [--dry-run] [--canonical] [--batch] [--batch-id <id>]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -95,15 +95,23 @@ Options:
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
   --fit-policy <mode>    What to do when a model won't fit this machine's memory (skip | downshift |
-                         force). Omitted + a model that won't fit → bench asks [YES/n] before running
-                         (needs a terminal; non-interactive runs fail closed). (AIStudio_1020)
-  --batch                Run the pinned batch set from benchmarks/batch/bench_canonical.yaml
-                         (the canonical runs in TUTORIAL §5.9); each writes a standard report
-                         into benchmarks/<corpus>/reports/
-  --batch-id <id>        With --batch, run only the run with this id (e.g. A)
-  --canonical            [deprecated alias for --batch; --canonical-id → --batch-id]
-  --dry-run              With --batch, print the resolved run set and exit WITHOUT executing
-                         (preview a batch before committing the hours). (AIStudio_1012)
+                         force). Omitted + a model that won't fit → bench offers what DOES fit:
+                         several models fit → a numbered pick-list; exactly one fits → (r)un it,
+                         (f)ree memory & restart, (Enter) cancel; nothing fits → it stops and tells
+                         you how to free memory. Needs a terminal; non-interactive runs fail closed.
+                         (AIStudio_1020)
+  --mem-track            Show free memory per question (default on). --no-mem-track hides the
+                         column; the end-of-run memory recap and the JSON record are always kept.
+  --canonical            EXACT REPRODUCTION of the audited reference runs — every run in
+                         benchmarks/batch/bench_canonical.yaml with its PINNED model. Use this to
+                         reproduce or extend published numbers.
+  --batch                Run the reference question sets against THIS machine. Bare --batch runs
+                         every set TWICE — smallest installed model + largest that fits — so the
+                         machine is characterised across its own range. Narrow it with
+                         --model <name|largest|smallest>. Prints a runtime estimate first.
+  --batch-id <id>        With --batch or --canonical, run only the run with this id (e.g. A)
+  --dry-run              With --batch/--canonical, print the resolved run set + runtime estimate
+                         and exit WITHOUT executing. (AIStudio_1012)
 
 Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --scope big_banks
@@ -111,12 +119,18 @@ Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
   ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
 
-Batch reports (reproducible reference set, TUTORIAL §5.9):
-  ais_bench --batch                    Run all runs in benchmarks/batch/bench_canonical.yaml
-  ais_bench --batch --batch-id A       Run only run A
+Reference runs — reproduce, or characterise your machine (TUTORIAL §5.9):
+  ais_bench --canonical                Exact reproduction: every run on its pinned model
+  ais_bench --batch                    Every run twice: smallest installed + largest that fits
+  ais_bench --batch --model largest    Every run on the largest model that fits
+  ais_bench --batch --model smallest   Every run on the smallest model installed
+  ais_bench --batch --model gemma3:12b Every run on a model you name
+  ais_bench --batch --dry-run          Preview the resolved runs + runtime, execute nothing
   · Spec:    benchmarks/batch/bench_canonical.yaml (one parameter set per run)
   · Reports: benchmarks/<corpus>/reports/ (standard timestamped names; .md/.json/.pdf)
-  · --batch manages its own corpora — other run flags are ignored in this mode
+  · Both modes manage their own corpora — other run flags are ignored
+  · Use --canonical when the numbers must be comparable to published ones; --batch when you want
+    to know what YOUR machine does. Bare --batch is 8 runs and can take hours — check --dry-run.
 
 · Scopes compose with --topics and --question-ids using AND
 · Available scopes: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques

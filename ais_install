@@ -8,7 +8,10 @@
 #   ./ais_install --list             # show all installable user commands
 #   ./ais_install --verify           # check which commands are active in .zshrc
 #
-# Version: 2.4.13
+# Version: 2.4.14
+# Changelog: 2.4.14 — AIStudio_1043: verify the PDF toolchain (pandoc + pango) at install and
+#   report ONCE, actionably, instead of letting a skipped QUICKSTART step nag on every bench run
+#   forever (observed on Beast: pango present, pandoc absent, months of '⚠ PDF skipped').
 # Changelog: 2.4.13 — By-path consistency: ais_install is run as ./ais_install (not an installed
 #             alias), so every user-facing instruction now shows the ./ form — the install-summary
 #             banner ("./ais_install --verify"), the usage header block, and the not-found "--list"
@@ -34,7 +37,7 @@
 # ── Source guard: this script must be executed, not sourced ──────────────────
 [[ "$ZSH_EVAL_CONTEXT" == *:file* ]] && { echo "❌ Do not source this script — execute it directly."; return 1; }
 
-VERSION="2.4.13"
+VERSION="2.4.14"
 
 SCRIPT_NAME="ais_install"
 SCRIPT_DIR="${0:A:h}"
@@ -199,6 +202,26 @@ source "$REPO/.venv/bin/activate"
 pip cache purge --quiet 2>/dev/null || true  # clear stale cache entries (AIStudio_540)
 pip install -r "$REPO/requirements.txt" --quiet
 echo "✅ Dependencies installed."
+
+# ── PDF toolchain verification (AIStudio_1043) ────────────────────────────────
+# The PDF report path is two system binaries deep: pandoc converts .md → .html, then
+# weasyprint (which needs pango) renders .html → .pdf. weasyprint arrives via requirements.txt,
+# but pandoc and pango are Homebrew formulae that pip cannot install — QUICKSTART documents
+# them, and nothing ever verified they landed. Result observed on Beast: pango installed,
+# pandoc did not, and EVERY benchmark run printed "⚠ PDF skipped" for months. Report it once,
+# here, where it is actionable — not forever at runtime.
+_pdf_missing=""
+command -v pandoc >/dev/null 2>&1 || _pdf_missing="pandoc"
+[[ -d /opt/homebrew/lib && -n "$(ls /opt/homebrew/lib/libpango* 2>/dev/null)" ]] || \
+    _pdf_missing="${_pdf_missing:+$_pdf_missing }pango"
+if [[ -n "$_pdf_missing" ]]; then
+    echo "⚠ PDF reports will be skipped — missing: $_pdf_missing."
+    echo "· Install both:  brew install pango pandoc"
+    echo "· Answer 'y' if brew asks about dependencies (pandoc pulls gmp)."
+    echo "· Everything else works; only the .pdf companion to each report is affected."
+else
+    echo "✅ PDF toolchain present (pandoc + pango)."
+fi
 
 # ── DYLD_LIBRARY_PATH — required for weasyprint/pango PDF generation on macOS ─
 # Homebrew installs pango to /opt/homebrew/lib but macOS dyld doesn't search there

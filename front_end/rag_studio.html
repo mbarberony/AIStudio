@@ -8,6 +8,12 @@
 <!-- Version: 2.18.1 -->
 <!-- Changelog: 2.18.1 — AIStudio_1015 (label half): the min_score control is relabeled "Relevance Threshold" across all three surfaces (main query panel, Edit Corpus modal, Defaults modal) + tooltip reworded to "Relevance threshold — the minimum relevance score…". The internal field name (min_score / default_min_score / API) is UNCHANGED — a config/API rename is the parked bigger refactor. Prose in README/QUICKSTART/HOWTO/TUTORIAL + help-corpus regen remain (the doc-batch half). -->
 <!-- Version: 2.18.0 -->
+<!-- Changelog: 2.18.1 — AIStudio_1020 follow-up: "no model fits" state. When NO generative model fits
+     this machine (e.g. 24GB box under load where even 8b blocks), the picker's default-selection sets
+     window._noModelFits and _applyFitGuard() shows a distinct dead-end banner ("No model fits this
+     machine right now. Free up memory… then restart: ais_start") instead of a per-model "use X instead"
+     that has no smaller X to name. Embedding-only models (is_generative === false) are excluded from the
+     "does anything fit" test. -->
 <!-- Changelog: 2.18.0 — AIStudio_1020 (memory-fit guard, UI enforcement). The model picker now renders the SERVER-computed fit verdict from /models `m.fit` (one policy, app/model_fit.py) instead of re-deriving a disk-fraction-of-total threshold in JS — the _967 heuristic under-warned 27b (~16GB disk / 24GB total ≈ 0.70, below its 0.75 line). FIT = normal · WARN = amber ⚠ · BLOCK = red ⛔ + the option is DISABLED. New _applyFitGuard(): on BLOCK it shows a red banner under the picker with the recommended fitting model and disables Send (and the change-handler skips prewarm — prewarming a BLOCK model would itself wedge); WARN shows an amber advisory, Send stays on. sendMessage() has a _modelBlocked backstop so a query never fires into a load-then-hang. Default-model selection now excludes BLOCK candidates so a fresh 24GB load never auto-picks a wedge. Fallback estimate (old backend without `fit`) now uses AVAILABLE memory × 1.2 runtime-footprint, not raw disk/total. -->
 <!-- Version: 2.17.1 -->
 <!-- Changelog: 2.17.1 — A20 re-fix. The 2.17.0 sticky-footer approach still overlapped: the Score Threshold slider bled below/through the Cancel/Save row (the negative bottom margin on the sticky footer let the last slider paint into its zone). Replaced with the proven flex-column pattern used by the other modals: the Edit Corpus container is now display:flex; flex-direction:column; overflow:hidden, the form content lives in an inner overflow-y:auto; flex:1 body that scrolls, and the footer is a plain flex-shrink:0 child that never scrolls and always sits at the true bottom. No more sticky/negative-margin overlap. -->
@@ -1445,6 +1451,10 @@
             // still functions (the /ask preflight will then explain the block on send).
             const first = goodLlama || gemmaCanon || smallestGemma || avail[0] || chatModels.filter(m => m.available)[0];
             if (first) modelSelect.value = first.id;
+            // AIStudio_1020 follow-up: does ANY generative model fit? (embedding-only models are
+            // never chat candidates.) If none fit, the guard shows the "no room for any model" state.
+            const _isGen = m => m.is_generative !== false;
+            window._noModelFits = chatModels.filter(m => m.available && _isGen(m) && _fitOk(m)).length === 0;
             _applyFitGuard();  // AIStudio_1020: reflect the selected model's fit into the banner + send button
         } catch {
             modelSelect.innerHTML = '<option>Ollama not running</option>';
@@ -1563,6 +1573,16 @@
         const fit = m && m.fit;
         _modelBlocked = false;
         if (!banner) return;
+        // AIStudio_1020 follow-up: no generative model fits at all — a specific, actionable dead-end
+        // state (distinct from "this one model is too big; use that smaller one").
+        if (window._noModelFits) {
+            _modelBlocked = true;
+            banner.innerHTML = `⛔ <b>No model fits this machine right now.</b> Free up memory (close other apps), or see the Tutorial (Module 2.5) for options — then restart the app: <code>ais_start</code> in Terminal.`;
+            banner.style.display = 'block';
+            banner.style.background = '#fbeaea'; banner.style.borderColor = 'var(--danger,#c0392b)'; banner.style.color = '#7a1f1f';
+            if (currentCorpus) sendBtn.disabled = true;
+            return;
+        }
         if (fit && fit.verdict === 'BLOCK') {
             _modelBlocked = true;
             const rec = fit.recommendation ? ` Use <b>${fit.recommendation}</b>, which fits.` : ' Free up memory or pick a smaller model.';

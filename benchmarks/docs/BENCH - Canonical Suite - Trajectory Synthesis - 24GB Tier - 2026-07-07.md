@@ -1,7 +1,7 @@
 # AIStudio — Canonical Benchmark Suite
 ## Synthesis & Trajectory · 24 GB Tier (llama3.1:8b × gemma3:12b) · 2026-07-07
 
-*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on Beast, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — Suzanne's Mac, the box that historically returned 0/0/0 citations. IN PROGRESS: sec_10k complete; ESEF C/D pending tonight's runs.*
+*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on Beast, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — Suzanne's Mac, the box that historically returned 0/0/0 citations. IN PROGRESS: sec_10k complete; ESEF C/D pending — now **blocked on the bench sweep-starvation fix** (see *The memory envelope*, added 2026-07-17). Fit guard live-verified on this box 2026-07-17.*
 
 **Machine:** Suzanne / MacBook-Pro-2 · 24 GB unified memory · HEAD `093fabc`
 **Tiers:** `llama3.1:8b` (small, ~fast) × `gemma3:12b` (mid, ~50% slower) · Top-K=10 · T=0.3 · α=0.5 · **system_prompt_tier=small (both <20B)**
@@ -57,6 +57,32 @@ On a 24 GB machine:
 
 ---
 
+## The memory envelope (added 2026-07-17) — *what fits* vs *what sustains*
+
+The tier recommendation above answers **which model to trust**. Live verification on this box on 2026-07-17 added a second, orthogonal axis the recommendation must carry: **which model the machine can sustain for a given workload.** They are not the same question.
+
+**The fit guard is verified live on this machine.** `_1020`'s block path had only been simulated on Beast. On this box every surface was confirmed: the `ais_start` Models footer (honest per-model verdicts that track live memory — `4b✅ 8b✅ · 12b⛔ 12b-qat⛔ 27b⛔` "2 of 5" at ~10 GB free; "4 of 5" at ~15 GB after `ollama stop`), the bench interactive picker (a real 3-model numbered list), all three `--fit-policy` modes (`force` wedged 27b at 🔴 0.02 s — the guard's value demonstrated), and the `/ask` per-request preflight. **This is the box whose `psutil.available` under-reported ~2.5×; the `memory_pressure`-based denominator now reads honest free memory here.**
+
+**Sweep survival is inversely proportional to model size.** A benchmark sweep accumulates per-question working memory (KV cache / retrieval context at `num_ctx=16384`) that is **not released between questions**. Instrumented trace (3 s sampling): idle 68% → 52% at model load → gradual drift → **23% by Q9–Q10**, at which point the `/ask` guard begins BLOCKing the remaining questions. Confirmed **endogenous** (process audit mid-run: sole consumer `llama-server` at 5.4 GB; free returns to ~69% post-run).
+
+| Tier | Fits idle (24 GB)? | Sustains a 10-Q sweep? |
+|---|---|---|
+| `gemma3:4b` | ✅ | likely (untested) |
+| `llama3.1:8b` | ✅ | **partially — ~7–9 questions**, then guard-blocks |
+| `gemma3:12b` | ✅ | **no — starves after ~1 question** |
+| `gemma3:12b-it-qat` | ✅ (at ≥~15 GB free) | no (untested; nearer the ceiling than 12b) |
+| `gemma3:27b` | ❌ never | — |
+
+**Consequence for the tier recommendation.** "12b for quantitative work" holds **for single queries** — it remains the non-fabricating tier and that finding is unchanged. But **12b cannot sustain a multi-question session on 24 GB.** User guidance must therefore split on workload: *ask 12b one hard table question at a time; do not run it as a batch.* 8b buys more runway but does not survive a full sweep from a tight baseline either. Launching from a clean baseline (`ollama stop` first) buys questions; it does not remove the ceiling.
+
+**⚠ Provisional status of constrained-tier sweep scores.** Because the harness does not reset per-question memory, a multi-question sweep on this machine partly measures **the harness's own memory hygiene**, not the model. Two harness defects follow, both filed:
+1. **Sweep self-starvation** — per-question KV/context not released (PRIORITY; gates further constrained-tier benchmarking).
+2. **The grader cannot distinguish a block from a miss.** Latency is the discriminator: **0.02 s + 0 citations = guard BLOCK** (memory; the advisory is returned as the answer, `ok:true`) versus **40–60 s + 0 citations = a genuine content miss.** Both currently score 🔴, making the constrained-box pass rate uninterpretable. A clean-baseline Run A scored 7/10 — but two of the three reds were blocks, leaving **one real miss** (Q3, 2-firm × 2-year cyber comparison, 48.56 s, substantive prose, zero `[N]` tags while siblings cited fine). Its faithfulness is **undetermined**: the report stores no retrieved chunks, so BENCH_HARNESS §179's "verify the cited chunk" is un-executable from the artifact.
+
+**This does not invalidate the 2026-07-07 rows above.** Those runs completed without starvation (recorded `9🟢·1🟡·0🔴`, "without starvation"); reading them confirms it. The starvation is a newly-characterized mode under tight-baseline conditions.
+
+---
+
 ## The constant (carried from the 27b edition)
 
 The graceful-failure property holds here too, tier-dependently: **12b never invents a number** — it says less, hedges, or declines. 8b does invent on the table frontier — the one place the constant breaks at the small tier, and the reason the tier recommendation matters.
@@ -72,3 +98,5 @@ The [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20
 - **ESEF C/D × 8b/12b** — the language axis on the 24 GB tier (watch BNP/Erste/UniCredit for the non-EN drag; D is the EN control).
 - **Faithful-BlackRock sec_10k re-run** — clean Q9 across the +BLK 2×2, superseding the shortcut-add rows above.
 - Fold both into the tables + the tier recommendation once the data lands.
+- **⚠ BLOCKED ON HARNESS (added 2026-07-17):** run C/D only **after** the sweep-self-starvation fix + the block-vs-miss grader land — otherwise multi-question sweep scores on this box are starvation-confounded (see *The memory envelope*). Target shape is the **8-run matrix: (A,B,C,D) × (8b, 12b)**.
+- **Resolve Q3-class faithfulness** — needs harness chunk-capture (`--save-context`) to test untagged-grounding vs fabrication.
