@@ -1,7 +1,7 @@
 # AIStudio — Canonical Benchmark Suite
 ## Synthesis & Trajectory · 24 GB Tier (llama3.1:8b × gemma3:12b) · 2026-07-07
 
-*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on a 128 GB machine, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — a 24 GB MacBook Pro — the machine that had historically returned zero citations. IN PROGRESS: sec_10k complete; ESEF C/D pending — now **blocked on the bench sweep-starvation fix** (see *The memory envelope*, added 2026-07-17). Fit guard live-verified on this box 2026-07-17.*
+*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on a 128 GB machine, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — a 24 GB MacBook Pro — the machine that had historically returned zero citations. IN PROGRESS: sec_10k complete; ESEF C/D pending; **sweep-survival rows under re-measurement 2026-07-19 (AIStudio_1052)** — now **blocked on the bench sweep-starvation fix** (see *The memory envelope*, added 2026-07-17). Fit guard live-verified on this box 2026-07-17.*
 
 > **Where this sits in the arc.** This is a waypoint, not a conclusion. It records what the suite established on this hardware at this date; later runs extend it and none of the findings below have been restated. Read it as "what we knew on 2026-07-07, plus what the memory work added on 2026-07-17" — the memory-envelope section is a later addition and is marked as such.
 
@@ -71,13 +71,17 @@ The tier recommendation above answers **which model to trust**. Live verificatio
 
 | Tier | Fits idle (24 GB)? | Sustains a 10-Q sweep? |
 |---|---|---|
-| `gemma3:4b` | ✅ | likely (untested) |
-| `llama3.1:8b` | ✅ | **partially — ~7–9 questions**, then guard-blocks |
-| `gemma3:12b` | ✅ | **no — starves after ~1 question** |
-| `gemma3:12b-it-qat` | ✅ (at ≥~15 GB free) | no (untested; nearer the ceiling than 12b) |
+| `gemma3:4b` | ✅ | **yes — full 4-run matrix, zero blocks** (measured 2026-07-19) |
+| `llama3.1:8b` | ✅ | ⚠️ *under re-measurement* — recorded as ~7–9 questions then guard-blocks |
+| `gemma3:12b` | ✅ | ⚠️ *under re-measurement* — recorded as starving after ~1 question |
+| `gemma3:12b-it-qat` | ✅ (at ≥~15 GB free) | untested; C/D runs were skipped by the pre-fix guard |
 | `gemma3:27b` | ❌ never | — |
 
-**Consequence for the tier recommendation.** "12b for quantitative work" holds **for single queries** — it remains the non-fabricating tier and that finding is unchanged. But **12b cannot sustain a multi-question session on 24 GB.** User guidance must therefore split on workload: *ask 12b one hard table question at a time; do not run it as a batch.* 8b buys more runway but does not survive a full sweep from a tight baseline either. Launching from a clean baseline (`ollama stop` first) buys questions; it does not remove the ceiling.
+> **⚠️ The two ⚠️ rows are in doubt and are being re-measured (added 2026-07-19).** They were taken **before AIStudio_1052 was known**: the fit guard was running a single load-time test — *does this model's footprint fit in free memory?* — to answer two different questions, and applying it to a query against an **already-resident** model is wrong, because free memory is low *precisely because that model occupies it*. Observed live: a question answered at 25% free and the next refused at 23%. So "starvation" in those rows may be **partly, or entirely, the guard refusing work the machine could have done**, rather than real exhaustion.
+>
+> **Do not correct these figures by reasoning — re-measure them.** The evidence is the completed `gemma3:12b-it-qat` matrix on this box under the corrected harness (`bench` ≥2.26.3 + `api` ≥1.20.3), which has not yet been run. Until then: the **fits** column stands, the single-query tier recommendation stands, and only the sweep-survival column is in question. If a 12b-class model does sustain a sweep once the guard asks the right question, the tier ceiling moves up and the user-facing guidance moves with it.
+
+**Consequence for the tier recommendation.** "12b for quantitative work" holds **for single queries** — it remains the non-fabricating tier and that finding is unchanged. Whether 12b can sustain a multi-question session on 24 GB is **open pending the re-measurement above**; the earlier "cannot" was measured under the defective guard. What is not in doubt is the shape of the axis: user guidance must split on workload, single-query versus batch, and a model near the ceiling is the one to watch on a long unattended run. Launching from a clean baseline (`ollama stop` first) buys questions; it does not remove the ceiling.
 
 **⚠ Provisional status of constrained-tier sweep scores.** Because the harness does not reset per-question memory, a multi-question sweep on this machine partly measures **the harness's own memory hygiene**, not the model. Two harness defects follow, both filed:
 1. **Sweep self-starvation** — per-question KV/context not released (PRIORITY; gates further constrained-tier benchmarking).

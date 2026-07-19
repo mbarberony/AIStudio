@@ -1,6 +1,6 @@
 # Quickstart
 
-*Version: Beta | Updated: 2026-07-12*
+*Version: Beta | Updated: 2026-07-19*
 
 Get a running AIStudio instance in under 30 minutes.
 
@@ -262,7 +262,7 @@ Prefer a lighter model or another family? Small: `ollama pull gemma3:4b` (lighte
 
 > **The same rule applies when you benchmark.** `ais_bench` (Module 5 of the [Tutorial](TUTORIAL.md)) runs whatever model you point it at. The simplest safe choice on any Mac is **`ais_bench --batch`**, which picks models that fit your machine automatically; **`ais_bench --canonical`** reproduces the published runs on their pinned 27B model and needs 32 GB+. If you name a model yourself and it won't fit, `ais_bench` **offers what does** — a pick-list when several fit, `(r)un / (f)ree memory / (Enter) cancel` when only one does — or `--fit-policy downshift` to choose for you. It never silently hangs your Mac.
 >
-> **One caveat, because it is easy to get wrong:** *fitting* and *sustaining a long run* are different things. A model that loads fine can still exhaust memory part-way through a ten-question sweep, since each question's working memory adds up. On a 24 GB Mac we measured `llama3.1:8b` completing roughly seven of ten questions and `gemma3:12b` about one — both are perfectly usable for asking questions one at a time in the UI, but neither reliably finishes an unattended sweep there. If later questions come back instantly with no citations, that is the memory guard protecting you rather than the model failing: free memory with `ollama stop <model>` and run again.
+> **One caveat, because it is easy to get wrong:** *fitting* and *sustaining a long run* are different things. A model that loads fine can still exhaust memory part-way through a ten-question sweep, since each question's working memory adds up. On a memory-tight Mac, keep the models nearest your machine's ceiling for questions you ask one at a time in the UI, and prefer a smaller model for an unattended benchmark sweep. `ais_bench` clears resident models before a run and reclaims memory mid-run if it gets tight, and it tells you in its summary if a question was not run.
 
 > **Download times** depend on your internet speed (check yours at [fast.com](https://fast.com)). On a 100 Mbps connection, expect about 5 minutes for `llama3.1:8b` (or ~2 minutes for the lighter `gemma3:4b`) and 10 minutes for `gemma3:27b`. The estimate shown during download may fluctuate — starting at hours, then dropping to minutes.
 
