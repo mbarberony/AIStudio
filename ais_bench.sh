@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # ais_bench.sh — Run AIStudio benchmark
-# Version: 1.9.0
+# Version: 1.10.1
 # Changelog: 1.10.1 — removed the wrapper's corpus/questions checks entirely: they aborted before
 #   python ran, so a failure printed ❌ with NO identity banner (STD §2 wants it unconditionally).
 #   bench.py::_preflight_corpus now owns them; the wrapper forwards only AIS_BENCH_PREFLIGHT_CORPUS.

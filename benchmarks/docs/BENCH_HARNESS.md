@@ -1,8 +1,8 @@
 # Benchmark Harness (BENCH_HARNESS)
 
-*Version: 2.0.1 | Updated: 2026-06-27*
+*Version: 2.2.0 | Updated: 2026-07-18*
 
-*Lives at `benchmarks/docs/` (renamed from `docs/HARNESS.md`). Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how-to-read-a-benchmark in TUTORIAL §5.*
+*Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion reading: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how to read a benchmark in TUTORIAL §5.*
 
 AIStudio ships with a benchmark harness (`benchmarks/bench.py`) that runs a structured question set against any corpus and produces timestamped reports. It is designed for the demo corpus out of the box but works with any corpus and any YAML question file you provide.
 
@@ -20,53 +20,51 @@ ais_bench
 
 This runs all 14 demo questions against the `demo` corpus and writes a timestamped report to `benchmarks/demo/reports/`.
 
+The questions themselves are a plain YAML file you can read and edit:
+
+```
+benchmarks/demo/demo_questions.yaml
+```
+
+Every corpus follows the same convention — `benchmarks/<corpus>/<corpus>_questions.yaml` for the default set, with named variants under `benchmarks/<corpus>/questions/`. Open the demo file to see what a question looks like; the fields are documented in **Question File Format** below, and **Bringing Your Own Corpus** walks through writing one from scratch.
+
 ---
 
 ## CLI Reference
 
-```
+```bash
 ais_bench [OPTIONS]
-
-Options:
-  --corpus NAME         Corpus to query (default: demo)
-  --scope NAME          Restrict to a named corpus subset (e.g. lang_en) — reads
-                        data/corpora/<corpus>/scopes/<corpus>_<scope>_scope.yaml
-  --questions STEM      Named question subset by STEM (not a path). Empty = the flat
-                        default set; a STEM resolves to questions/<corpus>_<stem>_questions.yaml.
-                        An unknown STEM is a HARD ERROR (no silent fallback).
-  --canonical           Reproduce the audited runs EXACTLY — every run on its PINNED model
-  --batch               Run the reference sets against THIS machine: bare = every run twice
-                        (smallest installed + largest that fits); narrow with
-                        --model <name|largest|smallest>
-                        (multiple corpus/scope/question combinations in one invocation).
-  --top-k INT           Chunks retrieved per query (default: 10 for the financial corpora;
-                        a corpus with no stored default falls back to the system default of 5)
-  --temperature FLOAT   LLM sampling temperature 0.0–2.0 (default: 0.3)
-  --model NAME          Ollama model name (default: API default)
-  --api URL             Backend URL (default: http://localhost:8000)
-  --no-markdown         Skip writing .md report
-  --full                Include full answers in report (default: first 4 paragraphs)
-  --fit-policy MODE     What to do when a model won't fit this machine's memory (skip | downshift |
-                        force). Omitted + a model that won't fit → bench asks [YES/n] before running
-                        (needs a terminal; a fully non-interactive run fails closed). (AIStudio_1020)
-  --dry-run             With --batch/--canonical, print the resolved run set + runtime estimate and
-                        exit WITHOUT executing. Without either it stops with a notice. (AIStudio_1012)
-  --mem-track           Per-question free-memory column (default on). --no-mem-track hides the column;
-                        the run-tail recap and the JSON record are always written. (AIStudio_1037)
-  --help                Show this help message
-  --version             Show version
-
-(`--canonical` and `--batch` are now **different verbs**: `--canonical` reproduces the audited runs on their pinned models; `--batch` adapts to the machine it runs on. `--canonical` is no longer an alias.)
 ```
 
-**Question sets — one home.** The default set is the flat file
-`benchmarks/<corpus>/<corpus>_questions.yaml` (used when `--questions` is omitted).
-Named subsets live one level down in `benchmarks/<corpus>/questions/` as
-`<corpus>_<stem>_questions.yaml`, selected by STEM: `ais_bench --corpus sec_10k --questions frontier`
-resolves to `benchmarks/sec_10k/questions/sec_10k_frontier_questions.yaml`. A STEM that
-doesn't resolve is a hard error — the harness will not silently fall back to the default.
+**What to run**
 
----
+| Option | Meaning |
+|---|---|
+| `--corpus NAME` | Corpus to query. Default `demo`. |
+| `--scope NAME` | Restrict to a named subset of the corpus, e.g. `lang_en`. Reads `data/corpora/<corpus>/scopes/<corpus>_<scope>_scope.yaml`. |
+| `--questions STEM` | Named question set, given as a **stem, not a path**. Empty uses the default set; a stem resolves to `questions/<corpus>_<stem>_questions.yaml`. An unknown stem is a hard error — never a silent fallback to the default set. |
+| `--canonical` | Reproduce the audited reference runs exactly, each on its pinned model. See **The reference suite** below. |
+| `--batch` | Run the reference sets against *this* machine — every set twice by default (smallest installed model + largest that fits). Narrow with `--model`. |
+
+**How to run it**
+
+| Option | Meaning |
+|---|---|
+| `--model NAME` | Ollama model. Default is whatever the API is configured to use. With `--batch`, also accepts `largest` or `smallest`. |
+| `--top-k INT` | Chunks retrieved per query. Default 10 for the financial corpora; a corpus with no stored default falls back to 5. |
+| `--temperature FLOAT` | Sampling temperature, 0.0–2.0. Default 0.3. |
+| `--api URL` | Backend URL. Default `http://localhost:8000`. |
+| `--fit-policy MODE` | What to do when the chosen model won't fit in memory: `skip`, `downshift` (use the largest that fits), or `force` (run anyway — it will likely hang). Omit it and the harness asks, offering the models that do fit. Needs a terminal; a fully non-interactive run fails closed rather than guessing. |
+
+**Output and inspection**
+
+| Option | Meaning |
+|---|---|
+| `--dry-run` | With `--batch` or `--canonical`, print the resolved run set and a runtime estimate, then exit without executing. Use it before committing hours. |
+| `--mem-track` | Show a free-memory column per question. On by default; `--no-mem-track` hides the column. The end-of-run memory recap and the JSON record are written either way. |
+| `--full` | Put full answers in the report instead of the first four paragraphs. |
+| `--no-markdown` | Skip the `.md` report (JSON only). |
+| `--help` / `--version` | Show help, or the harness version. |
 
 ## Question File Format
 
@@ -114,19 +112,34 @@ Reports are written to `benchmarks/my_corpus/reports/`.
 
 ### The reference suite — `--canonical` vs `--batch`
 
-The reference set lives at `benchmarks/batch/bench_canonical.yaml`. There are two ways to run it, because reproducibility and machine-characterisation are different jobs:
+Most of this page is about running *one* thing and looking at it. The reference suite is the opposite: a fixed set of runs, defined once, that you can re-run whenever something changes. It lives at `benchmarks/batch/bench_canonical.yaml`, and each entry names a corpus, a question set, a scope, and the retrieval parameters — so "run A" always means the same thing.
+
+**Why a fixed set exists at all.** Benchmarks are only useful comparatively. A score of 8/10 means nothing on its own; 8/10 *against the same questions the previous release scored 6/10 on* means something. Pinning the runs — same corpora, same questions, same depth — is what turns individual numbers into a trend. The audited figures in `BENCH - Canonical Suite - README and Synthesis` all come from this set.
+
+**Why there are two commands instead of one.** The suite has to serve two goals that pull against each other.
+
+Reproducibility says: pin everything, including the model, so a number from today can be compared to one from three months ago. That is **`--canonical`** — it runs each entry exactly as written, on its pinned model, and it is how the published figures are regenerated.
+
+But the pinned model is not universal. The reference model is a 27B, which needs roughly 32 GB of unified memory; on a 24 GB Mac it will not load at all. Taken literally, that means a constrained machine cannot run the reference suite — and a suite nobody can run is not reproducible in any useful sense. It also leaves the more practical question unanswered: *what does the machine in front of me actually do?*
+
+That is **`--batch`**. It runs the same fixed set, but resolves the model at runtime against what this machine has installed and can hold:
 
 ```bash
-ais_bench --canonical      # exact reproduction — every run on its pinned model
-ais_bench --batch          # this machine — every run on smallest-installed AND largest-fitting
+ais_bench --canonical                  # exact reproduction, pinned models
+ais_bench --batch                      # this machine: smallest installed AND largest that fits
+ais_bench --batch --model largest      # only the largest that fits
+ais_bench --batch --model smallest     # only the smallest installed
+ais_bench --batch --model gemma3:12b   # a model you name
+ais_bench --batch --dry-run            # show what would run, execute nothing
 ```
 
-`--canonical` executes the runs exactly as specified — same corpora, same depth, same **pinned model** — which is what makes the numbers comparable across time and machines. This is how the headline figures in `BENCH - Canonical Suite - README and Synthesis` are regenerated.
+Bare `--batch` runs every entry **twice** — once on the smallest model you have, once on the largest that fits — because the interesting question on a given machine is usually not "how good is this model" but "how much does the model tier matter here". Two runs per entry give you that range directly.
 
-`--batch` answers a different question: *what does this machine do?* It runs every set twice — once on the smallest model you have installed, once on the largest that currently fits — producing the 4x2 matrix that characterises a machine across its own tier range. Narrow it with `--model largest`, `--model smallest`, or a model name. This exists because the pinned model is not universal: `gemma3:27b` will not load on a 24 GB Mac, so a constrained machine could not run the reference set at all. Bare `--batch` is 8 runs and can take hours — it prints an order-of-magnitude estimate first, and `--dry-run` previews the resolved set without executing.
+**Before you start one.** Bare `--batch` is eight runs and can take hours. The harness prints an order-of-magnitude estimate before it begins, and `--dry-run` shows the fully resolved run list — including which models were selected — without executing anything. Use it first.
 
-Use the individual flags below to explore.
+Reports from either mode are written per run to `benchmarks/<corpus>/reports/` and name their model, so runs from different tiers never get confused with each other.
 
+Use the individual flags below to explore outside the fixed set.
 
 ### Compare models
 
@@ -180,11 +193,19 @@ The first query in a cold session is slow (20–50s) while the LLM loads into me
 
 ## Scoring — the GREEN/AMBER/RED rating
 
-Since AIStudio_878, `evaluate()` returns a tri-state `rating ∈ {GREEN, AMBER, RED}` as the primary verdict, with the older binary `pass` demoted to a back-compat soft signal:
+`evaluate()` returns a tri-state `rating ∈ {GREEN, AMBER, RED}` as the primary verdict, with the older binary `pass` demoted to a back-compat soft signal:
 
 - **🟢 GREEN** — cited, right firm, honest, keywords present, adequate citation density.
 - **🟡 AMBER** — cited and plausibly right, but with a soft weakness (a keyword miss, low citation density, or partial entity coverage) → read up / audit.
 - **🔴 RED** — no citations, honest-empty, or wrong firm (entity coverage 0 with a filter active).
+
+**Two ratings beyond the colour scale.**
+
+**⚫ BLOCKED** — the fit guard declined to run the question because the model would not fit in the memory free at that moment. The model never ran, so this is a *machine* event, not a *quality* one: BLOCKED questions are excluded from the pass-rate denominator and from the latency average, and the summary names them with the remedy (free memory, or use a smaller model). Detection requires both the guard's advisory text and a sub-second latency, so a genuinely fast answer is never misread as a block.
+
+**Groundedness, and the "uncited but grounded" re-rating** — a zero-citation answer used to score RED, indistinguishable from a wrong or invented one. Since reports now carry the retrieved chunks, the harness measures how much of the answer's vocabulary actually appears in that context. Above ~70% the answer is re-rated **AMBER, "uncited but grounded"**: right answer, missing attribution. Below ~40% it is flagged as possible fabrication. This matters because the two are genuinely different defects and were being reported as the same one — the same question can score RED with zero citations on one run and GREEN with six on the next, on identical claims from the same model and corpus — sometimes with the *uncited* answer marginally better grounded. Without this check the grader measures tag emission and reports it as correctness.
+
+Groundedness is deliberately crude — lexical overlap, not entailment. It cannot prove an answer faithful. It can separate one built from the retrieved context from one built from nowhere, which is the distinction that changes the rating, and it makes the audit below automatic rather than manual.
 
 Keyword matching is demoted from the verdict to one input among several — a GREEN answer can miss a keyword and an AMBER one can hit them all. The thresholds are v1 defaults, calibrated against the audited canonical runs; the rating is a triage signal, not a grade. The contract is still the audit: verify the cited chunk, never the colour alone.
 

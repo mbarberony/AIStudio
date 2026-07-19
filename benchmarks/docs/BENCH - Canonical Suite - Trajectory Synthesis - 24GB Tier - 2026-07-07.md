@@ -1,9 +1,11 @@
 # AIStudio — Canonical Benchmark Suite
 ## Synthesis & Trajectory · 24 GB Tier (llama3.1:8b × gemma3:12b) · 2026-07-07
 
-*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on Beast, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — Suzanne's Mac, the box that historically returned 0/0/0 citations. IN PROGRESS: sec_10k complete; ESEF C/D pending — now **blocked on the bench sweep-starvation fix** (see *The memory envelope*, added 2026-07-17). Fit guard live-verified on this box 2026-07-17.*
+*Type: NOTES | Domain: AIS | Status: internal provenance — **hardware-tier edition**, sibling to the [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md). Where the 27b edition reads the arc across three time points on a 128 GB machine, this reads the arc across **model tiers on a memory-constrained (24 GB) machine** — a 24 GB MacBook Pro — the machine that had historically returned zero citations. IN PROGRESS: sec_10k complete; ESEF C/D pending — now **blocked on the bench sweep-starvation fix** (see *The memory envelope*, added 2026-07-17). Fit guard live-verified on this box 2026-07-17.*
 
-**Machine:** Suzanne / MacBook-Pro-2 · 24 GB unified memory · HEAD `093fabc`
+> **Where this sits in the arc.** This is a waypoint, not a conclusion. It records what the suite established on this hardware at this date; later runs extend it and none of the findings below have been restated. Read it as "what we knew on 2026-07-07, plus what the memory work added on 2026-07-17" — the memory-envelope section is a later addition and is marked as such.
+
+**Machine:** MacBook Pro · 24 GB unified memory · HEAD `093fabc`
 **Tiers:** `llama3.1:8b` (small, ~fast) × `gemma3:12b` (mid, ~50% slower) · Top-K=10 · T=0.3 · α=0.5 · **system_prompt_tier=small (both <20B)**
 **Reproduce:** `ais_bench --corpus sec_10k --model <M> [--questions frontier]` · ESEF: `--corpus esef_banks [--scope lang_en --questions lang_en]`
 **Note:** 27b does **not** fit 24 GB (loads to VRAM then wedges — blocked HTTP, tiny RSS). The tier ceiling here is 12b.
@@ -51,9 +53,11 @@ The control holds at both tiers: **single-cell numeric (Q10, FY2024 net revenue 
 
 ## The tier recommendation (the point of the exercise)
 
+> **Read this together with *The memory envelope* below**, added after later testing: the recommendation here is sound for **single queries**, but a model near this machine's ceiling may not sustain a long multi-question run. The original recommendation is unchanged; the caveat is additive.
+
 On a 24 GB machine:
 - **Qualitative work** (disclosure, cyber, climate, digital strategy, single-cell numeric): **8b is sufficient** — correct, cited, ~50% faster.
-- **Quantitative / multi-cell table work:** **12b is the safer tier** — it trades latency for *no fabrication*. Because the 8b fallback is the dangerous mode (invented numbers that look authoritative), **table-aware chunking** (bind value → row → year → basis at ingest) is the **top capability lever** — and it is *higher* priority for this tier than for Beast, since Beast can simply run the model that degrades safely.
+- **Quantitative / multi-cell table work:** **12b is the safer tier** — it trades latency for *no fabrication*. Because the 8b fallback is the dangerous mode (invented numbers that look authoritative), **table-aware chunking** (bind value → row → year → basis at ingest) is the **top capability lever** — and it is *higher* priority for this tier than for a large-memory machine, since such a machine can simply run the model that degrades safely.
 
 ---
 
@@ -61,7 +65,7 @@ On a 24 GB machine:
 
 The tier recommendation above answers **which model to trust**. Live verification on this box on 2026-07-17 added a second, orthogonal axis the recommendation must carry: **which model the machine can sustain for a given workload.** They are not the same question.
 
-**The fit guard is verified live on this machine.** `_1020`'s block path had only been simulated on Beast. On this box every surface was confirmed: the `ais_start` Models footer (honest per-model verdicts that track live memory — `4b✅ 8b✅ · 12b⛔ 12b-qat⛔ 27b⛔` "2 of 5" at ~10 GB free; "4 of 5" at ~15 GB after `ollama stop`), the bench interactive picker (a real 3-model numbered list), all three `--fit-policy` modes (`force` wedged 27b at 🔴 0.02 s — the guard's value demonstrated), and the `/ask` per-request preflight. **This is the box whose `psutil.available` under-reported ~2.5×; the `memory_pressure`-based denominator now reads honest free memory here.**
+**The fit guard is verified live on this machine.** The memory-fit guard's block path had previously only been exercised by simulation on a large-memory machine. On this box every surface was confirmed: the `ais_start` Models footer (honest per-model verdicts that track live memory — `4b✅ 8b✅ · 12b⛔ 12b-qat⛔ 27b⛔` "2 of 5" at ~10 GB free; "4 of 5" at ~15 GB after `ollama stop`), the bench interactive picker (a real 3-model numbered list), all three `--fit-policy` modes (`force` wedged 27b at 🔴 0.02 s — the guard's value demonstrated), and the `/ask` per-request preflight. **This is the machine whose available-memory reading had been under-reporting by roughly 2.5×; the corrected measurement now reflects real free memory here.**
 
 **Sweep survival is inversely proportional to model size.** A benchmark sweep accumulates per-question working memory (KV cache / retrieval context at `num_ctx=16384`) that is **not released between questions**. Instrumented trace (3 s sampling): idle 68% → 52% at model load → gradual drift → **23% by Q9–Q10**, at which point the `/ask` guard begins BLOCKing the remaining questions. Confirmed **endogenous** (process audit mid-run: sole consumer `llama-server` at 5.4 GB; free returns to ~69% post-run).
 
@@ -90,7 +94,7 @@ The graceful-failure property holds here too, tier-dependently: **12b never inve
 ---
 
 ## How to read this against the 27b edition
-The [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md) establishes the *durable calibrated baseline* on Beast (A 9/10, B ~6.5–7, C ~8–9/12, D ~7–8/8, zero fabrication). This edition asks: **what survives on 24 GB, and at which tier?** The answer so far — the calibrated surface survives at both tiers; the table frontier survives *safely* only at 12b; the language frontier (C/D) is tonight's measurement.
+The [27b Trajectory Synthesis](BENCH%20-%20Canonical%20Suite%20-%20Trajectory%20Synthesis%20-%202026-07-03.md) establishes the *durable calibrated baseline* on a 128 GB machine (A 9/10, B ~6.5–7, C ~8–9/12, D ~7–8/8, zero fabrication). This edition asks: **what survives on 24 GB, and at which tier?** The answer so far — the calibrated surface survives at both tiers; the table frontier survives *safely* only at 12b; the language frontier (C/D) was the next measurement planned.
 
 ---
 

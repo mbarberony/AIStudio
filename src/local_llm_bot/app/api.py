@@ -1,4 +1,16 @@
-# Version: 1.19.3
+# Version: 1.20.3
+# Changelog: 1.20.3 — ruff I001: the local import must lead its block; comments moved above the try.
+# Changelog: 1.20.2 — ruff F821: `ollama` is imported locally in each function here, not at
+#   module scope; the residency check now does the same.
+# Changelog: 1.20.1 — the 1.20.0 residency check used httpx, which is imported nowhere else in
+#   this module; where it is absent the ImportError was swallowed and the function returned False,
+#   so every question was blocked exactly as if the fix were not there. Now uses the `ollama` client
+#   the rest of the module uses, and REPORTS a failed residency check instead of failing silently.
+# Changelog: 1.20.0 — AIStudio_1037: the fit guard no longer BLOCKS a model that is already
+#   resident in Ollama. The guard asks 'is there room to LOAD this?', which is moot once loaded —
+#   free memory is low BECAUSE the model occupies it. Observed live on 24GB: a question answered at
+#   25% free, the next refused at 23%, losing every alternate question of a sweep to a constraint
+#   that no longer applied. Residency is checked via Ollama's /api/ps.
 # Changelog: 1.19.3 — ruff I001: `sys` now sits in the real top-level import block (alphabetical,
 #   between shutil and time) rather than mid-file. Third
 #   lint error from one 6-line addition — the lesson is to run the linter's own reasoning (what does
@@ -1097,6 +1109,39 @@ def _total_memory_bytes() -> int | None:
 _RESERVE_WARNED = False   # AIStudio_1042: warn once per process, not per request
 
 
+def _model_already_loaded(model: str | None) -> bool:
+    """True when Ollama already has this model resident.
+
+    AIStudio_1037. The fit guard answers "is there room to LOAD this model?" — a question that is
+    moot once the model is loaded. Free memory is low precisely BECAUSE the model occupies it, so
+    applying the load-time test to a resident model refuses requests it is perfectly able to serve.
+    Observed live on a 24 GB machine: the model answered a question at 25% free and was refused at
+    23%, losing every alternate question of a benchmark sweep to a constraint that no longer applied.
+    """
+    if not model:
+        return False
+    # Uses the same `ollama` client the rest of this module uses. The first version reached for
+    # httpx, which appears NOWHERE else here — so where it is absent the ImportError was swallowed
+    # by the except below, the function returned False, and every question was blocked exactly as if
+    # the fix were not present: a silent dependency failure indistinguishable from the bug it fixed.
+    try:
+        import ollama
+
+        running = ollama.ps()
+        models = running.get("models", []) if isinstance(running, dict) else getattr(running, "models", [])
+        for m in models:
+            name = m.get("name") or m.get("model") if isinstance(m, dict) else (
+                getattr(m, "name", None) or getattr(m, "model", None))
+            if name == model:
+                return True
+        return False
+    except Exception as _e:
+        # Do not fail silently: a resident model wrongly reported as absent blocks every question.
+        print(f"[backend] ⚠ residency check unavailable ({_e.__class__.__name__}: {_e}) — "
+              f"falling back to the load-time fit test.", file=sys.stderr, flush=True)
+        return False
+
+
 def _available_memory_bytes() -> int | None:
     """Available RAM for a model load, in bytes, MINUS the configured reserve. On macOS,
     psutil.virtual_memory().available OMITS purgeable/file-backed reclaimable pages, under-reporting
@@ -1401,6 +1446,9 @@ async def ask(req: AskRequest) -> AskResponse:
     # through and generate normally; unknowable memory (psutil absent, Ollama down) → no block.
     try:
         _fit = _fit_for(_effective_model)
+        # AIStudio_1037: a resident model needs no room to load into — do not refuse it.
+        if _fit is not None and _fit.verdict == "BLOCK" and _model_already_loaded(_effective_model):
+            _fit = None
         if _fit is not None and _fit.verdict == "BLOCK":
             _rec = _fit.recommendation
             _need = _human_size(_fit.footprint_bytes)

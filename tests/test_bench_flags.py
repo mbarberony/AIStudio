@@ -76,10 +76,20 @@ def test_block_no_policy_noninteractive_fails_closed(monkeypatch):
     assert ei.value.code == 1
 
 
-def test_block_no_policy_interactive_yes_downshifts(monkeypatch):
+def test_block_no_policy_interactive_pick_downshifts(monkeypatch):
+    # The interactive gate is a NUMBERED picker, not a YES/n prompt: on BLOCK it lists the models
+    # that do fit, largest first, and "1" selects the largest. This test previously fed "YES", which
+    # the picker treats as invalid input and therefore cancels — it was asserting a contract the
+    # command stopped honouring when the picker replaced the yes/no prompt.
     _patch_fit(monkeypatch, "BLOCK", "gemma3:12b")
     monkeypatch.setattr(bench.sys, "stdin", _FakeStdin(tty=True))
-    monkeypatch.setattr(builtins, "input", lambda *_a: "YES")
+    # The interactive gate offers the models that DO fit, which it fetches from the API. Without
+    # mocking that fetch the list is empty, the gate has nothing to offer and cancels — which is why
+    # this test failed regardless of the input given. With exactly one fitting model the prompt is
+    # "(r)un <model>, (f)ree memory & restart, (Enter) cancel", so the affirmative is "r".
+    monkeypatch.setattr(bench, "_fetch_fitting_models",
+                        lambda api, exclude=None: [{"id": "gemma3:12b", "gb": 10}])
+    monkeypatch.setattr(builtins, "input", lambda *_a: "r")
     assert bench._resolve_fit_policy("http://x", "gemma3:27b", None) == ("run", "gemma3:12b")
 
 
@@ -93,14 +103,16 @@ def test_block_no_policy_interactive_non_yes_aborts(monkeypatch):
 
 # ── --dry-run guard (single-run path stops instead of silently executing) ──────────────────────
 
-def test_dry_run_without_batch_returns_without_running(monkeypatch, capsys):
-    # main() must stop (return) when --dry-run is passed without --batch, not fall through to a run.
+def test_dry_run_without_batch_previews_and_returns(monkeypatch, capsys):
+    # --dry-run without --batch now PREVIEWS the single run and returns, rather than printing an
+    # advisory and refusing (bench 2.21.0). The assertion is that nothing executes and nothing is
+    # written — the previous version of this test asserted the old advisory text, which no longer
+    # exists, and so failed for a reason unrelated to the behaviour it was guarding.
     ns = bench.argparse.Namespace(
         canonical=False, canonical_id=None, dry_run=True, corpus="demo", model=None, fit_policy=None,
     )
     monkeypatch.setattr(bench, "parse_args", lambda: ns)
-    # If it fell through to the single-run path it would try to load questions / hit the API and raise;
-    # returning cleanly is the assertion.
     bench.main()
-    err = capsys.readouterr().err
-    assert "--dry-run applies to --batch" in err
+    out = capsys.readouterr().out
+    assert "Would run ONE job" in out
+    assert "no report was written" in out

@@ -1,4 +1,134 @@
 #!/usr/bin/env python3
+# Changelog: 2.26.3 — every optional attribute in the dry-run preview is now read defensively in one
+#   pass. Patching them one at a time as each AttributeError surfaced took three rounds; the block
+#   should not assume ANY attribute a caller might omit.
+# Changelog: 2.26.2 — _validate_args read the newer flags directly, so a caller constructing a
+#   Namespace without them (tests, programmatic use) crashed before validation could run. Reads
+#   every optional attribute defensively. The 2.26.1 fix patched the dry-run printer, which was not
+#   where the AttributeError came from — the lesson being to read the traceback's frame rather than
+#   the first plausible call site.
+# Changelog: 2.26.1 — the single-run --dry-run block read args.mem_floor_pct / args.no_ollama_restart
+#   directly, so any caller constructing a Namespace without the 2.24.0 flags crashed with
+#   AttributeError (caught by test_dry_run_without_batch_returns_without_running). Reads defensively.
+# Changelog: 2.26.0 — the residency exemption had been applied to the WRONG decision. Residency
+#   means a model need not be REFUSED (it requires no room to load again); it must NOT mean the
+#   model is exempt from being RECYCLED, because a resident model is the only kind that can have
+#   accumulated per-question memory. Skipping the recycle for resident models disabled the whole
+#   mitigation: observed live on 24GB, 7 of 8 questions blocked at a flat 27% while the model sat
+#   loaded and the reclaim never fired. Also: no blank line before the run marker, and the per-run
+#   'done →' line is dropped (the Reports section already states where output went).
+# Changelog: 2.25.3 — ORDER FIX: the clean-baseline clear ran AFTER the memory-fit check. So bench
+#   exempted an already-resident model ('already loaded — does not need room to load again'), then
+#   immediately unloaded it, and the question was blocked for want of memory to load a model bench
+#   had just evicted. Clearing now happens first, so the fit verdict describes the memory state the
+#   run will actually have.
+# Changelog: 2.25.2 — the clean-baseline step excluded the model being benchmarked, so it cleared
+#   everything EXCEPT the one that mattered and then reported '✅ Already clean' while that model
+#   held 8.6 GB. The exclusion was meant to avoid an unload/reload round-trip, but it made the
+#   baseline meaningless — the run inherited memory from whatever ran before it. Now clears all
+#   generative models; question 1 pays one model load, which a baseline should include.
+# Changelog: 2.25.1 — the residency exemption now also applies at BATCH level. _resolve_fit_policy
+#   still honoured a BLOCK for an already-loaded model, so whole runs were skipped ('needs ~11 GB
+#   but only ~7 GB is free') while that model was resident and answering questions. Same premise
+#   error as the per-question path, one level up.
+# Changelog: 2.25.0 — AIStudio_1037, the decisive correction: an ALREADY-RESIDENT model is no longer
+#   recycled or gated on load-time headroom. The fit guard answers 'is there room to LOAD this
+#   model?' — but once it is loaded, free memory is low precisely BECAUSE the model occupies it, and
+#   the model does not need that room a second time. Observed live on 24GB: the model answered a
+#   question at 25% free and was then refused at 23%, and every alternate question was lost to a
+#   reload it never needed. Residency is checked via `ollama ps` before any recycle decision.
+# Changelog: 2.24.2 — three corrections to the 2.24.1 recycle, found by checking the logic against
+#   the live 24GB log rather than re-reading the code. (1) the unload poll was capped at 10s, which
+#   was a guess; an 8.8GB unload can take longer and giving up early costs a whole question, so it
+#   is now 30s. (2) the trigger compared free memory to a FIXED 35%, but the real question is
+#   whether THIS model still fits — too eager for a 4GB model, too late for an 11GB one; it now
+#   derives the floor from the model's own footprint, with --mem-floor-pct as an absolute backstop.
+#   (3) the message promised a pause of 'a few seconds' while the log directly above it showed a
+#   75-second model load; it now says a full reload cost is paid.
+# Changelog: 2.24.1 — AIStudio_1037: the mid-sweep reload now WAITS for the unload to land. `ollama
+#   stop` returns when the request is accepted, not when memory is returned, so measuring
+#   immediately reported the pre-unload figure — bench printed '✅ Reclaimed' with an unchanged
+#   number and then blocked the very question the reload was performed for. Observed live on a 24GB
+#   machine: memory rose +23 points DURING the blocked question. Now polls up to ~10s until free
+#   memory rises above the floor, which makes the reclaim effective and turns a lost question into a
+#   slow one. If memory does NOT recover, it says so instead of claiming success — the memory would
+#   then not be held by the model process, and reloading it is aimed at the wrong target.
+# Changelog: 2.24.0 — batch output is now navigable. (a) the Batch section opens with the whole arc
+#   — how many runs, each id and description from the spec, and the total runtime estimate — before
+#   any of it scrolls past; (b) each run announces itself with `▶ ▶ ▶ Run N of M: <id> — <desc>`, so
+#   a multi-hour log can be scanned for where a run began; (c) per-run parameters stay in that run's
+#   Input Parameters block; (d) Timeout joins them — it was only ever shown in the batch preview
+#   line, so a single run never displayed the timeout it was actually using.
+# Changelog: 2.23.2 — argparse's own failures (invalid --fit-policy choice, bad type, missing value)
+#   bypassed our formatting entirely: argparse validates during parse_args(), calls error() and
+#   exits first, so those arrived with no banner, no ❌ and a usage dump. error() is now overridden,
+#   so every argument failure — ours and argparse's — has one presentation.
+# Changelog: 2.23.1 — CLI Output conformance for the new validation: ❌ replaces the ad-hoc ✗ (the
+#   STD has one error marker; two was drift, including in the pre-existing questions-stem error),
+#   the banner now prints before a validation failure so it does not look like output from a
+#   different program, sub-details indent 2 not 4, and argparse's prog is 'ais_bench' rather than
+#   'bench.py' — users invoke the alias and have no reason to know the filename.
+# Changelog: 2.23.0 — AIStudio_1050: argument validation at parse time. Previously accepted and
+#   silently applied: --mem-floor-pct 150 (always true → reload before EVERY question),
+#   --mem-floor-pct -10 (never true → silently disables the mitigation), --top-k 0/-5,
+#   --temperature 5.0, --corpus '' (silently ran `demo` while printing a blank name), and
+#   --canonical --model X (discarded the model, ran the pinned one — a user could believe they had
+#   benchmarked a model they never ran). --canonical + --batch now also errors as conflicting verbs.
+#   All fail at parse time with the reason and the fix, rather than downstream or not at all.
+# Changelog: 2.22.1 — fix: the 2.22.0 canonical runtime estimate still did not print, because the
+#   pinned model lives in the spec's top-level `model:` and each run dict usually omits it, so the
+#   model list came out empty. Falls back to default_model, as the run-line printer already did.
+# Changelog: 2.22.0 — three dry-run preview defects found by reading the output rather than checking
+#   it ran. (1) --canonical printed NO runtime estimate, though 4 pinned large-model runs is the
+#   longest thing the harness can launch; the estimate now covers the pinned path too. (2) the batch
+#   preview never mentioned the clean-baseline policy or --mem-floor-pct, so the flag looked ignored;
+#   it now states the policy as the single-run preview does. (3) the estimator bucketed models as
+#   <9GB/>=9GB, giving a 10GB and a 21GB model identical estimates — it is now roughly linear in
+#   model size (~2.5 s/GB, floor 8 s).
+# Changelog: 2.21.3 — dry-run wording: the clean-baseline line now says what will actually happen
+#   (clear first, reload mid-run if memory falls below the floor) rather than the terse 'reload below
+#   N%', and the one-job line points at --help as well as the batch verbs.
+# Changelog: 2.21.2 — dry-run cosmetics: colons aligned (the longest label, 'Clean baseline', set the
+#   column width and the others were padded to it), and the section header is title case to match
+#   Preflight / Input Parameters / Summary.
+# Changelog: 2.21.1 — the single-run dry-run printed `Top K: None · Temperature: None`, because both
+#   are resolved from corpus metadata at run time and are still None at preview. A preview that
+#   misreports two of its four parameters is worse than none; it now names where each value will
+#   come from.
+# Changelog: 2.21.0 — (1) --dry-run now previews a SINGLE run as well as a batch. It previously
+#   printed an advisory and exited, so `--dry-run` on a one-off job did nothing useful and could not
+#   be used to check flags before committing to a sweep. (2) the clean-baseline step moved from the
+#   Running section into Preflight, where it belongs — it is a check performed before the run, not
+#   output of the run itself.
+# Changelog: 2.20.3 — fix: the 2.19.1 empty-report-folder guard referenced `results` where the path
+#   is resolved, which is BEFORE the run loop exists (ruff F821). The directory is now created at the
+#   moment of writing instead, which achieves the same thing — a rejected run leaves no folder — and
+#   cannot reference state that does not exist yet.
+# Changelog: 2.20.2 — fix: the 2.20.0 flags were added with `parser.add_argument` but this module's
+#   parser is named `p`, so bench.py raised NameError at import and would not run at all. Caught by
+#   an end-to-end --dry-run smoke test rather than by ruff, which cannot know the intended binding.
+# Changelog: 2.20.1 — (1) `--questions ''` now resolves to the corpus default set as documented;
+#   argparse yields "" rather than None, so the `is not None` guard pushed an empty stem into
+#   resolution and hard-failed on paths built from an empty string. (2) the unresolved-stem ✗ is red.
+#   (3) the model picker prompts 'Your choice ❯' aligned with its instruction line.
+# Changelog: 2.20.0 — AIStudio_1037 mitigation, both halves ON BY DEFAULT. (1) CLEAN BASELINE: stop
+#   resident generative models before question 1 — a sweep that inherits a loaded model measures the
+#   previous run's leftovers, and on 24GB that alone decided whether the last three questions ran.
+#   (2) MID-SWEEP RECYCLE: when free memory falls below --mem-floor-pct (default 35), reload the
+#   model to reclaim accumulated working memory, announcing the pause so it does not read as a hang.
+#   Neither addresses the root cause — the 2026-07-18 constrained run showed the per-question cost is
+#   NOT proportional to retrieved-context size — but together they turn 'the tail of the sweep is
+#   refused' into 'the sweep takes ~10s longer'. Opt out with --no-ollama-restart.
+# Changelog: 2.19.3 — the interactive prompts now flush. stderr is unbuffered at a terminal but
+#   BLOCK-buffered once redirected or piped, so `ais_bench ... 2>&1 | head` swallowed the `\u276f`
+#   prompt and the run looked hung while it was actually waiting for input.
+# Changelog: 2.19.2 — presentation fixes from the first live constrained run: (1) the BLOCKED glyph
+#   was ⚫, which is black-on-black and effectively invisible in a dark terminal — now 🔲 (dark fill,
+#   light border) so it reads on both themes; (2) the blocked-remedy line now leads with an indented
+#   ❌ rather than a neutral ·, since it is a failure the user must act on, not a footnote.
+# Changelog: 2.19.1 — the report directory is created only when there are results to write. A run
+#   against a non-existent corpus used to leave a real benchmarks/<corpus>/reports/ tree behind
+#   before being rejected — an empty folder that reads as evidence a corpus was benchmarked.
 # Changelog: 2.19.0 — AIStudio_1014 + _1041. (1) GROUNDEDNESS: now that _1039 captures the retrieved
 #   chunks, a zero-citation RED is checked against them. High lexical overlap (>=70%) re-rates to
 #   AMBER 'uncited but grounded' — an attribution failure, not a content one; low overlap (<40%) is
@@ -360,7 +490,8 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.19.0"
+VERSION = "2.26.3"
+SCRIPT_LABEL = f"ais_bench v{VERSION} — AIStudio RAG Benchmark"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -371,7 +502,23 @@ def _sep(label: str) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="AIStudio RAG Benchmark")
+    class _Parser(argparse.ArgumentParser):
+        """ArgumentParser whose errors match the rest of this tool's output.
+
+        argparse validates `choices=`, types and required args itself, calls error() and exits before
+        any of our code runs — so those failures arrived with no banner, no ❌, and a three-line usage
+        dump the user has to scan for the actual problem. Same failure, two presentations. Overriding
+        error() puts every argument failure through one format.
+        """
+
+        def error(self, message: str):  # noqa: D102
+            print(f"\033[1m[{SCRIPT_LABEL}]\033[0m", file=sys.stderr)
+            print("❌ Invalid arguments — nothing was run.", file=sys.stderr)
+            print(f"  · {message}", file=sys.stderr)
+            print("  · Run `ais_bench --help` for the full list of options.", file=sys.stderr)
+            raise SystemExit(2)
+
+    p = _Parser(prog="ais_bench", description="AIStudio RAG Benchmark")
     p.add_argument("--corpus", default="demo", help="Corpus name")
     p.add_argument(
         "--scope",
@@ -542,6 +689,24 @@ def parse_args() -> argparse.Namespace:
     )
 
     p.add_argument(
+        "--no-ollama-restart",
+        action="store_true",
+        help=(
+            "Skip the clean memory baseline and the mid-sweep model reload. By default bench stops "
+            "resident models before question 1 and reloads when free memory falls below "
+            "--mem-floor-pct, so a run is not distorted by whatever was loaded before it."
+        ),
+    )
+    p.add_argument(
+        "--mem-floor-pct",
+        type=float,
+        default=35.0,
+        help=(
+            "Free-memory %% below which bench reloads the model mid-sweep to reclaim accumulated "
+            "per-question working memory (default: 35)."
+        ),
+    )
+    p.add_argument(
         "--mem-track",
         dest="mem_track",
         action=argparse.BooleanOptionalAction,
@@ -688,7 +853,10 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
     #   3. {stem}.yaml                             — literal (legacy, full filename stem)
     # (v2.4.0: dropped the scope-keyed candidate — --scope is a firm filter, not a
     #  question-file selector.)
-    if path is not None and "/" not in path and "\\" not in path and "." not in path:
+    # An empty --questions is the documented way to ask for the corpus default set. argparse
+    # hands us "" rather than None, so test truthiness — `is not None` sent "" into stem
+    # resolution and hard-failed on a path built from an empty string.
+    if path and "/" not in path and "\\" not in path and "." not in path:
         script_dir_stem = Path(__file__).parent
         # v2.8.0: named question subsets live in benchmarks/<corpus>/questions/ (mirrors
         # data/corpora/<corpus>/scopes/). Search there first; flat <corpus>/ kept for
@@ -709,7 +877,7 @@ def load_questions(path: str | None, corpus: str = "sec_10k") -> list[dict]:
             # resolves to the corpus default superset via the path-is-None branch below.
             tried = "\n      ".join(str(c) for c in candidates)
             raise SystemExit(
-                f"  \u2717 Questions stem '{path}' did not resolve for corpus '{corpus}'.\n"
+                f"  ❌ Questions stem '{path}' did not resolve for corpus '{corpus}'.\n"
                 f"    Named question sets live in benchmarks/{corpus}/questions/ "
                 f"as {corpus}_<stem>_questions.yaml.\n"
                 f"    Tried:\n      {tried}"
@@ -1013,6 +1181,78 @@ _STOPISH = {"their", "these", "those", "which", "there", "where", "would", "coul
             "about", "other", "using", "based", "while", "during", "across", "within", "through"}
 
 
+def _model_is_resident(model: str | None) -> bool:
+    """True when the model is ALREADY loaded in Ollama.
+
+    AIStudio_1037 — the decisive correction. The fit guard asks "is there room to LOAD this model?".
+    Once the model is resident that question is already answered: the memory it needs is memory it
+    is currently occupying, and free memory is low precisely BECAUSE the model is loaded. Applying a
+    load-time test to a running model blocks questions that would have succeeded — observed live on
+    24GB, where the model answered fine at 25% free and was then refused at 23%.
+    """
+    if not model:
+        return False
+    try:
+        out = subprocess.run(["ollama", "ps"], capture_output=True, text=True, timeout=10)
+        return any(line.split() and line.split()[0] == model for line in out.stdout.splitlines()[1:])
+    except Exception:
+        return False
+
+
+def _total_ram_gb() -> float:
+    """Physical RAM in GB, or 0 if it cannot be determined (callers then skip size-aware logic)."""
+    try:
+        out = subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5)
+        return int(out.stdout.strip()) / 1e9
+    except Exception:
+        return 0.0
+
+
+def _model_need_pct(api: str, model: str | None) -> float | None:
+    """This model's footprint as a percentage of total RAM, or None if unknown.
+
+    AIStudio_1037. The recycle trigger has to answer "does this model still fit?", which is a
+    function of its size — a fixed percentage floor is simultaneously too eager for a small model and
+    too late for one near the machine's ceiling. Returns a little above the raw footprint so the
+    reload happens while there is still room to reload INTO.
+    """
+    if not model:
+        return None
+    try:
+        for m in _installed_generative(api):
+            if m.get("id") == model and m.get("gb"):
+                total_gb = _total_ram_gb()
+                if total_gb:
+                    return min(90.0, (m["gb"] / total_gb) * 100 * 1.15)
+    except Exception:
+        pass
+    return None
+
+
+def _ollama_stop_all(exclude: str | None = None) -> list[str]:
+    """Stop resident Ollama models, returning the names stopped.
+
+    AIStudio_1037. A sweep launched while a previous model is still loaded starts with that model's
+    memory already gone, so on a constrained machine it blocks questions that would otherwise have
+    run — the benchmark ends up measuring the leftovers of whatever ran before it. Clearing first is
+    not a tip; it is the zero point of the measurement.
+    """
+    stopped: list[str] = []
+    try:
+        out = subprocess.run(["ollama", "ps"], capture_output=True, text=True, timeout=10)
+        for line in out.stdout.splitlines()[1:]:
+            parts = line.split()
+            name = parts[0] if parts else ""
+            # embedding models are tiny; reloading them costs more than it frees
+            if not name or "embed" in name or name == exclude:
+                continue
+            subprocess.run(["ollama", "stop", name], capture_output=True, timeout=20)
+            stopped.append(name)
+    except Exception:
+        pass
+    return stopped
+
+
 def _is_guard_block(result: dict) -> bool:
     """True when /ask returned the fit guard's advisory INSTEAD of running the model.
 
@@ -1222,7 +1462,7 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         q = r["question"]
         ev = r["eval"]
         res = r["result"]
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "🔲"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         latency = f"{res['elapsed_sec']}s"
         cites = ", ".join(ev.get("cited_sources", []))[:40] or "—"
         _lang = q.get("language", "en")
@@ -1399,7 +1639,14 @@ def _announce_runtime(n_runs: int, models: list[str], api: str) -> None:
     an order of magnitude — the point is 'minutes or hours?', not a promise.
     """
     _sizes = {m["id"]: (m["gb"] or 0) for m in _installed_generative(api)}
-    per_q = sum(60.0 if _sizes.get(m, 0) >= 9 else 10.0 for m in models) / max(len(models), 1)
+
+    def _per_q(model: str) -> float:
+        # Roughly linear in model size rather than a two-bucket split: the old <9GB/>=9GB threshold
+        # gave a 10GB and a 21GB model the SAME estimate, which is visibly wrong to anyone who has
+        # run both. ~2.5 s per GB, floored at 8 s for the smallest models.
+        return max(8.0, (_sizes.get(model, 0) or 6.0) * 2.5)
+
+    per_q = sum(_per_q(m) for m in models) / max(len(models), 1)
     total_s = per_q * 10 * n_runs          # ~10 questions per run
     lo, hi = total_s * 0.5, total_s * 2.0
 
@@ -1499,19 +1746,42 @@ def run_canonical(args: argparse.Namespace) -> int:
             if _t is not None:
                 _bits.append(f"timeout={_t}")
             print(f"  · {_rid}: " + "  ".join(_bits))
-        if not _exact and _batch_models:
-            _announce_runtime(len(runs), _batch_models, args.api)
+        # In the pinned (--canonical) path the model usually comes from the spec's top-level
+        # `model:` rather than each run, so reading r["model"] alone yielded an empty list and the
+        # longest run set silently printed no estimate at all.
+        _est_models = _batch_models if (not _exact and _batch_models) else [
+            m for m in (r.get("model", default_model) for r in runs) if m
+        ]
+        if _est_models:
+            _announce_runtime(len(runs), _est_models, args.api)
+        # (2) the memory policy applies to batch runs too — say so, as the single-run preview does.
+        if args.no_ollama_restart:
+            print("• Clean baseline: no — resident models left as they are (--no-ollama-restart)")
+        else:
+            print(f"• Clean baseline: yes — clear resident models before each run, and reload mid-run "
+                  f"if free memory falls below {args.mem_floor_pct:.0f}%")
         print(f"• {len(runs)} run(s) would execute → benchmarks/<corpus>/reports/. Re-run without --dry-run to execute.")
         return 0
 
-    print(f"• batch — {len(runs)} run(s) → benchmarks/<corpus>/reports/")
-    if not _exact and _batch_models:
-        _announce_runtime(len(runs), _batch_models, args.api)
+    # (a) Open with the arc: what the batch consists of, before any of it scrolls past.
+    print(f"• {len(runs)} runs → benchmarks/<corpus>/reports/")
+    for _r in runs:
+        _desc = _r.get("description") or _r.get("name") or ""
+        _rid = _r.get("id", "?")
+        print(f"  · {_rid}" + (f" — {_desc}" if _desc else ""))
+    _est = _batch_models if (not _exact and _batch_models) else [
+        m for m in (r.get("model", default_model) for r in runs) if m
+    ]
+    if _est:
+        _announce_runtime(len(runs), _est, args.api)
 
     failures = 0
     skipped = 0
-    for r in runs:
+    for _run_no, r in enumerate(runs, 1):
         rid = r.get("id", "?")
+        # (b) a batch is a sequence of runs; mark where each one starts so the log is navigable.
+        _rdesc = r.get("description") or r.get("name") or ""
+        print(f"\u25b6 \u25b6 \u25b6  Run {_run_no} of {len(runs)}: {rid}" + (f" — {_rdesc}" if _rdesc else ""))
         corpus = r.get("corpus")
         if not corpus:
             print(f"  ❌ run {rid}: missing 'corpus' — skipped")
@@ -1563,7 +1833,6 @@ def run_canonical(args: argparse.Namespace) -> int:
             print(f"  ❌ run {rid} failed (exit {result.returncode})")
             failures += 1
             continue
-        print(f"  ✅ {rid} done → benchmarks/{corpus}/reports/")
 
     ok = len(runs) - failures - skipped
     mark = "✅" if failures == 0 else "⚠"
@@ -1705,6 +1974,14 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
     print(f"▶ Checking model fit ({model} vs available memory)...")
     fit = _fetch_model_fit(api, model)
     verdict = (fit or {}).get("verdict")
+    # AIStudio_1037 — a model that is ALREADY resident needs no room to load into. The BLOCK verdict
+    # answers "is there space to load this?", and once loaded, free memory is low precisely BECAUSE
+    # the model occupies it. Applying the load-time test at batch level skipped whole runs on a 24GB
+    # machine (C and D, "needs ~11 GB but only ~7 GB free") while that very model sat loaded and
+    # answering. Check residency before honouring a BLOCK.
+    if verdict == "BLOCK" and _model_is_resident(model):
+        print(f"  ✅ {model} is already loaded — it does not need room to load again.")
+        return ("run", model)
     if verdict == "WARN":
         _fit_warn(f"{model} is a tight fit for this machine's memory{(' (' + context + ')') if context else ''}; may slow or swap")
         return ("run", model)
@@ -1779,7 +2056,7 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
         reprompted = False
         while True:
             print(f"  (r)un {only['id']}{gb}, (f)ree memory & restart, (Enter) cancel \u276f ",
-                  file=sys.stderr, end="")
+                  file=sys.stderr, end="", flush=True)
             try:
                 ans = input().strip().lower()
             except EOFError:
@@ -1809,7 +2086,9 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
             print(f"    {i}. {m['id']:<14} {gb:<10} run on this", file=sys.stderr)
         print(f"    {free_idx}. Free memory & restart", file=sys.stderr)
         print(f"    {cancel_idx}. Cancel", file=sys.stderr)
-        print("  \u276f ", file=sys.stderr, end="")
+        # flush: stderr is block-buffered once redirected, and an unflushed prompt makes the run
+        # look hung. Indent matches the "Choose an option" line above.
+        print("  Your choice \u276f ", file=sys.stderr, end="", flush=True)
         try:
             ans = input().strip()
         except EOFError:
@@ -1831,12 +2110,72 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
         _reply_cancel()
 
 
+def _validate_args(args) -> None:
+    """Reject implausible or contradictory arguments AT PARSE TIME, before anything runs.
+
+    AIStudio_1050 — every one of these was previously accepted and silently applied: --mem-floor-pct
+    150 (always true, so the model reloads before every question), --mem-floor-pct -10 (never true,
+    silently disabling the mitigation), --top-k 0, --temperature 5.0, and --canonical --model X
+    (which discarded the model and ran the pinned one anyway, so a user could believe they had
+    benchmarked a model they never ran). Arithmetically valid, obviously wrong, no complaint.
+    Validate at the point of derivation, not three steps downstream.
+    """
+    errs: list[str] = []
+
+    _floor_val = getattr(args, "mem_floor_pct", None)
+    if _floor_val is not None and not (0 < _floor_val < 100):
+        errs.append(
+            f"--mem-floor-pct {_floor_val:g} is not a usable free-memory percentage. "
+            "Above 100 reloads before every question; 0 or below never fires at all. Use 1-99 "
+            "(default 35)."
+        )
+    if getattr(args, "top_k", None) is not None and args.top_k < 1:
+        errs.append(f"--top-k {args.top_k} would retrieve nothing. Use 1 or more (typically 5-10).")
+    if getattr(args, "temperature", None) is not None and not (0.0 <= args.temperature <= 2.0):
+        errs.append(f"--temperature {args.temperature:g} is outside the supported 0.0-2.0 range.")
+
+    # Conflicting verbs: --canonical pins its models by definition, so an explicit --model is either
+    # a misunderstanding or a reproducibility break. Say which, rather than quietly ignoring it.
+    # NB the dest names are counter-intuitive: --canonical -> canonical_exact, --batch -> canonical.
+    _exact = getattr(args, "canonical_exact", False)   # --canonical (pinned models)
+    _batch = getattr(args, "canonical", False)         # --batch (machine-adaptive)
+    _canon = _exact or _batch
+    if _exact and _batch:
+        errs.append(
+            "--canonical and --batch are different verbs: --canonical reproduces the pinned runs, "
+            "--batch adapts them to this machine. Choose one."
+        )
+    if _exact and getattr(args, "model", None):
+        errs.append(
+            f"--canonical runs each entry on its PINNED model, so --model {args.model} would be "
+            "ignored and the reported numbers would not be the model you asked for. Use "
+            f"`--batch --model {args.model}` to run the same sets on that model instead."
+        )
+
+    if errs:
+        # Banner first: every other path opens with it, and an error that arrives without one looks
+        # like output from a different program. Sub-details at 2 spaces per CLI Output STD.
+        print(f"\033[1m[{SCRIPT_LABEL}]\033[0m", file=sys.stderr)
+        print("❌ Invalid arguments — nothing was run.", file=sys.stderr)
+        for e in errs:
+            print(f"  · {e}", file=sys.stderr)
+        raise SystemExit(2)
+
+
 def main() -> None:
     args = parse_args()
+    if args.corpus is not None and not str(args.corpus).strip():
+        # An empty --corpus silently fell through to `demo` while PRINTING a blank corpus name —
+        # a different corpus than the one asked for, with no signal. AIStudio_1050.
+        print(f"\033[1m[{SCRIPT_LABEL}]\033[0m", file=sys.stderr)
+        print("❌ --corpus was given but empty — nothing was run.", file=sys.stderr)
+        print("  · Name a corpus, or omit the flag to use the default.", file=sys.stderr)
+        raise SystemExit(2)
+    _validate_args(args)
     # Child runs spawned by run_canonical suppress their own header (the parent
     # already printed one + the ▶ banner IDs each run); see AIS_BENCH_CHILD below.
     if not os.environ.get("AIS_BENCH_CHILD"):
-        print(f"\033[1m[ais_bench v{VERSION} — AIStudio RAG Benchmark]\033[0m")
+        print(f"\033[1m[{SCRIPT_LABEL}]\033[0m")
 
     # --- Preflight opens HERE, unconditionally. It used to live inside _resolve_fit_policy(),
     # which only runs when --model is given — so `ais_bench --corpus nonexistent` skipped every
@@ -1859,7 +2198,24 @@ def main() -> None:
     # AIStudio_1012: --dry-run only previews a --batch run set. Without --batch there is nothing to
     # preview, and silently executing a single run would defeat the flag — stop with a notice instead.
     if getattr(args, "dry_run", False):
-        print("⚠ --dry-run applies to --batch (it previews the resolved run set). Add --batch, or drop --dry-run to run a single job.", file=sys.stderr)
+        # A single run is previewable too — there was no reason to refuse. Print the resolved job the
+        # way --batch previews its set, then exit without touching the model or writing a report.
+        _sep("Dry Run")
+        print("• Would run ONE job. Add --batch or --canonical to preview a multi-run set, or see")
+        print("  --help for the full set of options.")
+        print(f"  · Corpus         : {getattr(args, 'corpus', 'demo')}")
+        print(f"  · Model          : {getattr(args, 'model', None) or 'API default'}")
+        print(f"  · Questions      : {getattr(args, 'questions', None) or 'corpus default set'}")
+        # args.top_k / args.temperature are None until the corpus defaults are read at run time.
+        # Printing the raw None misreports the preview — say where the value will come from instead.
+        _tk = getattr(args, "top_k", None) if getattr(args, "top_k", None) is not None else "corpus default (10 for the financial corpora, else 5)"
+        _tp = getattr(args, "temperature", None) if getattr(args, "temperature", None) is not None else "corpus default (0.3)"
+        print(f"  · Top K          : {_tk}")
+        print(f"  · Temperature    : {_tp}")
+        _clean = ("no — resident models left as they are (--no-ollama-restart)" if getattr(args, "no_ollama_restart", False)
+                  else f"yes — clear resident models first, and reload the model mid-run if free memory falls below {getattr(args, 'mem_floor_pct', 35.0):.0f}%")
+        print(f"  · Clean baseline : {_clean}")
+        print("• Nothing was run and no report was written.")
         return
 
     # ── Scope (AIStudio_882): load + validate the firm-universe up front ─────────
@@ -1912,6 +2268,25 @@ def main() -> None:
     # AIStudio_1020: memory-fit gate for this single run. Only when an explicit --model was given
     # (a default-model run is backstopped by the API's own /ask preflight). May skip the run or
     # downshift args.model to a model that fits. Emits its own `--- Preflight` bundle (CLI Output §2).
+    # AIStudio_1037 — clear FIRST, then judge fit. Running this after the fit check meant bench
+    # exempted an already-resident model ('does not need room to load again') and then unloaded
+    # that very model, so the question arrived with the model gone and too little free memory —
+    # blocked by a state bench had itself created one step earlier. Start from a known baseline. Default ON: a sweep that inherits a resident
+    # model is measuring the previous run, not this one. This is a preflight check, not run output.
+    if not args.no_ollama_restart:
+        print("▶ Clearing resident models for a clean memory baseline...")
+        # Clear EVERYTHING, including the model about to be benchmarked. Excluding the target (as
+        # this did until v2.25.2) meant the baseline was not clean at all: the run inherited that
+        # model's memory from whatever ran before, and the step reported "already clean" while the
+        # model sat resident holding 8.6 GB. The reload costs one model load on question 1, which is
+        # exactly what a baseline measurement should include.
+        _stopped = _ollama_stop_all()
+        if _stopped:
+            print(f"  ✅ Cleared {len(_stopped)}: {', '.join(_stopped)}")
+            print("  · Question 1 therefore includes model-load time. Skip with --no-ollama-restart.")
+        else:
+            print("  ✅ Already clean — no resident models to clear.")
+
     if args.model:
         # (No separator print here: Preflight is now one unified section opened in main(), so the
         #  blank line this used to emit orphaned itself in the middle of the checks.)
@@ -1920,10 +2295,13 @@ def main() -> None:
             return  # skip reason already printed under --- Preflight by _resolve_fit_policy
         args.model = _fit_model
 
-    # Resolve paths — output to benchmarks/{corpus}/reports/ with timestamp
+    # Resolve paths — output to benchmarks/{corpus}/reports/ with timestamp.
+    # The directory is created only once there are results to write. Creating it up front left a
+    # stray benchmarks/<corpus>/reports/ tree behind for corpora that do not exist (observed
+    # 2026-07-18: `--corpus nonexistent_corpus` produced a real folder before the run was rejected),
+    # which then looks like evidence a corpus was benchmarked when it never was.
     script_dir = Path(__file__).parent
     reports_dir = script_dir / args.corpus / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
     # STD - General - Naming Conventions: time component is HHMM (no hyphen)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
 
@@ -1964,6 +2342,7 @@ def main() -> None:
     # Naming STD §2: datetime is ALWAYS the last field, after all descriptors.
     # base_name = benchmark_{corpus}_{model}_{descriptors}_{timestamp}
     base_name = f"benchmark_{args.corpus}_{_model_slug}{filter_suffix}_{timestamp}"
+    reports_dir.mkdir(parents=True, exist_ok=True)
     output_path = reports_dir / f"{base_name}.json"
     questions_path = args.questions
 
@@ -2023,6 +2402,10 @@ def main() -> None:
         ("Entity-filter", str(args.entity_filter_mode)),
         ("Keywords", str(args.keywords)),
     ]
+    # Timeout is a run parameter like any other — it was only visible in the batch preview line,
+    # so a single run never showed the value it was actually using.
+    if getattr(args, "timeout", None) is not None:
+        _params.append(("Timeout", f"{args.timeout:g}s"))
     _w = max(len(k) for k, _ in _params)
     for _k, _v in _params:
         print(f"• {_k.ljust(_w)} : {_v}")
@@ -2035,12 +2418,60 @@ def main() -> None:
     _sep("Running")
 
     results = []
+    _reloads = 0
     for i, q in enumerate(questions, 1):
         corpus = q.get("corpus") or args.corpus
         # CLI --firm overrides per-question firm field; otherwise use YAML's firm
         effective_firm = args.firm if args.firm else q.get("firm")
         print(f"▶ [{i}/{len(questions)}] {q['description']}...")
         _mem_before = _free_memory_pct()  # AIStudio_1037
+
+        # AIStudio_1037 — recycle before the guard has to block. Per-question working memory is not
+        # fully returned, so on a constrained machine free memory slides until the remaining questions
+        # are refused. Reloading costs ~10s once; losing the tail of the run costs the run. Announce
+        # it, because an unexplained pause reads as a hang.
+        # Trigger on headroom relative to THIS model, not a fixed percentage. A 35% floor is about
+        # right for a 6GB model on 24GB, needlessly eager for a 4GB one, and fires too late for an
+        # 11GB one — the question is always "does this model still fit?", which depends on its size.
+        # --mem-floor-pct remains an absolute backstop for the case where the size is unknown.
+        # Only consider recycling if the model is NOT already resident. A loaded model does not need
+        # room to load into, and recycling one that is working fine costs a full reload for nothing.
+        # Residency exempts a model from being REFUSED (it needs no room to load again). It must not
+        # exempt it from being RECYCLED: a resident model is the only kind that can have accumulated
+        # per-question memory, so skipping the recycle for it disabled the mitigation entirely —
+        # observed live, 7 of 8 questions blocked at a flat 27% while the model sat loaded.
+        _need_pct = _model_need_pct(args.api, args.model)
+        _floor = max(args.mem_floor_pct, _need_pct) if _need_pct else args.mem_floor_pct
+        if (not args.no_ollama_restart and _mem_before is not None
+                and _mem_before < _floor and i > 1):
+            print(f"  ⚠ Free memory {_mem_before:.0f}% is below the {_floor:.0f}% needed for this model — "
+                  f"reloading the model to reclaim it before this question.")
+            print("  · The model is unloaded and reloaded, so this question pays a full model-load "
+                  "cost (tens of seconds for a large model). Later questions are unaffected.")
+            _ollama_stop_all()
+            _reloads += 1
+            # `ollama stop` returns as soon as the request is ACCEPTED — the unload completes
+            # asynchronously a moment later. Measuring immediately reported the pre-unload figure, so
+            # the guard then blocked the very question the reload was performed for, and memory was
+            # observed jumping +23 points DURING that blocked question. Poll until it actually
+            # recovers. Waiting here is the whole point: it converts a lost question into a slow one.
+            _recovered = _mem_before
+            for _ in range(60):                      # up to ~30s: giving up early costs a question,
+                                                     # waiting costs seconds
+                time.sleep(0.5)
+                _now = _free_memory_pct()
+                if _now is not None and _now > _recovered:
+                    _recovered = _now
+                if _recovered >= args.mem_floor_pct:
+                    break
+            if _recovered is not None and _recovered > _mem_before:
+                print(f"  ✅ Reclaimed — free memory now {_recovered:.0f}%.")
+                _mem_before = _recovered
+            else:
+                # Say so plainly rather than claiming success: if the memory is not held by the model
+                # process, reloading it is aimed at the wrong target and the user needs to know.
+                print(f"  ⚠ Reload did not free memory (still {_recovered:.0f}%) — the accumulated "
+                      f"memory may not be held by the model. This question will likely be blocked.")
 
         # AIStudio_875: --query-expansion and --entity-filter map directly to server request
         # fields. --entity-filter yaml forwards the question's entity_filter; none/auto leave it
@@ -2091,7 +2522,7 @@ def main() -> None:
             elif _g < 0.40:
                 ev["ungrounded"] = True
                 ev["reason"] = f"Answer shows little overlap with the retrieved context ({_g:.0%}) — possible fabrication."
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "🔲"}.get(ev.get("rating"), "✅" if ev["pass"] else "❌")
         _lang = q.get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         _missing_str = f" | missing: {', '.join(ev['missing_keywords'])}" if ev.get("missing_keywords") else ""
@@ -2168,7 +2599,7 @@ def main() -> None:
     if _blocked:
         # Say it plainly: these were never asked, so they are excluded from the denominator.
         print(f"• {_blocked} question(s) BLOCKED by the fit guard — not scored, excluded from the pass rate.")
-        print("  · The model did not run on these. Free memory (`ollama stop <model>`) or use a smaller model, then re-run.")
+        print("  ❌ The model did not run on these. Free memory (`ollama stop <model>`) or use a smaller model, then re-run.")
 
     # AIStudio_1037: sweep memory drift — the headline diagnostic for self-starvation.
     # A sweep should hold memory roughly constant; a monotonic slide means per-question working
@@ -2202,7 +2633,7 @@ def main() -> None:
             f"({_drift:+.0f} points over {_n_after} question(s) after load){_flag}"
         )
     for r in results:
-        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "⚫"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
+        status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "🔲"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
         _lang = r["question"].get("language", "en")
         _lang_marker = " (*)" if _lang and _lang != "en" else ""
         print(f"  {status} {r['question']['id']}{_lang_marker}")
