@@ -1,0 +1,570 @@
+{
+  "run_at": "2026-06-26T22:43:54.961430",
+  "config": {
+    "corpus": "esef_banks",
+    "scope": "lang_en",
+    "scope_firms": [
+      "ING Groep N.V.",
+      "Barclays Bank PLC",
+      "HSBC Holdings plc",
+      "StandardChartered Bank",
+      "Banco Bilbao Vizcaya Argentaria, S.A."
+    ],
+    "top_k": 10,
+    "temperature": 0.3,
+    "alpha": 0.5,
+    "min_score": 0.5,
+    "model": "gemma3:27b",
+    "api": "http://localhost:8000",
+    "questions_file": "lang_en",
+    "questions_sha8": "\u2014"
+  },
+  "summary": {
+    "total": 8,
+    "passed": 6,
+    "avg_latency_sec": 62.74
+  },
+  "results": [
+    {
+      "question": {
+        "id": "cet1_ing_group",
+        "description": "How does ING Group describe its CET1 capital ratio and regulatory capital position in its most recent annual report?",
+        "query": "How does ING Group describe its CET1 capital ratio and regulatory capital position in its most recent annual report?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CET1",
+          "capital",
+          "ING",
+          "ratio",
+          "regulatory"
+        ],
+        "entity_filter": [
+          "ING_Groep_N.V."
+        ],
+        "notes": "L1 baseline. ING files in English. Entity tag in corpus = 'ING Groep N.V.'.",
+        "topic": "Capital Adequacy",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_and_table",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 62.13,
+        "data": {
+          "answer": "ING Group's CET1 ratio was 13.1% as of December 31, 2025, decreasing from 13.6% at the end of 2024 [1]. The firm\u2019s fully loaded CET1 requirement stood at 11.09% at the end of 4Q2025 (compared to 10.88% in 4Q2024) and is higher than the prevailing CET1 ratio requirement [1]. ING's CET1 target level is approximately 13%, which is well above the maximum distributable amount (MDA) level of 11.03% at December 31, 2025, creating a management buffer of about 195 basis points [1]. The overall SREP CET1 requirement for ING Group increased during 2025 to 11.03% due to an increase in the countercyclical buffer requirement [1]. Minimum Pillar 1 capital requirements applicable to ING Group are a CET1 ratio of 4.5%, a Tier 1 ratio of 6.0%, and a Total capital ratio of 8.0% of risk-weighted assets [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml::chunk-683",
+              "score": 0.11663630000000003
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How does ING Group describe its CET1 capital ratio and regulatory capital position in its most recent annual report? ING Groep N.V.",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": false,
+        "rating": "AMBER",
+        "score": 0.7,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "regulatory"
+        ],
+        "citation_count": 1,
+        "citation_density": 0.071,
+        "low_citation_density": true,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "ING_Groep_N.V._ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "tier1_capital_barclays",
+        "description": "What is Barclays' Tier 1 capital ratio and what are the components of their capital stack?",
+        "query": "What is Barclays' Tier 1 capital ratio and what are the components of their capital stack?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "Tier 1",
+          "capital",
+          "ratio",
+          "Barclays",
+          "CET1"
+        ],
+        "entity_filter": [
+          "Barclays_Bank_PLC"
+        ],
+        "notes": "Annex 1 holdco/sub case. Entity in corpus = 'Barclays Bank PLC' (sub). Tests alias resolution.",
+        "topic": "Capital Adequacy",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_and_table",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 46.59,
+        "data": {
+          "answer": "Barclays Bank PLC\u2019s solo-consolidated CET1 ratio was 12.7% as of December 31, 2025 [1]. The Tier 1 capital ratio was 16.1% and total regulatory capital was 19.0% in 2025 [1].\n\nAs of 2025, Barclays Bank PLC\u2019s CET1 capital totaled \u00a328,177 million, while its Tier 1 capital reached \u00a335,848 million and total regulatory capital amounted to \u00a342,129 million [1]. Total risk weighted assets were \u00a3222,247 million in 2025 [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml::chunk-1339",
+              "score": 0.19685699999999995
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "What is Barclays' Tier 1 capital ratio and what are the components of their capital stack? Barclays Bank PLC",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "citation_density": 0.143,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "Barclays_Bank_PLC_ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "leverage_ratio_hsbc",
+        "description": "What is HSBC's leverage ratio and how does it compare to the regulatory minimum requirement?",
+        "query": "What is HSBC's leverage ratio and how does it compare to the regulatory minimum requirement?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "leverage",
+          "ratio",
+          "HSBC",
+          "regulatory",
+          "minimum"
+        ],
+        "entity_filter": [
+          "HSBC_Holdings_plc"
+        ],
+        "notes": "L1 table-located fact. Tests table extraction on a clean EN filer.",
+        "topic": "Capital Adequacy",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_and_table",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 49.97,
+        "data": {
+          "answer": "HSBC's leverage ratio was 5.3% at December 31, 2025, decreasing from 5.6% at December 31, 2024 [1]. The UK minimum leverage ratio requirement was 3.25%, with an additional buffer of 0.9% \u2013 comprising a 0.7% additional leverage ratio buffer and a 0.2% countercyclical leverage ratio buffer [1]. HSBC exceeded these leverage requirements throughout 2025 [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/HSBC_Holdings_plc_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/HSBC_Holdings_plc_ESEF_2025.xhtml::chunk-1491",
+              "score": 0.16291310000000003
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "What is HSBC's leverage ratio and how does it compare to the regulatory minimum requirement? HSBC Holdings plc",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": false,
+        "rating": "AMBER",
+        "score": 0.85,
+        "keyword_pass": false,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [
+          "regulatory"
+        ],
+        "citation_count": 1,
+        "citation_density": 0.111,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "HSBC_Holdings_plc_ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "cet1_cross_firm_en",
+        "description": "How do ING Group, HSBC, and Barclays compare in terms of their CET1 capital ratios and capital management approaches?",
+        "query": "How do ING Group, HSBC, and Barclays compare in terms of their CET1 capital ratios and capital management approaches?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "CET1",
+          "capital",
+          "ING",
+          "HSBC",
+          "Barclays"
+        ],
+        "entity_filter": [
+          "ING_Groep_N.V.",
+          "HSBC_Holdings_plc",
+          "Barclays_Bank_PLC"
+        ],
+        "notes": "Cross-firm EN comparison. Tests entity isolation across 3 firms.",
+        "topic": "Capital Adequacy",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_and_table",
+        "section_count": "multi",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 3
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 74.24,
+        "data": {
+          "answer": "ING Group\u2019s fully loaded CET1 requirement was 11.09% at the end of 4Q2025, up from 10.88% in 4Q2024 [1]. The overall SREP CET1 requirement for ING Group increased to 11.03% at December 31, 2025, comprised of a 4.5% Pillar 1 requirement, a 0.93% Pillar 2 requirement, a 2.5% capital conservation buffer, a 0.93% countercyclical buffer, 0.16% Sectoral Systemic Risk buffer, and a 2.0% Other Systemically Important Institutions (O-SII) buffer [1]. ING intends to maintain its CET1 capital ratio within a medium-term target range of 14%-14.5% [2].\n\nBarclays Bank PLC\u2019s solo-consolidated CET1 ratio was 12.7% as of December 31, 2025, exceeding the minimum regulatory requirement of 10.4% [3]. The firm is subject to a binding Pillar 1 minimum capital requirement to satisfy a CET1 ratio of 4.5%, a Tier 1 capital ratio of 6.0%, and a total capital ratio of 8.0% of risk-weighted assets [3]. Barclays also has additional capital requirements including Pillar 2A, capital buffers (CCB, CCyB, O-SII), and a G-SII buffer [3].\n\nHSBC\u2019s target CET1 capital ratio is within the range of 14%-14.5% [2]. The privatization of Hang Seng Bank had a net CET1 capital impact of 110bps in January 2026, but HSBC expects to restore its CET1 capital ratio within this target range through organic capital generation and by not initiating further buy-backs until the ratio is back within or above the range [2].\n\n\n\nThe available sources do not directly address a comparison of capital management *approaches* between these three firms beyond stating that each firm has internal processes to manage capital adequacy, regulatory requirements, and risk appetite.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml::chunk-1690",
+              "score": 0.20108526999999998
+            },
+            {
+              "index": 2,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/HSBC_Holdings_plc_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/HSBC_Holdings_plc_ESEF_2025.xhtml::chunk-13",
+              "score": 0.2589846
+            },
+            {
+              "index": 3,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml::chunk-1278",
+              "score": 0.25244279999999997
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How do ING Group, HSBC, and Barclays compare in terms of their CET1 capital ratios and capital management approaches? ING Groep N.V. Barclays Bank PLC HSBC Holdings plc",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 3,
+        "citation_density": 0.12,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "ING_Groep_N.V._ESEF_2025.xhtml",
+          "HSBC_Holdings_plc_ESEF_2025.xhtml",
+          "Barclays_Bank_PLC_ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "climate_risk_bbva",
+        "description": "How does BBVA describe its approach to climate-related risks and its net zero transition strategy?",
+        "query": "How does BBVA describe its approach to climate-related risks and its net zero transition strategy?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "climate",
+          "risk",
+          "BBVA",
+          "emissions",
+          "transition"
+        ],
+        "entity_filter": [
+          "Banco_Bilbao_Vizcaya_Argentaria"
+        ],
+        "notes": "BBVA FY2024 (latest available). EN filer despite Spanish jurisdiction. GLEIF mis-merge risk class.",
+        "topic": "Climate & ESG",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 59.13,
+        "data": {
+          "answer": "BBVA recognizes its important role in mitigating climate change due to its responsibility as a purpose-driven organization, its aspiration to manage associated risks, and the business opportunity presented by supporting customers\u2019 transitions [1]. The firm follows the recommendations of the Task Force on Climate-related Financial Disclosures (TCFD) and has developed a Transition Plan aligned with TCFD and the Glasgow Financial Alliance for Net Zero (GFANZ) [1].\n\nBBVA's strategy centers around two main objectives: promoting new business through sustainability \u2013 aiming to channel \u20ac300 billion into sustainable finance \u2013 and achieving net zero emissions by 2050. It is progressively incorporating sustainability-related opportunities and risks into its strategy, business, processes, and risk management, expanding its sustainable product portfolio and considering climate transition risk in its operations.\n\nBBVA assesses the impact of different climate scenarios (both transition and physical risks) on its strategy and business through a forward-looking exercise updated at least twice a year. Since 2020, it has conducted climate assessments to determine its vulnerability to these risks, progressing toward a quantitative approach with defined metrics.  It also assesses potential impacts of extreme climate events on its portfolio and how climate-related factors might influence its main risk categories.\n\nBBVA's decarbonization strategy includes sectoral transition plans prioritizing emissions-intensive sectors like Oil & Gas, Power generation, Auto, Steel, Cement, Coal, Aviation, Shipping, Aluminum and Real estate. It is also working to reduce its own carbon footprint by measuring and managing energy consumption, integrating climate risk into its risk planning and capital assessment exercises.  BBVA monitors customers\u2019 progress on sustainability and expects improvements in the short and medium term.",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Banco_Bilbao_Vizcaya_Argentaria,_S.A._ESEF_2024.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Banco_Bilbao_Vizcaya_Argentaria,_S.A._ESEF_2024.xhtml::chunk-1768",
+              "score": 0.1202436
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How does BBVA describe its approach to climate-related risks and its net zero transition strategy? Banco Bilbao Vizcaya Argentaria, S.A.",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "citation_density": 0.1,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "Banco_Bilbao_Vizcaya_Argentaria,_S.A._ESEF_2024.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "climate_standard_chartered",
+        "description": "How does Standard Chartered describe its climate risk framework and net zero commitments?",
+        "query": "How does Standard Chartered describe its climate risk framework and net zero commitments?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "climate",
+          "Standard Chartered",
+          "risk",
+          "net zero",
+          "transition"
+        ],
+        "entity_filter": [
+          "StandardChartered_Bank"
+        ],
+        "notes": "Annex 1 holdco/sub class. Entity in corpus = 'StandardChartered Bank' (whitespace missing).",
+        "topic": "Climate & ESG",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 49.78,
+        "data": {
+          "answer": "Standard Chartered embeds Climate Risk considerations across relevant Principal Risk Types and performs client-level Climate Risk assessments, setting adequate mitigants or controls where relevant [1]. The PLC Group has committed to be net zero in its own operations (Scope 1 and 2 emissions) by the end of 2025 and intends to maintain this going forward [1]. They also embed values through Position Statements and a list of prohibited activities, maintaining ESG and Reputational Risk standards to identify, assess, and manage risks when providing services to clients [1].\n\nStandard Chartered considers transition risk with reference to client transition pathways, covering 12 highest emitting sectors, and uses net zero targets alongside climate risk questionnaires to assess clients for transition risks [1]. They use scenario analysis to evaluate how Transition Risk scenarios impact Loan Impairment intensities [1].  Exposure to Climate Risk is monitored in conjunction with other Principal Risk Types, embedding qualitative and quantitative climate considerations into Credit Underwriting Principles for portfolios like Oil & Gas, Mining, Shipping, Commercial real estate, and Project Finance [1]. Starting October 2025, they introduced a Client-level Physical Risk Grading Framework to identify and monitor key risk hotspots in the CIB portfolio regarding exposure to extreme weather events, alongside existing Transition Risk Grading [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/StandardChartered_Bank_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/StandardChartered_Bank_ESEF_2025.xhtml::chunk-33",
+              "score": 0.21432083999999996
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How does Standard Chartered describe its climate risk framework and net zero commitments?",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "citation_density": 0.143,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "StandardChartered_Bank_ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "digital_ing",
+        "description": "What are ING Group's key technology investments and digital transformation priorities?",
+        "query": "What are ING Group's key technology investments and digital transformation priorities?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "technology",
+          "digital",
+          "ING",
+          "transformation"
+        ],
+        "entity_filter": [
+          "ING_Groep_N.V."
+        ],
+        "notes": "Digital Banking",
+        "topic": "Digital Banking",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 53.05,
+        "data": {
+          "answer": "ING Group\u2019s key technology investments and digital transformation priorities center around four key enablers: providing seamless digital services, using scalable technology and operations, staying safe and secure, and unlocking their people\u2019s full potential [1]. The ING Tech strategy has three goals under the leadership of the chief technology officer: increase productivity, excel in customer experience, and be a top employer for engineering talent [1]. \n\nSpecific priorities include operational excellence \u2013 enhancing reliability, reinforcing cybersecurity, and investing in the workforce [1]; digital product governance \u2013 advancing digital product capabilities for control, transparency, and strategic alignment [1]; engineering \u2013 driving an engineering way of working and innovation including AI-enabled coding [1]; transformation \u2013 continuing development and expansion of their scalable technology platform [1]; and data and AI development \u2013 accelerating responsible and effective use of data [1]. \n\nING aims to deliver scalable technology and operations that enable seamless, fully digital services with enhanced customer experience and high standards of safety and security [1]. They are focused on providing a seamless, mobile-first digital experience, engaging customers across daily banking activities with personalized products supported by advanced technology and data insights [1]. In 2025, 87% of customers chose mobile as their primary channel [1]. Furthermore, they prioritize making banking frictionless and relevant through \u2018always-on\u2019 channels and data-enabled personalization [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/ING_Groep_N.V._ESEF_2025.xhtml::chunk-183",
+              "score": 0.19933593000000005
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "What are ING Group's key technology investments and digital transformation priorities? ING Groep N.V.",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "citation_density": 0.143,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "ING_Groep_N.V._ESEF_2025.xhtml"
+        ]
+      }
+    },
+    {
+      "question": {
+        "id": "barclays_holdco_sub",
+        "description": "How does Barclays describe its capital structure and the relationship between the holding company and its banking subsidiaries?",
+        "query": "How does Barclays describe its capital structure and the relationship between the holding company and its banking subsidiaries?",
+        "corpus": null,
+        "firm": null,
+        "year": null,
+        "keywords": [
+          "Barclays",
+          "capital",
+          "structure",
+          "holding",
+          "subsidiary"
+        ],
+        "entity_filter": [
+          "Barclays_Bank_PLC"
+        ],
+        "notes": "Annex 1 DEMO_10 holdco/sub teaching case. Entity = 'Barclays Bank PLC' in corpus. PROVEN PASS.",
+        "topic": "Entity Resolution Teaching Cases",
+        "language": "en",
+        "question_language": "en",
+        "answer_location": "prose_only",
+        "section_count": "single",
+        "data_type": "qualitative",
+        "difficulty": "standard",
+        "entity_count": 1
+      },
+      "result": {
+        "ok": true,
+        "elapsed_sec": 107.04,
+        "data": {
+          "answer": "Barclays PLC holds 100% of the issued ordinary shares of Barclays Bank PLC [1]. The largest group in which the results of Barclays Bank PLC are consolidated is headed by Barclays PLC, located at 1 Churchill Place London E14 5HP [1].\n\nBarclays PLC, Barclays Bank PLC, BUSHL and BUSL have financial holding company (FHC) status under the Bank Holding Company Act of 1956, allowing them to engage in various financial activities through subsidiaries [1]. BUSL is the ultimate US holding company that holds substantially all of the Barclays Bank Group\u2019s US subsidiaries, including Barclays Capital Inc. and Barclays Bank Delaware [1].\n\nThe Barclays Bank Group\u2019s principal subsidiary companies had combined assets and liabilities (before intercompany eliminations) of \u00a3582 billion in 2025 and \u00a3515 billion in 2024 [1]. Regulatory requirements restrict subsidiaries' ability to remit dividends to Barclays Bank PLC except during legal capital reduction or liquidation [1].\n\nControl over entities, particularly structured entities, is determined by assessing power over activities, not just voting rights [1]. The Barclays Bank Group consolidates structured entities where it has control and exposure to returns [1].",
+          "citations": [
+            {
+              "index": 1,
+              "source": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml",
+              "page": null,
+              "chunk_id": "/Users/manuelbarbero/Developer/AIStudio/data/corpora/esef_banks/uploads/Barclays_Bank_PLC_ESEF_2025.xhtml::chunk-2232",
+              "score": 0.17640409999999995
+            }
+          ],
+          "has_citations": true,
+          "retrieval_query": "How does Barclays describe its capital structure and the relationship between the holding company and its banking subsidiaries? Barclays Bank PLC",
+          "model_used": "gemma3:27b"
+        }
+      },
+      "eval": {
+        "pass": true,
+        "rating": "GREEN",
+        "score": 1.0,
+        "keyword_pass": true,
+        "citation_pass": true,
+        "no_info_signal": false,
+        "missing_keywords": [],
+        "citation_count": 1,
+        "citation_density": 0.111,
+        "low_citation_density": false,
+        "entity_coverage": null,
+        "entities_missing": [],
+        "cited_sources": [
+          "Barclays_Bank_PLC_ESEF_2025.xhtml"
+        ]
+      }
+    }
+  ]
+}
