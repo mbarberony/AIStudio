@@ -1,4 +1,64 @@
 #!/usr/bin/env python3
+# Changelog: 2.28.4 — AIStudio_1062: CLI conformance + language pass on the batch path, from reading
+#   a full 8-run log. (a) The batch preflight's ✅ had no ▶ announcing what produced it — CLI Output
+#   §1 pairs every outcome with the action that caused it. (b) "Resident models cleared" printed when
+#   nothing was cleared: a success message for work not done (Fit Checks Spec rule 2). It now reports
+#   what it found. (c) The fit ⚠ answers a ▶ and so is a CHILD — indented per §1 (v1.6.0:
+#   indentation marks parent/child). It also went to stderr, which un-indents it visually when
+#   streams interleave; the batch-preflight path prints to stdout. (d) "canonical" is wrong under
+#   --batch — these are THIS machine's runs, not the canonical pinned ones; the banner now names the
+#   tier and the model, and carries temperature. (e) "wedges" was jargon, and the remedy did not say
+#   where to run it. (f) The reclaim announced an intent and never reported the cost; it now states
+#   the elapsed reload time. (g) Stray blank line before the batch summary.
+# Changelog: 2.28.3 — AIStudio_1061: four batch defects, all found on the first real --batch run.
+#   (a) EMULATION UNRECORDED. --batch spawns a subprocess per run; --emulate-ram was not passed, so
+#       every child stamped itself m4max-128gb while running inside the parent's 24GB ballast. The
+#       artifact denied the very condition it was measuring. Fixed by env (AIS_BENCH_EMULATED_GB),
+#       NOT by argv: passing the flag would make the child lock a SECOND ballast on top of the
+#       parent's. The child records; only the parent locks.
+#   (b) FIT RESOLVED INSIDE THE LOOP. Each run's fit was checked just before it ran — against a
+#       machine still holding the previous run's model. Run 2 was told 12b-it-qat "needs ~11GB but
+#       only ~7GB is free" because 4b was still resident. Verbatim rule 3 of the Memory Fit Checks
+#       Spec: check and act must not be separated by anything that changes what was checked. Now a
+#       single BATCH PREFLIGHT clears residents once, resolves every run's model against that clean
+#       baseline, and prints the resolved plan. A batch is unattended by definition — it must ask
+#       everything it needs before it commits hours, or nothing at all.
+#   (c) The per-run argv echo duplicated the descriptive line directly above it.
+#   (d) A blank line sat inside the preflight bundle, against CLI Output §1.
+# Changelog: 2.28.2 — AIStudio_1060: recalibrated the runtime estimate against measured data and
+#   stopped implying a precision it cannot support. Three defects: (a) 2.5 s/GB under-predicted by
+#   ~2x — gemma3:4b measured 22 s/question on a real 24GB Mac, the model said 10; (b) the range was
+#   the point estimate x0.5-x2.0, so the LOWER bound was arithmetically unreachable; (c) latency was
+#   modelled as linear in model size, which the data contradicts — 4b ran 22 s/q on a 24GB box while
+#   12b ran 19 s/q on a 128GB one, so the MACHINE dominates and size barely predicts within it.
+#   Now: floor 20 s/question, per-GB slope halved, asymmetric range (x0.8-x2.5) because runs
+#   overrun far more often than they underrun, and the question count comes from the resolved runs
+#   instead of assuming 10 each. Framed as "expect at least", not a bracket.
+# Changelog: 2.28.1 — AIStudio_1059 follow-up: the two --dry-run previews still announced the old
+#   "reload if free memory falls below 35%" while the decision itself had moved to the model's own
+#   footprint in GB. A preview that describes behaviour the code no longer has is worse than no
+#   preview — it is the silent-inconsistency antipattern (_1050) in its documentation form, and it
+#   was caught by reading a dry-run rather than by any test. Both strings now read the same
+#   _model_need_gb() the run will use, and say "unknown" honestly when the model is not yet named.
+# Changelog: 2.28.0 — AIStudio_1059: memory is reported in GB, never percent, and the reload
+#   threshold is the model's own footprint instead of a fixed 35%. Three defects closed at once:
+#   (a) a percentage is unreadable under --emulate-ram, because it is a share of PHYSICAL RAM
+#       while the run only sees the emulated amount — "10% free" meant 12.8GB of a 30GB machine;
+#   (b) --mem-floor-pct's 35% default won a max() against the size-derived figure, so a backstop
+#       intended for the unknown-size case OVERRODE the known one — calibrated for a 6GB model on
+#       24GB, it fired on every question of a 12b run that answered fine at every reading;
+#   (c) the reload was announced before the question that suffered it rather than after the one
+#       that caused it, and claimed "later questions are unaffected" while firing 9 times.
+#   Also records the machine in the report FILENAME (m4max-30gb-emu), so an emulated run can
+#   never be mistaken for a native one.
+# Changelog: 2.27.0 — AIStudio_1058: NEW --emulate-ram <GB>. Wires RAM (scripts/_mem_ballast.py,
+#   libc mlock) so this machine behaves as if it had <GB>, making real memory scarcity reproducible
+#   on a large box instead of only on the 24GB one. The unit is the machine being EMULATED, not the
+#   amount wired. Named --emulate-ram, not --mem: --mem-track and --mem-floor-pct already exist and
+#   mean different things; a third --mem* flag would be unreadable in a user command. Released via
+#   atexit, so an aborted run never leaves memory wired. Also records `machine` in the report config
+#   (chip + RAM + emulated target) — two runs on the same box at different ballast were previously
+#   indistinguishable from their own artifacts.
 # Changelog: 2.26.3 — every optional attribute in the dry-run preview is now read defensively in one
 #   pass. Patching them one at a time as each AttributeError surfaced took three rounds; the block
 #   should not assume ANY attribute a caller might omit.
@@ -410,6 +470,7 @@ Question file auto-detection (in order):
 from __future__ import annotations
 
 import argparse
+import atexit as _atexit
 import hashlib
 import json
 import os
@@ -431,6 +492,7 @@ from pathlib import Path
 # the resolver in ../scripts/ — prepend it to the path before import. Single source of
 # truth for scope load/validate + entity selection (AIStudio_882 hard-error contract).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import _mem_ballast  # noqa: E402
 import _scope_common as _scope  # noqa: E402
 
 # Version — single source of truth for urc_deploy and runtime display.
@@ -490,7 +552,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.26.3"
+VERSION = "2.28.4"
 SCRIPT_LABEL = f"ais_bench v{VERSION} — AIStudio RAG Benchmark"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -698,6 +760,15 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--emulate-ram",
+        type=float,
+        default=None,
+        metavar="GB",
+        help="Run as if this machine had GB of RAM (e.g. 24). Wires the difference so memory "
+             "scarcity is real, not simulated — the only way to reproduce a small machine's "
+             "behaviour on a large one. Released when the run ends. Minimum 8.",
+    )
+    p.add_argument(
         "--mem-floor-pct",
         type=float,
         default=35.0,
@@ -727,7 +798,7 @@ def parse_args() -> argparse.Namespace:
             "fit guard returns BLOCK; e.g. gemma3:27b on a 24GB box loads then hangs). "
             "skip = do not run it (logged as a loud SKIP, never a silent gap); "
             "downshift = auto-switch to the recommended fitting model; "
-            "force = run anyway (you accept the wedge risk). "
+            "force = run anyway (it may stop responding and you would need to restart). "
             "If OMITTED and a run is BLOCKed, bench stops and offers (r)etry-after-freeing-memory, "
             "(d)owngrade-to-a-fitting-model, or Enter=stop — it never silently runs the too-big model "
             "(requires a terminal; a fully non-interactive run fails closed). FIT/WARN models, and "
@@ -1208,22 +1279,24 @@ def _total_ram_gb() -> float:
         return 0.0
 
 
-def _model_need_pct(api: str, model: str | None) -> float | None:
-    """This model's footprint as a percentage of total RAM, or None if unknown.
+def _model_need_gb(api: str, model: str | None) -> float | None:
+    """Free memory (GB) this model needs to keep answering, or None if unknown.
 
-    AIStudio_1037. The recycle trigger has to answer "does this model still fit?", which is a
-    function of its size — a fixed percentage floor is simultaneously too eager for a small model and
-    too late for one near the machine's ceiling. Returns a little above the raw footprint so the
-    reload happens while there is still room to reload INTO.
+    AIStudio_1059. The threshold is the model's OWN footprint, not a share of the machine.
+    Measured 2026-07-19 (gemma3:12b, 10GB): each question consumed 7.7-10.3GB and every
+    question answered with 11.5-12.8GB free — so footprint is the working-set figure, which
+    makes sense since KV cache scales with layers x heads, i.e. with parameter count.
+
+    A percentage cannot express this. Under --emulate-ram it is a share of PHYSICAL RAM while
+    the run sees only the emulated amount, so the same "35%" means different things on every
+    machine and nothing at all on an emulated one.
     """
     if not model:
         return None
     try:
         for m in _installed_generative(api):
             if m.get("id") == model and m.get("gb"):
-                total_gb = _total_ram_gb()
-                if total_gb:
-                    return min(90.0, (m["gb"] / total_gb) * 100 * 1.15)
+                return float(m["gb"]) * 1.15   # a little above raw, so a reload has room to land
     except Exception:
         pass
     return None
@@ -1634,9 +1707,14 @@ def _resolve_batch_models(api: str, selector: str | None) -> list[str]:
 def _announce_runtime(n_runs: int, models: list[str], api: str) -> None:
     """Order-of-magnitude runtime estimate before committing hours. AIStudio_1040.
 
-    ~10 s/question on a small model, ~60 s on a large one. Real spread is wide (retrieval size,
-    thermal state, what else is resident), so this is announced as a RANGE (50-200%) and framed as
-    an order of magnitude — the point is 'minutes or hours?', not a promise.
+    Calibrated against measured runs, not assumed: gemma3:4b = 22 s/question on a real 24GB Mac,
+    gemma3:12b = 19 s/question on a 128GB one. Those two numbers carry the whole lesson — the
+    SMALLER model was SLOWER, because the machine dominates and model size barely predicts latency
+    across hardware. So the floor does the work and the per-GB slope is a minor correction.
+
+    The range is deliberately asymmetric (x0.8 to x2.5). A benchmark overruns far more often than
+    it underruns — a cold load, one slow question, a mid-run reload — and a lower bound nobody can
+    hit is worse than no lower bound. The point is 'minutes or hours?', not a promise.
     """
     _sizes = {m["id"]: (m["gb"] or 0) for m in _installed_generative(api)}
 
@@ -1644,16 +1722,17 @@ def _announce_runtime(n_runs: int, models: list[str], api: str) -> None:
         # Roughly linear in model size rather than a two-bucket split: the old <9GB/>=9GB threshold
         # gave a 10GB and a 21GB model the SAME estimate, which is visibly wrong to anyone who has
         # run both. ~2.5 s per GB, floored at 8 s for the smallest models.
-        return max(8.0, (_sizes.get(model, 0) or 6.0) * 2.5)
+        return max(20.0, (_sizes.get(model, 0) or 6.0) * 1.25)
 
     per_q = sum(_per_q(m) for m in models) / max(len(models), 1)
     total_s = per_q * 10 * n_runs          # ~10 questions per run
-    lo, hi = total_s * 0.5, total_s * 2.0
+    lo, hi = total_s * 0.8, total_s * 2.5
 
     def _fmt(sec: float) -> str:
         return f"{sec / 60:.0f} min" if sec < 5400 else f"{sec / 3600:.1f} h"
 
-    print(f"• Estimated runtime: {_fmt(lo)}-{_fmt(hi)} (order of magnitude, ~10 questions/run).")
+    print(f"• Estimated runtime: expect at least {_fmt(lo)}, allow {_fmt(hi)} "
+          f"(~10 questions/run; cold loads and reloads push it up, never down).")
 
 
 def run_canonical(args: argparse.Namespace) -> int:
@@ -1758,8 +1837,11 @@ def run_canonical(args: argparse.Namespace) -> int:
         if args.no_ollama_restart:
             print("• Clean baseline: no — resident models left as they are (--no-ollama-restart)")
         else:
+            _need = _model_need_gb(args.api, args.model)
+            _thr = (f"below the {_need:.1f} GB this model needs" if _need
+                    else "below what the chosen model needs (resolved per run)")
             print(f"• Clean baseline: yes — clear resident models before each run, and reload mid-run "
-                  f"if free memory falls below {args.mem_floor_pct:.0f}%")
+                  f"if free memory falls {_thr}")
         print(f"• {len(runs)} run(s) would execute → benchmarks/<corpus>/reports/. Re-run without --dry-run to execute.")
         return 0
 
@@ -1775,30 +1857,55 @@ def run_canonical(args: argparse.Namespace) -> int:
     if _est:
         _announce_runtime(len(runs), _est, args.api)
 
+    # AIStudio_1061 — BATCH PREFLIGHT. Resolve every run's model ONCE, here, against a machine
+    # cleared of residents. Resolving inside the loop asked each run's fit question against a
+    # machine still holding the PREVIOUS run's model: run 2 was refused 12b-it-qat for "only ~7GB
+    # free" while 4b sat resident from run 1. That is rule 3 of the Memory Fit Checks Spec — check
+    # and act must not be separated by anything that changes what was checked.
+    #
+    # It also fixes the interaction defect: a prompt 45 minutes into an unattended batch is the
+    # same as a hang. Everything that needs asking is asked before the first run starts.
     failures = 0
     skipped = 0
-    for _run_no, r in enumerate(runs, 1):
+    _plan: list[tuple[dict, str | None]] = []
+    if any(r.get("model", default_model) for r in runs):
+        print("--- Batch preflight")
+        if not args.no_ollama_restart:
+            print("▶ Clearing resident models so every run's fit is judged on the same machine...")
+            _freed = _ollama_stop_all()
+            if _freed:
+                print(f"  ✅ Unloaded {len(_freed)}: {', '.join(_freed)}")
+            else:
+                print("  ✅ Nothing was loaded — the machine is already at its baseline.")
+        for r in runs:
+            rid = r.get("id", "?")
+            model = r.get("model", default_model)
+            if model:
+                _act, _m = _resolve_fit_policy(args.api, str(model), args.fit_policy,
+                                               context=f"run {rid}", indent="  ")
+                if _act == "skip":
+                    print(f"  ⚠ {rid}: SKIPPED — {model} won't fit this machine (--fit-policy).", file=sys.stderr)
+                    skipped += 1
+                    continue
+                if _m != model:
+                    print(f"  ℹ {rid}: {model} → {_m} (largest that fits)")
+                model = _m
+            _plan.append((r, model))
+        print(f"  ✅ {len(_plan)} run(s) resolved" + (f", {skipped} skipped" if skipped else "") + ".")
+    else:
+        _plan = [(r, None) for r in runs]
+
+    for _run_no, (r, _resolved_model) in enumerate(_plan, 1):
         rid = r.get("id", "?")
         # (b) a batch is a sequence of runs; mark where each one starts so the log is navigable.
         _rdesc = r.get("description") or r.get("name") or ""
-        print(f"\u25b6 \u25b6 \u25b6  Run {_run_no} of {len(runs)}: {rid}" + (f" — {_rdesc}" if _rdesc else ""))
+        print(f"\u25b6 \u25b6 \u25b6  Run {_run_no} of {len(_plan)}: {rid}" + (f" — {_rdesc}" if _rdesc else ""))
         corpus = r.get("corpus")
         if not corpus:
             print(f"  ❌ run {rid}: missing 'corpus' — skipped")
             failures += 1
             continue
-        model = r.get("model", default_model)
-
-        # AIStudio_1020: memory-fit gate per run. The PARENT owns the decision (skip / downshift /
-        # force / confirm) so the run is resolved once; the child then runs the resolved model with
-        # --fit-policy force so it does not re-evaluate or re-prompt.
-        if model:
-            _fit_action, _fit_model = _resolve_fit_policy(args.api, str(model), args.fit_policy, context=f"run {rid}")
-            if _fit_action == "skip":
-                print(f"  ⚠ run {rid}: SKIPPED — {model} won't fit this machine (--fit-policy).", file=sys.stderr)
-                skipped += 1
-                continue
-            model = _fit_model
+        model = _resolved_model   # AIStudio_1061: decided in the batch preflight above
 
         # Build the single-run argv — reuses the full single-run path verbatim.
         argv = [sys.executable, str(Path(__file__).resolve()), "--corpus", str(corpus)]
@@ -1824,11 +1931,25 @@ def run_canonical(args: argparse.Namespace) -> int:
         if _run_timeout is not None:
             argv += ["--timeout", str(_run_timeout)]
 
-        print(f"\n\033[1m▶ canonical {rid}: {r.get('label', corpus)}\033[0m")
-        print("    " + " ".join(argv[2:]))
+        # AIStudio_1062 — "canonical" is wrong here: --batch runs THIS machine's models, not the
+        # pinned canonical ones. Name the tier and the model instead, and state temperature — it is
+        # a parameter of the run and was the one setting the banner never showed.
+        _tier = ("largest model" if model == (_batch_models[-1] if _batch_models else None)
+                 else "smallest model" if model == (_batch_models[0] if _batch_models else None)
+                 else "model")
+        _temp = r.get("temperature", args.temperature)
+        _bits = [f"{_tier} ({model})" if model else str(corpus), str(corpus),
+                 str(r.get("questions") or "default questions"),
+                 f"K {r.get('top_k') or args.top_k}", f"T {_temp}"]
+        print("• " + "  ·  ".join(_bits))
         # AIS_BENCH_CHILD=1 → child suppresses its own header (▶ banner IDs the run);
         # env spread inherits the parent's PYTHONPATH/venv. Output streams through.
-        result = subprocess.run(argv, env={**os.environ, "AIS_BENCH_CHILD": "1"})
+        _child_env = {**os.environ, "AIS_BENCH_CHILD": "1"}
+        _emu = getattr(args, "emulate_ram", None)
+        if _emu:
+            # RECORD, do not establish — the parent already holds the ballast (AIStudio_1061).
+            _child_env["AIS_BENCH_EMULATED_GB"] = str(_emu)
+        result = subprocess.run(argv, env=_child_env)
         if result.returncode != 0:
             print(f"  ❌ run {rid} failed (exit {result.returncode})")
             failures += 1
@@ -1837,7 +1958,7 @@ def run_canonical(args: argparse.Namespace) -> int:
     ok = len(runs) - failures - skipped
     mark = "✅" if failures == 0 else "⚠"
     _skip_note = f", {skipped} skipped (won't fit)" if skipped else ""
-    print(f"\n{mark} batch: {ok}/{len(runs)} run(s) ok{_skip_note} → benchmarks/<corpus>/reports/")
+    print(f"{mark} batch: {ok}/{len(_plan)} run(s) ok{_skip_note} → benchmarks/<corpus>/reports/")
     return 1 if failures else 0
 
 
@@ -1887,6 +2008,20 @@ def _fetch_fitting_models(api: str, exclude: str = "") -> list[dict]:
             out.append({"id": mid, "gb": fp / 1e9 if fp else None})
     out.sort(key=lambda x: (x["gb"] or 0), reverse=True)  # largest-fitting-first
     return out
+
+
+def _free_memory_gb() -> float | None:
+    """Free memory in GB — the figure every user-facing memory message uses.
+
+    Derived from the same memory_pressure reading as _free_memory_pct so it agrees with the
+    API's fit guard, then multiplied by physical RAM. Under --emulate-ram this is still the
+    true free GB, which is precisely why GB works where a percentage does not.
+    """
+    pct = _free_memory_pct()
+    total = _total_ram_gb()
+    if pct is None or not total:
+        return None
+    return pct / 100.0 * total
 
 
 def _free_memory_pct() -> float | None:
@@ -1949,15 +2084,24 @@ def _fit_err(msg: str) -> None:
     print(f"❌ {msg}.", file=sys.stderr)
 
 
-def _fit_warn(msg: str) -> None:
-    print(f"⚠ {msg}.", file=sys.stderr)
+def _fit_warn(msg: str, indent: str = "") -> None:
+    """A fit verdict answers the `▶ Checking model fit...` line above it, so it is a CHILD.
+
+    CLI Output §1 (v1.6.0): indentation marks parent/child. `indent` is passed by callers that
+    print the ▶ to stdout, so the pair stays visually joined; stderr is kept for the single-run
+    path where the advisory must survive a `| tee` capture.
+    """
+    if indent:
+        print(f"{indent}⚠ {msg}.")
+    else:
+        print(f"⚠ {msg}.", file=sys.stderr)
 
 
 def _fit_info(msg: str) -> None:
     print(f"ℹ {msg}", file=sys.stderr)
 
 
-def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: str = "") -> tuple[str, str | None]:
+def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: str = "", indent: str = "") -> tuple[str, str | None]:
     """Decide whether/how a run proceeds given its model's fit verdict and --fit-policy.
 
     Returns (action, effective_model): action 'run' → proceed (model may be a downshift substitute);
@@ -1971,7 +2115,7 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
     # runs the corpus/questions checks SILENTLY and exports the resolved facts, so this single
     # section owns the whole preflight rather than the wrapper printing a competing one before
     # the identity banner.
-    print(f"▶ Checking model fit ({model} vs available memory)...")
+    print(f"{indent}▶ Checking model fit ({model} vs available memory)...")
     fit = _fetch_model_fit(api, model)
     verdict = (fit or {}).get("verdict")
     # AIStudio_1037 — a model that is ALREADY resident needs no room to load into. The BLOCK verdict
@@ -1983,10 +2127,10 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
         print(f"  ✅ {model} is already loaded — it does not need room to load again.")
         return ("run", model)
     if verdict == "WARN":
-        _fit_warn(f"{model} is a tight fit for this machine's memory{(' (' + context + ')') if context else ''}; may slow or swap")
+        _fit_warn(f"{model} is a tight fit for this machine's memory{(' (' + context + ')') if context else ''}; may slow or swap", indent=indent)
         return ("run", model)
     if verdict != "BLOCK":
-        print(f"  ✅ {model} fits.")
+        print(f"{indent}  ✅ {model} fits.")
         return ("run", model)  # FIT or unknown — fail-open; the API's own /ask preflight still backstops
 
     rec = (fit or {}).get("recommendation")
@@ -1994,20 +2138,20 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
     label = f"{model}{(' [' + context + ']') if context else ''}"
 
     if policy == "force":
-        _fit_warn(f"{label} {reason}; --fit-policy force → running anyway (may hang)")
+        _fit_warn(f"{label} {reason}; --fit-policy force → running anyway (may hang)", indent=indent)
         # AIStudio_1041: a forced oversize model usually wedges with its weights still resident, so
         # the NEXT run sees a machine with far less free memory and honestly skips everything. Say so
         # up front — the cleanup is one command and nobody guesses it from a downstream SKIP.
-        print(f"  · If it wedges, the model stays resident: `ollama stop {model}` before the next run.", file=sys.stderr)
+        print(f"{indent}  · If it runs out of memory it will stop responding, and the model stays loaded. Run `ollama stop {model}` in Terminal before the next run.", file=sys.stderr)
         return ("run", model)
     if policy == "skip":
-        _fit_warn(f"{label} {reason}; --fit-policy skip → SKIPPED")
+        _fit_warn(f"{label} {reason}; --fit-policy skip → SKIPPED", indent=indent)
         return ("skip", None)
     if policy == "downshift":
         if rec:
             _fit_info(f"{label} {reason}; --fit-policy downshift → running on {rec} instead")
             return ("run", rec)
-        _fit_warn(f"{label} {reason}, and no smaller model fits; --fit-policy downshift → SKIPPED")
+        _fit_warn(f"{label} {reason}, and no smaller model fits; --fit-policy downshift → SKIPPED", indent=indent)
         return ("skip", None)
 
     # policy is None → interactive gate. Needs a terminal to answer.
@@ -2018,7 +2162,7 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
     # A "retry" that needs the operator to free memory does NOT re-poll in-process — it directs
     # to ais_restart (state change realized by the restart, not a racing live poll). STD §10.5.
     if not sys.stdin.isatty():
-        _fit_warn(f"{label} {reason}, and --fit-policy was not set")
+        _fit_warn(f"{label} {reason}, and --fit-policy was not set", indent=indent)
         _fit_err("no terminal to confirm — pass --fit-policy {skip,downshift,force} for non-interactive runs")
         sys.exit(1)
 
@@ -2041,13 +2185,13 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
 
     # 0 fit → dead-end.
     if not fitting:
-        _fit_warn(f"{label} {reason}")
+        _fit_warn(f"{label} {reason}", indent=indent)
         _fit_err("No model fits this machine right now")
         print("  \u00b7 Free memory (close other apps), or see the Tutorial (Module 2.5) for options.", file=sys.stderr)
         print("  \u00b7 Then restart: ais_start", file=sys.stderr)
         sys.exit(1)
 
-    _fit_warn(f"{label} {reason}")
+    _fit_warn(f"{label} {reason}", indent=indent)
 
     # 1 fit → lettered inline (STD §10.3-A).
     if len(fitting) == 1:
@@ -2108,6 +2252,81 @@ def _resolve_fit_policy(api: str, model: str, policy: str | None, *, context: st
             reprompted = True
             continue
         _reply_cancel()
+
+
+def _backend_num_ctx(api: str) -> int | None:
+    """The context window the BACKEND actually loaded, from /config (AIStudio_1058).
+
+    Read from the server, never from the client's own environment: an exported
+    AISTUDIO_NUM_CTX after ais_start does nothing, so the client view can differ
+    from what is running. None means unknown, never a guess.
+    """
+    try:
+        import json as _json
+        import urllib.request
+
+        with urllib.request.urlopen(f"{api}/config", timeout=5) as resp:
+            return _json.loads(resp.read()).get("rag_config", {}).get("num_ctx")
+    except Exception:
+        return None
+
+
+def _effective_emulated_gb(explicit: float | None) -> float | None:
+    """The emulated size this process should RECORD, which is not always the one it established.
+
+    AIStudio_1061. Under --batch the parent holds the ballast and spawns one child per run. The
+    child must record the emulation but must NOT create one — a second mlock of (physical - target)
+    on top of the parent's would fail or lock the machine. So the value travels by environment,
+    never by argv: argv means "establish this", env means "you are inside this".
+    """
+    if explicit:
+        return explicit
+    try:
+        env = os.environ.get("AIS_BENCH_EMULATED_GB")
+        return float(env) if env else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _machine_slug(emulated_gb: float | None) -> str:
+    """Filename token identifying the machine, e.g. m4max-128gb or m4max-30gb-emu.
+
+    AIStudio_1059. Public-safe by construction: chip model and RAM size only, never a hostname.
+    The `-emu` marker is load-bearing — without it an emulated 30GB run is indistinguishable
+    from a real 30GB machine, and the two are not the same measurement.
+    """
+    emulated_gb = _effective_emulated_gb(emulated_gb)
+    rec = _machine_record(emulated_gb)
+    chip = (rec.get("chip") or "unknown").lower()
+    chip = chip.replace("apple ", "").replace(" ", "")
+    if emulated_gb:
+        return f"{chip}-{emulated_gb:g}gb-emu"
+    return f"{chip}-{rec.get('ram_gb') or '?'}gb"
+
+
+def _machine_record(emulated_gb: float | None) -> dict:
+    """Chip, physical RAM, and any emulated target — so a report identifies its own machine.
+
+    AIStudio_1058: two 27b runs on the same box at different ballast were indistinguishable
+    from their artifacts, and the machine had to be recalled rather than read.
+    """
+    emulated_gb = _effective_emulated_gb(emulated_gb)
+    def _sysctl(key: str) -> str | None:
+        try:
+            return subprocess.run(["sysctl", "-n", key], capture_output=True,
+                                  text=True, check=True).stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None
+
+    chip = _sysctl("machdep.cpu.brand_string")
+    memsize = _sysctl("hw.memsize")
+    ram_bytes = int(memsize) if memsize and memsize.isdigit() else None
+    return {
+        "chip": chip,
+        "ram_bytes": ram_bytes,
+        "ram_gb": round(ram_bytes / 1024**3) if ram_bytes else None,
+        "emulated_ram_gb": emulated_gb,
+    }
 
 
 def _validate_args(args) -> None:
@@ -2172,6 +2391,21 @@ def main() -> None:
         print("  · Name a corpus, or omit the flag to use the default.", file=sys.stderr)
         raise SystemExit(2)
     _validate_args(args)
+
+    # AIStudio_1058 — establish the memory ballast BEFORE any preflight, so every fit check,
+    # model load and question in this run sees the emulated machine rather than the real one.
+    # atexit (not try/finally) because main() has many exit paths; wired memory must never
+    # outlive the process that asked for it.
+    if getattr(args, "emulate_ram", None) is not None and not os.environ.get("AIS_BENCH_CHILD"):
+        try:
+            _ballast = _mem_ballast.lock_to_target(args.emulate_ram)
+        except _mem_ballast.BallastError as exc:
+            print(f"\033[1m[{SCRIPT_LABEL}]\033[0m", file=sys.stderr)
+            print(f"❌ --emulate-ram {args.emulate_ram:g}: {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
+        if _ballast is not None:
+            _atexit.register(_ballast.release)
+
     # Child runs spawned by run_canonical suppress their own header (the parent
     # already printed one + the ▶ banner IDs each run); see AIS_BENCH_CHILD below.
     if not os.environ.get("AIS_BENCH_CHILD"):
@@ -2212,8 +2446,11 @@ def main() -> None:
         _tp = getattr(args, "temperature", None) if getattr(args, "temperature", None) is not None else "corpus default (0.3)"
         print(f"  · Top K          : {_tk}")
         print(f"  · Temperature    : {_tp}")
+        _need_preview = _model_need_gb(args.api, getattr(args, "model", None))
+        _thr_preview = (f"below the {_need_preview:.1f} GB this model needs" if _need_preview
+                        else "below what this model needs")
         _clean = ("no — resident models left as they are (--no-ollama-restart)" if getattr(args, "no_ollama_restart", False)
-                  else f"yes — clear resident models first, and reload the model mid-run if free memory falls below {getattr(args, 'mem_floor_pct', 35.0):.0f}%")
+                  else f"yes — clear resident models first, and reload the model mid-run if free memory falls {_thr_preview}")
         print(f"  · Clean baseline : {_clean}")
         print("• Nothing was run and no report was written.")
         return
@@ -2236,7 +2473,7 @@ def main() -> None:
             sys.exit(2)
         scope_firms = [n for n in (_scope.entity_name(r) for r in _rows) if n]
         scope_tokens = [f.replace(" ", "_") for f in scope_firms]
-        print(f"· --scope {args.scope} → {len(scope_firms)} firm(s): {', '.join(scope_firms)}")
+        print(f"• scope {args.scope} → {len(scope_firms)} firm(s): {', '.join(scope_firms)}")
         # AIStudio_882 (scope application): scope_tokens ride the /ask `allowed_source_paths`
         # field — the server ANDs them with each question's entity logic (intersect). An
         # out-of-scope question retrieves nothing; a scope-only run retrieves across the scope.
@@ -2341,7 +2578,9 @@ def main() -> None:
 
     # Naming STD §2: datetime is ALWAYS the last field, after all descriptors.
     # base_name = benchmark_{corpus}_{model}_{descriptors}_{timestamp}
-    base_name = f"benchmark_{args.corpus}_{_model_slug}{filter_suffix}_{timestamp}"
+    # AIStudio_1059 — the machine is part of the identity of a run, not metadata about it.
+    _mach_slug = _machine_slug(getattr(args, "emulate_ram", None))
+    base_name = f"benchmark_{args.corpus}_{_model_slug}_{_mach_slug}{filter_suffix}_{timestamp}"
     reports_dir.mkdir(parents=True, exist_ok=True)
     output_path = reports_dir / f"{base_name}.json"
     questions_path = args.questions
@@ -2424,7 +2663,7 @@ def main() -> None:
         # CLI --firm overrides per-question firm field; otherwise use YAML's firm
         effective_firm = args.firm if args.firm else q.get("firm")
         print(f"▶ [{i}/{len(questions)}] {q['description']}...")
-        _mem_before = _free_memory_pct()  # AIStudio_1037
+        _mem_before = _free_memory_gb()  # AIStudio_1037 / _1059 — GB, not percent
 
         # AIStudio_1037 — recycle before the guard has to block. Per-question working memory is not
         # fully returned, so on a constrained machine free memory slides until the remaining questions
@@ -2440,14 +2679,19 @@ def main() -> None:
         # exempt it from being RECYCLED: a resident model is the only kind that can have accumulated
         # per-question memory, so skipping the recycle for it disabled the mitigation entirely —
         # observed live, 7 of 8 questions blocked at a flat 27% while the model sat loaded.
-        _need_pct = _model_need_pct(args.api, args.model)
-        _floor = max(args.mem_floor_pct, _need_pct) if _need_pct else args.mem_floor_pct
-        if (not args.no_ollama_restart and _mem_before is not None
-                and _mem_before < _floor and i > 1):
-            print(f"  ⚠ Free memory {_mem_before:.0f}% is below the {_floor:.0f}% needed for this model — "
-                  f"reloading the model to reclaim it before this question.")
-            print("  · The model is unloaded and reloaded, so this question pays a full model-load "
-                  "cost (tens of seconds for a large model). Later questions are unaffected.")
+        # AIStudio_1059 — the threshold is the model's own footprint in GB. --mem-floor-pct is
+        # the fallback for the UNKNOWN-size case only; it no longer wins a max() against the
+        # size-derived figure, which is what made a 6GB-model-on-24GB default fire on every
+        # question of a 12b run that answered fine at every reading.
+        _need_gb = _model_need_gb(args.api, args.model)
+        if _need_gb is None:
+            _total = _total_ram_gb()
+            _need_gb = (args.mem_floor_pct / 100.0 * _total) if _total else None
+        if (not args.no_ollama_restart and _mem_before is not None and _need_gb is not None
+                and _mem_before < _need_gb and i > 1):
+            print(f"  ⚠ memory {_mem_before:.1f} GB free, below the {_need_gb:.1f} GB "
+                  f"{args.model or 'this model'} needs — reclaiming memory by swapping the model out and in...")
+            _reload_t0 = time.monotonic()
             _ollama_stop_all()
             _reloads += 1
             # `ollama stop` returns as soon as the request is ACCEPTED — the unload completes
@@ -2459,19 +2703,23 @@ def main() -> None:
             for _ in range(60):                      # up to ~30s: giving up early costs a question,
                                                      # waiting costs seconds
                 time.sleep(0.5)
-                _now = _free_memory_pct()
+                _now = _free_memory_gb()             # AIStudio_1059 — GB, matching _recovered
                 if _now is not None and _now > _recovered:
                     _recovered = _now
-                if _recovered >= args.mem_floor_pct:
+                if _need_gb is not None and _recovered >= _need_gb:
                     break
+            _reload_sec = time.monotonic() - _reload_t0
             if _recovered is not None and _recovered > _mem_before:
-                print(f"  ✅ Reclaimed — free memory now {_recovered:.0f}%.")
+                # AIStudio_1062 — state the COST, not just the intent. v2.28.3 announced a reload
+                # "tens of seconds for a large model" and then never said what it actually took.
+                print(f"  🟢 memory {_mem_before:.1f} → {_recovered:.1f} GB free "
+                      f"(model reloaded, {_reload_sec:.1f}s)")
                 _mem_before = _recovered
             else:
                 # Say so plainly rather than claiming success: if the memory is not held by the model
                 # process, reloading it is aimed at the wrong target and the user needs to know.
-                print(f"  ⚠ Reload did not free memory (still {_recovered:.0f}%) — the accumulated "
-                      f"memory may not be held by the model. This question will likely be blocked.")
+                print(f"  ⚠ reload did not free memory (still {_recovered:.1f} GB after {_reload_sec:.1f}s) — "
+                      f"the accumulated memory may not be held by the model. This question will likely be blocked.")
 
         # AIStudio_875: --query-expansion and --entity-filter map directly to server request
         # fields. --entity-filter yaml forwards the question's entity_filter; none/auto leave it
@@ -2532,15 +2780,15 @@ def main() -> None:
         elif ev.get("ungrounded"):
             _density_str += f" | ⚠ only {ev['groundedness']:.0%} grounded"
         # AIStudio_1037: memory at question boundaries — the curve that reveals sweep starvation.
-        _mem_after = _free_memory_pct()
+        _mem_after = _free_memory_gb()
         _mem_str = ""
         if not getattr(args, "mem_track", True):
             _mem_before = _mem_before  # still recorded to JSON, just not displayed
         elif _mem_before is not None and _mem_after is not None:
             _arrow = "→" if _mem_after != _mem_before else "="
-            _mem_str = f" | mem {_mem_before:.0f}%{_arrow}{_mem_after:.0f}%"
+            _mem_str = f" | mem {_mem_before:.1f} {_arrow} {_mem_after:.1f} GB free"
         elif getattr(args, "mem_track", True) and _mem_after is not None:
-            _mem_str = f" | mem {_mem_after:.0f}%"
+            _mem_str = f" | mem {_mem_after:.1f} GB free"
         print(
             f"  {status} {result['elapsed_sec']}s | {ev['citation_count']} citation(s){_missing_str}{_density_str}{_lang_marker}{_mem_str}"
         )
@@ -2577,8 +2825,9 @@ def main() -> None:
         # AIStudio_1039: keep the retrieved context in the artifact — it is the only thing that makes
         # a RED-uncited answer auditable after the fact (grounded-but-untagged vs fabricated).
         results.append({"question": q, "result": result, "eval": ev,
-                        "memory": {"free_pct_before": _mem_before,  # AIStudio_1037
-                                   "free_pct_after": _mem_after}})
+                        "memory": {"free_gb_before": _mem_before,  # AIStudio_1059 — GB, not percent
+                                   "free_gb_after": _mem_after,
+                                   "need_gb": _need_gb}})
 
     # Summary
     passed = sum(1 for r in results if r["eval"]["pass"])
@@ -2619,18 +2868,21 @@ def main() -> None:
         _drift = _mem_end - _steady          # post-load drift — the accumulation signal
         _n_after = max(len(_mem_pts) - 1, 0)  # questions measured after the load
         _flag = ""
-        if _n_after >= 2 and _drift <= -10:
+        _need_end = _model_need_gb(args.api, args.model)
+        if _n_after >= 2 and _drift <= -(0.1 * (_steady or 1)):
             _flag = "  ⚠ memory keeps sliding after load — suspect sweep accumulation (AIStudio_1037)"
-        elif _mem_end <= 25:
-            _flag = "  ⚠ low headroom at run end — later questions may have been fit-guard BLOCKED"
-        _load_str = f"load {_load_cost:+.0f} · " if _load_cost is not None else ""
+        elif _need_end and _mem_end <= _need_end:
+            # AIStudio_1059 — only warn about blocks when memory is actually below what the
+            # model needs. The old form keyed off a fixed 25% and fired on a run with zero blocks.
+            _flag = f"  ⚠ ended below the {_need_end:.1f} GB this model needs — later questions may have been blocked"
+        _load_str = f"load {_load_cost:+.1f} GB · " if _load_cost is not None else ""
         # The LOWEST point matters more than the end value: a transient dip is what actually trips
         # the fit guard mid-sweep, and it can recover before the run finishes.
         _low = min(_mem_pts)
-        _low_str = f" · low {_low:.0f}%" if _low < _steady else ""
+        _low_str = f" · low {_low:.1f} GB" if _low < _steady else ""
         print(
-            f"• memory: {_load_str}steady {_steady:.0f}% → {_mem_end:.0f}% at end{_low_str} "
-            f"({_drift:+.0f} points over {_n_after} question(s) after load){_flag}"
+            f"• memory: {_load_str}steady {_steady:.1f} GB → {_mem_end:.1f} GB free at end{_low_str} "
+            f"({_drift:+.1f} GB over {_n_after} question(s) after load){_flag}"
         )
     for r in results:
         status = {"GREEN": "🟢", "AMBER": "🟡", "RED": "🔴", "BLOCKED": "🔲"}.get(r["eval"].get("rating"), "✅" if r["eval"]["pass"] else "❌")
@@ -2668,6 +2920,8 @@ def main() -> None:
                     "api": args.api,
                     "questions_file": questions_label,
                     "questions_sha8": questions_sha,
+                    "machine": _machine_record(getattr(args, "emulate_ram", None)),
+                    "num_ctx": _backend_num_ctx(args.api),
                 },
                 "summary": {
                     "total": total,

@@ -1,4 +1,8 @@
-# Version: 1.20.3
+# Version: 1.20.4
+# Changelog: 1.20.4 — AIStudio_1058: /config now reports the resolved num_ctx. It was readable
+#   nowhere: /debug/prompt returns num_ctx_set, a boolean that has been unconditionally true since
+#   _958, so two runs at different context windows were indistinguishable from their artifacts.
+#   bench.py records this value in every report.
 # Changelog: 1.20.3 — ruff I001: the local import must lead its block; comments moved above the try.
 # Changelog: 1.20.2 — ruff F821: `ollama` is imported locally in each function here, not at
 #   module scope; the residency check now does the same.
@@ -3283,6 +3287,7 @@ async def get_config() -> dict[str, Any]:
             # "hybrid_enabled": CONFIG.rag.hybrid_enabled,
             # "decompose_multi_entity": CONFIG.rag.decompose_multi_entity,
             "max_distance": CONFIG.rag.max_distance,
+            "num_ctx": CONFIG.rag.num_ctx,
         },
         "ingest_config": {
             "chunk_size": CONFIG.ingest.chunk_size,

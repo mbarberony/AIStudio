@@ -74,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--mem-track] [--dry-run] [--canonical] [--batch] [--batch-id <id>]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--mem-track] [--emulate-ram <GB>] [--dry-run] [--canonical] [--batch] [--batch-id <id>]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -100,8 +100,18 @@ Options:
                          (f)ree memory & restart, (Enter) cancel; nothing fits → it stops and tells
                          you how to free memory. Needs a terminal; non-interactive runs fail closed.
                          (AIStudio_1020)
-  --mem-track            Show free memory per question (default on). --no-mem-track hides the
-                         column; the end-of-run memory recap and the JSON record are always kept.
+  --emulate-ram <GB>     Run as if this machine had GB of RAM, e.g. 24. Reserves the difference so
+                         the shortage is real, not simulated — every memory check, model-fit verdict
+                         and reload decision sees the smaller machine. It is the only way to see how
+                         a smaller Mac behaves without owning one. Released when the run ends.
+                         Minimum 8 GB. Report filenames record it (..._m4max-24gb-emu_...) so an
+                         emulated run is never mistaken for a real machine of that size.
+  --mem-track            Show free memory per question, in GB (default on). --no-mem-track hides
+                         the column; the end-of-run memory recap and the JSON record are always
+                         kept. Memory is reported in GB rather than percent: a percentage is a share
+                         of PHYSICAL RAM, so under --emulate-ram it describes memory the run cannot
+                         see. The model is reloaded mid-run only when free memory falls below what
+                         that model needs (about its own size), not below a fixed share of the box.
   --canonical            EXACT REPRODUCTION of the audited reference runs — every run in
                          benchmarks/batch/bench_canonical.yaml with its PINNED model. Use this to
                          reproduce or extend published numbers.

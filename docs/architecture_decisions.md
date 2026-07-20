@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-*Version: 1.2.0 | Updated: 2026-06-24*
+*Version: 1.3.0 | Updated: 2026-07-19*
 
 Key technical choices made in this project, with rationale. This document is
 intended for anyone reviewing the codebase who wants to understand not just
@@ -462,3 +462,60 @@ correct output format explicitly.
 
 **Tradeoff:** System prompt is not version-controlled in git (it's a runtime
 file, not source code). Tracked via the BUNDLE/PACKET protocol.
+
+---
+
+## 19. No Orchestration Framework: LangChain and LlamaIndex Declined
+
+**Decision:** AIStudio implements retrieval, chunking, prompt assembly and the
+citation contract directly, against Qdrant and Ollama. No LangChain, no
+LlamaIndex, no orchestration framework of any kind.
+
+**Why:**
+The purpose of this project is substrate knowledge — understanding retrieval
+well enough to reason about it in an architecture review, not shipping a RAG
+product fastest. A framework is precisely the wrong tool for that goal. It
+would have supplied a working pipeline in an afternoon and, in exchange, hidden
+every decision worth understanding: how chunks are sized and overlapped, how
+hybrid scores are combined, what actually reaches the model's context window,
+and why a citation marker appears or does not.
+
+Several findings in this codebase were only reachable because there was no
+abstraction in the way:
+
+- **Entity anaphora as the dominant retrieval failure** — visible only by reading
+  the chunks a query actually retrieved, which led to the Document-Head
+  normalizer (ADR 17).
+- **"Lost in the middle" citation dropout** — diagnosed by controlling context
+  ordering directly and testing a slim system prompt against a verbose one
+  (ADR 18).
+- **A memory guard applying a load-time test to an already-resident model** —
+  found by owning the request path end to end. A framework's `.query()` would
+  have returned the same wrong answer with no seam to look through.
+
+None of these are exotic. They are ordinary RAG failure modes, and each was
+found by reading code we wrote rather than tracing code we imported.
+
+**The counter-argument, stated fairly:** a framework brings maintained
+integrations, a large community, and battle-tested edge-case handling. For a
+team shipping a product against a deadline, that is usually the right trade —
+and this decision should not be read as a general recommendation against
+orchestration frameworks. It is a decision about *this* project's purpose.
+
+**Tradeoff:** Every integration is ours to write and maintain. Adding a vector
+store, an embedding provider, or a document loader is real work rather than a
+config change. Accepted deliberately: the integration surface here is small
+(one vector store, one inference host, two document formats) and the
+understanding is the deliverable.
+
+**Relationship to ADR 1:** the same reasoning, one layer down. ADR 1 declines
+cloud inference and isolates the swap point in `ollama_client.py`; this ADR
+declines the orchestration layer above it. Both keep the seams visible and
+under our control. The production path is unchanged — LiteLLM for provider
+abstraction (ADR 1), and the inference layer remains swappable via the
+OpenAI-compatible interface described in `architecture_elements.md` §7.
+
+**Would change for production:** If AIStudio grew a broad integration surface —
+many vector stores, many providers, many loaders — the maintenance argument
+would eventually outweigh the transparency one. That threshold is not close.
+

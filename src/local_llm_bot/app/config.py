@@ -1,4 +1,10 @@
 # src/local_llm_bot/app/config.py
+# Version: 1.8.0
+# Changelog: 1.8.0 — AIStudio_1059: ModelFitConfig gains mem_floor_gb, the minimum machine size the
+#   memory-ballast utility (scripts/_mem_ballast.py, ais_bench --emulate-ram) will emulate. Locked
+#   memory cannot be swapped, so a target below this leaves macOS no headroom. Declared here for
+#   discoverability via /config; the utility reads AISTUDIO_MEM_FLOOR_GB directly because it must
+#   work standalone (bench and ais_start do not import the app package).
 # Version: 1.7.0
 # Changelog: 1.7.0 — AIStudio_1020: ModelFitConfig — the memory-fit guard's four calibration
 #   constants (reserve_bytes, footprint_mult, warn_frac, block_frac), env-overridable
@@ -139,6 +145,8 @@ class ModelFitConfig(BaseModel):
     footprint_mult: float = Field(default=1.2, ge=1.0)
     warn_frac: float = Field(default=0.80, ge=0.0, le=2.0)
     block_frac: float = Field(default=0.92, ge=0.0, le=2.0)
+    # AIStudio_1059 — floor for --emulate-ram. Env AISTUDIO_MEM_FLOOR_GB.
+    mem_floor_gb: float = Field(default=8.0, ge=1.0)
 
 
 @dataclass(frozen=True)
@@ -217,6 +225,7 @@ def load_config_from_env() -> AppConfig:
     cfg.fit.footprint_mult = _env_float("AISTUDIO_FIT_FOOTPRINT_MULT", cfg.fit.footprint_mult)
     cfg.fit.warn_frac = _env_float("AISTUDIO_FIT_WARN_FRAC", cfg.fit.warn_frac)
     cfg.fit.block_frac = _env_float("AISTUDIO_FIT_BLOCK_FRAC", cfg.fit.block_frac)
+    cfg.fit.mem_floor_gb = _env_float("AISTUDIO_MEM_FLOOR_GB", cfg.fit.mem_floor_gb)
 
     return cfg
 

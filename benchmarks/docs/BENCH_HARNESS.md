@@ -1,6 +1,6 @@
 # Benchmark Harness (BENCH_HARNESS)
 
-*Version: 2.2.0 | Updated: 2026-07-18*
+*Version: 2.3.0 | Updated: 2026-07-19*
 
 *Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion reading: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how to read a benchmark in TUTORIAL §5.*
 
@@ -61,7 +61,8 @@ ais_bench [OPTIONS]
 | Option | Meaning |
 |---|---|
 | `--dry-run` | With `--batch` or `--canonical`, print the resolved run set and a runtime estimate, then exit without executing. Use it before committing hours. |
-| `--mem-track` | Show a free-memory column per question. On by default; `--no-mem-track` hides the column. The end-of-run memory recap and the JSON record are written either way. |
+| `--mem-track` | Show a free-memory column per question, in GB. On by default; `--no-mem-track` hides the column. The end-of-run memory recap and the JSON record are written either way. |
+| `--emulate-ram GB` | Run as if this machine had `GB` of RAM, e.g. `24`. Reserves the difference so the shortage is real and every memory check sees the smaller machine — the only way to reproduce a constrained Mac's behaviour on a larger one. Released when the run ends. Minimum 8 GB. The report filename records it (`…_m4max-24gb-emu_…`), so an emulated run is never confused with a real machine of that size. |
 | `--full` | Put full answers in the report instead of the first four paragraphs. |
 | `--no-markdown` | Skip the `.md` report (JSON only). |
 | `--help` / `--version` | Show help, or the harness version. |
@@ -177,7 +178,9 @@ benchmarks/demo/reports/benchmark_demo_2026-04-15_21-30.json
 
 Each report contains:
 
-**Configuration** — full snapshot (corpus, model, top-k, temperature, timestamp) so every report is self-describing and reproducible.
+**Configuration** — full snapshot (corpus, model, top-k, temperature, timestamp, **machine** and **context window**) so every report is self-describing and reproducible. The machine block names the chip, physical RAM, and any emulated target; `num_ctx` is read from the running backend rather than the client's environment, because exporting it after `ais_start` changes nothing and the two can disagree.
+
+**Memory is reported in GB, never as a percentage.** A percentage is a share of *physical* RAM, so under `--emulate-ram` it describes memory the run cannot see — "10% free" on a 128 GB box emulating 30 GB is 12.8 GB, which is ample. GB is the same number on every machine. The reload threshold is likewise the model's own footprint (~10 GB for a 12B, ~21 GB for a 27B), not a fixed share of the box: per-question working memory scales with parameter count, because KV cache scales with layers × heads.
 
 **Summary** — total questions, the 🟢/🟡/🔴 rating tally, binary pass rate (back-compat), average latency.
 

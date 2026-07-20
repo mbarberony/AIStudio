@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-07-12*
+*Version: Beta | Updated: 2026-07-19*
 
 ---
 
@@ -186,9 +186,9 @@ ollama list
 
 ***How do I install a new LLM?***
 ```bash
-ollama pull gemma3:4b         # ~3.3GB — the out-of-the-box default, fast
+ollama pull llama3.1:8b       # ~5GB — the out-of-the-box default, fast, cites cleanly
 ollama pull gemma3:27b        # ~17GB — best quality-for-size; the benchmark model
-ollama pull llama3.1:8b       # ~5GB — alternative, fast
+ollama pull gemma3:4b         # ~3.3GB — lighter alternative, fastest
 ollama pull llama3.1:70b      # ~42GB — best quality, requires ~64GB RAM
 ollama pull mistral:7b        # ~4.4GB — alternative option
 ```
@@ -198,13 +198,22 @@ No restart required.
 ***Which model should I choose?***
 On Apple Silicon, `llama3.1:70b` and `llama3.1:8b` have identical query latency
 (~6–7s) once warm. Choose based on available RAM:
-- `gemma3:4b` — 8GB+ RAM, the out-of-the-box default; small, fast, best first run
+- `llama3.1:8b` — 8GB+ RAM, the out-of-the-box default; clean citations, best first run
 - `gemma3:27b` — 32GB+ RAM, best quality-for-size; the model AIStudio benchmarks on
-- `llama3.1:8b` — 8GB RAM minimum, solid alternative
+- `gemma3:4b` — 8GB RAM minimum, lighter and faster; a fallback when memory is tight
 - `llama3.1:70b` — 64GB+ RAM, best answer quality
 - `mistral:7b` — good alternative on constrained hardware
 
-AIStudio checks whether a model fits your machine's memory before running it: the UI's model picker shows a fit verdict (and disables a model too large to run), `ais_start` lists what is installed and what can actually run, and an oversized model is caught rather than silently loaded-then-hung. Note that *fitting* and *sustaining a long run* are different things — a model that loads fine can still exhaust memory part-way through a multi-question benchmark sweep, so a model near your machine's ceiling is better for single questions than for unattended runs. Benchmarks follow the same rule: `ais_bench --batch` picks models that fit the current machine, while `ais_bench --canonical` reproduces the published runs on their pinned model. See "Don't benchmark a model that's too big for your Mac" in TUTORIAL §5.9 (`ais_bench --fit-policy`).
+AIStudio checks whether a model fits your machine's memory before running it: the UI's model picker shows a fit verdict (and disables a model too large to run), `ais_start` lists what is installed and what can actually run, and an oversized model is caught rather than silently loaded-then-hung. *Fitting* and *sustaining a long run* are different things — each question adds working memory, so a long unattended run may pause to reload the model and free memory. On a machine constrained to 24 GB, `gemma3:12b-it-qat` completed all four benchmark sets with no refusals, spending about three seconds reloading before most questions: near the ceiling, the cost is time rather than failure. Benchmarks follow the same rule: `ais_bench --batch` picks models that fit the current machine, while `ais_bench --canonical` reproduces the published runs on their pinned model. See "Don't benchmark a model that's too big for your Mac" in TUTORIAL §5.9 (`ais_bench --fit-policy`).
+
+***How do I see how AIStudio would behave on a Mac with less memory?***
+Run a benchmark with `--emulate-ram` and the memory size you want to test:
+```bash
+ais_bench --corpus sec_10k --emulate-ram 24
+```
+AIStudio reserves the difference between your machine's real memory and the size you named, so the shortage is genuine rather than simulated — every memory check, model-fit verdict and reload decision sees the smaller machine. The memory is released when the run finishes. The minimum you can emulate is 8 GB.
+
+This is how the per-machine guidance in the benchmark reports is produced, and it is the honest way to answer "would this work on my other laptop?" without owning one. Reports name the emulation in their filename (for example `..._m4max-24gb-emu_...`) so an emulated run is never mistaken for a real machine of that size.
 
 ***How do I remove a model I no longer need?***
 ```bash
