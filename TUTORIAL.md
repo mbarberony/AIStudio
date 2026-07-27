@@ -1,5 +1,5 @@
 # AIStudio Tutorial
-*Version: Beta | Updated: 2026-07-19*
+*Version: Beta | Updated: 2026-07-26*
 
 Get the most out of AIStudio with four guided modules — from your first query, to two production-scale corpora, to your own documents.
 
@@ -433,7 +433,7 @@ The settings that move the result, and why each sits where it does:
 
 - **Top K = 10** for multi-firm financial corpora — fewer slots drop firms from a comparison; 5 is fine for small single-topic corpora.
 - **Retrieval Mix (α) = 0.5.** Pure conceptual retrieval loses the *named firm*: the query embedding is dominated by the shared concept (every bank discusses "CET1"), so the firm names barely move it and retrieval latches onto whoever wrote most densely about the topic. Blending in literal matching restores the names. 0.5 is the locked default.
-- **Relevance Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so ~0.2 is the working value for these corpora.
+- **Relevance Threshold (min_score).** A relevance floor that drops weak chunks — but set too high it starves genuinely relevant ones (the embedding model under-scores them), so 0.5 is the working value for these corpora.
 - **Entity handling — isolation, not expansion.** The central lesson: recognizing a firm and *appending* its name to the query does **not** stop the wrong firms' chunks from being retrieved. Only a retrieval-time **filter** keyed to the recognized firm isolates correctly — and AIStudio builds that filter automatically. Expansion decorates the query; the filter excludes the contaminants. Conflating the two once produced answers that cited the wrong companies while scoring 100% mechanically.
 - **Model.** When retrieval is the bottleneck, model size barely moves the score — a small local model matches a large one on retrieval-limited questions; the larger model pulls ahead only on dense multi-firm synthesis. Either way, a model handed a chunk that lacks the fact will *fabricate* rather than abstain — which is exactly why the audit reads the cited chunk, not the answer's confidence.
 
@@ -468,9 +468,9 @@ That's the strongest possible argument that the mechanical verdict, used alone, 
 
 We stopped trusting the pass-rate and moved the verdict to signals that catch fabrication:
 
-- **Objective-%, not "pass-rate."** Score quality as the fraction of answers that are *objectively correct* — right content, right firm, supported by the cited chunk — out of every answer except the grading artifacts. In the four-state audit below, that's **✅ Good ÷ (✅ Good + ⚠ Partial + ❌ Miss)**; the 🔍 grading-artifact answers are excluded from the denominator because they're a measurement ceiling, not a model failure. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
+- **Objective-%, not "pass-rate."** Score quality as the fraction of answers that are *objectively correct* — right content, right firm, supported by the cited chunk — out of every answer except the grading artifacts. In the four-state audit below, that's **✅ Good ÷ (✅ Good + ⚠ Partial + ❌ Miss)**; Three classes are excluded from the denominator, and each is **named in the report rather than silently dropped**: 🔍 grading artifacts (a measurement ceiling, not a model failure), **Language Ceiling** answers (a structural limit of the filing's language), and ⚫ **BLOCKED** questions (the fit guard declined to run them, so the model never answered). A report reads "8 Good · 1 Partial · 1 excluded (Language Ceiling)", never a bare 8/9. We call it "objective %," deliberately not "honest %" — *honesty is a property of the measurement discipline, not a moral claim about the model.*
 - **A four-state audit, not a binary.** Every audited question gets one of: **✅ Good** (correct, right firm, substantive, cited), **⚠ Partial** (mechanically passing but incomplete or wrong firm), **❌ Miss** (retrieval or generation failure), **🔍 Grading artifact** (mechanically failed but substantively *correct* — keyword brittleness, citation dropout, an accent mismatch). The grading-artifact bucket is the mirror image of §5.3: it's where the mechanical score *understates* quality, and it's what tells you to fix a keyword list rather than the engine.
-- **An amber, entity-weighted score.** The weighted-sum grader leads with **entity coverage** (did the answer cite the firms it should) and demotes raw keyword presence to one signal among several — so confident-but-wrong-firm answers can't score green.
+- **An amber, entity-weighted score.** The weighted-sum grader (`AIStudio_878`, shipped) scores citation presence heaviest at 0.45, **entity coverage** second at 0.25 — did the answer cite the firms it should — then keyword presence and citation density at 0.15 each, less a 0.5 penalty for an uncited no-information answer. Raw keyword presence is demoted from the verdict to one signal among several, so confident-but-wrong-firm answers can't score green. This audit vocabulary is canonical: `NOTES - AIStudio - Benchmarking Methodology` and `NOTES - AIStudio - Benchmark Artifact Map` reference it rather than restating it.
 
 ### 5.6 — The discipline that makes it real: verify the cited chunk
 

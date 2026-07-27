@@ -1,6 +1,6 @@
 # Benchmark Harness (BENCH_HARNESS)
 
-*Version: 2.3.0 | Updated: 2026-07-19*
+*Version: 2.4.0 | Updated: 2026-07-26*
 
 *Also ingested into the help corpus, so you can ask AIStudio how to run benchmarks. Companion reading: the audited evidence in `BENCH - Canonical Suite - README and Synthesis` (same folder), and how to read a benchmark in TUTORIAL §5.*
 
@@ -209,6 +209,8 @@ The first query in a cold session is slow (20–50s) while the LLM loads into me
 **Groundedness, and the "uncited but grounded" re-rating** — a zero-citation answer used to score RED, indistinguishable from a wrong or invented one. Since reports now carry the retrieved chunks, the harness measures how much of the answer's vocabulary actually appears in that context. Above ~70% the answer is re-rated **AMBER, "uncited but grounded"**: right answer, missing attribution. Below ~40% it is flagged as possible fabrication. This matters because the two are genuinely different defects and were being reported as the same one — the same question can score RED with zero citations on one run and GREEN with six on the next, on identical claims from the same model and corpus — sometimes with the *uncited* answer marginally better grounded. Without this check the grader measures tag emission and reports it as correctness.
 
 Groundedness is deliberately crude — lexical overlap, not entailment. It cannot prove an answer faithful. It can separate one built from the retrieved context from one built from nowhere, which is the distinction that changes the rating, and it makes the audit below automatic rather than manual.
+
+**The four ratings above are the MACHINE layer.** The separate human **audit** layer — ✅ Good / ⚠ Partial / ❌ Miss / 🔍 Artifact, with the objective-% formula and the three exclusion classes — is defined canonically in `TUTORIAL` §5.5 and referenced (not restated) by the Methodology note and the Artifact Map. ⚫ BLOCKED is one of those three exclusions: it is excluded from the pass-rate denominator and the latency average, and must be **named** in a report rather than silently dropped.
 
 Keyword matching is demoted from the verdict to one input among several — a GREEN answer can miss a keyword and an AMBER one can hit them all. The thresholds are v1 defaults, calibrated against the audited canonical runs; the rating is a triage signal, not a grade. The contract is still the audit: verify the cited chunk, never the colour alone.
 

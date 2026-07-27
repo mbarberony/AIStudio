@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-07-19*
+*Version: Beta | Updated: 2026-07-26*
 
 # AIStudio
 
@@ -84,7 +84,7 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 - **Demo corpus** — 9 original documents spanning 2003–2026
 - **In-app help** — 15 reference documents
 
-**Performance** *(MacBook Pro M4 Pro, 128 GB unified memory)*
+**Performance** *(MacBook Pro M4 Max, 128 GB unified memory)*
 
 - **Ingest** — ~54 chunks/sec · 100K+ chunks in ~31 min · 0 failures
 - **Warm query** — ~6–7 s (llama3.1 8b and 70b statistically identical)
@@ -254,17 +254,17 @@ flowchart TD
 
 ## Performance Findings
 
-Synthesized from benchmark runs on MacBook Pro M4 Pro (128GB unified memory):
+Synthesized from benchmark runs on MacBook Pro M4 Max (128GB unified memory):
 
 - **8.6s avg latency** per query at α=0.5 hybrid retrieval, K=10 — including complex multi-source synthesis
-- **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Pro, 128GB unified memory). With `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
+- **14/14 pass rate** on demo corpus benchmark with `gemma3:27b`, K=10, α=0.5 hybrid retrieval (M4 Max, 128GB unified memory). With `llama3.1:8b` at K=5: **12/14 mechanical, 13/14 substantive**. Questions file updated to v2.2.0 (2026-06-16) — prior versions had keyword brittleness preventing 14/14 on any model.
 - **10/10 mechanical · 9/10 calibrated** on the curated SEC 10-K question set (`gemma3:27b`, 10 cross-firm questions, 21 firms, 100K+ chunks). With `llama3.1:8b`: **8/10 mechanical · 9/10 substantive** — consistent across both models. Precise table-cell extraction is the known frontier. The full audited evidence — four canonical runs across both corpora (US + European), each read mechanical-score-then-calibrated-audit — lives in [benchmarks/docs/](benchmarks/docs/) (start with the suite synthesis, `BENCH - Canonical Suite - README and Synthesis`); reproduce it with `ais_bench --batch`. How to read these is TUTORIAL §5.
 - **SEC 10-K synthesis runs ~58s avg** on `gemma3:27b` — long, multi-firm answers, so output-token generation dominates (consistent with the bottleneck below), not retrieval
 - **Model size does not predict warm latency** — llama3.1:70b and llama3.1:8b both land at ~6s warm; the bottleneck is output token generation, not parameter count
 - **Retrieval adds ~0.3–0.5s** even at 100K+ chunks — inference, not retrieval, is the bottleneck
 - **Stable across successive runs** — no thermal throttling or memory pressure observed
 
-All figures from the reference machine (MacBook Pro M4 Pro, 128 GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Pro and M4 base. Demo corpus results use hybrid retrieval (α=0.5, K=10); pure vector retrieval (default) achieves 13/14.
+All figures from the reference machine (MacBook Pro M4 Max, 128 GB unified memory). MacBook Air (M4) clean install validated — latency is approximately 4–5× higher at equivalent load, consistent with the memory bandwidth differential between M4 Max and M4 base. Demo corpus results use hybrid retrieval (α=0.5, K=10); pure vector retrieval (default) achieves 13/14.
 
 → [Benchmark harness and question sets](benchmarks/)
 
@@ -278,10 +278,11 @@ Chunks:     100K+
 Ingest:     ~31 min, ~54 chunks/sec, 0 failures
 Model:      llama3.1:8b (default) · gemma3:27b (SEC 10-K / benchmark) · gemma3:4b / mistral (also supported)
 Latency:    ~58s avg on the SEC 10-K cross-firm synthesis set (gemma3:27b);
-            ~6s warm on demo (llama3.1 8b/70b identical, M4 Pro 128GB)
+            ~6s warm on demo (llama3.1 8b/70b identical, M4 Max 128GB)
 Benchmark:  SEC 10-K 10/10 mech · 9/10 audited (gemma3:27b); 8/10 mech · 9/10 substantive (llama3.1:8b)
             demo 14/14 (gemma3:27b, K=10); 12/14 mech · 13/14 substantive (llama3.1:8b, K=5)
-Frontier:   precise table-cell extraction — see TUTORIAL §5 (calibrated audit)
+Frontier:   multi-cell table reliability under synthesis — extraction binds coordinates;
+            the open problem is year/basis binding at multi-firm scale (TUTORIAL §5, Annex 4)
 ChromaDB:   crashed at 32,285 chunks
 Qdrant:     stable at 100K+ chunks
 ```
@@ -318,7 +319,7 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - Hybrid retrieval (M2.A) — `Retrieval Mix` slider blends vector semantic search with BM25 keyword matching per query; α=0 pure semantic, α=1 pure keyword, default 0.5 ✅
 - `--force` ingest flag — atomic wipe + clean re-index ✅
 - YAML benchmark question files with corpus auto-detection ✅
-- Demo corpus benchmark: 14/14 questions pass at α=0.5 hybrid retrieval, K=10, gemma3:27b (M4 Pro) ✅ · 12/14 with llama3.1:8b at K=5
+- Demo corpus benchmark: 14/14 questions pass at α=0.5 hybrid retrieval, K=10, gemma3:27b (M4 Max) ✅ · 12/14 with llama3.1:8b at K=5
 - Corpus rename — UI + API, background re-index, re-ingest time estimate ✅
 - Ingestion metadata — last_ingested_at and duration persisted to corpus_metadata.yaml ✅
 - Manifest-driven `ais_install` — adds any new command alias in one step ✅
@@ -328,11 +329,11 @@ Core RAG loop working end-to-end on a 100K-chunk production corpus. Qdrant vecto
 - XBRL noise stripping in HTML ingestion ✅
 - **Memory-fit guard** — the model picker, API, and benchmark each check a model against the machine's available RAM before running it; a model too large is blocked (never left to silently load-and-hang) with a one-click recommendation of the tier that does fit ✅
 - **Benchmark tooling** — `ais_bench --batch --dry-run` previews the resolved run set without executing it; `--fit-policy {skip,downshift,force}` makes a batch memory-aware ✅
+- **Table-aware extraction with coordinate binding** — data tables in HTML/iXBRL are no longer flattened into prose. Each value is serialized as a self-contained `row_label (column-key): value` statement, so a number carries its own row and column coordinates and survives a chunk split. Column binding is exact-index first, with a nearest-left fallback for sparse tables. Layout tables are detected and left alone ✅ **— shipped, and the reliability work is not finished.** Single-cell lookups are exact. Under multi-firm, multi-year synthesis the model can still bind a correctly-extracted value to the wrong year, or read a ratio on the wrong regulatory basis. Extraction is solved; making the *answer* dependable at that scale is the active build. See TUTORIAL §5 and Annex 4
 
 **What's next — near term:**
 
 - **Entity name-resolution at ingest** — a firm's identity keyed to its CIK/LEI with a user-authoritative name override, so the same company always reads as one firm regardless of how each filing self-reports
-- **Table-aware chunking** — binding each number to its row, year, and basis (the multi-cell financial-table frontier where a small model will otherwise fabricate)
 - **Per-entity retrieval guarantees** for thinly-covered firms
 
 Source Dive (citation → exact page), a one-click `.dmg` installer, published API docs, Docker + AWS ECS Fargate, GPU inference — live in [PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md).
