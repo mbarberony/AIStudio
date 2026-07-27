@@ -23,7 +23,7 @@ Stops any running services first — safe to run even if already running.
 Services: Qdrant (vector store), Ollama (LLM host), FastAPI backend.
 On first run, automatically indexes the demo and help corpora (tracked in git;
 Qdrant collections are empty until indexed). Backend health is polled every
-second for up to 60s — browser only opens once the backend is confirmed healthy.
+second for up to 30s — browser only opens once the backend is confirmed healthy.
 
 Implementation: ais_start.sh (wrapper) → scripts/ais_start.py (logic). Both tracked in git.
 
@@ -74,7 +74,7 @@ Options:
 
 ## ais_bench
 
-Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--mem-track] [--emulate-ram <GB>] [--dry-run] [--canonical] [--batch] [--batch-id <id>]
+Usage: ais_bench [--help] [--version] [--corpus <name>] [--top-k <n>] [--temperature <t>] [--model <name>] [--alpha <f>] [--firm <name>] [--topics <list>] [--question-ids <list>] [--questions <path>] [--api <url>] [--no-markdown] [--full] [--fit-policy <mode>] [--dry-run] [--batch] [--batch-id <id>]
 
 Run the AIStudio benchmark suite against a corpus.
 Default: demo corpus, top-k 5, temperature 0.3.
@@ -94,34 +94,50 @@ Options:
   --api <url>            API base URL (default: http://localhost:8000)
   --no-markdown          Skip writing the .md report
   --full                 Include full answers in report (default: first 4 paragraphs)
-  --fit-policy <mode>    What to do when a model won't fit this machine's memory (skip | downshift |
-                         force). Omitted + a model that won't fit → bench offers what DOES fit:
-                         several models fit → a numbered pick-list; exactly one fits → (r)un it,
-                         (f)ree memory & restart, (Enter) cancel; nothing fits → it stops and tells
-                         you how to free memory. Needs a terminal; non-interactive runs fail closed.
-                         (AIStudio_1020)
-  --emulate-ram <GB>     Run as if this machine had GB of RAM, e.g. 24. Reserves the difference so
-                         the shortage is real, not simulated — every memory check, model-fit verdict
-                         and reload decision sees the smaller machine. It is the only way to see how
-                         a smaller Mac behaves without owning one. Released when the run ends.
-                         Minimum 8 GB. Report filenames record it (..._m4max-24gb-emu_...) so an
-                         emulated run is never mistaken for a real machine of that size.
-  --mem-track            Show free memory per question, in GB (default on). --no-mem-track hides
-                         the column; the end-of-run memory recap and the JSON record are always
-                         kept. Memory is reported in GB rather than percent: a percentage is a share
-                         of PHYSICAL RAM, so under --emulate-ram it describes memory the run cannot
-                         see. The model is reloaded mid-run only when free memory falls below what
-                         that model needs (about its own size), not below a fixed share of the box.
-  --canonical            EXACT REPRODUCTION of the audited reference runs — every run in
-                         benchmarks/batch/bench_canonical.yaml with its PINNED model. Use this to
-                         reproduce or extend published numbers.
-  --batch                Run the reference question sets against THIS machine. Bare --batch runs
-                         every set TWICE — smallest installed model + largest that fits — so the
-                         machine is characterised across its own range. Narrow it with
-                         --model <name|largest|smallest>. Prints a runtime estimate first.
-  --batch-id <id>        With --batch or --canonical, run only the run with this id (e.g. A)
-  --dry-run              With --batch/--canonical, print the resolved run set + runtime estimate
-                         and exit WITHOUT executing. (AIStudio_1012)
+  --fit-policy <mode>    AIStudio_1020 — action when a run's --model won't fit this machine's memory
+                         (API fit guard returns BLOCK): skip (don't run, logged as SKIP) | downshift
+                         (auto-switch to the recommended fitting model) | force (run anyway, may hang).
+                         Omitted + a BLOCKed run → an interactive gate branching on how many OTHER
+                         models fit (CLI-Output STD §10.3-D): >=2 fit → one numbered list (models
+                         largest-first, then "Free memory & restart", then "Cancel"); exactly 1 fits →
+                         inline (r)un <model>, (f)ree memory & restart, (Enter) cancel; 0 fit → a
+                         dead-end notice with no prompt. TTY-gated on stdin; a fully non-interactive
+                         run fails closed, exit 1. FIT/WARN and no-explicit-model runs are unaffected.
+                         Batch: the parent resolves the policy once, children run with
+                         --fit-policy force so they do not re-gate.
+  --emulate-ram <GB>     AIStudio_1058 — lock (physical - GB) via libc mlock so the machine behaves
+                         as if it had GB of RAM. mlock is the ONLY method that works: macOS counts
+                         everything reclaimable as free, so ordinary allocations never move the
+                         reading the fit guard consults. The unit is the machine EMULATED, not the
+                         amount locked, so the same value means the same thing on any box. Floor 8 GB
+                         (AISTUDIO_MEM_FLOOR_GB); verifies the reading actually moved and fails
+                         loudly if not. Released via atexit. Named --emulate-ram, not --mem:
+                         --mem-track/--mem-floor-pct already exist and mean other things.
+  --mem-track            AIStudio_1037 — per-question free-memory column in GB (default ON while
+                         the sweep self-starvation bug is open; flip to default OFF when _1037
+                         closes). --no-mem-track hides the column only; the run-tail recap (load /
+                         steady / low / end + drift warning) and the JSON
+                         `memory.free_gb_before|after|need_gb` per result are unconditional.
+                         AIStudio_1059 — GB replaced percent everywhere: a percentage is a share of
+                         PHYSICAL RAM and is meaningless under --emulate-ram. The reload threshold is
+                         _model_need_gb() = footprint x 1.15, NOT max(mem_floor_pct, footprint_pct);
+                         the 35%% default won that max() and fired 9 needless reloads on a 12b run
+                         answering fine at every reading. --mem-floor-pct is now the fallback for the
+                         unknown-footprint case only.
+  --canonical            EXACT REPRODUCTION: every run in bench_canonical.yaml with its PINNED model
+                         (spec-level `model:` or the run's own). The comparability path — published
+                         numbers are produced this way. The fit gate still applies per run.
+  --batch                AIStudio_1040 — machine-adaptive. Model resolved at runtime from /models:
+                         bare → [smallest INSTALLED, largest that FITS] and every run executes on
+                         BOTH (the 4x2 matrix); --model largest|smallest → that tier only;
+                         --model <name> → verbatim (fit gate still applies). Embedding-only models
+                         excluded. smallest==largest collapses to one pass with a note. Run ids are
+                         suffixed with the model (A·llama3.1:8b) so the tiers are distinguishable.
+                         Prints an order-of-magnitude runtime estimate (~10s/q small, ~60s/q large,
+                         announced as a 50-200% range) before executing.
+  --batch-id <id>        With --batch/--canonical, run only the run with this id (e.g. A)
+  --dry-run              With --batch/--canonical, print the resolved run set + runtime estimate and
+                         exit WITHOUT executing. (AIStudio_1012)
 
 Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --scope big_banks
@@ -129,18 +145,20 @@ Question scope filtering (sec_10k):
   ais_bench --corpus sec_10k --question-ids capital_ratios_trend,latency_test
   ais_bench --corpus sec_10k --topics "Capital & Financial Position" --scope big_banks
 
-Reference runs — reproduce, or characterise your machine (TUTORIAL §5.9):
-  ais_bench --canonical                Exact reproduction: every run on its pinned model
-  ais_bench --batch                    Every run twice: smallest installed + largest that fits
-  ais_bench --batch --model largest    Every run on the largest model that fits
-  ais_bench --batch --model smallest   Every run on the smallest model installed
-  ais_bench --batch --model gemma3:12b Every run on a model you name
-  ais_bench --batch --dry-run          Preview the resolved runs + runtime, execute nothing
+Reference runs (TUTORIAL §5.9) — two verbs, two purposes:
+  ais_bench --canonical                Exact reproduction, pinned models (comparability)
+  ais_bench --batch                    Every run x [smallest installed, largest fitting] = the 4x2
+  ais_bench --batch --model largest    Largest fitting tier only
+  ais_bench --batch --model smallest   Smallest installed tier only
+  ais_bench --batch --model <name>     A named model for every run
+  ais_bench --batch --dry-run          Resolved run set + runtime estimate, nothing executed
+  ais_bench --canonical --batch-id A   Single run, pinned model
   · Spec:    benchmarks/batch/bench_canonical.yaml (one parameter set per run)
   · Reports: benchmarks/<corpus>/reports/ (standard timestamped names; .md/.json/.pdf)
   · Both modes manage their own corpora — other run flags are ignored
-  · Use --canonical when the numbers must be comparable to published ones; --batch when you want
-    to know what YOUR machine does. Bare --batch is 8 runs and can take hours — check --dry-run.
+  · WHY TWO: the pinned spec is what makes published numbers comparable, but a 24GB box cannot run
+    the pinned 27b at all. --canonical preserves reproducibility; --batch answers "what does THIS
+    machine do". Bare --batch is 8 runs (hours) — preview with --dry-run first.
 
 · Scopes compose with --topics and --question-ids using AND
 · Available scopes: big_banks, bulge_bracket, asset_managers, exchanges, insurance, custody, boutiques
