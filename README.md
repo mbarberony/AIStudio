@@ -1,10 +1,10 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-07-26*
+*Version: Beta | Updated: 2026-07-27*
 
 # AIStudio
 
-**AIStudio is a private, local AI search and RAG (Retrieval-Augmented Generation) application that runs entirely on your Mac.** It lets you upload your own documents, index them, and ask questions in plain English — getting cited answers grounded in your content, with no data leaving your machine and no external API or cloud dependency.
+**AIStudio answers questions across your own documents and verifies its own faithfulness at the level of the cited passage** — so a confident-sounding answer can be checked against the exact text it rests on. It runs entirely on your Mac: upload your documents, index them, and ask in plain English, getting cited answers grounded in your content, with no data leaving your machine and no external API or cloud dependency. "RAG on a laptop" is commodity; the point is pointing the system at your *whole* corpus — mixing your own files with outside sources — and being able to prove each answer against its source.
 
 AIStudio is what you use when you want to query your own documents with AI. It is not a general-purpose chatbot — it is a document intelligence system. You bring the documents; AIStudio finds the answers.
 
@@ -78,7 +78,7 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 
 **Scale**
 
-- **Codebase** — ~28,400 lines of code across 95 files
+- **Codebase** — ~36,300 lines of code *(snapshot as of 2026-07-20; regenerate with `urc_xray_repo`)*
 - **SEC 10-K corpus** — 100+ filings · 21 firms · 901 MB of source filings · 100K+ chunks
 - **ESEF corpus** — European bank annual reports, multilingual, retrieved by LEI
 - **Demo corpus** — 9 original documents spanning 2003–2026

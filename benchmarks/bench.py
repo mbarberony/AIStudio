@@ -1,4 +1,20 @@
 #!/usr/bin/env python3
+# Changelog: 2.28.6 — AIStudio_1085: dry-run preview crashed on a partial Namespace — line ~2471
+#   read `args.api` directly while the `model` arg beside it was already `getattr`-guarded, so the
+#   preview path (deliberately written to tolerate missing attrs) threw AttributeError under
+#   test_dry_run_without_batch_previews_and_returns. Pre-existing (identical line in v2.28.4); NOT
+#   caused by the _1071 write_markdown change — surfaced by EOS Step 1 (ais_test_ops). Guarded `api`
+#   with the same default as argparse (http://localhost:8000). The real CLI always sets api, so this
+#   only affects hand-built Namespaces (tests); the fix restores the path's original tolerate-partial intent.
+# Changelog: 2.28.5 — AIStudio_1071: write_markdown now excludes ⚫ BLOCKED from the pass denominator
+#   and the latency average, matching the console (AIStudio_1038). Before this, a constrained-tier
+#   run where the fit guard refused every question wrote "Passed (binary): 0/10 (0%)" and
+#   "Avg latency: 0.0s" into the report artifact — a machine (memory) event indistinguishable, on the
+#   page, from a total quality collapse. The report now reads "— (0 of 10 scored; all BLOCKED)",
+#   "🟢 0 · ⚫ 10", "n/a — no question ran"; and a partial block (1 ran, 9 blocked) reads "1/1 (100%)
+#   · ⚫ 9" over the one real question's latency. Detection is shared with the console: rating ==
+#   "BLOCKED". Fixes every constrained-tier report artifact; must precede the Suzanne 24 GB run so
+#   that run produces auditable reports rather than ones needing re-annotation.
 # Changelog: 2.28.4 — AIStudio_1062: CLI conformance + language pass on the batch path, from reading
 #   a full 8-run log. (a) The batch preflight's ✅ had no ▶ announcing what produced it — CLI Output
 #   §1 pairs every outcome with the action that caused it. (b) "Resident models cleared" printed when
@@ -552,7 +568,7 @@ import _scope_common as _scope  # noqa: E402
 #            spec `timeout` wins, else inherit the parent's --timeout). Fixes `ais_bench --canonical
 #            --timeout 300` silently not reaching children — heavy questions on the larger _958 window
 #            could hit the 120s wall → HTTP fail → mechanical RED.
-VERSION = "2.28.4"
+VERSION = "2.28.6"
 SCRIPT_LABEL = f"ais_bench v{VERSION} — AIStudio RAG Benchmark"
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -1494,9 +1510,19 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
     md_path = output_path.with_suffix(".md")
     passed = sum(1 for r in results if r["eval"]["pass"])
     total = len(results)
-    avg_latency = sum(r["result"]["elapsed_sec"] for r in results if r["result"]["ok"]) / max(
-        1, total
-    )
+    # AIStudio_1071: mirror the console (AIStudio_1038) — a BLOCKED question never ran, so it must be
+    # excluded from BOTH the latency average and the pass denominator. write_markdown previously
+    # divided latency by `total` and computed "passed/total", and omitted BLOCKED from the rating
+    # line entirely. On an all-blocked constrained run that produced "0/10 (0%)" and "0.0s" — a
+    # memory event misreported as a catastrophic quality result. One detection logic, shared with
+    # the console Summary: rating == "BLOCKED".
+    _timed = [r for r in results if r["result"]["ok"] and r["eval"].get("rating") != "BLOCKED"]
+    avg_latency = (sum(r["result"]["elapsed_sec"] for r in _timed) / len(_timed)) if _timed else None
+    _greens = sum(1 for r in results if r["eval"].get("rating") == "GREEN")
+    _ambers = sum(1 for r in results if r["eval"].get("rating") == "AMBER")
+    _reds = sum(1 for r in results if r["eval"].get("rating") == "RED")
+    _blocked = sum(1 for r in results if r["eval"].get("rating") == "BLOCKED")
+    _scored = total - _blocked
 
     lines = [
         "# AIStudio — Benchmark Findings",
@@ -1514,10 +1540,13 @@ def write_markdown(results: list[dict], args: argparse.Namespace, output_path: P
         f"- **Questions:** `{questions_label or '(default)'}`" + (f" · sha `{questions_sha}`" if questions_sha and questions_sha != '—' else ''),
         "",
         "## Summary",
-        f"- **Questions:** {total}",
-        f"- **Passed (binary):** {passed}/{total} ({round(100 * passed / total)}%)",
-        f"- **Rating (AIStudio_878):** 🟢 {sum(1 for r in results if r['eval'].get('rating')=='GREEN')} GREEN · 🟡 {sum(1 for r in results if r['eval'].get('rating')=='AMBER')} AMBER · 🔴 {sum(1 for r in results if r['eval'].get('rating')=='RED')} RED",
-        f"- **Avg latency:** {round(avg_latency, 1)}s",
+        f"- **Questions:** {total}" + (f" ({_scored} scored · {_blocked} BLOCKED)" if _blocked else ""),
+        "- **Passed (binary):** " + (f"{passed}/{_scored} ({round(100 * passed / _scored)}%)"
+                                     if _scored else f"— (0 of {total} scored; all BLOCKED)"),
+        f"- **Rating (AIStudio_878):** 🟢 {_greens} GREEN · 🟡 {_ambers} AMBER · 🔴 {_reds} RED"
+        + (f" · ⚫ {_blocked} BLOCKED" if _blocked else ""),
+        "- **Avg latency:** " + (f"{round(avg_latency, 1)}s" if avg_latency is not None
+                                 else "n/a — no question ran"),
         "",
         "## Infrastructure",
         "- Vector store: Qdrant 1.17.0 (Apple Silicon, local)",
@@ -2446,7 +2475,7 @@ def main() -> None:
         _tp = getattr(args, "temperature", None) if getattr(args, "temperature", None) is not None else "corpus default (0.3)"
         print(f"  · Top K          : {_tk}")
         print(f"  · Temperature    : {_tp}")
-        _need_preview = _model_need_gb(args.api, getattr(args, "model", None))
+        _need_preview = _model_need_gb(getattr(args, "api", "http://localhost:8000"), getattr(args, "model", None))
         _thr_preview = (f"below the {_need_preview:.1f} GB this model needs" if _need_preview
                         else "below what this model needs")
         _clean = ("no — resident models left as they are (--no-ollama-restart)" if getattr(args, "no_ollama_restart", False)
