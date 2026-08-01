@@ -2,7 +2,7 @@
 schema_version: '2.0'
 corpus_name: help
 corpus_type: generated
-last_updated: '2026-07-27'
+last_updated: '2026-07-31'
 short_description: AIStudio documentation — commands, setup, architecture
 description: AIStudio user and developer documentation — installation, usage, architecture,
   benchmarks, roadmap, and file/command reference.
@@ -75,10 +75,10 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   gets its own line.
 
   '
-last_ingested_at: '2026-07-27T12:15:58'
-last_ingest_chunks: 312
+last_ingested_at: '2026-07-31T20:33:07'
+last_ingest_chunks: 317
 last_ingest_files: 15
-ingest_duration_seconds: 16.17
+ingest_duration_seconds: 15.99
 sources:
 - filename: README.pdf
   source_path: README.md
@@ -303,14 +303,14 @@ sources:
   - retrieval
   - generation
   - pipeline
-avg_seconds_per_file: 1.08
+avg_seconds_per_file: 1.07
 files:
   about.pdf:
     file_type: PDF
     size_bytes: 21624
     chunks: 2
-    duration_sec: 1.763
-    ingested_at: '2026-07-27T16:15:44+00:00'
+    duration_sec: 1.993
+    ingested_at: '2026-08-01T00:32:53+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -319,18 +319,18 @@ files:
     file_type: PDF
     size_bytes: 41023
     chunks: 9
-    duration_sec: 0.578
-    ingested_at: '2026-07-27T16:15:45+00:00'
+    duration_sec: 0.475
+    ingested_at: '2026-08-01T00:32:54+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   architecture_decisions.pdf:
     file_type: PDF
-    size_bytes: 111954
+    size_bytes: 111957
     chunks: 25
-    duration_sec: 1.068
-    ingested_at: '2026-07-27T16:15:46+00:00'
+    duration_sec: 1.013
+    ingested_at: '2026-08-01T00:32:55+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -339,48 +339,48 @@ files:
     file_type: PDF
     size_bytes: 174689
     chunks: 17
-    duration_sec: 0.776
-    ingested_at: '2026-07-27T16:15:46+00:00'
+    duration_sec: 0.762
+    ingested_at: '2026-08-01T00:32:55+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   BENCH_HARNESS.pdf:
     file_type: PDF
-    size_bytes: 555762
+    size_bytes: 555765
     chunks: 15
-    duration_sec: 0.747
-    ingested_at: '2026-07-27T16:15:47+00:00'
+    duration_sec: 0.685
+    ingested_at: '2026-08-01T00:32:56+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   CODEBASE_GUIDE.pdf:
     file_type: PDF
-    size_bytes: 74191
+    size_bytes: 74199
     chunks: 13
-    duration_sec: 0.78
-    ingested_at: '2026-07-27T16:15:48+00:00'
+    duration_sec: 0.682
+    ingested_at: '2026-08-01T00:32:57+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   DEMO_CORPUS.pdf:
     file_type: PDF
-    size_bytes: 29980
+    size_bytes: 29979
     chunks: 4
-    duration_sec: 0.288
-    ingested_at: '2026-07-27T16:15:48+00:00'
+    duration_sec: 0.312
+    ingested_at: '2026-08-01T00:32:57+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   dependencies.pdf:
     file_type: PDF
-    size_bytes: 174818
+    size_bytes: 174822
     chunks: 9
-    duration_sec: 0.589
-    ingested_at: '2026-07-27T16:15:49+00:00'
+    duration_sec: 0.493
+    ingested_at: '2026-08-01T00:32:58+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -389,18 +389,18 @@ files:
     file_type: PDF
     size_bytes: 97750
     chunks: 15
-    duration_sec: 0.844
-    ingested_at: '2026-07-27T16:15:50+00:00'
+    duration_sec: 0.778
+    ingested_at: '2026-08-01T00:32:58+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   HOWTO.pdf:
     file_type: PDF
-    size_bytes: 187524
-    chunks: 21
-    duration_sec: 0.96
-    ingested_at: '2026-07-27T16:15:51+00:00'
+    size_bytes: 193182
+    chunks: 24
+    duration_sec: 1.073
+    ingested_at: '2026-08-01T00:32:59+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
@@ -409,48 +409,48 @@ files:
     file_type: PDF
     size_bytes: 32445
     chunks: 8
-    duration_sec: 0.426
-    ingested_at: '2026-07-27T16:15:51+00:00'
+    duration_sec: 0.371
+    ingested_at: '2026-08-01T00:33:00+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   QA_TESTING_LESSONS_LEARNED.pdf:
     file_type: PDF
-    size_bytes: 365626
+    size_bytes: 365622
     chunks: 11
-    duration_sec: 0.604
-    ingested_at: '2026-07-27T16:15:52+00:00'
+    duration_sec: 0.583
+    ingested_at: '2026-08-01T00:33:00+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   QUICKSTART.pdf:
     file_type: PDF
-    size_bytes: 302956
+    size_bytes: 302972
     chunks: 40
-    duration_sec: 1.769
-    ingested_at: '2026-07-27T16:15:53+00:00'
+    duration_sec: 1.741
+    ingested_at: '2026-08-01T00:33:02+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   README.pdf:
     file_type: PDF
-    size_bytes: 238207
-    chunks: 25
-    duration_sec: 1.12
-    ingested_at: '2026-07-27T16:15:55+00:00'
+    size_bytes: 244561
+    chunks: 27
+    duration_sec: 1.13
+    ingested_at: '2026-08-01T00:33:03+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
     normalizer_mismatch: false
   TUTORIAL.pdf:
     file_type: PDF
-    size_bytes: 652429
+    size_bytes: 652678
     chunks: 98
-    duration_sec: 3.78
-    ingested_at: '2026-07-27T16:15:58+00:00'
+    duration_sec: 3.792
+    ingested_at: '2026-08-01T00:33:07+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
