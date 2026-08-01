@@ -1,6 +1,6 @@
 [![CI](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/mbarberony/AIStudio/actions/workflows/ci.yml)
 
-*Version: Beta | Updated: 2026-07-27*
+*Version: Beta | Updated: 2026-07-31*
 
 # AIStudio
 
@@ -74,6 +74,20 @@ AIStudio does what any retrieval system worth its salt must: **it verifies its o
 
 ---
 
+## What AIStudio measures
+
+Groundedness is well-covered ground. Ragas, DeepEval, ARES and Arize Phoenix score *faithfulness*; TruLens scores *groundedness* as part of its RAG Triad. All of them ask the same question — is this claim supported by the retrieved context — and all of them answer it with an LLM as judge.
+
+AIStudio's own score is narrower and deliberately crude: lexical overlap between an answer and the context retrieved for it, used to separate *answered from the sources but didn't cite them* from *possibly fabricated*. It is not entailment and it does not prove faithfulness. What it is, is **deterministic** — no judge model, no API call, no network, and the same number every time. The standard frameworks default to GPT-4o and drift silently when that judge is updated beneath them.
+
+The question AIStudio is built around is different again: **is this number attached to the entity it belongs to?** A figure can be present in the context, correctly retrieved, and still bound to the wrong bank, the wrong fiscal year, or the wrong line item. On regulated filings that distinction is the whole risk — and it is the failure mode named as the open frontier above.
+
+Results are reported **per memory tier**, because the failure this system exists to catch is the one that appears when the machine runs out of RAM, not when it has plenty.
+
+HOWTO covers how the score is computed and how the field measures the same thing. TUTORIAL Module 5 covers benchmark scoring; Annex 4 works through the table case, where a figure loses its row header.
+
+---
+
 ## AIStudio in numbers
 
 **Scale**
@@ -101,21 +115,21 @@ AIStudio ships ~16 reference documents (about 80 pages), plus the benchmark evid
 | Document | What it covers | Read it when… |
 |---|---|---|
 | **README** | Product overview, point of view, architecture, benchmarks | You're deciding what AIStudio is |
-| **about** | One-page overview shown in the UI About panel | You clicked About or want the gist |
-| **QUICKSTART** | Install + first run in under 30 min | You're setting it up |
-| **HOWTO** | Corpora, upload, filters, query settings, troubleshooting | You're using it day to day |
-| **TUTORIAL** | Guided walkthroughs + SEC 10-K at-scale + benchmarking | You want to go deep |
-| **architecture_elements** | How the pieces fit + data flow (the mental model) — the doc to read if you want to *really* understand how chunks, retrieval, grounding, and benchmarking work | You want the "under the hood" picture |
-| **architecture_decisions** | Why Qdrant / CrossEncoder / chunking | You're weighing the technical choices |
-| **api_introduction** | The local HTTP API — retrieve vs ask, firm isolation | You're building an integration |
-| **CODEBASE_GUIDE** | Directory layout, files, the ingest/query pipeline | You're reading or extending the code |
-| **FILE_GUIDE** | Commands, files, services reference | You need to look up a command or file |
-| **DEMO_CORPUS** | What ships in the demo + suggested questions | You're exploring the demo |
-| **BENCH_HARNESS** | Running benchmarks — `ais_bench` flags, question format, reading a report (`benchmarks/docs/`) | You're measuring quality |
-| **BENCH — Canonical Suite** | The audited benchmark evidence — four runs across both corpora + synthesis (`benchmarks/docs/`) | You want the proof, not just the claim |
-| **QA_TESTING_LESSONS_LEARNED** | Install friction + QA findings | You hit a snag or want the honest record |
-| **dependencies** | Python + system dependency versions | You're troubleshooting the environment |
-| **PRODUCT_ROADMAP** | What works now and the direction beyond Beta | You want to know what's next |
+| **[about](about.md)** | One-page overview shown in the UI About panel | You clicked About or want the gist |
+| **[QUICKSTART](QUICKSTART.md)** | Install + first run in under 30 min | You're setting it up |
+| **[HOWTO](HOWTO.md)** | Corpora, upload, filters, query settings, troubleshooting | You're using it day to day |
+| **[TUTORIAL](TUTORIAL.md)** | Guided walkthroughs + SEC 10-K at-scale + benchmarking | You want to go deep |
+| **[architecture_elements](docs/architecture_elements.md)** | How the pieces fit + data flow (the mental model) — the doc to read if you want to *really* understand how chunks, retrieval, grounding, and benchmarking work | You want the "under the hood" picture |
+| **[architecture_decisions](docs/architecture_decisions.md)** | Why Qdrant / CrossEncoder / chunking | You're weighing the technical choices |
+| **[api_introduction](docs/api_introduction.md)** | The local HTTP API — retrieve vs ask, firm isolation | You're building an integration |
+| **[CODEBASE_GUIDE](docs/CODEBASE_GUIDE.md)** | Directory layout, files, the ingest/query pipeline | You're reading or extending the code |
+| **[FILE_GUIDE](FILE_GUIDE.md)** | Commands, files, services reference | You need to look up a command or file |
+| **[DEMO_CORPUS](docs/DEMO_CORPUS.md)** | What ships in the demo + suggested questions | You're exploring the demo |
+| **[BENCH_HARNESS](benchmarks/docs/BENCH_HARNESS.md)** | Running benchmarks — `ais_bench` flags, question format, reading a report (`benchmarks/docs/`) | You're measuring quality |
+| **[BENCH — Canonical Suite](benchmarks/docs/)** | The audited benchmark evidence — four runs across both corpora + synthesis (`benchmarks/docs/`) | You want the proof, not just the claim |
+| **[QA_TESTING_LESSONS_LEARNED](docs/QA_TESTING_LESSONS_LEARNED.md)** | Install friction + QA findings | You hit a snag or want the honest record |
+| **[dependencies](docs/dependencies.md)** | Python + system dependency versions | You're troubleshooting the environment |
+| **[PRODUCT_ROADMAP](docs/PRODUCT_ROADMAP.md)** | What works now and the direction beyond Beta | You want to know what's next |
 
 ## Quickstart
 

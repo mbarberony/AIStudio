@@ -4,7 +4,7 @@ Practical answers for day-to-day AIStudio use.
 Not a getting-started guide (see [QUICKSTART.md](QUICKSTART.md)) — reach for this when
 you need to do something specific or something isn't working as expected.
 
-*Version: Beta | Updated: 2026-07-19*
+*Version: Beta | Updated: 2026-07-31*
 
 ---
 
@@ -17,6 +17,7 @@ you need to do something specific or something isn't working as expected.
 - [Installing and Managing LLMs](#installing-and-managing-llms)
 - [Query Settings](#query-settings)
 - [Understanding Citations](#understanding-citations)
+- [How to define groundedness](#how-to-define-groundedness)
 - [Benchmark & Corpus Testing](#benchmark--corpus-testing)
 - [Troubleshooting](#troubleshooting)
 
@@ -297,6 +298,37 @@ Check the citations first. If the referenced chunks don't actually contain the c
 **Uncited claims:** if a sentence has no citation marker, the model is drawing on general context rather than a specific retrieved passage. Treat uncited claims with more caution, especially for specific numbers or facts.
 
 **Opening the source:** click the citation chip in the References panel to see the full chunk text and open the source document.
+
+---
+
+## How to define groundedness
+
+**Short answer:** AIStudio computes a **groundedness** score — the lexical overlap between an answer and the context retrieved for it. It is deterministic: the same run returns the same number. It is deliberately crude — overlap, not entailment — and it does **not** prove an answer is faithful. Its job is narrower, and more useful, than that.
+
+**What it is actually for.** It triages citation failures. When an answer carries no citation at all, the score decides how that answer is rated:
+
+- **≥70% overlap** — the answer is grounded in what was retrieved but emitted no citation. An attribution failure, not a content one.
+- **<40% overlap** — little relation to the retrieved context. Possible fabrication.
+
+This is separate from the benchmark's pass/fail, which checks that the expected keywords appear, that at least one citation is present, and that the model did not hedge.
+
+**On the name.** The field uses two words for this idea, and is converging on one:
+
+| Framework | Metric |
+|---|---|
+| [Ragas](https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/faithfulness/) | `Faithfulness` — plus a separate `Response Groundedness` |
+| [DeepEval](https://deepeval.com/docs/metrics-introduction) | `faithfulness` |
+| [ARES](https://aclanthology.org/2024.naacl-long.20/) | `answer faithfulness` |
+| [Arize Phoenix](https://arize.com/docs/phoenix/evaluation/running-pre-tested-evals/hallucinations) | `Faithfulness` — its `Hallucination` evaluator was deprecated in favour of it, for clearer terminology |
+| [TruLens](https://www.trulens.org/getting_started/core_concepts/rag_triad/) | `groundedness`, as part of the RAG Triad |
+
+Every one of them scores it with an LLM as judge, usually GPT-4o by default — so their numbers carry judge variance, need a network round-trip, cost money per run, and shift when the judge model is updated underneath them. AIStudio's overlap score is computed locally, offline, at no cost, and returns the same value twice.
+
+The trade is real, and it runs the other way too: a judge model recognises paraphrase that lexical overlap misses. AIStudio takes determinism instead, because a measurement that moves between identical runs cannot be compared across machines or over time.
+
+**What none of this covers.** An answer can be well grounded — every claim present in the retrieved context — and still wrong in the way that matters on a filing, because the figure was bound to the wrong entity, the wrong period, or the wrong line item. TUTORIAL Annex 4 works that case through on a real table.
+
+**Reading further.** Benchmark scoring is TUTORIAL Module 5: what the mechanical score actually checks (§5.2), why a passing question can still be wrong (§5.3), and the discipline of verifying the cited chunk (§5.6).
 
 ---
 
