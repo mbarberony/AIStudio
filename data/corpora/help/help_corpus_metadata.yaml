@@ -75,10 +75,10 @@ search_guidance: 'Route questions to the most relevant document based on intent:
   gets its own line.
 
   '
-last_ingested_at: '2026-07-31T20:33:07'
-last_ingest_chunks: 317
-last_ingest_files: 15
-ingest_duration_seconds: 15.99
+last_ingested_at: '2026-07-31T20:42:35'
+last_ingest_chunks: 15
+last_ingest_files: 1
+ingest_duration_seconds: 1.13
 sources:
 - filename: README.pdf
   source_path: README.md
@@ -303,154 +303,14 @@ sources:
   - retrieval
   - generation
   - pipeline
-avg_seconds_per_file: 1.07
+avg_seconds_per_file: 1.13
 files:
-  about.pdf:
-    file_type: PDF
-    size_bytes: 21624
-    chunks: 2
-    duration_sec: 1.993
-    ingested_at: '2026-08-01T00:32:53+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  api_introduction.pdf:
-    file_type: PDF
-    size_bytes: 41023
-    chunks: 9
-    duration_sec: 0.475
-    ingested_at: '2026-08-01T00:32:54+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  architecture_decisions.pdf:
-    file_type: PDF
-    size_bytes: 111957
-    chunks: 25
-    duration_sec: 1.013
-    ingested_at: '2026-08-01T00:32:55+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  architecture_elements.pdf:
-    file_type: PDF
-    size_bytes: 174689
-    chunks: 17
-    duration_sec: 0.762
-    ingested_at: '2026-08-01T00:32:55+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  BENCH_HARNESS.pdf:
-    file_type: PDF
-    size_bytes: 555765
-    chunks: 15
-    duration_sec: 0.685
-    ingested_at: '2026-08-01T00:32:56+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  CODEBASE_GUIDE.pdf:
-    file_type: PDF
-    size_bytes: 74199
-    chunks: 13
-    duration_sec: 0.682
-    ingested_at: '2026-08-01T00:32:57+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  DEMO_CORPUS.pdf:
-    file_type: PDF
-    size_bytes: 29979
-    chunks: 4
-    duration_sec: 0.312
-    ingested_at: '2026-08-01T00:32:57+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  dependencies.pdf:
-    file_type: PDF
-    size_bytes: 174822
-    chunks: 9
-    duration_sec: 0.493
-    ingested_at: '2026-08-01T00:32:58+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
   FILE_GUIDE.pdf:
     file_type: PDF
-    size_bytes: 97750
+    size_bytes: 97742
     chunks: 15
-    duration_sec: 0.778
-    ingested_at: '2026-08-01T00:32:58+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  HOWTO.pdf:
-    file_type: PDF
-    size_bytes: 193182
-    chunks: 24
-    duration_sec: 1.073
-    ingested_at: '2026-08-01T00:32:59+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  PRODUCT_ROADMAP.pdf:
-    file_type: PDF
-    size_bytes: 32445
-    chunks: 8
-    duration_sec: 0.371
-    ingested_at: '2026-08-01T00:33:00+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  QA_TESTING_LESSONS_LEARNED.pdf:
-    file_type: PDF
-    size_bytes: 365622
-    chunks: 11
-    duration_sec: 0.583
-    ingested_at: '2026-08-01T00:33:00+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  QUICKSTART.pdf:
-    file_type: PDF
-    size_bytes: 302972
-    chunks: 40
-    duration_sec: 1.741
-    ingested_at: '2026-08-01T00:33:02+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  README.pdf:
-    file_type: PDF
-    size_bytes: 244561
-    chunks: 27
-    duration_sec: 1.13
-    ingested_at: '2026-08-01T00:33:03+00:00'
-    normalizer_entity: ''
-    normalizer_year: ''
-    normalizer_source: ''
-    normalizer_mismatch: false
-  TUTORIAL.pdf:
-    file_type: PDF
-    size_bytes: 652678
-    chunks: 98
-    duration_sec: 3.792
-    ingested_at: '2026-08-01T00:33:07+00:00'
+    duration_sec: 1.094
+    ingested_at: '2026-08-01T00:42:35+00:00'
     normalizer_entity: ''
     normalizer_year: ''
     normalizer_source: ''
