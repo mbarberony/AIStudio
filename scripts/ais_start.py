@@ -99,6 +99,48 @@ def _health(url: str) -> bool:
         return False
 
 
+def _check_index_paths(corpus: str) -> None:
+    """AIStudio_1120 — warn if index.jsonl references source paths that no longer exist.
+
+    The vector store self-heals on an empty collection; the on-disk .jsonl does
+    not. The two drift and nothing reports it. This does not compare the two —
+    it asks the cheaper question that catches the failure actually observed:
+    do the recorded source paths still resolve?
+
+    Measured 2026-09-04: demo/index.jsonl carried 3210 references to
+    /Users/janebarbero/... , a home directory from a retired test machine,
+    while the Qdrant collection was clean. Chunk counts MATCHED, so a count
+    comparison would have reported healthy.
+
+    Warns and returns. Never blocks, never mutates, never raises — ais_start is
+    the first thing that runs and a check that halts on a false positive costs
+    more than the defect it guards against.
+    """
+    idx = Path(__file__).resolve().parent.parent / "data" / "corpora" / corpus / "index.jsonl"
+    if not idx.exists():
+        return
+    try:
+        seen: set[str] = set()
+        with idx.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                try:
+                    p = json.loads(line).get("source_path")
+                except (ValueError, AttributeError):
+                    continue
+                if p:
+                    seen.add(p)
+        missing = sorted(p for p in seen if not Path(p).exists())
+        if missing:
+            print(f"  ⚠ {corpus}: {len(missing)} of {len(seen)} source path(s) in index.jsonl "
+                  f"no longer exist on this machine (AIStudio_1120).")
+            print(f"      e.g. {missing[0]}")
+            print(f"      → ais_update_corpus_ops --corpus {corpus} --rebuild")
+    except OSError:
+        return  # unreadable index is not this check's business
+
+
 def _qdrant_collection_count(collection: str) -> int:
     """Returns chunk count, 0 if collection missing/empty, -1 if Qdrant unreachable."""
     try:
@@ -423,9 +465,33 @@ def main() -> int:
     # On first run their Qdrant collections are empty — trigger ingest via
     # the backend API (fire-and-forget; UI shows live progress).
     # Subsequent starts: collections already populated, just report count.
+    #
+    # ⚠ KNOWN GAP — AIStudio_1120 (found by KRR, 2026-09-04).
+    #   This re-ingests ONLY when the Qdrant collection is empty, and it never
+    #   regenerates the on-disk .jsonl artefacts. So the vector store
+    #   self-heals and the index files do not: the two can drift and NOTHING
+    #   REPORTS IT. A non-empty count below is evidence the collection exists,
+    #   not evidence it agrees with data/corpora/<corpus>/index.jsonl.
+    #
+    #   Measured instance: `janebarbero` (a retired test machine's home dir)
+    #   persisted in demo/index.jsonl at 3210 occurrences and manifest.jsonl at
+    #   9, while the collection was clean. Found only because someone grepped
+    #   for a hostname. Fixed by `ais_update_corpus_ops --corpus demo --rebuild`.
+    #
+    #   ✅ RULED AND FIXED 2026-09-06 (Manuel). The check is NARROWER than the
+    #   original framing: it does not compare the index to the collection at
+    #   all. It asks whether the source paths recorded in index.jsonl still
+    #   RESOLVE ON DISK. That is what the measured failure actually was — a
+    #   home directory from another machine — and a count comparison would
+    #   have missed it entirely, because the counts matched.
+    #   On mismatch: WARN, never block. ais_start is the first thing that runs;
+    #   a check that halts on a false positive costs more than the defect.
+    #   ⚠ Does NOT catch an index and a collection that disagree while every
+    #   path resolves. That comparison is deferred, deliberately.
     _sep("Processing", separator)
 
     for corpus in ("demo", "help"):
+        _check_index_paths(corpus)
         count = _qdrant_collection_count(f"aistudio_{corpus}")
         if count > 0:
             print(f"✅ {corpus} corpus: {count} chunks.")

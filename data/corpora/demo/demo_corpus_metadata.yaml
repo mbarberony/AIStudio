@@ -2,7 +2,7 @@
 schema_version: '2.0'
 corpus_name: demo
 corpus_type: seeded
-last_updated: '2026-06-27'
+last_updated: '2026-09-01'
 short_description: 20 years of original thought leadership — architecture, strategy,
   AI
 description: A curated corpus of original thought leadership documents spanning 2003–2026,
@@ -79,10 +79,10 @@ default_top_k: 5
 default_temperature: 0.3
 default_hybrid_alpha: 0.5
 default_min_score: 0.3
-last_ingested_at: '2026-06-27T15:01:40'
-last_ingest_chunks: 0
-last_ingest_files: 0
-ingest_duration_seconds: 0.04
+last_ingested_at: '2026-09-01T14:02:49'
+last_ingest_chunks: 1070
+last_ingest_files: 9
+ingest_duration_seconds: 41.67
 sources:
 - description: Enterprise architecture methodology and toolset — universal architecture
     concepts for organizational design
@@ -179,5 +179,96 @@ sources:
   - knowledge productivity
   - financial services
   title: Agentic AI in Financial Services
-files: {}
+avg_seconds_per_file: 4.63
+files:
+  Barbero - 2006 - Architecture Concepts and How To Use Them To Design an Organization.pdf:
+    file_type: PDF
+    size_bytes: 1086427
+    chunks: 127
+    duration_sec: 6.137
+    ingested_at: '2026-09-01T18:02:13+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero - 2020 - Technology Modernization and Cloud Migration.pdf:
+    file_type: PDF
+    size_bytes: 1383620
+    chunks: 63
+    duration_sec: 2.666
+    ingested_at: '2026-09-01T18:02:16+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero - 2026 - Agentic AI in Financial Services.pdf:
+    file_type: PDF
+    size_bytes: 96823
+    chunks: 20
+    duration_sec: 0.791
+    ingested_at: '2026-09-01T18:02:17+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero et al. - 2005 - FS Journal - Digitization.pdf:
+    file_type: PDF
+    size_bytes: 1769420
+    chunks: 130
+    duration_sec: 4.338
+    ingested_at: '2026-09-01T18:02:21+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero et al. - 2005 - FS Journal - IT Infrastructure.pdf:
+    file_type: PDF
+    size_bytes: 1111130
+    chunks: 212
+    duration_sec: 7.883
+    ingested_at: '2026-09-01T18:02:29+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero et al. - 2005 - FS Journal - Risk Compliance and Security.pdf:
+    file_type: PDF
+    size_bytes: 871554
+    chunks: 226
+    duration_sec: 8.527
+    ingested_at: '2026-09-01T18:02:37+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero et al. - 2006 - FS Journal - Strategy and Architecture Concepts and Techniques.pdf:
+    file_type: PDF
+    size_bytes: 2693215
+    chunks: 236
+    duration_sec: 8.503
+    ingested_at: '2026-09-01T18:02:46+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Barbero | Hunt - 2021 - Data Strategy.pdf:
+    file_type: PDF
+    size_bytes: 2337736
+    chunks: 22
+    duration_sec: 1.386
+    ingested_at: '2026-09-01T18:02:47+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
+  Erder | Pureur - 2003 - Architecture and QFD.pdf:
+    file_type: PDF
+    size_bytes: 453563
+    chunks: 34
+    duration_sec: 1.381
+    ingested_at: '2026-09-01T18:02:49+00:00'
+    normalizer_entity: ''
+    normalizer_year: ''
+    normalizer_source: ''
+    normalizer_mismatch: false
 deleted_files: {}
