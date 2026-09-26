@@ -25,6 +25,16 @@ meta/
 *_ops.sh
 *_ops.py
 *_ops
+# KRR_365 — urc_harvest_mail reads IMAP credentials from the Keychain.
+# Protected by the *_ops.* pattern below TODAY. These explicit lines keep it protected
+# if the _ops suffix is ever strangled out of AIStudio (Manuel, 2026-09-14), and cover
+# the refactored names before they exist. ⛔ Never remove without moving the file into meta/.
+scripts/urc_harvest_mail_ops.py
+scripts/urc_harvest_mail.py
+scripts/harvest_mail.py
+scripts/urc/harvest_mail.py
+scripts/urc/harvest_mail_ops.py
+
 # Any _ops file regardless of extension (.yaml/.txt/...) — §23 intent: operator-only, never tracked.
 # Closes the ingest_test_ops.yaml leak the .sh/.py/bare rules missed (KRR_064).
 *_ops.*
@@ -136,3 +146,33 @@ data/corpora/esef_banks/trash/
 # Demo corpus trash (superseded files, never tracked)
 data/corpora/demo/trash/
 data/model_manifest.json
+
+# ── Tests for operator-only tooling (2026-09-25) ─────────────────────────────
+# A test belongs in this repo if and only if the thing it tests does. The operator
+# deploy/bundle/conformance tooling is not tracked here (see the ignored operator
+# entries above), so its tests are not either. They stay on disk and `make test`
+# still runs them locally.
+#
+# One had leaked: ais_commit.sh uses `git add -A`, and its staged-content guard greps
+# for '\.zip$|_ops\.|_ops$|(^|/)meta/|PACKET|BUNDLE|\.backup'. A filename of the form
+# test_<tool>_ops_<case>.py misses every pattern by one character — `_ops\.` wants a
+# literal dot after _ops, and `_ops$` wants end-of-name. These globs close that gap.
+tests/test_deploy_ops_*.py
+tests/test_urc_*.py
+tests/test_conform_*.py
+tests/test_manifest_*.py
+tests/test_krr*.py
+# ⚠ The 17 product tests stay TRACKED and must not be added here — test_health.py,
+#   test_embeddings.py, test_help_conformance.py, test_api_integration.py and the rest
+#   test AIStudio itself, so they belong in this repo.
+
+# KRR_354 — Claude UI delivery folder. Created by the desktop app's "Save to folder";
+# no manifest routes to it and nothing in it belongs in version control.
+Claude outputs/
+
+# Backups written beside a file before an edit (urc-fs and session scripts).
+*.bak-*
+*.bak.*
+
+# Claude Code project state.
+.claude/
